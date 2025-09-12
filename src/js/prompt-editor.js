@@ -1,13 +1,7 @@
-// src/js/prompt-editor.js
-
-// This file now controls the prompt editor modal within the novel editor.
-
 import { init as initRephraseEditor, buildPromptJson as buildRephraseJson } from './prompt-editors/rephrase-editor.js';
 import { init as initTranslateEditor, buildPromptJson as buildTranslateJson } from './prompt-editors/translate-editor.js';
-import { getActiveEditor } from './novel-planner/content-editor.js';
 import { updateToolbarState } from './novel-planner/toolbar.js';
 import { TextSelection } from 'prosemirror-state';
-import { DOMParser } from 'prosemirror-model';
 
 const editors = {
 	'rephrase': { name: 'Rephrase', init: initRephraseEditor },

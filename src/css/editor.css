@@ -130,3 +130,8 @@ i[class^="bi-"], i[class*=" bi-"] {
 #break-type-popover .menu button {
     @apply w-full flex justify-start;
 }
+
+.ProseMirror > * {
+    content-visibility: auto;
+    contain-intrinsic-size: auto;
+}

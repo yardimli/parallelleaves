@@ -4,11 +4,14 @@ import { addListNodes } from 'prosemirror-schema-list';
 
 let activeEditorView = null;
 
-const highlightMarkSpec = (colorClass) => ({
-	attrs: {},
-	parseDOM: [{ tag: `span.${colorClass}` }],
-	toDOM: () => ['span', { class: colorClass }, 0],
-});
+const highlightMarkSpec = (colorClass) => {
+	console.log(`[PM DEBUG] highlightMarkSpec called for color: ${colorClass}`);
+	return {
+		attrs: {},
+		parseDOM: [{ tag: `span.${colorClass}` }],
+		toDOM: () => ['span', { class: colorClass }, 0],
+	};
+};
 
 const nodes = basicSchema.spec.nodes.update('blockquote', {
 	content: 'paragraph+',
@@ -29,6 +32,7 @@ const noteNodeSpec = {
 	selectable: false,
 	isolating: true, // MODIFIED: Prevents cursor from entering and content from being merged.
 	toDOM(node) {
+		console.log('[PM DEBUG] noteNodeSpec.toDOM called for node:', node);
 		// This is the "serialized" version for saving. The NodeView creates the interactive version.
 		const wrapper = document.createElement('div');
 		// Add the 'note-wrapper' class for parsing and a 'prose' class to prevent nested prose styles.
@@ -41,8 +45,11 @@ const noteNodeSpec = {
 	parseDOM: [{
 		tag: 'div.note-wrapper',
 		getAttrs(dom) {
+			console.log('[PM DEBUG] noteNodeSpec.parseDOM.getAttrs called on DOM element:', dom);
 			const p = dom.querySelector('p');
-			return { text: p ? p.textContent : '' };
+			const attrs = { text: p ? p.textContent : '' };
+			console.log('[PM DEBUG] Parsed attributes:', attrs);
+			return attrs;
 		}
 	}]
 };
@@ -50,6 +57,7 @@ const noteNodeSpec = {
 // Add the note node to the schema spec before the horizontal rule.
 const nodesWithNote = nodes.addBefore('horizontal_rule', 'note', noteNodeSpec);
 
+console.log('[PM DEBUG] Creating ProseMirror Schema...');
 export const schema = new Schema({
 	nodes: addListNodes(nodesWithNote, 'paragraph+', 'block'),
 	marks: {
@@ -93,18 +101,24 @@ export const schema = new Schema({
 		},
 	},
 });
+console.log('[PM DEBUG] Schema created successfully.');
 
 export function setActiveEditor(view) {
+	console.log('[PM DEBUG] setActiveEditor called. New view:', view);
 	activeEditorView = view;
 }
 
 export function getActiveEditor() {
+	console.log('[PM DEBUG] getActiveEditor called.');
 	return activeEditorView;
 }
 
 // A NodeView for our custom 'note' node.
 export class NoteNodeView {
 	constructor(node, view, getPos) {
+		console.log('[PM DEBUG] NoteNodeView.constructor called.');
+		console.log('  - Initial node:', node);
+		console.log('  - Initial position:', getPos());
 		this.node = node;
 		this.view = view;
 		this.getPos = getPos;
@@ -141,18 +155,22 @@ export class NoteNodeView {
 		this.dom.appendChild(controls);
 	}
 	
+	
 	// ProseMirror calls this when the node is selected. We use it to add a visual indicator.
 	selectNode() {
+		console.log(`[PM DEBUG] NoteNodeView.selectNode called for node at pos ${this.getPos()}`);
 		this.dom.classList.add('ProseMirror-selectednode');
 	}
 	
 	// ProseMirror calls this when the node is deselected. We use it to remove the visual indicator.
 	deselectNode() {
+		console.log(`[PM DEBUG] NoteNodeView.deselectNode called for node at pos ${this.getPos()}`);
 		this.dom.classList.remove('ProseMirror-selectednode');
 	}
 	
 	openEditModal(e) {
 		e.preventDefault();
+		console.log('[PM DEBUG] NoteNodeView.openEditModal called.');
 		const noteModal = document.getElementById('note-editor-modal');
 		const form = document.getElementById('note-editor-form');
 		const title = noteModal.querySelector('.js-note-modal-title');
@@ -163,11 +181,15 @@ export class NoteNodeView {
 		title.textContent = 'Edit Note';
 		contentInput.value = this.node.attrs.text;
 		posInput.value = this.getPos();
+		console.log(`  - Setting modal pos to: ${this.getPos()}`);
 		
 		// Find the chapterId from the parent element to populate the modal.
 		const chapterEl = this.dom.closest('.manuscript-chapter-item');
 		if(chapterEl) {
 			chapterIdInput.value = chapterEl.dataset.chapterId;
+			console.log(`  - Found and set chapterId: ${chapterEl.dataset.chapterId}`);
+		} else {
+			console.warn('[PM DEBUG] Could not find parent .manuscript-chapter-item to get chapterId.');
 		}
 		
 		noteModal.showModal();
@@ -175,16 +197,36 @@ export class NoteNodeView {
 	
 	deleteNode(e) {
 		e.preventDefault();
-		const tr = this.view.state.tr.delete(this.getPos(), this.getPos() + this.node.nodeSize);
+		const pos = this.getPos();
+		const nodeSize = this.node.nodeSize;
+		console.log(`[PM DEBUG] NoteNodeView.deleteNode called. Deleting node at pos ${pos} with size ${nodeSize}`);
+		const tr = this.view.state.tr.delete(pos, pos + nodeSize);
 		this.view.dispatch(tr);
 	}
 	
-	stopEvent() { return true; }
+	stopEvent() {
+		console.log('[PM DEBUG] NoteNodeView.stopEvent called, returning true.');
+		return true;
+	}
 	
 	update(node) {
-		if (node.type !== this.node.type) return false;
+		// If the node type has changed, we must re-render.
+		if (node.type !== this.node.type) {
+			return false;
+		}
+		
+		// If the note text is the only thing that can change,
+		// check if it has and update the DOM directly.
+		if (node.attrs.text !== this.node.attrs.text) {
+			const noteTextElement = this.dom.querySelector('.note-text-class'); // Or however you access it
+			if (noteTextElement) {
+				noteTextElement.textContent = node.attrs.text;
+			}
+		}
+		
+		// Update the internal node reference
 		this.node = node;
-		this.contentDOM.textContent = node.attrs.text;
+		// Return true to signal that ProseMirror doesn't need to re-render this node.
 		return true;
 	}
 }

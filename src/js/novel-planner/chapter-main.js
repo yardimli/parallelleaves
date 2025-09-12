@@ -9,19 +9,6 @@ import { baseKeymap } from 'prosemirror-commands';
 import { schema, NoteNodeView, getActiveEditor, setActiveEditor } from './content-editor.js';
 import { updateToolbarState } from './toolbar.js';
 
-// NEW: Throttling utility to limit how often a function can be called.
-const throttle = (func, limit) => {
-	let inThrottle;
-	return function(...args) {
-		const context = this;
-		if (!inThrottle) {
-			func.apply(context, args);
-			inThrottle = true;
-			setTimeout(() => inThrottle = false, limit);
-		}
-	};
-};
-
 // NEW: Debouncing utility to delay function execution until after a pause.
 const debounce = (func, delay) => {
 	let timeout;
@@ -47,9 +34,17 @@ const chapterEditorViews = new Map();
  * @returns {EditorView}
  */
 function createEditorView(mount, initialHtml, isEditable, chapterId, saveField) {
-	// NEW: Create a debounced save function for this specific editor instance.
-	// This improves performance by only serializing content when the user has paused typing.
+	console.log(`[createEditorView] Initializing for chapter ${chapterId}, field: ${saveField}`);
 	const debouncedContentSave = debounce(async (view) => {
+		console.log(`[SAVE] Debounced save triggered for ${saveField}, chapter ${chapterId}...`);
+		if (saveField === 'target_content') {
+			const wordCount = view.state.doc.textContent.trim().split(/\s+/).filter(Boolean).length;
+			const wordCountEl = mount.closest('.manuscript-chapter-item').querySelector('.js-target-word-count');
+			if (wordCountEl) {
+				wordCountEl.textContent = `${wordCount.toLocaleString()} words`;
+			}
+		}
+		
 		const serializer = DOMSerializer.fromSchema(view.state.schema);
 		const fragmentContent = serializer.serializeFragment(view.state.doc.content);
 		const tempDiv = document.createElement('div');
@@ -57,42 +52,37 @@ function createEditorView(mount, initialHtml, isEditable, chapterId, saveField) 
 		const value = tempDiv.innerHTML;
 		try {
 			await window.api.updateChapterField({ chapterId, field: saveField, value });
+			console.log(`[SAVE] Successfully saved ${saveField} for chapter ${chapterId}.`);
 		} catch (error) {
-			console.error(`Error saving ${saveField} for chapter ${chapterId}:`, error);
+			console.error(`[SAVE] Error saving ${saveField} for chapter ${chapterId}:`, error);
 			window.showAlert(`Could not save ${saveField} changes.`);
 		}
 	}, 2000); // 2 second delay
 	
-	// NEW SECTION START: Custom plugin to prevent 'note' nodes from being deleted.
 	const noteProtectionPlugin = new Plugin({
 		// This part improves the user experience for single key presses (Backspace/Delete).
 		props: {
 			handleKeyDown(view, event) {
-				// We only care about Backspace and Delete.
 				if (event.key !== 'Backspace' && event.key !== 'Delete') {
-					return false; // Don't handle the event.
+					return false;
 				}
+				console.log(`[noteProtectionPlugin] Keydown detected: ${event.key}`);
 				
 				const { $from, empty } = view.state.selection;
-				// This logic only applies when the cursor is collapsed (no selection).
 				if (!empty) {
 					return false;
 				}
 				
 				let adjacentNode;
 				if (event.key === 'Backspace') {
-					// Check if the cursor is at the start of a text block.
 					if ($from.parentOffset === 0) {
-						// Look for the node right before this block.
 						const nodeBefore = view.state.doc.resolve($from.pos - 1).nodeBefore;
 						if (nodeBefore && nodeBefore.type.name === 'note') {
 							adjacentNode = nodeBefore;
 						}
 					}
 				} else { // 'Delete'
-					// Check if the cursor is at the end of a text block.
 					if ($from.parentOffset === $from.parent.content.size) {
-						// Look for the node right after this block.
 						const nodeAfter = view.state.doc.nodeAt($from.pos);
 						if (nodeAfter && nodeAfter.type.name === 'note') {
 							adjacentNode = nodeAfter;
@@ -100,51 +90,49 @@ function createEditorView(mount, initialHtml, isEditable, chapterId, saveField) 
 					}
 				}
 				
-				// If we found an adjacent note, handle the event to prevent the deletion.
 				if (adjacentNode) {
+					console.log('[noteProtectionPlugin] Preventing deletion of adjacent note node via keydown.');
 					return true;
 				}
 				
-				return false; // Otherwise, allow the default behavior.
+				return false;
 			},
 		},
 		// This part provides a rock-solid guarantee that no transaction can delete a note.
-		// It acts as a failsafe for selections, pastes, etc.
 		filterTransaction(tr, state) {
-			// If the document isn't changing, we can allow the transaction.
 			if (!tr.docChanged) {
 				return true;
 			}
 			
 			let noteDeleted = false;
-			// Check the old document for any 'note' nodes.
 			state.doc.descendants((node, pos) => {
 				if (node.type.name === 'note') {
-					// See if that node's position was deleted in the transaction.
 					if (tr.mapping.mapResult(pos).deleted) {
 						noteDeleted = true;
 					}
 				}
 			});
 			
-			// If a note was going to be deleted, block the entire transaction.
+			if (noteDeleted) {
+				console.warn('[noteProtectionPlugin] Blocking transaction that would delete a note node.');
+			}
 			return !noteDeleted;
 		},
 	});
-	// NEW SECTION END
 	
 	const editorPlugin = new Plugin({
 		props: {
 			editable: () => isEditable,
 			handleDOMEvents: {
 				focus(view) {
-					// We can now set any focused editor as the active one.
+					console.log(`[EditorEvent] Focus on chapter ${chapterId}, field: ${saveField}`);
 					setActiveEditor(view);
 					updateToolbarState(view);
 					const chapterItem = view.dom.closest('.manuscript-chapter-item');
 					if (chapterItem) {
 						const currentChapterId = chapterItem.dataset.chapterId;
 						if (currentChapterId && currentChapterId !== activeChapterId) {
+							console.log(`[EditorEvent] Active chapter changed to ${currentChapterId} via focus.`);
 							activeChapterId = currentChapterId;
 							document.getElementById('js-chapter-nav-dropdown').value = currentChapterId;
 						}
@@ -152,6 +140,7 @@ function createEditorView(mount, initialHtml, isEditable, chapterId, saveField) 
 				},
 				blur(view, event) {
 					const relatedTarget = event.relatedTarget;
+					console.log(`[EditorEvent] Blur on chapter ${chapterId}. Related target:`, relatedTarget);
 					if (!relatedTarget || (!relatedTarget.closest('#top-toolbar') && !relatedTarget.closest('#note-editor-modal'))) {
 						setActiveEditor(null);
 						updateToolbarState(null);
@@ -163,41 +152,41 @@ function createEditorView(mount, initialHtml, isEditable, chapterId, saveField) 
 	
 	const doc = DOMParser.fromSchema(schema).parse(document.createRange().createContextualFragment(initialHtml || ''));
 	
+	const debouncedToolbarUpdate = debounce((view) => {
+		console.log(`[dispatchTransaction] Debounced: Updating toolbar state for chapter ${chapterId}`);
+		updateToolbarState(view);
+	}, 200); // 200ms delay
+	
 	return new EditorView(mount, {
 		state: EditorState.create({
+			attributes: {
+				spellcheck: 'false',
+			},
 			doc: doc,
 			plugins: [
 				history(),
 				keymap({ 'Mod-z': undo, 'Mod-y': redo }),
 				keymap(baseKeymap),
 				editorPlugin,
-				noteProtectionPlugin, // MODIFIED: Added the note protection plugin.
+				noteProtectionPlugin,
 			],
 		}),
 		nodeViews: {
 			note(node, view, getPos) { return new NoteNodeView(node, view, getPos); }
 		},
 		dispatchTransaction(transaction) {
+			console.log(`[dispatchTransaction] Chapter ${chapterId}, DocChanged: ${transaction.docChanged}, SelectionSet: ${transaction.selectionSet}`);
+
 			const newState = this.state.apply(transaction);
 			this.updateState(newState);
 			
 			if (isEditable && transaction.docChanged) {
-				// MODIFIED: Serialization is removed from here. We just call the debounced function,
-				// passing the view instance. This is much more performant.
 				debouncedContentSave(this);
-				
-				if (saveField === 'target_content') {
-					const wordCount = this.state.doc.textContent.trim().split(/\s+/).filter(Boolean).length;
-					const wordCountEl = mount.closest('.manuscript-chapter-item').querySelector('.js-target-word-count');
-					if (wordCountEl) {
-						wordCountEl.textContent = `${wordCount.toLocaleString()} words`;
-					}
-				}
 			}
 			
 			if (transaction.selectionSet || transaction.docChanged) {
 				if (this.hasFocus()) {
-					updateToolbarState(this);
+					debouncedToolbarUpdate(this);
 				}
 			}
 		},
@@ -210,10 +199,10 @@ function createEditorView(mount, initialHtml, isEditable, chapterId, saveField) 
  * @returns {string} HTML with placeholders replaced by styled divs.
  */
 function processSourceContentForDisplay(sourceHtml) {
+	console.log('[processSourceContent] Processing source HTML for display.');
 	if (!sourceHtml) return '';
 	// This regex finds all instances of {{TranslationBlock-NUMBER}} and replaces them.
 	return sourceHtml.replace(/{{TranslationBlock-(\d+)}}/g, (match, blockNumber) => {
-		// MODIFIED: Added a button to translate the block and data-attribute for identification.
 		const stylingClasses = 'note-wrapper not-prose p-1 my-1 border-l-4 border-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-600 rounded-r-md flex justify-between items-center';
 		return `<div class="${stylingClasses}" data-block-number="${blockNumber}">
                     <p class="m-0 text-sm font-semibold">Translation Block #${blockNumber}</p>
@@ -230,10 +219,13 @@ function processSourceContentForDisplay(sourceHtml) {
  * @param {object} novelData - The full novel data.
  */
 async function renderManuscript(container, novelData) {
+	console.time('renderManuscript');
+	console.log('[renderManuscript] Starting manuscript render...');
 	const fragment = document.createDocumentFragment();
 	const chapterCodexTagTemplate = await window.api.getTemplate('chapter/chapter-codex-tag');
 	
 	for (const section of novelData.sections) {
+		console.log(`[renderManuscript] Rendering section "${section.title}"`);
 		const sectionHeader = document.createElement('div');
 		sectionHeader.className = 'px-8 py-6 sticky top-0 bg-base-100/90 backdrop-blur-sm z-10 border-b border-base-300';
 		sectionHeader.innerHTML = `<h2 class="text-3xl font-bold text-indigo-500">${section.section_order}. ${section.title}</h2>`;
@@ -248,6 +240,7 @@ async function renderManuscript(container, novelData) {
 		}
 		
 		for (const chapter of section.chapters) {
+			console.log(`[renderManuscript] Processing chapter "${chapter.title}" (ID: ${chapter.id})`);
 			const chapterWrapper = document.createElement('div');
 			chapterWrapper.id = `chapter-scroll-target-${chapter.id}`;
 			chapterWrapper.className = 'manuscript-chapter-item px-8 py-6';
@@ -259,12 +252,12 @@ async function renderManuscript(container, novelData) {
 			titleInput.className = 'text-2xl font-bold w-full bg-transparent border-0 p-0 focus:ring-0 focus:border-b-2 focus:border-indigo-500 mb-4';
 			titleInput.placeholder = 'Chapter Title';
 			
-			// MODIFIED: Create a debounced save function for the title input.
 			const debouncedTitleSave = debounce(async (value) => {
+				console.log(`[SAVE] Debounced title save triggered for chapter ${chapter.id}.`);
 				try {
 					await window.api.updateChapterField({ chapterId: chapter.id, field: 'title', value });
 				} catch (error) {
-					console.error(`Error saving title for chapter ${chapter.id}:`, error);
+					console.error(`[SAVE] Error saving title for chapter ${chapter.id}:`, error);
 					window.showAlert('Could not save title changes.');
 				}
 			}, 1500); // 1.5 second delay for title
@@ -277,7 +270,7 @@ async function renderManuscript(container, novelData) {
 			sourceCol.className = 'col-span-1 prose prose-sm dark:prose-invert max-w-none bg-base-200 p-4 rounded-lg';
 			sourceCol.innerHTML = `<h3 class="!mt-0 text-sm font-semibold uppercase tracking-wider text-base-content/70 border-b pb-1 mb-2">Source (<span class="js-source-word-count">${chapter.source_word_count.toLocaleString()} words</span>)</h3>`;
 			const sourceContentContainer = document.createElement('div');
-			sourceContentContainer.className = 'source-content-readonly'; // Styling is now on the parent `sourceCol`.
+			sourceContentContainer.className = 'source-content-readonly';
 			
 			const processedSourceHtml = processSourceContentForDisplay(chapter.source_content || '');
 			sourceContentContainer.innerHTML = processedSourceHtml;
@@ -287,7 +280,7 @@ async function renderManuscript(container, novelData) {
 			targetCol.className = 'col-span-1 prose prose-sm dark:prose-invert max-w-none p-4';
 			targetCol.innerHTML = `<h3 class="!mt-0 text-sm font-semibold uppercase tracking-wider text-base-content/70 border-b pb-1 mb-2">Target (<span class="js-target-word-count">${chapter.target_word_count.toLocaleString()} words</span>)</h3>`;
 			const targetContentMount = document.createElement('div');
-			targetContentMount.className = 'js-target-content-editable'; // Styling is now on the parent `targetCol`.
+			targetContentMount.className = 'js-target-content-editable';
 			targetCol.appendChild(targetContentMount);
 			
 			const codexTagsHtml = chapter.linked_codex.map(entry =>
@@ -339,6 +332,8 @@ async function renderManuscript(container, novelData) {
 	
 	container.innerHTML = '';
 	container.appendChild(fragment);
+	console.log('[renderManuscript] Finished manuscript render.');
+	console.timeEnd('renderManuscript');
 }
 
 
@@ -346,16 +341,19 @@ async function renderManuscript(container, novelData) {
  * Sets up the intersection observer to track the active chapter during scrolling.
  */
 function setupIntersectionObserver() {
+	console.log('[setupIntersectionObserver] Setting up...');
 	const container = document.getElementById('js-manuscript-container');
 	const navDropdown = document.getElementById('js-chapter-nav-dropdown');
 	
 	const observer = new IntersectionObserver((entries) => {
 		if (isScrollingProgrammatically) return;
+		console.log('[IntersectionObserver] Fired. Entries count:', entries.length);
 		
 		entries.forEach(entry => {
 			if (entry.isIntersecting) {
 				const chapterId = entry.target.dataset.chapterId;
 				if (chapterId && chapterId !== activeChapterId) {
+					console.log(`[IntersectionObserver] Chapter ${chapterId} is now active.`);
 					activeChapterId = chapterId;
 					navDropdown.value = chapterId;
 				}
@@ -368,6 +366,7 @@ function setupIntersectionObserver() {
 	});
 	
 	container.querySelectorAll('.manuscript-chapter-item').forEach(el => observer.observe(el));
+	console.log('[setupIntersectionObserver] Observer is now watching chapter items.');
 }
 
 /**
@@ -375,6 +374,7 @@ function setupIntersectionObserver() {
  * @param {object} novelData - The full novel data.
  */
 function populateNavDropdown(novelData) {
+	console.log('[populateNavDropdown] Populating chapter navigation dropdown.');
 	const navDropdown = document.getElementById('js-chapter-nav-dropdown');
 	navDropdown.innerHTML = '';
 	
@@ -391,6 +391,7 @@ function populateNavDropdown(novelData) {
 	});
 	
 	navDropdown.addEventListener('change', () => {
+		console.log('[NavDropdown] Change event detected, scrolling to chapter:', navDropdown.value);
 		scrollToChapter(navDropdown.value);
 	});
 }
@@ -400,11 +401,13 @@ function populateNavDropdown(novelData) {
  * @param {string} chapterId - The ID of the chapter to scroll to.
  */
 function scrollToChapter(chapterId) {
+	console.log(`[scrollToChapter] Attempting to scroll to chapter ${chapterId}`);
 	const target = document.getElementById(`chapter-scroll-target-${chapterId}`);
 	const container = document.getElementById('js-manuscript-container');
 	
 	if (target && container) {
 		isScrollingProgrammatically = true;
+		console.log('[scrollToChapter] Starting programmatic scroll.');
 		
 		const containerRect = container.getBoundingClientRect();
 		const targetRect = target.getBoundingClientRect();
@@ -420,7 +423,12 @@ function scrollToChapter(chapterId) {
 		if (chapterId !== activeChapterId) {
 			activeChapterId = chapterId;
 		}
-		setTimeout(() => { isScrollingProgrammatically = false; }, 1000);
+		setTimeout(() => {
+			console.log('[scrollToChapter] Ending programmatic scroll flag.');
+			isScrollingProgrammatically = false;
+		}, 1000); // Increased timeout to ensure smooth scroll completes
+	} else {
+		console.warn(`[scrollToChapter] Could not find target element for chapter ${chapterId}`);
 	}
 }
 
@@ -428,10 +436,12 @@ function scrollToChapter(chapterId) {
  * Sets up the event listener for unlinking codex entries.
  */
 function setupCodexUnlinking() {
+	console.log('[setupCodexUnlinking] Setting up listener...');
 	const container = document.getElementById('js-manuscript-container');
 	container.addEventListener('click', async (event) => {
 		const removeBtn = event.target.closest('.js-remove-codex-link');
 		if (!removeBtn) return;
+		console.log('[CodexUnlink] Remove button clicked.');
 		
 		const tag = removeBtn.closest('.js-codex-tag');
 		const chapterId = removeBtn.dataset.chapterId;
@@ -439,12 +449,14 @@ function setupCodexUnlinking() {
 		const entryTitle = tag.querySelector('.js-codex-tag-title').textContent;
 		
 		if (!confirm(`Are you sure you want to unlink "${entryTitle}" from this chapter?`)) {
+			console.log('[CodexUnlink] Unlink cancelled by user.');
 			return;
 		}
 		
 		try {
 			const data = await window.api.detachCodexFromChapter(chapterId, codexEntryId);
 			if (!data.success) throw new Error(data.message || 'Failed to unlink codex entry.');
+			console.log('[CodexUnlink] Unlink successful.');
 			
 			const tagContainer = tag.parentElement;
 			tag.remove();
@@ -454,8 +466,7 @@ function setupCodexUnlinking() {
 				if (tagsWrapper) tagsWrapper.classList.add('hidden');
 			}
 		} catch (error) {
-			console.error('Error unlinking codex entry:', error);
-			// MODIFIED: Replaced native alert with custom modal.
+			console.error('[CodexUnlink] Error unlinking codex entry:', error);
 			window.showAlert(error.message);
 		}
 	});
@@ -465,19 +476,22 @@ function setupCodexUnlinking() {
  * Sets up the note editor modal for creating and editing notes.
  */
 function setupNoteEditorModal() {
+	console.log('[setupNoteEditorModal] Setting up modal...');
 	const modal = document.getElementById('note-editor-modal');
 	const form = document.getElementById('note-editor-form');
 	const closeBtn = modal.querySelector('.js-close-note-modal');
-	if (!modal || !form || !closeBtn) return;
+	if (!modal || !form || !closeBtn) {
+		console.error('[setupNoteEditorModal] Could not find all required modal elements.');
+		return;
+	}
 	
 	form.addEventListener('submit', (event) => {
 		event.preventDefault();
+		console.log('[NoteEditor] Form submitted.');
 		
 		const view = getActiveEditor();
-		
 		if (!view) {
-			console.error('No active editor view to save note to.');
-			// MODIFIED: Replaced native alert with custom modal.
+			console.error('[NoteEditor] No active editor view to save note to.');
 			window.showAlert('Could not find an active editor to save the note. Please click inside an editor first.', 'Save Error');
 			return;
 		}
@@ -487,7 +501,6 @@ function setupNoteEditorModal() {
 		const noteText = contentInput.value.trim();
 		
 		if (!noteText) {
-			// MODIFIED: Replaced native alert with custom modal.
 			window.showAlert('Note cannot be empty.', 'Validation Error');
 			return;
 		}
@@ -496,8 +509,10 @@ function setupNoteEditorModal() {
 		let tr;
 		
 		if (pos !== null && !isNaN(pos)) {
+			console.log(`[NoteEditor] Updating existing note at position ${pos}.`);
 			tr = view.state.tr.setNodeMarkup(pos, null, { text: noteText });
 		} else {
+			console.log('[NoteEditor] Creating new note.');
 			const { $from } = view.state.selection;
 			const noteNode = schema.nodes.note.create({ text: noteText });
 			tr = view.state.tr.replaceRangeWith($from.start(), $from.end(), noteNode);
@@ -510,84 +525,76 @@ function setupNoteEditorModal() {
 	});
 	
 	closeBtn.addEventListener('click', () => {
+		console.log('[NoteEditor] Modal closed via button.');
 		modal.close();
 		form.reset();
 	});
 }
 
-// NEW SECTION START
 /**
  * Sets up the event listener for the "Translate Block" button in the source panel.
  */
 function setupTranslateBlockAction() {
+	console.log('[setupTranslateBlockAction] Setting up listener...');
 	const container = document.getElementById('js-manuscript-container');
 	container.addEventListener('click', (event) => {
 		const translateBtn = event.target.closest('.js-translate-block-btn');
 		if (!translateBtn) return;
+		console.log('[TranslateBlock] Button clicked.');
 		
 		event.preventDefault();
 		event.stopPropagation();
 		
-		// 1. Get the source container and block number from the clicked button's context.
 		const marker = translateBtn.closest('[data-block-number]');
 		const sourceContainer = marker.closest('.source-content-readonly');
 		const blockNumber = parseInt(marker.dataset.blockNumber, 10);
+		console.log(`[TranslateBlock] Found block number: ${blockNumber}`);
 		
 		if (!sourceContainer || isNaN(blockNumber)) {
-			console.error('Could not find source container or block number for translation.');
+			console.error('[TranslateBlock] Could not find source container or block number for translation.');
 			return;
 		}
 		
-		// 2. Find the DOM nodes that define the start and end of this block's content.
 		const allMarkers = Array.from(sourceContainer.querySelectorAll('[data-block-number]'));
 		const currentMarkerIndex = allMarkers.findIndex(m => parseInt(m.dataset.blockNumber, 10) === blockNumber);
-		
 		if (currentMarkerIndex === -1) return;
 		
 		const startNode = allMarkers[currentMarkerIndex];
 		const endNode = (currentMarkerIndex + 1 < allMarkers.length) ? allMarkers[currentMarkerIndex + 1] : null;
 		
-		// 3. Create a selection range for the text between these two marker nodes.
 		const range = document.createRange();
 		range.setStartAfter(startNode);
 		
 		if (endNode) {
 			range.setEndBefore(endNode);
 		} else {
-			// If it's the last block, select until the end of the container.
 			range.selectNodeContents(sourceContainer);
 			range.setStartAfter(startNode);
 		}
+		console.log('[TranslateBlock] Created text range for selection.');
 		
 		const selection = window.getSelection();
 		selection.removeAllRanges();
 		selection.addRange(range);
 		
-		// 4. Trigger the main translation UI flow by simulating a click on the top toolbar button.
-		// This re-uses the existing logic for opening the prompt editor.
 		const toolbarTranslateBtn = document.querySelector('#top-toolbar .js-ai-action-btn[data-action="translate"]');
 		if (toolbarTranslateBtn) {
-			// The `selectionchange` event is async, so we wait a moment for it to fire and update the toolbar state.
+			console.log('[TranslateBlock] Simulating click on top toolbar translate button.');
 			setTimeout(() => {
 				if (!toolbarTranslateBtn.disabled) {
 					toolbarTranslateBtn.click();
 				} else {
-					console.warn('Translate button was not enabled after block selection, likely because the block is empty.');
+					console.warn('[TranslateBlock] Translate button was disabled after block selection, likely empty block.');
 				}
-			}, 50); // A small delay is usually sufficient.
+			}, 50);
 		}
 	});
 }
-// NEW SECTION END
 
 // Main Initialization
 document.addEventListener('DOMContentLoaded', async () => {
-	// ADDED SECTION START
-	/**
-	 * Displays a custom modal alert to prevent focus issues with native alerts.
-	 * @param {string} message - The message to display.
-	 * @param {string} [title='Error'] - The title for the alert modal.
-	 */
+	console.log('[DOM] DOMContentLoaded event fired. Starting initialization.');
+	
 	window.showAlert = function(message, title = 'Error') {
 		const modal = document.getElementById('alert-modal');
 		if (modal) {
@@ -597,15 +604,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 			if (modalContent) modalContent.textContent = message;
 			modal.showModal();
 		} else {
-			// Fallback for pages without the modal
 			alert(message);
 		}
 	};
-	// ADDED SECTION END
 	
 	const params = new URLSearchParams(window.location.search);
 	const novelId = params.get('novelId');
 	const initialChapterId = params.get('chapterId');
+	console.log(`[Init] Novel ID: ${novelId}, Initial Chapter ID: ${initialChapterId}`);
 	
 	if (!novelId) {
 		document.body.innerHTML = '<p class="text-error p-8">Error: Project ID is missing.</p>';
@@ -615,10 +621,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 	document.body.dataset.novelId = novelId;
 	
 	try {
+		console.log('[Init] Fetching full manuscript data...');
 		const novelData = await window.api.getFullManuscript(novelId);
 		if (!novelData || !novelData.title) {
 			throw new Error('Failed to load project data from the database.');
 		}
+		console.log('[Init] Manuscript data loaded successfully.');
 		
 		document.title = `Translating: ${novelData.title}`;
 		document.getElementById('js-novel-title').textContent = novelData.title;
@@ -631,49 +639,54 @@ document.addEventListener('DOMContentLoaded', async () => {
 				<p class="text-sm mt-2">You can import a document from the dashboard to get started.</p>
 			</div>`;
 			document.getElementById('js-chapter-nav-dropdown').disabled = true;
+			console.log('[Init] No sections found. Displaying empty message.');
 			return;
 		}
 		
 		await renderManuscript(manuscriptContainer, novelData);
 		populateNavDropdown(novelData);
 		
+		console.log('[Init] Setting up UI components...');
 		setupTopToolbar({
 			isChapterEditor: true,
 			getActiveChapterId: () => activeChapterId,
-			getChapterViews: (chapterId) => chapterEditorViews.get(chapterId.toString()), // MODIFIED: ensure chapterId is string
+			getChapterViews: (chapterId) => chapterEditorViews.get(chapterId.toString()),
 		});
 		setupPromptEditor();
 		setupIntersectionObserver();
 		setupCodexUnlinking();
 		setupNoteEditorModal();
 		setupTranslateBlockAction(); // MODIFIED: Added call to setup the new feature.
+		console.log('[Init] UI components setup complete.');
 		
-		// MODIFIED SECTION START: Performance optimization for toolbar updates.
-		// Toolbar updates on selection changes can be frequent and cause lag.
-		// Throttling this event handler improves editor responsiveness significantly.
-		const throttledUpdateToolbar = throttle(() => {
+		const throttledUpdateToolbar = debounce(async (view) => {
+			console.log('[SelectionChange] Debounced event fired. Updating toolbar state.');
 			updateToolbarState(getActiveEditor());
-		}, 150); // Update at most once every 150ms.
+		}, 500);
 		
-		// Use the throttled function for the event listener.
 		document.addEventListener('selectionchange', throttledUpdateToolbar);
-		// MODIFIED SECTION END
+		console.log('[Init] "selectionchange" listener attached.');
 		
 		const chapterToLoad = initialChapterId || novelData.sections[0]?.chapters[0]?.id;
 		if (chapterToLoad) {
+			console.log(`[Init] Initial chapter to load: ${chapterToLoad}`);
 			document.getElementById('js-chapter-nav-dropdown').value = chapterToLoad;
 			setTimeout(() => scrollToChapter(chapterToLoad), 100);
+		} else {
+			console.log('[Init] No specific initial chapter to load.');
 		}
 		
 		document.body.addEventListener('click', (event) => {
 			const openBtn = event.target.closest('.js-open-codex-entry');
 			if (openBtn) {
+				console.log(`[Codex] Opening codex entry: ${openBtn.dataset.entryId}`);
 				window.api.openCodexEditor(openBtn.dataset.entryId);
 			}
 		});
 		
 		if (window.api && typeof window.api.onManuscriptScrollToChapter === 'function') {
 			window.api.onManuscriptScrollToChapter((event, chapterId) => {
+				console.log(`[IPC] Received onManuscriptScrollToChapter event for chapter: ${chapterId}`);
 				if (chapterId) {
 					scrollToChapter(chapterId);
 					const navDropdown = document.getElementById('js-chapter-nav-dropdown');
@@ -682,7 +695,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 					}
 				}
 			});
+			console.log('[Init] IPC listener for scrolling is ready.');
 		}
+		console.log('[Init] All initialization tasks are complete.');
 		
 	} catch (error) {
 		console.error('Failed to load manuscript data:', error);
