@@ -230,54 +230,65 @@ async function handleToolbarAction(button) {
 		
 		const isChapterEditor = toolbarConfig.isChapterEditor;
 		
-		const activeEditor = getActiveEditor();
-		let editorForPrompt = activeEditor;
+		const focusedEditor = getActiveEditor();
+		let editorForPrompt = focusedEditor;
 		let selectedText = '';
 		let wordsBefore = '';
 		let wordsAfter = '';
 		let chapterId = null;
 		
-		// MODIFIED: Logic to handle summarization is now more robust and context-aware.
+		const novelData = await window.api.getOneNovel(novelId);
+		let languageForPrompt;
+		
 		if (action === 'scene-summarization') {
 			if (isChapterEditor) {
-				// We are in the main translation editor.
 				chapterId = toolbarConfig.getActiveChapterId ? toolbarConfig.getActiveChapterId() : null;
 				if (!chapterId) {
 					alert('Could not determine the active chapter.');
 					return;
 				}
 				const views = toolbarConfig.getChapterViews ? toolbarConfig.getChapterViews(chapterId) : null;
-				// Check for the specific views of the translation editor.
-				if (views && views.sourceContentView && views.targetSummaryView) {
-					// Summarize the SOURCE content.
-					selectedText = views.sourceContentView.state.doc.textContent;
-					// The AI will write the result into the TARGET summary editor.
-					editorForPrompt = views.targetSummaryView;
-				} else {
-					alert('Could not find source content and target summary editors for the active chapter.');
+				if (!views) {
+					alert('Could not find editor views for the active chapter.');
 					return;
+				}
+				
+				// MODIFIED: Determine which content to summarize based on the focused editor.
+				if (focusedEditor === views.targetContentView) {
+					// User's cursor is in the target editor.
+					selectedText = views.targetContentView.state.doc.textContent;
+					editorForPrompt = views.targetSummaryView; // Output to target summary
+					languageForPrompt = novelData.target_language || 'English';
+				} else {
+					// Fallback: Cursor is in the source editor, a summary box, or somewhere else.
+					// Default to summarizing the source content.
+					selectedText = views.sourceContentView.state.doc.textContent;
+					editorForPrompt = views.sourceSummaryView; // Output to source summary
+					languageForPrompt = novelData.source_language || 'English';
 				}
 			} else {
 				// We are in a different editor (e.g., Codex). Summarize the active editor's full content.
-				if (activeEditor) {
-					selectedText = activeEditor.state.doc.textContent;
-					editorForPrompt = activeEditor; // The result will replace the current content.
+				if (focusedEditor) {
+					selectedText = focusedEditor.state.doc.textContent;
+					editorForPrompt = focusedEditor; // The result will replace the current content.
 				} else {
 					alert('No active editor to summarize.');
 					return;
 				}
+				languageForPrompt = novelData.target_language || 'English';
 			}
-		} else if (activeEditor) {
+		} else if (focusedEditor) {
 			// For other actions like "Rephrase", use the selected text from the active editor.
-			const {state} = activeEditor;
+			const {state} = focusedEditor;
 			const {from, to, empty} = state.selection;
 			if (!empty) {
 				selectedText = state.doc.textBetween(from, to, ' ');
 			}
+			languageForPrompt = novelData.target_language || 'English';
 		}
 		
-		if (activeEditor) {
-			const {state} = activeEditor;
+		if (focusedEditor) {
+			const {state} = focusedEditor;
 			const {from, to} = state.selection;
 			
 			const textBeforeSelection = state.doc.textBetween(Math.max(0, from - 1500), from);
@@ -286,16 +297,13 @@ async function handleToolbarAction(button) {
 			wordsBefore = textBeforeSelection.trim().split(/\s+/).slice(-200).join(' ');
 			wordsAfter = textAfterSelection.trim().split(/\s+/).slice(0, 200).join(' ');
 			
-			const chapterContainer = activeEditor.dom.closest('[data-chapter-id]');
+			const chapterContainer = focusedEditor.dom.closest('[data-chapter-id]');
 			if (chapterContainer) {
 				chapterId = chapterContainer.dataset.chapterId;
 			} else if (isChapterEditor) {
 				chapterId = toolbarConfig.getActiveChapterId ? toolbarConfig.getActiveChapterId() : null;
 			}
 		}
-		
-		const novelData = await window.api.getOneNovel(novelId);
-		const novelLanguage = novelData.target_language || 'English';
 		
 		const allCodexEntries = await window.api.getAllCodexEntriesForNovel(novelId);
 		let linkedCodexEntryIds = [];
@@ -307,7 +315,7 @@ async function handleToolbarAction(button) {
 			selectedText,
 			allCodexEntries,
 			linkedCodexEntryIds,
-			novelLanguage,
+			languageForPrompt,
 			wordsBefore,
 			wordsAfter,
 			activeEditorView: editorForPrompt,

@@ -178,8 +178,9 @@ async function renderManuscript(container, novelData) {
 			const sourceSummarySection = document.createElement('div');
 			sourceSummarySection.innerHTML = `<h4 class="text-xs uppercase tracking-wider font-bold border-b border-base-300 pb-1 mb-2">Source Summary</h4>`;
 			const sourceSummaryMount = document.createElement('div');
-			// MODIFIED: Removed bg-base-200/50 to show it's editable.
-			sourceSummaryMount.className = 'js-source-summary-editable text-xs p-2 border rounded-md';
+			// MODIFIED: Added relative positioning and a spinner to provide feedback during AI summarization.
+			sourceSummaryMount.className = 'js-source-summary-editable text-xs p-2 border rounded-md relative';
+			sourceSummaryMount.innerHTML = `<div class="js-summary-spinner absolute inset-0 bg-base-100/80 backdrop-blur-sm flex items-center justify-center z-10 hidden"><span class="loading loading-spinner"></span></div>`;
 			sourceSummarySection.appendChild(sourceSummaryMount);
 			
 			const targetSummarySection = document.createElement('div');

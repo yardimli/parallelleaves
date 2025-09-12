@@ -69,16 +69,16 @@ const buildSurroundingTextBlock = (wordsBefore, wordsAfter) => {
 
 // Export this function for use in the main prompt editor module.
 export const buildPromptJson = (formData, context) => {
-	// MODIFIED: Changed novelLanguage to targetLanguage for clarity.
-	const { selectedText, wordCount, allCodexEntries, novelLanguage: targetLanguage, wordsBefore, wordsAfter } = context;
+	// MODIFIED: Use the new `languageForPrompt` context variable.
+	const { selectedText, wordCount, allCodexEntries, languageForPrompt, wordsBefore, wordsAfter } = context;
 	
-	// MODIFIED: System prompt now explicitly uses the target language.
+	// MODIFIED: System prompt now explicitly uses the language passed in the context.
 	const system = `You are an expert prose editor.
 
 Whenever you're given text, rephrase it using the following instructions: <instructions>${formData.instructions || 'Rephrase the given text.'}</instructions>
 
 Imitiate and keep the current writing style, and leave mannerisms, word choice and sentence structure intact.
-You are free to remove redundant lines of speech. Keep the same tense and stylistic choices. Use ${targetLanguage || 'English'} spelling and grammar.
+You are free to remove redundant lines of speech. Keep the same tense and stylistic choices. Use ${languageForPrompt || 'English'} spelling and grammar.
 
 Only return the rephrased text, nothing else.`;
 	

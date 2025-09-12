@@ -56,16 +56,16 @@ const renderCodexList = (container, context, initialState = null) => {
 
 // Export this function for use in the main prompt editor module.
 export const buildPromptJson = (formData, context) => {
-	// MODIFIED: Changed novelLanguage to targetLanguage for clarity.
-	const { selectedText, allCodexEntries, novelLanguage: targetLanguage } = context;
+	// MODIFIED: Use the new `languageForPrompt` context variable.
+	const { selectedText, allCodexEntries, languageForPrompt } = context;
 	
-	// MODIFIED: System prompt now explicitly uses the target language.
+	// MODIFIED: System prompt now explicitly uses the language passed in the context.
 	const system = `You are an expert novel summarizer.
 Whenever you're given text, summarize it into a concise, condensed version.
 
 Keep the following rules in mind:
 - Don't write more than ${formData.words || 100} words.
-- Always write in ${targetLanguage || 'English'} spelling and grammar.
+- Always write in ${languageForPrompt || 'English'} spelling and grammar.
 - Only return the summary in running text, don't abbreviate to bullet points.
 - Don't start with "In this scene..." or "Here is...". Only write the summary itself.
 - Mention characters by name and never by their role (e.g. protagonist, mentor, friend, author).
