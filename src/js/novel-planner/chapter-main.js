@@ -199,8 +199,14 @@ function processSourceContentForDisplay(sourceHtml) {
 	if (!sourceHtml) return '';
 	// This regex finds all instances of {{TranslationBlock-NUMBER}} and replaces them.
 	return sourceHtml.replace(/{{TranslationBlock-(\d+)}}/g, (match, blockNumber) => {
-		const stylingClasses = 'note-wrapper not-prose p-1 my-1 border-l-4 border-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-600 rounded-r-md';
-		return `<div class="${stylingClasses}"><p>translation block #${blockNumber}</p></div>`;
+		// MODIFIED: Added a button to translate the block and data-attribute for identification.
+		const stylingClasses = 'note-wrapper not-prose p-1 my-1 border-l-4 border-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-600 rounded-r-md flex justify-between items-center';
+		return `<div class="${stylingClasses}" data-block-number="${blockNumber}">
+                    <p class="m-0 text-sm font-semibold">Translation Block #${blockNumber}</p>
+                    <button type="button" class="js-translate-block-btn btn btn-xs btn-ghost gap-1" title="Translate this block">
+                        <i class="bi bi-translate"></i> Translate
+                    </button>
+                </div>`;
 	});
 }
 
@@ -485,6 +491,71 @@ function setupNoteEditorModal() {
 	});
 }
 
+// NEW SECTION START
+/**
+ * Sets up the event listener for the "Translate Block" button in the source panel.
+ */
+function setupTranslateBlockAction() {
+	const container = document.getElementById('js-manuscript-container');
+	container.addEventListener('click', (event) => {
+		const translateBtn = event.target.closest('.js-translate-block-btn');
+		if (!translateBtn) return;
+		
+		event.preventDefault();
+		event.stopPropagation();
+		
+		// 1. Get the source container and block number from the clicked button's context.
+		const marker = translateBtn.closest('[data-block-number]');
+		const sourceContainer = marker.closest('.source-content-readonly');
+		const blockNumber = parseInt(marker.dataset.blockNumber, 10);
+		
+		if (!sourceContainer || isNaN(blockNumber)) {
+			console.error('Could not find source container or block number for translation.');
+			return;
+		}
+		
+		// 2. Find the DOM nodes that define the start and end of this block's content.
+		const allMarkers = Array.from(sourceContainer.querySelectorAll('[data-block-number]'));
+		const currentMarkerIndex = allMarkers.findIndex(m => parseInt(m.dataset.blockNumber, 10) === blockNumber);
+		
+		if (currentMarkerIndex === -1) return;
+		
+		const startNode = allMarkers[currentMarkerIndex];
+		const endNode = (currentMarkerIndex + 1 < allMarkers.length) ? allMarkers[currentMarkerIndex + 1] : null;
+		
+		// 3. Create a selection range for the text between these two marker nodes.
+		const range = document.createRange();
+		range.setStartAfter(startNode);
+		
+		if (endNode) {
+			range.setEndBefore(endNode);
+		} else {
+			// If it's the last block, select until the end of the container.
+			range.selectNodeContents(sourceContainer);
+			range.setStartAfter(startNode);
+		}
+		
+		const selection = window.getSelection();
+		selection.removeAllRanges();
+		selection.addRange(range);
+		
+		// 4. Trigger the main translation UI flow by simulating a click on the top toolbar button.
+		// This re-uses the existing logic for opening the prompt editor.
+		const toolbarTranslateBtn = document.querySelector('#top-toolbar .js-ai-action-btn[data-action="translate"]');
+		if (toolbarTranslateBtn) {
+			// The `selectionchange` event is async, so we wait a moment for it to fire and update the toolbar state.
+			setTimeout(() => {
+				if (!toolbarTranslateBtn.disabled) {
+					toolbarTranslateBtn.click();
+				} else {
+					console.warn('Translate button was not enabled after block selection, likely because the block is empty.');
+				}
+			}, 50); // A small delay is usually sufficient.
+		}
+	});
+}
+// NEW SECTION END
+
 // Main Initialization
 document.addEventListener('DOMContentLoaded', async () => {
 	// ADDED SECTION START
@@ -551,6 +622,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 		setupIntersectionObserver();
 		setupCodexUnlinking();
 		setupNoteEditorModal();
+		setupTranslateBlockAction(); // MODIFIED: Added call to setup the new feature.
 		
 		// NEW: Listen for any selection change to update toolbar state for source panel selections.
 		document.addEventListener('selectionchange', () => {

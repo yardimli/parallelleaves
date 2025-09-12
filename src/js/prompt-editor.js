@@ -303,6 +303,33 @@ function startAiStream(params) {
 			// MODIFIED SECTION END
 			
 		} else if (payload.done) {
+			// MODIFIED SECTION START: Clean up empty paragraphs from the AI-generated content.
+			if (activeEditorView) {
+				const { from, to } = aiActionRange;
+				const { tr } = activeEditorView.state;
+				const deletions = [];
+				
+				// First, find all empty paragraphs within the generated range.
+				activeEditorView.state.doc.nodesBetween(from, to, (node, pos) => {
+					// Ensure we are within the action range and dealing with an empty paragraph.
+					if (pos >= from && node.type.name === 'paragraph' && node.content.size === 0) {
+						deletions.push({ from: pos, to: pos + node.nodeSize });
+					}
+				});
+				
+				// Apply deletions backwards to maintain valid positions.
+				if (deletions.length > 0) {
+					for (let i = deletions.length - 1; i >= 0; i--) {
+						tr.delete(deletions[i].from, deletions[i].to);
+					}
+					
+					// Update the end of the action range for the floating toolbar.
+					aiActionRange.to = tr.mapping.map(to);
+					activeEditorView.dispatch(tr);
+				}
+			}
+			// MODIFIED SECTION END
+			
 			createFloatingToolbar(activeEditorView, aiActionRange.from, aiActionRange.to, model);
 			
 		} else if (payload.error) {
