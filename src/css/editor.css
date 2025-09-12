@@ -1,75 +1,9 @@
-/* Custom styles for the novel editor UI */
-.resize-handle {
-    @apply absolute bottom-0 right-0 w-4 h-4 cursor-se-resize;
-    /* A visual indicator can be added via a background image or pseudo-element if desired */
-}
-
-.resize-handle::after {
-    content: '';
-    @apply absolute bottom-1 right-1 w-2 h-2 border-r-2 border-b-2 border-gray-400;
-}
-
-.dark .resize-handle::after {
-    @apply border-gray-500;
-}
-
-.window-minimized {
-    @apply h-10 shadow-lg cursor-pointer;
-}
-
-.dragging {
-    @apply transition-none !important;
-}
-
-.active .window-title-bar {
-    @apply bg-indigo-200 dark:bg-indigo-900/70;
-}
-
-.active .window-title-bar .font-bold {
-    @apply text-black dark:text-white;
-}
-
-.window-inactive-content {
-    @apply pointer-events-none opacity-75;
-}
-
-#desktop.is-dragging .window-inactive-content {
-    @apply pointer-events-auto;
-}
+/* MODIFIED: Removed styles specific to the Novel Planner's windowing system. */
+/* Kept styles for ProseMirror, AI suggestions, toolbar, highlights, scrollbars, and document import. */
 
 i[class^="bi-"], i[class*=" bi-"] {
     display: inline-flex;
     align-items: center;
-}
-
-.selected {
-    @apply ring-2 ring-blue-500;
-}
-
-#desktop {
-    background-image:
-            linear-gradient(to right, theme('colors.gray.200') 1px, transparent 1px),
-            linear-gradient(to bottom, theme('colors.gray.200') 1px, transparent 1px);
-    background-size: 20px 20px;
-    cursor: grab;
-    will-change: transform, top, left;
-}
-
-.dark #desktop {
-    background-image:
-            linear-gradient(to right, theme('colors.gray.800') 1px, transparent 1px),
-            linear-gradient(to bottom, theme('colors.gray.800') 1px, transparent 1px);
-}
-
-#viewport.panning #desktop {
-    cursor: grabbing;
-}
-
-.window-element {
-    cursor: pointer;
-}
-.window-element .ProseMirror {
-    cursor: text;
 }
 
 .ai-suggestion {

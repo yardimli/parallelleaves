@@ -5,15 +5,13 @@
   "main": "electron-main.js",
   "scripts": {
     "build:css": "tailwindcss -i ./src/css/input.css -o ./dist/styles.css",
-    "build:js": "esbuild src/js/novel-planner/planner-main.js --bundle --outfile=dist/editor-bundle.js --platform=browser",
     "build:js:chapter-editor": "esbuild src/js/novel-planner/chapter-main.js --bundle --outfile=dist/chapter-editor-bundle.js --platform=browser",
     "build:js:codex-editor": "esbuild src/js/novel-planner/codex-entry-main.js --bundle --outfile=dist/codex-editor-bundle.js --platform=browser",
-    "build": "npm run build:css && npm run build:js && npm run build:js:chapter-editor && npm run build:js:codex-editor",
+    "build": "npm run build:css && npm run build:js:chapter-editor && npm run build:js:codex-editor",
     "watch:css": "tailwindcss -i ./src/css/input.css -o ./dist/styles.css --watch",
-    "watch:js": "esbuild src/js/novel-planner/planner-main.js --bundle --outfile=dist/editor-bundle.js --platform=browser --watch",
     "watch:js:chapter-editor": "esbuild src/js/novel-planner/chapter-main.js --bundle --outfile=dist/chapter-editor-bundle.js --platform=browser --watch",
     "watch:js:codex-editor": "esbuild src/js/novel-planner/codex-entry-main.js --bundle --outfile=dist/codex-editor-bundle.js --platform=browser --watch",
-    "watch": "concurrently \"npm:watch:css\" \"npm:watch:js\" \"npm:watch:js:chapter-editor\" \"npm:watch:js:codex-editor\"",
+    "watch": "concurrently \"npm:watch:css\" \"npm:watch:js:chapter-editor\" \"npm:watch:js:codex-editor\"",
     "start": "npm run build && electron .",
     "postinstall": "electron-rebuild",
     "rebuild": "electron-rebuild -f -w better-sqlite3"

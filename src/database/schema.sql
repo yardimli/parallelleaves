@@ -5,8 +5,12 @@
 -- ALTER TABLE novels ADD COLUMN prose_tense TEXT DEFAULT 'past';
 -- ALTER TABLE novels ADD COLUMN prose_language TEXT DEFAULT 'English';
 -- ALTER TABLE novels ADD COLUMN prose_pov TEXT DEFAULT 'third_person_limited';
--- ALTER TABLE chapters ADD COLUMN pov TEXT;
--- ALTER TABLE chapters ADD COLUMN pov_character_id INTEGER REFERENCES codex_entries(id) ON DELETE SET NULL;
+-- ALTER TABLE chapters DROP COLUMN pov;
+-- ALTER TABLE chapters DROP COLUMN pov_character_id;
+-- ALTER TABLE novels DROP COLUMN editor_state;
+-- MODIFIED: Add these ALTER statements to remove codex image columns if your database already exists.
+-- ALTER TABLE codex_entries DROP COLUMN image_path;
+-- ALTER TABLE images DROP COLUMN codex_entry_id;
 
 
 CREATE TABLE IF NOT EXISTS users (
@@ -37,7 +41,7 @@ CREATE TABLE IF NOT EXISTS novels (
     synopsis TEXT,
     status TEXT NOT NULL DEFAULT 'draft',
     order_in_series INTEGER,
-    editor_state TEXT, -- Stored as JSON
+    -- MODIFIED: Removed editor_state as it was for the Novel Planner.
     prose_tense TEXT DEFAULT 'past',
     prose_language TEXT DEFAULT 'English',
     prose_pov TEXT DEFAULT 'third_person_limited',
@@ -67,13 +71,11 @@ CREATE TABLE IF NOT EXISTS chapters (
     content TEXT,
     status TEXT,
     chapter_order INTEGER NOT NULL,
-    pov TEXT, -- NEW: Stores the chapter-specific POV override (e.g., 'first_person')
-    pov_character_id INTEGER, -- NEW: Foreign key to the codex_entries table for the POV character
+    -- MODIFIED: Removed chapter-specific POV overrides as the UI for editing them was in the Novel Planner.
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (novel_id) REFERENCES novels(id) ON DELETE CASCADE,
-    FOREIGN KEY (section_id) REFERENCES sections(id) ON DELETE CASCADE,
-    FOREIGN KEY (pov_character_id) REFERENCES codex_entries(id) ON DELETE SET NULL -- NEW: Foreign key constraint
+    FOREIGN KEY (section_id) REFERENCES sections(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS codex_categories (
@@ -92,7 +94,7 @@ CREATE TABLE IF NOT EXISTS codex_entries (
     codex_category_id INTEGER NOT NULL,
     title TEXT NOT NULL,
     content TEXT,
-    image_path TEXT,
+    -- MODIFIED: Removed image_path column.
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (novel_id) REFERENCES novels(id) ON DELETE CASCADE,
@@ -103,7 +105,7 @@ CREATE TABLE IF NOT EXISTS images (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
     novel_id INTEGER,
-    codex_entry_id INTEGER,
+    -- MODIFIED: Removed codex_entry_id and its foreign key. This table is now only for novel covers.
     image_local_path TEXT,
     thumbnail_local_path TEXT,
     remote_url TEXT,
@@ -112,8 +114,7 @@ CREATE TABLE IF NOT EXISTS images (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (novel_id) REFERENCES novels(id) ON DELETE CASCADE,
-    FOREIGN KEY (codex_entry_id) REFERENCES codex_entries(id) ON DELETE CASCADE
+    FOREIGN KEY (novel_id) REFERENCES novels(id) ON DELETE CASCADE
 );
 
 -- Pivot table for Chapter <-> CodexEntry

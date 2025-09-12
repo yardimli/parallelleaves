@@ -13,11 +13,11 @@ const imageHandler = require('./src/utils/image-handler.js');
 
 let db;
 let mainWindow;
-let editorWindows = new Map();
+// MODIFIED: Removed editorWindows map as the Novel Planner is gone.
 let chapterEditorWindows = new Map();
 let outlineWindows = new Map();
 let codexEditorWindows = new Map();
-let importWindow = null; // NEW: To hold the import window instance
+let importWindow = null;
 
 // --- Template and HTML Helper Functions ---
 
@@ -137,86 +137,10 @@ function createMainWindow() {
 	
 }
 
-/**
- * Creates a new novel editor window for a given novel.
- * @param {number} novelId - The ID of the novel to load.
- */
-function createEditorWindow(novelId) {
-	if (editorWindows.has(novelId)) {
-		const existingWin = editorWindows.get(novelId);
-		if (existingWin) {
-			existingWin.focus();
-			return;
-		}
-	}
-	
-	const editorWindow = new BrowserWindow({
-		width: 1600,
-		height: 900,
-		icon: path.join(__dirname, 'assets/icon.png'),
-		title: 'Parallel Leaves - Editor',
-		autoHideMenuBar: true,
-		webPreferences: {
-			preload: path.join(__dirname, 'preload.js'),
-			contextIsolation: true,
-			nodeIntegration: false
-		}
-	});
-	
-	editorWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
-		callback({
-			responseHeaders: {
-				...details.responseHeaders,
-				'Content-Security-Policy': ["default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' file: data: https:;"]
-			}
-		});
-	});
-	
-	editorWindow.loadFile('public/novel-planner.html', {query: {novelId: novelId}});
-	editorWindows.set(novelId, editorWindow);
-	
-	editorWindow.webContents.on('context-menu', (event, params) => {
-		const menu = new Menu();
-		
-		for (const suggestion of params.dictionarySuggestions) {
-			menu.append(new MenuItem({
-				label: suggestion,
-				click: () => editorWindow.webContents.replaceMisspelling(suggestion)
-			}));
-		}
-		
-		if (params.misspelledWord) {
-			menu.append(
-				new MenuItem({
-					label: 'Add to dictionary',
-					click: () => editorWindow.webContents.session.addWordToSpellCheckerDictionary(params.misspelledWord)
-				})
-			);
-		}
-		
-		if (params.isEditable) {
-			if (menu.items.length > 0) {
-				menu.append(new MenuItem({type: 'separator'}));
-			}
-			
-			menu.append(new MenuItem({label: 'Cut', role: 'cut', enabled: params.selectionText}));
-			menu.append(new MenuItem({label: 'Copy', role: 'copy', enabled: params.selectionText}));
-			menu.append(new MenuItem({label: 'Paste', role: 'paste'}));
-			menu.append(new MenuItem({type: 'separator'}));
-			menu.append(new MenuItem({label: 'Select All', role: 'selectAll'}));
-		}
-		
-		menu.popup();
-	});
-	
-	
-	editorWindow.on('closed', () => {
-		editorWindows.delete(novelId);
-	});
-	
-	// editorWindow.webContents.openDevTools();
-	
-}
+
+// MODIFIED: This function has been removed as it was for the Novel Planner.
+// function createEditorWindow(novelId) { ... }
+
 
 /**
  * Creates a new dedicated chapter editor window.
@@ -471,6 +395,7 @@ function setupIpcHandlers() {
 	});
 	
 	ipcMain.handle('novels:getOne', (event, novelId) => {
+		// MODIFIED: Removed editor_state from the query.
 		const novel = db.prepare('SELECT * FROM novels WHERE id = ?').get(novelId);
 		if (!novel) return null;
 		
@@ -486,22 +411,12 @@ function setupIpcHandlers() {
         `).all(novelId);
 		
 		novel.codexCategories.forEach(category => {
+			// MODIFIED: Removed join to images table.
 			category.entries = db.prepare(`
-                SELECT ce.*, i.thumbnail_local_path
-                FROM codex_entries ce
-                LEFT JOIN images i ON i.codex_entry_id = ce.id
-                WHERE ce.codex_category_id = ? ORDER BY ce.title
+                SELECT * FROM codex_entries WHERE codex_category_id = ? ORDER BY title
             `).all(category.id);
 		});
 		
-		if (novel.editor_state) {
-			try {
-				novel.editor_state = JSON.parse(novel.editor_state);
-			} catch (e) {
-				console.error('Failed to parse editor state for novel:', novelId);
-				novel.editor_state = null;
-			}
-		}
 		return novel;
 	});
 	
@@ -520,7 +435,8 @@ function setupIpcHandlers() {
 		// 1. Get Outline Structure
 		const sections = db.prepare('SELECT * FROM sections WHERE novel_id = ? ORDER BY section_order').all(novelId);
 		sections.forEach(section => {
-			section.chapters = db.prepare('SELECT id, title, summary, content, pov, pov_character_id, chapter_order FROM chapters WHERE section_id = ? ORDER BY chapter_order').all(section.id);
+			// MODIFIED: Simplified query as chapter-level POV is removed.
+			section.chapters = db.prepare('SELECT id, title, summary, content, chapter_order FROM chapters WHERE section_id = ? ORDER BY chapter_order').all(section.id);
 			
 			let sectionTotalWords = 0;
 			
@@ -528,20 +444,18 @@ function setupIpcHandlers() {
 				chapter.word_count = countWordsInHtml(chapter.content);
 				sectionTotalWords += chapter.word_count;
 				
-				// Get POV info
-				const povType = chapter.pov || novel.prose_pov;
-				const povCharacter = chapter.pov_character_id ? db.prepare('SELECT title FROM codex_entries WHERE id = ?').get(chapter.pov_character_id) : null;
+				// MODIFIED: Simplified POV info to always use the novel's default.
+				const povType = novel.prose_pov;
 				chapter.pov_display = {
 					type: povDisplayMap[povType] || 'Not Set',
-					character_name: povCharacter ? povCharacter.title : null
+					character_name: null // Character override is removed.
 				};
 				
-				// Get linked codex entries
+				// MODIFIED: Simplified query to remove join to images table.
 				chapter.linked_codex = db.prepare(`
-                SELECT ce.id, ce.title, i.thumbnail_local_path
+                SELECT ce.id, ce.title
                 FROM codex_entries ce
                 JOIN chapter_codex_entry cce ON ce.id = cce.codex_entry_id
-                LEFT JOIN images i ON ce.id = i.codex_entry_id
                 WHERE cce.chapter_id = ?
                 ORDER BY ce.title
             `).all(chapter.id);
@@ -558,11 +472,11 @@ function setupIpcHandlers() {
     `).all(novelId);
 		
 		codexCategories.forEach(category => {
+			// MODIFIED: Simplified query to remove join to images table.
 			category.entries = db.prepare(`
-            SELECT ce.id, ce.title, ce.content, i.thumbnail_local_path
-            FROM codex_entries ce
-            LEFT JOIN images i ON i.codex_entry_id = ce.id
-            WHERE ce.codex_category_id = ? ORDER BY ce.title
+            SELECT id, title, content
+            FROM codex_entries
+            WHERE codex_category_id = ? ORDER BY title
         `).all(category.id);
 		});
 		
@@ -583,11 +497,11 @@ function setupIpcHandlers() {
 			section.chapters.forEach(chapter => {
 				chapter.word_count = countWordsInHtml(chapter.content);
 				
+				// MODIFIED: Simplified query to remove join to images table.
 				chapter.linked_codex = db.prepare(`
-                    SELECT ce.id, ce.title, i.thumbnail_local_path
+                    SELECT ce.id, ce.title
                     FROM codex_entries ce
                     JOIN chapter_codex_entry cce ON ce.id = cce.codex_entry_id
-                    LEFT JOIN images i ON ce.id = i.codex_entry_id
                     WHERE cce.chapter_id = ? ORDER BY ce.title
                 `).all(chapter.id);
 			});
@@ -682,6 +596,7 @@ function setupIpcHandlers() {
 	ipcMain.handle('novels:delete', (event, novelId) => {
 		const deleteTransaction = db.transaction(() => {
 			// 1. Find all image files associated with the novel to delete them from disk.
+			// MODIFIED: This now only targets novel cover images, as codex_entry_id is removed from the images table.
 			const imagesToDelete = db.prepare('SELECT image_local_path, thumbnail_local_path FROM images WHERE novel_id = ?').all(novelId);
 			
 			for (const image of imagesToDelete) {
@@ -709,8 +624,9 @@ function setupIpcHandlers() {
 		}
 	});
 	
+	// MODIFIED: This now opens the main manuscript editor instead of the planner.
 	ipcMain.on('novels:openEditor', (event, novelId) => {
-		createEditorWindow(novelId);
+		createChapterEditorWindow({ novelId, chapterId: null });
 	});
 	
 	ipcMain.on('novels:openOutline', (event, novelId) => {
@@ -802,162 +718,17 @@ function setupIpcHandlers() {
 		}
 	});
 	
-	ipcMain.handle('chapters:getOneHtml', (event, chapterId) => {
-		const chapter = db.prepare(`
-			SELECT
-				c.*,
-				s.title as section_title,
-				s.section_order as section_order,
-				n.prose_pov as novel_default_pov,
-				pov_char.title as pov_character_name
-			FROM
-				chapters c
-			LEFT JOIN
-				sections s ON c.section_id = s.id
-			LEFT JOIN
-				novels n ON c.novel_id = n.id
-			LEFT JOIN
-				codex_entries pov_char ON c.pov_character_id = pov_char.id
-			WHERE
-				c.id = ?
-		`).get(chapterId);
-		
-		if (!chapter) throw new Error('Chapter not found');
-		
-		chapter.codexEntries = db.prepare(`
-        SELECT ce.*, i.thumbnail_local_path
-        FROM codex_entries ce
-        JOIN chapter_codex_entry cce ON ce.id = cce.codex_entry_id
-        LEFT JOIN images i ON ce.id = i.codex_entry_id
-        WHERE cce.chapter_id = ?
-        ORDER BY ce.title
-    `).all(chapterId);
-
-		const chapterCodexTagTemplate = getTemplate('chapter/chapter-codex-tag');
-		
-		const codexTagsHtml = chapter.codexEntries.map(entry => {
-			return chapterCodexTagTemplate
-				.replace(/{{ENTRY_ID}}/g, entry.id)
-				.replace(/{{ENTRY_TITLE}}/g, escapeAttr(entry.title))
-				.replace(/{{CHAPTER_ID}}/g, chapter.id);
-		}).join('');
-		
-		const sectionInfoHtml = chapter.section_order ? `<h3 class="text-sm font-semibold uppercase tracking-wider text-indigo-500 dark:text-indigo-400">${chapter.section_order}. ${escapeAttr(chapter.section_title)} &ndash; Chapter ${chapter.chapter_order}</h3>` : '';
-		
-		// Prepare POV display data.
-		const povDisplayMap = {
-			'first_person': '1st Person',
-			'second_person': '2nd Person',
-			'third_person': '3rd Person',
-			'third_person_limited': '3rd Person (Limited)',
-			'third_person_omniscient': '3rd Person (Omniscient)',
-		};
-		
-		const povType = chapter.pov || chapter.novel_default_pov;
-		const povTypeDisplay = povDisplayMap[povType] || 'Not Set';
-		const povCharacterHtml = chapter.pov_character_name ? ` &ndash; <span class="italic">${escapeAttr(chapter.pov_character_name)}</span>` : '';
-		const povSourceText = chapter.pov ? 'This chapter has a custom POV.' : ""; // "Using novel's default POV setting.";
-		
-		const povDisplayTemplate = getTemplate('chapter/chapter-pov-display');
-		const povSettingsHtml = povDisplayTemplate
-			.replace('{{POV_TYPE_DISPLAY}}', povTypeDisplay)
-			.replace('{{POV_CHARACTER_HTML}}', povCharacterHtml)
-			.replace('{{POV_SOURCE_TEXT}}', povSourceText)
-			.replace('{{CHAPTER_ID}}', chapter.id);
-		
-		let template = getTemplate('chapter/chapter-window');
-		template = template.replace('{{CHAPTER_ID}}', chapter.id);
-		template = template.replace('{{SECTION_INFO_HTML}}', sectionInfoHtml);
-		template = template.replace('{{CHAPTER_TITLE_ATTR}}', escapeAttr(chapter.title));
-		template = template.replace('{{CHAPTER_SUMMARY_HTML}}', chapter.summary || '');
-		template = template.replace('{{TAGS_WRAPPER_HIDDEN}}', chapter.codexEntries.length === 0 ? 'hidden' : '');
-		template = template.replace('{{CODEX_TAGS_HTML}}', codexTagsHtml);
-		template = template.replace('{{POV_SETTINGS_HTML}}', povSettingsHtml);
-		
-		return template;
-	});
 	
-	ipcMain.handle('chapters:updateContent', (event, chapterId, data) => {
-		try {
-			// The SQL query no longer updates the 'content' field.
-			db.prepare('UPDATE chapters SET title = ?, summary = ? WHERE id = ?')
-				.run(data.title, data.summary, chapterId);
-			return {success: true, message: 'Chapter content updated.'};
-		} catch (error) {
-			console.error(`Failed to update chapter ${chapterId}:`, error);
-			return {success: false, message: 'Failed to save chapter content.'};
-		}
-	});
+	// MODIFIED: This handler has been removed as it was only for the Planner's chapter windows.
+	// ipcMain.handle('chapters:getOneHtml', ...);
 	
-	ipcMain.handle('chapters:getPovData', (event, chapterId) => {
-		const chapter = db.prepare('SELECT novel_id, pov, pov_character_id FROM chapters WHERE id = ?').get(chapterId);
-		if (!chapter) throw new Error('Chapter not found.');
-		
-		const novel = db.prepare('SELECT prose_pov FROM novels WHERE id = ?').get(chapter.novel_id);
-		
-		// Find the 'Characters' category ID, case-insensitively.
-		const charactersCategory = db.prepare(`
-            SELECT id FROM codex_categories
-            WHERE novel_id = ? AND lower(name) = 'characters'
-        `).get(chapter.novel_id);
-		
-		let characters = [];
-		if (charactersCategory) {
-			characters = db.prepare(`
-                SELECT id, title FROM codex_entries
-                WHERE codex_category_id = ? ORDER BY title
-            `).all(charactersCategory.id);
-		}
-		
-		return {
-			currentPov: chapter.pov || novel.prose_pov,
-			currentCharacterId: chapter.pov_character_id,
-			isOverride: !!chapter.pov,
-			characters: characters
-		};
-	});
+	// MODIFIED: This handler has been removed as it was only for the Planner's chapter windows.
+	// ipcMain.handle('chapters:updateContent', ...);
 	
-	ipcMain.handle('chapters:updatePov', (event, {chapterId, pov, pov_character_id}) => {
-		try {
-			db.prepare('UPDATE chapters SET pov = ?, pov_character_id = ? WHERE id = ?')
-				.run(pov, pov_character_id || null, chapterId);
-			
-			// Fetch the updated display info to send back to the renderer for UI updates.
-			const updatedChapter = db.prepare(`
-                SELECT c.pov, pov_char.title as pov_character_name, n.prose_pov as novel_default_pov
-                FROM chapters c
-                LEFT JOIN novels n ON c.novel_id = n.id
-                LEFT JOIN codex_entries pov_char ON c.pov_character_id = pov_char.id
-                WHERE c.id = ?
-            `).get(chapterId);
-			
-			return {success: true, updatedChapter};
-		} catch (error) {
-			console.error('Failed to update chapter POV:', error);
-			return {success: false, message: error.message};
-		}
-	});
-	
-	ipcMain.handle('chapters:deletePovOverride', (event, chapterId) => {
-		try {
-			db.prepare('UPDATE chapters SET pov = NULL, pov_character_id = NULL WHERE id = ?')
-				.run(chapterId);
-			
-			// Fetch the updated display info to send back.
-			const updatedChapter = db.prepare(`
-                SELECT c.pov, pov_char.title as pov_character_name, n.prose_pov as novel_default_pov
-                FROM chapters c
-                LEFT JOIN novels n ON c.novel_id = n.id
-                LEFT JOIN codex_entries pov_char ON c.pov_character_id = pov_char.id
-                WHERE c.id = ?
-            `).get(chapterId);
-			
-			return {success: true, updatedChapter};
-		} catch (error) {
-			console.error('Failed to delete chapter POV override:', error);
-			return {success: false, message: error.message};
-		}
-	});
+	// MODIFIED: All chapter-specific POV handlers have been removed.
+	// ipcMain.handle('chapters:getPovData', ...);
+	// ipcMain.handle('chapters:updatePov', ...);
+	// ipcMain.handle('chapters:deletePovOverride', ...);
 	
 	ipcMain.handle('chapters:getLinkedCodexIds', (event, chapterId) => {
 		try {
@@ -995,54 +766,11 @@ function setupIpcHandlers() {
 		return getTemplate(templateName);
 	});
 	
-	ipcMain.handle('editor:saveState', (event, novelId, state) => {
-		try {
-			const jsonState = JSON.stringify(state);
-			db.prepare('UPDATE novels SET editor_state = ? WHERE id = ?').run(jsonState, novelId);
-			return {success: true};
-		} catch (error) {
-			console.error('Failed to save editor state:', error);
-			throw error;
-		}
-	});
+	// MODIFIED: This handler has been removed as it was for the Novel Planner's state.
+	// ipcMain.handle('editor:saveState', ...);
 	
-	ipcMain.handle('codex-entries:getOneHtml', (event, entryId) => {
-		const codexEntry = db.prepare('SELECT * FROM codex_entries WHERE id = ?').get(entryId);
-		if (!codexEntry) throw new Error('Codex Entry not found');
-		
-		const image = db.prepare('SELECT * FROM images WHERE codex_entry_id = ?').get(entryId);
-		codexEntry.image_url = image
-			? `file://${path.join(imageHandler.IMAGES_DIR, image.image_local_path)}`
-			: './assets/codex-placeholder.png';
-		
-		codexEntry.linkedEntries = db.prepare(`
-            SELECT ce.*, i.thumbnail_local_path
-            FROM codex_entries ce
-            JOIN codex_entry_links cel ON ce.id = cel.linked_codex_entry_id
-            LEFT JOIN images i ON ce.id = i.codex_entry_id
-            WHERE cel.codex_entry_id = ?
-            ORDER BY ce.title
-        `).all(entryId);
-		
-		const codexLinkTagTemplate = getTemplate('planner/codex-link-tag');
-		
-		const linkedTagsHtml = codexEntry.linkedEntries.map(entry => {
-			return codexLinkTagTemplate
-				.replace(/{{ENTRY_ID}}/g, entry.id)
-				.replace(/{{ENTRY_TITLE}}/g, escapeAttr(entry.title))
-				.replace(/{{PARENT_ENTRY_ID}}/g, codexEntry.id);
-		}).join('');
-		
-		let template = getTemplate('planner/codex-entry-window');
-		template = template.replace(/{{ENTRY_ID}}/g, codexEntry.id);
-		template = template.replace(/{{ENTRY_TITLE_ATTR}}/g, escapeAttr(codexEntry.title));
-		template = template.replace('{{IMAGE_URL}}', escapeAttr(codexEntry.image_url));
-		template = template.replace('{{CONTENT_HTML}}', codexEntry.content || '');
-		template = template.replace('{{LINKED_TAGS_WRAPPER_HIDDEN}}', codexEntry.linkedEntries.length === 0 ? 'hidden' : '');
-		template = template.replace('{{LINKED_TAGS_HTML}}', linkedTagsHtml);
-		
-		return template;
-	});
+	// MODIFIED: This handler has been removed as it was for the Planner's codex windows.
+	// ipcMain.handle('codex-entries:getOneHtml', ...);
 	
 	ipcMain.handle('codex:getAllForNovel', (event, novelId) => {
 		try {
@@ -1066,22 +794,8 @@ function setupIpcHandlers() {
 		}
 	});
 	
-	ipcMain.handle('chapters:codex:attach', (event, chapterId, codexEntryId) => {
-		db.prepare('INSERT OR IGNORE INTO chapter_codex_entry (chapter_id, codex_entry_id) VALUES (?, ?)')
-			.run(chapterId, codexEntryId);
-		
-		const codexEntry = db.prepare('SELECT ce.*, i.thumbnail_local_path FROM codex_entries ce LEFT JOIN images i ON ce.id = i.codex_entry_id WHERE ce.id = ?')
-			.get(codexEntryId);
-		
-		return {
-			success: true,
-			message: 'Codex entry linked successfully.',
-			codexEntry: {
-				id: codexEntry.id,
-				title: codexEntry.title,
-			}
-		};
-	});
+	// MODIFIED: Removed attachCodexToChapter as the UI for it was in the planner.
+	// The manuscript editor currently only supports unlinking.
 	
 	ipcMain.handle('chapters:codex:detach', (event, chapterId, codexEntryId) => {
 		db.prepare('DELETE FROM chapter_codex_entry WHERE chapter_id = ? AND codex_entry_id = ?')
@@ -1126,7 +840,8 @@ function setupIpcHandlers() {
 	});
 	
 	ipcMain.handle('codex-entries:store', async (event, novelId, formData) => {
-		const { title, content, codex_category_id, new_category_name, imagePath } = formData;
+		// MODIFIED: Removed imagePath from destructuring.
+		const { title, content, codex_category_id, new_category_name } = formData;
 		const userId = 1;
 		let categoryId = codex_category_id;
 		let newCategoryData = null;
@@ -1148,13 +863,10 @@ function setupIpcHandlers() {
 			
 			runSyncTransaction();
 			
-			if (imagePath) {
-				const paths = await imageHandler.storeImageFromPath(imagePath, novelId, entryId, 'codex-image-upload');
-				db.prepare('INSERT INTO images (user_id, novel_id, codex_entry_id, image_local_path, thumbnail_local_path, image_type) VALUES (?, ?, ?, ?, ?, ?)')
-					.run(userId, novelId, entryId, paths.original_path, paths.thumbnail_path, 'upload');
-			}
+			// MODIFIED: Removed the entire block that handled saving an image file.
 			
-			const newEntry = db.prepare('SELECT ce.*, i.thumbnail_local_path FROM codex_entries ce LEFT JOIN images i ON ce.id = i.codex_entry_id WHERE ce.id = ?')
+			// MODIFIED: Simplified query to not join the images table.
+			const newEntry = db.prepare('SELECT * FROM codex_entries WHERE id = ?')
 				.get(entryId);
 			
 			return {
@@ -1179,28 +891,12 @@ function setupIpcHandlers() {
 		return {success: true, message: 'Codex entry updated successfully.'};
 	});
 	
-	ipcMain.handle('codex-entries:link:attach', (event, parentEntryId, linkedEntryId) => {
-		db.prepare('INSERT OR IGNORE INTO codex_entry_links (codex_entry_id, linked_codex_entry_id) VALUES (?, ?)')
-			.run(parentEntryId, linkedEntryId);
-		
-		const linkedEntry = db.prepare('SELECT ce.*, i.thumbnail_local_path FROM codex_entries ce LEFT JOIN images i ON ce.id = i.codex_entry_id WHERE ce.id = ?')
-			.get(linkedEntryId);
-		
-		return {
-			success: true,
-			message: 'Codex entry linked successfully.',
-			codexEntry: {
-				id: linkedEntry.id,
-				title: linkedEntry.title,
-			}
-		};
-	});
+	// MODIFIED: Handlers for linking codex entries to each other have been removed as the UI was in the planner.
+	// ipcMain.handle('codex-entries:link:attach', ...);
+	// ipcMain.handle('codex-entries:link:detach', ...);
 	
-	ipcMain.handle('codex-entries:link:detach', (event, parentEntryId, linkedEntryId) => {
-		db.prepare('DELETE FROM codex_entry_links WHERE codex_entry_id = ? AND linked_codex_entry_id = ?')
-			.run(parentEntryId, linkedEntryId);
-		return {success: true, message: 'Codex entry unlinked.'};
-	});
+	// MODIFIED: IPC handlers for codex image generation and uploading ('codex-entries:generateImage', 'codex-entries:uploadImage')
+	// have been removed from this file as the feature is no longer supported.
 	
 	ipcMain.on('codex-entries:process-text-stream', (event, {data, channel}) => {
 		const onChunk = (chunk) => {
@@ -1305,8 +1001,8 @@ function setupIpcHandlers() {
 			if (importWindow) {
 				importWindow.close();
 			}
-			// Optionally, open the editor for the new novel
-			createEditorWindow(novelId);
+			// MODIFIED: Open the manuscript editor for the newly imported novel.
+			createChapterEditorWindow({ novelId, chapterId: null });
 			return { success: true, novelId };
 		} catch (error) {
 			console.error('Failed to import document:', error);
@@ -1323,6 +1019,7 @@ function setupIpcHandlers() {
 	});
 	
 	ipcMain.handle('codex-entries:getOneForEditor', (event, entryId) => {
+		// MODIFIED: Simplified query to remove join to novels table. We only need codex data.
 		const entry = db.prepare(`
 			SELECT
 				ce.title,
@@ -1330,7 +1027,7 @@ function setupIpcHandlers() {
 				ce.novel_id,
 				n.title AS novel_title
 			FROM codex_entries ce
-			LEFT JOIN novels n ON ce.novel_id = n.id
+			JOIN novels n ON ce.novel_id = n.id
 			WHERE ce.id = ?
 		`).get(entryId);
 		
@@ -1338,10 +1035,7 @@ function setupIpcHandlers() {
 			throw new Error('Codex entry not found for editor.');
 		}
 		
-		const image = db.prepare('SELECT image_local_path FROM images WHERE codex_entry_id = ?').get(entryId);
-		entry.image_url = image
-			? `file://${path.join(imageHandler.IMAGES_DIR, image.image_local_path)}`
-			: './assets/codex-placeholder.png';
+		// MODIFIED: Removed logic to fetch and attach an image_url.
 		
 		return entry;
 	});

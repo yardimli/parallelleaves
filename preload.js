@@ -2,13 +2,14 @@ const {contextBridge, ipcRenderer} = require('electron');
 
 contextBridge.exposeInMainWorld('api', {
 	// --- App Level ---
-	openImportWindow: () => ipcRenderer.send('app:open-import-window'), // NEW
+	openImportWindow: () => ipcRenderer.send('app:open-import-window'),
 	
 	// --- Dashboard/Novel Creation ---
 	getNovelsWithCovers: () => ipcRenderer.invoke('novels:getAllWithCovers'),
 	getOneNovel: (novelId) => ipcRenderer.invoke('novels:getOne', novelId),
 	getFullManuscript: (novelId) => ipcRenderer.invoke('novels:getFullManuscript', novelId),
 	createNovel: (data) => ipcRenderer.invoke('novels:store', data),
+	// MODIFIED: This now opens the manuscript editor. The renderer-side code (dashboard.js) doesn't need to change.
 	openEditor: (novelId) => ipcRenderer.send('novels:openEditor', novelId),
 	openOutline: (novelId) => ipcRenderer.send('novels:openOutline', novelId),
 	getOutlineData: (novelId) => ipcRenderer.invoke('novels:getOutlineData', novelId),
@@ -24,38 +25,25 @@ contextBridge.exposeInMainWorld('api', {
 	onCoverUpdated: (callback) => ipcRenderer.on('novels:cover-updated', callback),
 	
 	// --- Document Import ---
-	showOpenDocumentDialog: () => ipcRenderer.invoke('dialog:showOpenDocument'), // NEW
-	readDocumentContent: (filePath) => ipcRenderer.invoke('document:read', filePath), // NEW
-	importDocumentAsNovel: (data) => ipcRenderer.invoke('document:import', data), // NEW
+	showOpenDocumentDialog: () => ipcRenderer.invoke('dialog:showOpenDocument'),
+	readDocumentContent: (filePath) => ipcRenderer.invoke('document:read', filePath),
+	importDocumentAsNovel: (data) => ipcRenderer.invoke('document:import', data),
 	
 	// --- Editor Specific APIs ---
 	
 	getTemplate: (templateName) => ipcRenderer.invoke('templates:get', templateName),
 	
-	// State Management
-	saveEditorState: (novelId, state) => ipcRenderer.invoke('editor:saveState', novelId, state),
-	
-	// Window Content Fetching
-	getChapterHtml: (chapterId) => ipcRenderer.invoke('chapters:getOneHtml', chapterId),
-	getCodexEntryHtml: (entryId) => ipcRenderer.invoke('codex-entries:getOneHtml', entryId),
-	
 	// Chapter <-> Codex Linking
-	attachCodexToChapter: (chapterId, codexEntryId) => ipcRenderer.invoke('chapters:codex:attach', chapterId, codexEntryId),
+	// MODIFIED: Removed attachCodexToChapter as it was only used by the Planner's drag-drop UI.
 	detachCodexFromChapter: (chapterId, codexEntryId) => ipcRenderer.invoke('chapters:codex:detach', chapterId, codexEntryId),
 	
 	openChapterEditor: (data) => ipcRenderer.send('chapters:openEditor', data),
 	onManuscriptScrollToChapter: (callback) => ipcRenderer.on('manuscript:scrollToChapter', callback),
 	
-	updateChapterFull: (chapterId, data) => ipcRenderer.invoke('chapters:updateFull', chapterId, data),
 	updateChapterField: (data) => ipcRenderer.invoke('chapters:updateField', data),
 	
-	updateChapterContent: (chapterId, data) => ipcRenderer.invoke('chapters:updateContent', chapterId, data),
 	createChapter: (novelId, data) => ipcRenderer.invoke('chapters:store', novelId, data),
 	
-	// Chapter POV APIs
-	getPovDataForChapter: (chapterId) => ipcRenderer.invoke('chapters:getPovData', chapterId),
-	updateChapterPov: (data) => ipcRenderer.invoke('chapters:updatePov', data),
-	deleteChapterPovOverride: (chapterId) => ipcRenderer.invoke('chapters:deletePovOverride', chapterId),
 	getLinkedCodexIdsForChapter: (chapterId) => ipcRenderer.invoke('chapters:getLinkedCodexIds', chapterId),
 	
 	// Codex Entry Management
@@ -67,10 +55,6 @@ contextBridge.exposeInMainWorld('api', {
 	updateCodexEntry: (entryId, data) => ipcRenderer.invoke('codex-entries:update', entryId, data),
 	getAllCodexEntriesForNovel: (novelId) => ipcRenderer.invoke('codex:getAllForNovel', novelId),
 	getCategoriesForNovel: (novelId) => ipcRenderer.invoke('codex-categories:getAllForNovel', novelId),
-	
-	// Codex <-> Codex Linking
-	attachCodexToCodex: (parentEntryId, linkedEntryId) => ipcRenderer.invoke('codex-entries:link:attach', parentEntryId, linkedEntryId),
-	detachCodexFromCodex: (parentEntryId, linkedEntryId) => ipcRenderer.invoke('codex-entries:link:detach', parentEntryId, linkedEntryId),
 	
 	// Codex AI & Image Actions
 	processCodexTextStream: (data, onData) => {

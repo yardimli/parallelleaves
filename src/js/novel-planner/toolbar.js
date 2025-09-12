@@ -1,8 +1,8 @@
-import { toggleMark, setBlockType, wrapIn, lift } from 'prosemirror-commands';
-import { history, undo, redo } from 'prosemirror-history';
-import { wrapInList, liftListItem } from 'prosemirror-schema-list';
-import { openPromptEditor } from '../prompt-editor.js';
-import { getActiveEditor } from './content-editor.js';
+import {toggleMark, setBlockType, wrapIn, lift} from 'prosemirror-commands';
+import {history, undo, redo} from 'prosemirror-history';
+import {wrapInList, liftListItem} from 'prosemirror-schema-list';
+import {openPromptEditor} from '../prompt-editor.js';
+import {getActiveEditor} from './content-editor.js';
 
 
 let activeEditorView = null;
@@ -12,7 +12,7 @@ let toolbarConfig = {};
 
 
 function isNodeActive(state, type) {
-	const { $from } = state.selection;
+	const {$from} = state.selection;
 	for (let i = $from.depth; i > 0; i--) {
 		if ($from.node(i).type === type) {
 			return true;
@@ -27,7 +27,7 @@ export function updateToolbarState(view) {
 	
 	const isMarkActive = (state, type) => {
 		if (!type) return false;
-		const { from, $from, to, empty } = state.selection;
+		const {from, $from, to, empty} = state.selection;
 		if (empty) {
 			return !!(state.storedMarks || $from.marks()).some(mark => mark.type === type);
 		}
@@ -35,9 +35,9 @@ export function updateToolbarState(view) {
 	};
 	
 	if (view && view.state) {
-		const { state } = view;
-		const { schema } = state;
-		const { from, to, empty, $from } = state.selection;
+		const {state} = view;
+		const {schema} = state;
+		const {from, to, empty, $from} = state.selection;
 		
 		const isTextSelected = !empty;
 		
@@ -56,24 +56,40 @@ export function updateToolbarState(view) {
 			let commandFn, markType;
 			
 			switch (cmd) {
-				case 'undo': btn.disabled = !undo(state); return;
-				case 'redo': btn.disabled = !redo(state); return;
+				case 'undo':
+					btn.disabled = !undo(state);
+					return;
+				case 'redo':
+					btn.disabled = !redo(state);
+					return;
 				case 'create_codex':
 					btn.disabled = empty;
 					return;
 				// MODIFIED: Corrected the logic to enable the button only when the cursor is in an empty paragraph.
 				case 'add_note': {
-					const { $from } = state.selection;
+					const {$from} = state.selection;
 					// The button should be enabled only if the selection is a cursor (empty)
 					// and its parent node is a paragraph with no content.
 					const isAtEmptyPara = empty && $from.parent.type.name === 'paragraph' && $from.parent.content.size === 0;
 					btn.disabled = !isAtEmptyPara;
 					return;
 				}
-				case 'bold': markType = schema.marks.strong; commandFn = toggleMark(markType); break;
-				case 'italic': markType = schema.marks.em; commandFn = toggleMark(markType); break;
-				case 'underline': markType = schema.marks.underline; commandFn = toggleMark(markType); break;
-				case 'strike': markType = schema.marks.strike; commandFn = toggleMark(markType); break;
+				case 'bold':
+					markType = schema.marks.strong;
+					commandFn = toggleMark(markType);
+					break;
+				case 'italic':
+					markType = schema.marks.em;
+					commandFn = toggleMark(markType);
+					break;
+				case 'underline':
+					markType = schema.marks.underline;
+					commandFn = toggleMark(markType);
+					break;
+				case 'strike':
+					markType = schema.marks.strike;
+					commandFn = toggleMark(markType);
+					break;
 				case 'blockquote':
 					commandFn = isNodeActive(state, schema.nodes.blockquote) ? lift : wrapIn(schema.nodes.blockquote);
 					btn.classList.toggle('active', isNodeActive(state, schema.nodes.blockquote));
@@ -115,7 +131,7 @@ export function updateToolbarState(view) {
 			} else {
 				headingBtn.textContent = 'Paragraph';
 			}
-			headingBtn.disabled = !setBlockType(schema.nodes.paragraph)(state) && !setBlockType(schema.nodes.heading, { level: 1 })(state);
+			headingBtn.disabled = !setBlockType(schema.nodes.paragraph)(state) && !setBlockType(schema.nodes.heading, {level: 1})(state);
 		}
 		
 		if (isTextSelected) {
@@ -127,7 +143,10 @@ export function updateToolbarState(view) {
 		}
 		
 	} else {
-		allBtns.forEach(btn => { btn.disabled = true; btn.classList.remove('active'); });
+		allBtns.forEach(btn => {
+			btn.disabled = true;
+			btn.classList.remove('active');
+		});
 		const headingBtn = toolbar.querySelector('.js-heading-btn');
 		if (headingBtn) headingBtn.textContent = 'Paragraph';
 		wordCountEl.textContent = 'No text selected';
@@ -137,15 +156,23 @@ export function updateToolbarState(view) {
 function applyCommand(command, attrs = {}) {
 	if (!activeEditorView) return;
 	
-	const { state, dispatch } = activeEditorView;
-	const { schema } = state;
+	const {state, dispatch} = activeEditorView;
+	const {schema} = state;
 	let cmd;
 	
 	switch (command) {
-		case 'bold': cmd = toggleMark(schema.marks.strong); break;
-		case 'italic': cmd = toggleMark(schema.marks.em); break;
-		case 'underline': cmd = toggleMark(schema.marks.underline); break;
-		case 'strike': cmd = toggleMark(schema.marks.strike); break;
+		case 'bold':
+			cmd = toggleMark(schema.marks.strong);
+			break;
+		case 'italic':
+			cmd = toggleMark(schema.marks.em);
+			break;
+		case 'underline':
+			cmd = toggleMark(schema.marks.underline);
+			break;
+		case 'strike':
+			cmd = toggleMark(schema.marks.strike);
+			break;
 		case 'blockquote':
 			cmd = isNodeActive(state, schema.nodes.blockquote) ? lift : wrapIn(schema.nodes.blockquote);
 			break;
@@ -159,10 +186,10 @@ function applyCommand(command, attrs = {}) {
 			dispatch(state.tr.replaceSelectionWith(schema.nodes.horizontal_rule.create()));
 			break;
 		case 'heading':
-			const { level } = attrs;
+			const {level} = attrs;
 			cmd = (level === 0)
 				? setBlockType(schema.nodes.paragraph)
-				: setBlockType(schema.nodes.heading, { level });
+				: setBlockType(schema.nodes.heading, {level});
 			break;
 	}
 	
@@ -174,9 +201,9 @@ function applyCommand(command, attrs = {}) {
 function applyHighlight(color) {
 	if (!activeEditorView) return;
 	
-	const { state } = activeEditorView;
-	const { schema } = state;
-	const { from, to } = state.selection;
+	const {state} = activeEditorView;
+	const {schema} = state;
+	const {from, to} = state.selection;
 	let tr = state.tr;
 	
 	Object.keys(schema.marks).forEach(markName => {
@@ -234,14 +261,14 @@ async function handleToolbarAction(button) {
 			
 			const activeContentEditor = getActiveEditor();
 			if (activeContentEditor && !activeContentEditor.state.selection.empty) {
-				const { from, to } = activeContentEditor.state.selection;
+				const {from, to} = activeContentEditor.state.selection;
 				selectedText = activeContentEditor.state.doc.textBetween(from, to, ' ');
 			} else {
 				selectedText = contentView.state.doc.textContent;
 			}
 		} else if (activeEditor) {
-			const { state } = activeEditor;
-			const { from, to, empty } = state.selection;
+			const {state} = activeEditor;
+			const {from, to, empty} = state.selection;
 			
 			if (!empty) {
 				selectedText = state.doc.textBetween(from, to, ' ');
@@ -251,8 +278,8 @@ async function handleToolbarAction(button) {
 		}
 		
 		if (activeEditor) {
-			const { state } = activeEditor;
-			const { from, to } = state.selection;
+			const {state} = activeEditor;
+			const {from, to} = state.selection;
 			
 			const textBeforeSelection = state.doc.textBetween(Math.max(0, from - 1500), from);
 			const textAfterSelection = state.doc.textBetween(to, Math.min(to + 1500, state.doc.content.size));
@@ -272,17 +299,13 @@ async function handleToolbarAction(button) {
 		const novelLanguage = novelData.prose_language || 'English';
 		const novelTense = novelData.prose_tense || 'past';
 		
-		let povData;
-		if (chapterId) {
-			povData = await window.api.getPovDataForChapter(chapterId);
-		} else {
-			povData = {
-				currentPov: novelData.prose_pov,
-				isOverride: false,
-				characters: [],
-				currentCharacterId: null,
-			};
-		}
+		let povData = {
+			currentPov: novelData.prose_pov,
+			isOverride: false,
+			characters: [],
+			currentCharacterId: null,
+		};
+		
 		
 		if (povData && povData.currentPov) {
 			const povDisplayMap = {
@@ -340,14 +363,14 @@ async function handleToolbarAction(button) {
 			redo(activeEditorView.state, activeEditorView.dispatch);
 		} else if (command === 'create_codex') {
 			if (!activeEditorView) return;
-			const { state } = activeEditorView;
+			const {state} = activeEditorView;
 			if (state.selection.empty) return;
 			
 			const selectedText = state.doc.textBetween(state.selection.from, state.selection.to, ' ');
 			const novelId = document.body.dataset.novelId;
 			
 			if (novelId && selectedText) {
-				window.api.openNewCodexEditor({ novelId, selectedText });
+				window.api.openNewCodexEditor({novelId, selectedText});
 			}
 		} else if (command === 'add_note') {
 			if (!activeEditorView) return;
@@ -380,7 +403,7 @@ async function handleToolbarAction(button) {
 		if (document.activeElement) document.activeElement.blur();
 	} else if (button.classList.contains('js-heading-option')) {
 		const level = parseInt(button.dataset.level, 10);
-		applyCommand('heading', { level });
+		applyCommand('heading', {level});
 		if (document.activeElement) document.activeElement.blur();
 	}
 	

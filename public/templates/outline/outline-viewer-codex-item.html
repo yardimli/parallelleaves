@@ -1,16 +1,14 @@
 <div class="card card-compact bg-base-200 shadow" data-entry-id="{{ENTRY_ID}}">
-	<div class="flex items-start gap-4 p-4">
-		<div class="flex-grow min-w-0">
-			<!-- MODIFIED: Wrapped title and added edit button -->
-			<div class="flex justify-between items-start">
-				<h4 class="font-semibold truncate">{{ENTRY_TITLE}}</h4>
-				<button type="button" class="js-edit-codex-entry btn btn-sm btn-ghost" data-entry-id="{{ENTRY_ID}}">
-					<i class="bi bi-pencil-square"></i> Edit
-				</button>
-			</div>
-			<div class="prose prose-sm dark:prose-invert max-w-none mt-1 text-xs text-base-content/80">
-				{{CONTENT_HTML}}
-			</div>
+	<!-- MODIFIED: Simplified layout by removing flex container for image. -->
+	<div class="p-4">
+		<div class="flex justify-between items-start">
+			<h4 class="font-semibold truncate">{{ENTRY_TITLE}}</h4>
+			<button type="button" class="js-edit-codex-entry btn btn-sm btn-ghost" data-entry-id="{{ENTRY_ID}}">
+				<i class="bi bi-pencil-square"></i> Edit
+			</button>
+		</div>
+		<div class="prose prose-sm dark:prose-invert max-w-none mt-1 text-xs text-base-content/80">
+			{{CONTENT_HTML}}
 		</div>
 	</div>
 </div>
