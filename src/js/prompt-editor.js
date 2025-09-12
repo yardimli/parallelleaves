@@ -250,7 +250,8 @@ async function startAiStream(params) {
 			
 		} else if (payload.error) {
 			console.error('AI Action Error:', payload.error);
-			alert(`Error: ${payload.error}`);
+			// MODIFIED: Replaced native alert with custom modal.
+			window.showAlert(payload.error);
 			handleFloatyDiscard();
 		}
 	};
@@ -259,7 +260,8 @@ async function startAiStream(params) {
 		window.api.processCodexTextStream({ prompt, model }, onData);
 	} catch (error) {
 		console.error('AI Action Error:', error);
-		alert(`Error: ${error.message}`);
+		// MODIFIED: Replaced native alert with custom modal.
+		window.showAlert(error.message);
 		handleFloatyDiscard();
 	}
 }
@@ -303,14 +305,16 @@ async function handleModalApply() {
 	const form = modalEl.querySelector('.js-custom-editor-pane form');
 	
 	if (!model || !action || !form) {
-		alert('Could not apply action. Missing model, action, or form.');
+		// MODIFIED: Replaced native alert with custom modal.
+		window.showAlert('Could not apply action. Missing model, action, or form.');
 		return;
 	}
 	
 	const builder = promptBuilders[action];
 	const extractor = formDataExtractors[action];
 	if (!builder || !extractor) {
-		alert(`No prompt builder or form extractor found for action: ${action}`);
+		// MODIFIED: Replaced native alert with custom modal.
+		window.showAlert(`No prompt builder or form extractor found for action: ${action}`);
 		return;
 	}
 	
@@ -318,7 +322,8 @@ async function handleModalApply() {
 	
 	activeEditorView = currentContext.activeEditorView;
 	if (!activeEditorView) {
-		alert('No active editor to apply changes to.');
+		// MODIFIED: Replaced native alert with custom modal.
+		window.showAlert('No active editor to apply changes to.');
 		return;
 	}
 	
@@ -330,7 +335,8 @@ async function handleModalApply() {
 	
 	// Rephrase requires a selection, but translate can simply insert at the cursor.
 	if (action === 'rephrase' && empty) {
-		alert('Please select text to apply this action.');
+		// MODIFIED: Replaced native alert with custom modal.
+		window.showAlert('Please select text to apply this action.', 'Action Required');
 		return;
 	}
 	

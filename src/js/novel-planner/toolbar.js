@@ -238,7 +238,8 @@ async function handleToolbarAction(button) {
 		const action = button.dataset.action;
 		const novelId = document.body.dataset.novelId;
 		if (!novelId) {
-			alert('Error: Could not determine the current project.');
+			// MODIFIED: Replaced native alert with custom modal.
+			window.showAlert('Could not determine the current project.');
 			return;
 		}
 		
@@ -278,7 +279,8 @@ async function handleToolbarAction(button) {
 			
 			// Check if the selection crosses a block boundary.
 			if (startMarker !== endMarker) {
-				alert('Selection cannot span across multiple translation blocks. Please select text within a single block.');
+				// MODIFIED: Replaced native alert with custom modal.
+				window.showAlert('Selection cannot span across multiple translation blocks. Please select text within a single block.', 'Selection Error');
 				return;
 			}
 			
@@ -396,7 +398,8 @@ async function handleToolbarAction(button) {
 			
 			const activeChapterId = toolbarConfig.getActiveChapterId ? toolbarConfig.getActiveChapterId() : null;
 			if (!activeChapterId) {
-				alert('Cannot add a note without an active chapter.');
+				// MODIFIED: Replaced native alert with custom modal.
+				window.showAlert('Cannot add a note without an active chapter.');
 				return;
 			}
 			

@@ -104,7 +104,8 @@ async function setupCreateMode(novelId, selectedText) {
 			}
 		} catch (error) {
 			console.error('Error creating codex entry:', error);
-			alert('Error: ' + error.message);
+			// MODIFIED: Replaced native alert with custom modal.
+			window.showAlert(error.message);
 			setButtonLoadingState(createBtn, false);
 		}
 	});
@@ -139,6 +140,27 @@ async function setupEditMode(entryId) {
 
 // --- Main Initialization ---
 document.addEventListener('DOMContentLoaded', async () => {
+	// ADDED SECTION START
+	/**
+	 * Displays a custom modal alert to prevent focus issues with native alerts.
+	 * @param {string} message - The message to display.
+	 * @param {string} [title='Error'] - The title for the alert modal.
+	 */
+	window.showAlert = function(message, title = 'Error') {
+		const modal = document.getElementById('alert-modal');
+		if (modal) {
+			const modalTitle = modal.querySelector('#alert-modal-title');
+			const modalContent = modal.querySelector('#alert-modal-content');
+			if (modalTitle) modalTitle.textContent = title;
+			if (modalContent) modalContent.textContent = message;
+			modal.showModal();
+		} else {
+			// Fallback for pages without the modal
+			alert(message);
+		}
+	};
+	// ADDED SECTION END
+	
 	const params = new URLSearchParams(window.location.search);
 	const mode = params.get('mode') || 'edit'; // Default to 'edit' for backward compatibility
 	

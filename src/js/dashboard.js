@@ -1,4 +1,25 @@
 document.addEventListener('DOMContentLoaded', () => {
+	// ADDED SECTION START
+	/**
+	 * Displays a custom modal alert to prevent focus issues with native alerts.
+	 * @param {string} message - The message to display.
+	 * @param {string} [title='Error'] - The title for the alert modal.
+	 */
+	window.showAlert = function(message, title = 'Error') {
+		const modal = document.getElementById('alert-modal');
+		if (modal) {
+			const modalTitle = modal.querySelector('#alert-modal-title');
+			const modalContent = modal.querySelector('#alert-modal-content');
+			if (modalTitle) modalTitle.textContent = title;
+			if (modalContent) modalContent.textContent = message;
+			modal.showModal();
+		} else {
+			// Fallback for pages without the modal
+			alert(message);
+		}
+	};
+	// ADDED SECTION END
+	
 	const novelList = document.getElementById('novel-list');
 	const loadingMessage = document.getElementById('loading-message');
 	const importDocBtn = document.getElementById('import-doc-btn');
@@ -185,7 +206,8 @@ document.addEventListener('DOMContentLoaded', () => {
 			metaModal.close();
 		} catch (error) {
 			console.error('Failed to save meta settings:', error);
-			alert('Error saving settings: ' + error.message);
+			// MODIFIED: Replaced native alert with custom modal.
+			window.showAlert('Error saving settings: ' + error.message);
 		}
 	});
 	
@@ -221,7 +243,8 @@ document.addEventListener('DOMContentLoaded', () => {
 				renderNovels();
 			} catch (error) {
 				console.error('Failed to delete project:', error);
-				alert('Error deleting project.');
+				// MODIFIED: Replaced native alert with custom modal.
+				window.showAlert('Error deleting project.');
 			}
 		}
 	});

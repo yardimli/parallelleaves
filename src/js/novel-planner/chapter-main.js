@@ -30,7 +30,8 @@ function triggerDebouncedSave(chapterId, field, value) {
 			await window.api.updateChapterField({ chapterId, field, value });
 		} catch (error) {
 			console.error(`Error saving ${field} for chapter ${chapterId}:`, error);
-			alert(`Error: Could not save ${field} changes.`);
+			// MODIFIED: Replaced native alert with custom modal.
+			window.showAlert(`Could not save ${field} changes.`);
 		}
 		debounceTimers.delete(key);
 	}, 2000);
@@ -348,7 +349,8 @@ function setupCodexUnlinking() {
 			}
 		} catch (error) {
 			console.error('Error unlinking codex entry:', error);
-			alert(error.message);
+			// MODIFIED: Replaced native alert with custom modal.
+			window.showAlert(error.message);
 		}
 	});
 }
@@ -369,7 +371,8 @@ function setupNoteEditorModal() {
 		
 		if (!view) {
 			console.error('No active editor view to save note to.');
-			alert('Error: Could not find an active editor to save the note. Please click inside an editor first.');
+			// MODIFIED: Replaced native alert with custom modal.
+			window.showAlert('Could not find an active editor to save the note. Please click inside an editor first.', 'Save Error');
 			return;
 		}
 		
@@ -378,7 +381,8 @@ function setupNoteEditorModal() {
 		const noteText = contentInput.value.trim();
 		
 		if (!noteText) {
-			alert('Note cannot be empty.');
+			// MODIFIED: Replaced native alert with custom modal.
+			window.showAlert('Note cannot be empty.', 'Validation Error');
 			return;
 		}
 		
@@ -407,6 +411,27 @@ function setupNoteEditorModal() {
 
 // Main Initialization
 document.addEventListener('DOMContentLoaded', async () => {
+	// ADDED SECTION START
+	/**
+	 * Displays a custom modal alert to prevent focus issues with native alerts.
+	 * @param {string} message - The message to display.
+	 * @param {string} [title='Error'] - The title for the alert modal.
+	 */
+	window.showAlert = function(message, title = 'Error') {
+		const modal = document.getElementById('alert-modal');
+		if (modal) {
+			const modalTitle = modal.querySelector('#alert-modal-title');
+			const modalContent = modal.querySelector('#alert-modal-content');
+			if (modalTitle) modalTitle.textContent = title;
+			if (modalContent) modalContent.textContent = message;
+			modal.showModal();
+		} else {
+			// Fallback for pages without the modal
+			alert(message);
+		}
+	};
+	// ADDED SECTION END
+	
 	const params = new URLSearchParams(window.location.search);
 	const novelId = params.get('novelId');
 	const initialChapterId = params.get('chapterId');

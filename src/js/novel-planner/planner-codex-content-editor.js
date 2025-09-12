@@ -48,7 +48,8 @@ async function saveWindowContent(entryId) {
 		if (!response.success) throw new Error(response.message || 'Failed to save codex entry.');
 	} catch (error) {
 		console.error('Error saving codex entry:', error);
-		alert('Error: Could not save changes to codex entry.');
+		// MODIFIED: Replaced native alert with custom modal.
+		window.showAlert('Could not save changes to codex entry.');
 	}
 }
 

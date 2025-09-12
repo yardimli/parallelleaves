@@ -1,4 +1,25 @@
 document.addEventListener('DOMContentLoaded', () => {
+	// ADDED SECTION START
+	/**
+	 * Displays a custom modal alert to prevent focus issues with native alerts.
+	 * @param {string} message - The message to display.
+	 * @param {string} [title='Error'] - The title for the alert modal.
+	 */
+	window.showAlert = function(message, title = 'Error') {
+		const modal = document.getElementById('alert-modal');
+		if (modal) {
+			const modalTitle = modal.querySelector('#alert-modal-title');
+			const modalContent = modal.querySelector('#alert-modal-content');
+			if (modalTitle) modalTitle.textContent = title;
+			if (modalContent) modalContent.textContent = message;
+			modal.showModal();
+		} else {
+			// Fallback for pages without the modal
+			alert(message);
+		}
+	};
+	// ADDED SECTION END
+	
 	const selectFileBtn = document.getElementById('select-file-btn');
 	const startImportBtn = document.getElementById('start-import-btn');
 	const autoDetectBtn = document.getElementById('auto-detect-btn');
@@ -303,7 +324,8 @@ document.addEventListener('DOMContentLoaded', () => {
 	
 	startImportBtn.addEventListener('click', async () => {
 		if (!titleInput.value.trim()) {
-			alert('Please provide a project title.');
+			// MODIFIED: Replaced native alert with custom modal.
+			window.showAlert('Please provide a project title.', 'Information');
 			return;
 		}
 		
@@ -356,7 +378,8 @@ document.addEventListener('DOMContentLoaded', () => {
 		}
 		
 		if (acts.length === 0) {
-			alert('No content to import.');
+			// MODIFIED: Replaced native alert with custom modal.
+			window.showAlert('No content to import.', 'Information');
 			setButtonLoading(startImportBtn, false);
 			return;
 		}
@@ -370,7 +393,8 @@ document.addEventListener('DOMContentLoaded', () => {
 			});
 		} catch (error) {
 			console.error('Import failed:', error);
-			alert(`Error during import: ${error.message}`);
+			// MODIFIED: Replaced native alert with custom modal.
+			window.showAlert(`Error during import: ${error.message}`);
 			setButtonLoading(startImportBtn, false);
 		}
 	});
