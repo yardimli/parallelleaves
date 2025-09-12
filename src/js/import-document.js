@@ -17,7 +17,82 @@ document.addEventListener('DOMContentLoaded', () => {
 	let targetedParagraph = null;
 	
 	const languages = [
-		"English", "Spanish", "French", "German", "Mandarin Chinese", "Hindi", "Arabic", "Bengali", "Russian", "Portuguese", "Indonesian", "Urdu", "Japanese", "Swahili", "Marathi", "Telugu", "Turkish", "Korean", "Tamil", "Vietnamese", "Italian", "Javanese", "Thai", "Gujarati", "Polish", "Ukrainian", "Malayalam", "Kannada", "Oriya", "Burmese", "Norwegian", "Finnish", "Danish", "Swedish", "Dutch", "Greek", "Czech", "Hungarian", "Romanian", "Bulgarian", "Serbian", "Croatian", "Slovak", "Slovenian", "Lithuanian", "Latvian", "Estonian", "Hebrew", "Persian", "Afrikaans", "Zulu", "Xhosa", "Amharic", "Yoruba", "Igbo", "Hausa", "Nepali", "Sinhala", "Khmer", "Lao", "Mongolian", "Pashto", "Tajik", "Uzbek", "Kurdish", "Albanian", "Macedonian", "Bosnian", "Icelandic", "Irish", "Welsh", "Catalan", "Basque", "Galician", "Luxembourgish", "Maltese"
+		"English",
+		"Norwegian",
+		"Turkish",
+		"Afrikaans",
+		"Albanian",
+		"Amharic",
+		"Arabic",
+		"Basque",
+		"Bengali",
+		"Bosnian",
+		"Bulgarian",
+		"Burmese",
+		"Catalan",
+		"Croatian",
+		"Czech",
+		"Danish",
+		"Dutch",
+		"Estonian",
+		"Finnish",
+		"French",
+		"Galician",
+		"German",
+		"Greek",
+		"Gujarati",
+		"Hausa",
+		"Hebrew",
+		"Hindi",
+		"Hungarian",
+		"Icelandic",
+		"Igbo",
+		"Indonesian",
+		"Irish",
+		"Italian",
+		"Japanese",
+		"Javanese",
+		"Kannada",
+		"Khmer",
+		"Korean",
+		"Kurdish",
+		"Lao",
+		"Latvian",
+		"Lithuanian",
+		"Luxembourgish",
+		"Macedonian",
+		"Malayalam",
+		"Maltese",
+		"Mandarin Chinese",
+		"Marathi",
+		"Mongolian",
+		"Nepali",
+		"Oriya",
+		"Pashto",
+		"Persian",
+		"Polish",
+		"Portuguese",
+		"Romanian",
+		"Russian",
+		"Serbian",
+		"Sinhala",
+		"Slovak",
+		"Slovenian",
+		"Spanish",
+		"Swahili",
+		"Swedish",
+		"Tajik",
+		"Tamil",
+		"Telugu",
+		"Thai",
+		"Ukrainian",
+		"Urdu",
+		"Uzbek",
+		"Vietnamese",
+		"Welsh",
+		"Xhosa",
+		"Yoruba",
+		"Zulu"
 	];
 	
 	function populateLanguages() {
@@ -82,39 +157,42 @@ document.addEventListener('DOMContentLoaded', () => {
 		targetedParagraph = null;
 	}
 	
-	// MODIFIED: This function now adds the first block marker at the beginning of the chapter content.
 	/**
-	 * Processes an array of paragraph texts for a chapter, injecting translation block markers.
+	 * Processes an array of paragraph texts for a chapter, injecting translation block placeholders.
 	 * @param {string[]} paragraphsArray - An array of paragraph strings.
-	 * @param {number} blockSize - The number of words before inserting a marker.
-	 * @returns {string} The final HTML content for the chapter.
+	 * @param {number} blockSize - The number of words before inserting a placeholder.
+	 * @returns {string} The final HTML content for the chapter with placeholders like {{TranslationBlock-1}}.
 	 */
-	function processChapterContentForMarkers(paragraphsArray, blockSize) {
+	function insertTranslationBlockPlaceholders(paragraphsArray, blockSize) {
 		if (!paragraphsArray || paragraphsArray.length === 0) {
 			return '';
 		}
 		
+		// If no block size is specified, just return the joined paragraphs.
 		if (!blockSize || blockSize <= 0) {
 			return `<p>${paragraphsArray.join('</p><p>')}</p>`;
 		}
 		
-		// NEW: Start the HTML with the first block marker.
-		let finalHtml = '<div class="note-wrapper not-prose"><p>translation block #1</p></div>';
-		let wordCount = 0;
-		// NEW: The next block number to be inserted is now #2.
-		let blockNumber = 2;
+		let finalHtml = '';
+		let wordCountSinceLastMarker = 0;
+		let blockNumber = 1;
+		
+		// Always start with the first block marker.
+		finalHtml += `{{TranslationBlock-${blockNumber}}}`;
+		blockNumber++;
 		
 		for (const pText of paragraphsArray) {
 			finalHtml += `<p>${pText}</p>`;
 			const wordsInP = pText.split(/\s+/).filter(Boolean).length;
 			
 			if (wordsInP > 0) {
-				wordCount += wordsInP;
+				wordCountSinceLastMarker += wordsInP;
 			}
 			
-			if (wordCount >= blockSize && wordsInP > 0) {
-				finalHtml += `<div class="note-wrapper not-prose"><p>translation block #${blockNumber}</p></div>`;
-				wordCount = 0;
+			// If the word count exceeds the block size, insert a new placeholder.
+			if (wordCountSinceLastMarker >= blockSize && wordsInP > 0) {
+				finalHtml += `{{TranslationBlock-${blockNumber}}}`;
+				wordCountSinceLastMarker = 0; // Reset counter
 				blockNumber++;
 			}
 		}
@@ -244,7 +322,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			
 			if (isActBreak || isChapterBreak) {
 				if (currentChapter.content.length > 0) {
-					currentChapter.content = processChapterContentForMarkers(currentChapter.content, blockSize);
+					currentChapter.content = insertTranslationBlockPlaceholders(currentChapter.content, blockSize);
 					currentAct.chapters.push(currentChapter);
 				}
 				
@@ -263,7 +341,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		}
 		
 		if (currentChapter.content.length > 0) {
-			currentChapter.content = processChapterContentForMarkers(currentChapter.content, blockSize);
+			currentChapter.content = insertTranslationBlockPlaceholders(currentChapter.content, blockSize);
 			currentAct.chapters.push(currentChapter);
 		}
 		if (currentAct.chapters.length > 0) {
@@ -272,7 +350,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		
 		if (acts.length === 0 && paragraphs.length > 0) {
 			const allContent = Array.from(paragraphs).map(p => p.textContent.trim());
-			currentChapter.content = processChapterContentForMarkers(allContent, blockSize);
+			currentChapter.content = insertTranslationBlockPlaceholders(allContent, blockSize);
 			currentAct.chapters.push(currentChapter);
 			acts.push(currentAct);
 		}

@@ -1,4 +1,3 @@
-// NEW: Content editor manager specifically for the standalone codex entry editor.
 import { EditorState, Plugin } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
 import { DOMParser, DOMSerializer } from 'prosemirror-model';
@@ -53,7 +52,6 @@ async function saveWindowContent(entryId) {
 	}
 }
 
-// MODIFIED: Function now accepts an options object to conditionally enable debounced saving.
 export function setupContentEditor(options = {}) {
 	const { entryId } = options;
 	const initialContentContainer = document.getElementById('js-pm-content-source');
@@ -99,7 +97,6 @@ export function setupContentEditor(options = {}) {
 		dispatchTransaction(transaction) {
 			const newState = this.state.apply(transaction);
 			this.updateState(newState);
-			// MODIFIED: Only trigger debounced save if an entryId is provided (i.e., in edit mode).
 			if (transaction.docChanged && entryId) {
 				triggerDebouncedSave(entryId);
 			}
@@ -111,7 +108,6 @@ export function setupContentEditor(options = {}) {
 		},
 	});
 	
-	// MODIFIED: Only add the input listener for debounced saving in edit mode.
 	if (entryId) {
 		titleInput.addEventListener('input', () => triggerDebouncedSave(entryId));
 	}

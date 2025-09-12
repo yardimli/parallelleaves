@@ -134,13 +134,10 @@
 	</div>
 	
 	<!-- Editor Layout -->
-	<!-- MODIFIED: Removed flex layout wrapper and image column. -->
 	<div class="flex-grow min-h-0">
-		<!-- MODIFIED: Changed width to full and made it the main container for the form. -->
 		<div class="w-full h-full flex flex-col min-w-0 border border-base-300 rounded-md overflow-hidden">
 			<form id="js-codex-form" class="flex flex-col h-full" novalidate>
 				<div class="flex-shrink-0 p-4 border-b border-base-300 relative">
-					<!-- NEW: Spinner for AI suggestions -->
 					<div id="js-ai-suggestion-spinner" class="absolute inset-0 bg-base-100/80 backdrop-blur-sm flex items-center justify-center z-10 hidden">
 						<div class="text-center">
 							<span class="loading loading-spinner loading-lg"></span>
@@ -151,7 +148,6 @@
 					       class="text-3xl font-bold w-full bg-transparent border-0 p-0 focus:ring-0 focus:border-b-2 focus:border-teal-500"
 					       placeholder="Codex Entry Title" required>
 					
-					<!-- NEW: Metadata section for create mode -->
 					<div id="js-create-meta-section" class="hidden mt-4 space-y-2">
 						<div class="form-control">
 							<label for="js-codex-category" class="label"><span class="label-text">Category <span class="text-error">*</span></span></label>
@@ -167,10 +163,8 @@
 					</div>
 				</div>
 				<div class="js-pm-container flex-grow p-4 overflow-y-auto prose prose-sm dark:prose-invert max-w-none">
-					<!-- MODIFIED: Removed h-full to allow editor to grow naturally with content -->
 					<div class="js-editable" data-name="content" data-placeholder="Enter detailed content here..."></div>
 				</div>
-				<!-- NEW: Action button for create mode -->
 				<div id="js-create-action-section" class="hidden p-4 border-t border-base-300">
 					<button type="submit" class="js-create-entry-btn btn btn-primary btn-block">
 						<span class="js-btn-text">Create Entry</span>

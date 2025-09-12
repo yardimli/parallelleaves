@@ -1,4 +1,3 @@
-// NEW: Entry point for the dedicated outline viewer window.
 
 /**
  * Truncates HTML content to a specific word limit.
@@ -58,7 +57,6 @@ async function renderOutline(container, sections) {
 						.replace(/{{ENTRY_TITLE}}/g, entry.title)
 				).join('');
 				
-				// MODIFIED: Removed the replacement for POV_TYPE and POV_CHARACTER.
 				const chapterHtml = chapterTemplate
 					.replace(/{{CHAPTER_ID}}/g, chapter.id)
 					.replace('{{CHAPTER_ORDER}}', chapter.chapter_order)

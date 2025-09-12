@@ -1,4 +1,3 @@
-// NEW: Entry point for the dedicated codex entry editor window.
 import { setupTopToolbar } from '../novel-planner/toolbar.js';
 import { getCodexEditorView, setupContentEditor } from './planner-codex-content-editor.js';
 import { setupPromptEditor } from '../prompt-editor.js';
@@ -20,12 +19,10 @@ function setButtonLoadingState(button, isLoading) {
 	}
 }
 
-// MODIFIED: setupImageHandlers function and all related logic has been removed.
-
 // --- Mode-Specific Setup Functions ---
 
 /**
- * NEW: Configures the editor window for creating a new codex entry.
+ * Configures the editor window for creating a new codex entry.
  * @param {string} novelId - The ID of the novel this entry belongs to.
  * @param {string} selectedText - The text selected in the chapter editor.
  */
@@ -37,7 +34,6 @@ async function setupCreateMode(novelId, selectedText) {
 	document.getElementById('js-novel-info').textContent = 'Create New Codex Entry';
 	document.getElementById('js-create-meta-section').classList.remove('hidden');
 	document.getElementById('js-create-action-section').classList.remove('hidden');
-	// MODIFIED: Removed lines that hid image buttons as they no longer exist.
 	
 	// 2. Setup ProseMirror editor with selected text
 	const sourceContainer = document.getElementById('js-pm-content-source');
@@ -90,7 +86,6 @@ async function setupCreateMode(novelId, selectedText) {
 		const tempDiv = document.createElement('div');
 		tempDiv.appendChild(fragment);
 		
-		// MODIFIED: Removed imagePath from formData.
 		const formData = {
 			title: titleInput.value,
 			content: tempDiv.innerHTML,
@@ -128,7 +123,6 @@ async function setupEditMode(entryId) {
 		document.getElementById('js-novel-info').textContent = `${entryData.novel_title} > Codex`;
 		document.getElementById('js-codex-title-input').value = entryData.title;
 		document.title = `Editing Codex: ${entryData.title}`;
-		// MODIFIED: Removed line that set the image src, as the image container is gone.
 		
 		const sourceContainer = document.getElementById('js-pm-content-source');
 		sourceContainer.querySelector('[data-name="content"]').innerHTML = entryData.content || '';
@@ -136,7 +130,6 @@ async function setupEditMode(entryId) {
 		setupContentEditor({ entryId }); // Pass entryId to enable debounced saving
 		setupTopToolbar({ isCodexEditor: true, getEditorView: getCodexEditorView });
 		setupPromptEditor();
-		// MODIFIED: Removed call to setupImageHandlers.
 		
 	} catch (error) {
 		console.error('Failed to load codex entry data:', error);

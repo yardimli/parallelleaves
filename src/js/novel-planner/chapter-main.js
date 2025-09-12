@@ -1,4 +1,3 @@
-// MODIFIED: This file is completely rewritten to be the entry point for the new translation editor.
 import { setupTopToolbar } from './toolbar.js';
 import { setupPromptEditor } from '../prompt-editor.js';
 import { EditorState, Plugin } from 'prosemirror-state';
@@ -18,7 +17,7 @@ const chapterEditorViews = new Map();
 /**
  * Triggers a debounced save for a specific field of a chapter.
  * @param {string} chapterId - The ID of the chapter being edited.
- * @param {string} field - The field to save ('title', 'source_content', 'target_content').
+ * @param {string} field - The field to save ('title', 'target_content').
  * @param {string} value - The new value of the field.
  */
 function triggerDebouncedSave(chapterId, field, value) {
@@ -66,8 +65,6 @@ function createEditorView(mount, initialHtml, isEditable, chapterId, saveField) 
 				},
 				blur(view, event) {
 					const relatedTarget = event.relatedTarget;
-					// MODIFIED: Prevent clearing the active editor if focus moves to the toolbar OR the note editor modal.
-					// This ensures that when the note modal is open, we still know which editor to save the note to.
 					if (!relatedTarget || (!relatedTarget.closest('#top-toolbar') && !relatedTarget.closest('#note-editor-modal'))) {
 						setActiveEditor(null);
 						updateToolbarState(null);
@@ -98,11 +95,9 @@ function createEditorView(mount, initialHtml, isEditable, chapterId, saveField) 
 				tempDiv.appendChild(fragmentContent);
 				triggerDebouncedSave(chapterId, saveField, tempDiv.innerHTML);
 				
-				// Update word count for content editors
-				if (saveField === 'source_content' || saveField === 'target_content') {
+				if (saveField === 'target_content') {
 					const wordCount = this.state.doc.textContent.trim().split(/\s+/).filter(Boolean).length;
-					const wordCountSelector = saveField === 'source_content' ? '.js-source-word-count' : '.js-target-word-count';
-					const wordCountEl = mount.closest('.manuscript-chapter-item').querySelector(wordCountSelector);
+					const wordCountEl = mount.closest('.manuscript-chapter-item').querySelector('.js-target-word-count');
 					if(wordCountEl) {
 						wordCountEl.textContent = `${wordCount.toLocaleString()} words`;
 					}
@@ -118,6 +113,19 @@ function createEditorView(mount, initialHtml, isEditable, chapterId, saveField) 
 	});
 }
 
+/**
+ * Replaces {{TranslationBlock-X}} placeholders with styled HTML divs for display.
+ * @param {string} sourceHtml - The raw HTML from the database.
+ * @returns {string} HTML with placeholders replaced by styled divs.
+ */
+function processSourceContentForDisplay(sourceHtml) {
+	if (!sourceHtml) return '';
+	// This regex finds all instances of {{TranslationBlock-NUMBER}} and replaces them.
+	return sourceHtml.replace(/{{TranslationBlock-(\d+)}}/g, (match, blockNumber) => {
+		const stylingClasses = 'note-wrapper not-prose p-1 my-1 border-l-4 border-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-600 rounded-r-md';
+		return `<div class="${stylingClasses}"><p>translation block #${blockNumber}</p></div>`;
+	});
+}
 
 /**
  * Renders the entire manuscript into the container.
@@ -155,24 +163,24 @@ async function renderManuscript(container, novelData) {
 			titleInput.placeholder = 'Chapter Title';
 			titleInput.addEventListener('input', () => triggerDebouncedSave(chapter.id, 'title', titleInput.value));
 			
-			// MODIFIED: Layout changed to a 2-column grid, removing the third metadata column.
 			const layoutGrid = document.createElement('div');
 			layoutGrid.className = 'grid grid-cols-2 gap-6';
 			
 			const sourceCol = document.createElement('div');
-			// MODIFIED: Changed col-span to 1.
-			sourceCol.className = 'col-span-1 prose prose-sm dark:prose-invert max-w-none';
-			sourceCol.innerHTML = `<h3 class="text-sm font-semibold uppercase tracking-wider text-base-content/70 border-b pb-1 mb-2">Source (<span class="js-source-word-count">${chapter.source_word_count.toLocaleString()} words</span>)</h3>`;
-			const sourceContentMount = document.createElement('div');
-			sourceContentMount.className = 'js-source-content-editable p-2 border rounded-md';
-			sourceCol.appendChild(sourceContentMount);
+			sourceCol.className = 'col-span-1 prose prose-sm dark:prose-invert max-w-none bg-base-200 p-4 rounded-lg';
+			sourceCol.innerHTML = `<h3 class="!mt-0 text-sm font-semibold uppercase tracking-wider text-base-content/70 border-b pb-1 mb-2">Source (<span class="js-source-word-count">${chapter.source_word_count.toLocaleString()} words</span>)</h3>`;
+			const sourceContentContainer = document.createElement('div');
+			sourceContentContainer.className = 'source-content-readonly'; // Styling is now on the parent `sourceCol`.
+			
+			const processedSourceHtml = processSourceContentForDisplay(chapter.source_content || '');
+			sourceContentContainer.innerHTML = processedSourceHtml;
+			sourceCol.appendChild(sourceContentContainer);
 			
 			const targetCol = document.createElement('div');
-			// MODIFIED: Changed col-span to 1.
-			targetCol.className = 'col-span-1 prose prose-sm dark:prose-invert max-w-none';
-			targetCol.innerHTML = `<h3 class="text-sm font-semibold uppercase tracking-wider text-base-content/70 border-b pb-1 mb-2">Target (<span class="js-target-word-count">${chapter.target_word_count.toLocaleString()} words</span>)</h3>`;
+			targetCol.className = 'col-span-1 prose prose-sm dark:prose-invert max-w-none p-4';
+			targetCol.innerHTML = `<h3 class="!mt-0 text-sm font-semibold uppercase tracking-wider text-base-content/70 border-b pb-1 mb-2">Target (<span class="js-target-word-count">${chapter.target_word_count.toLocaleString()} words</span>)</h3>`;
 			const targetContentMount = document.createElement('div');
-			targetContentMount.className = 'js-target-content-editable p-2 border rounded-md';
+			targetContentMount.className = 'js-target-content-editable'; // Styling is now on the parent `targetCol`.
 			targetCol.appendChild(targetContentMount);
 			
 			const codexTagsHtml = chapter.linked_codex.map(entry =>
@@ -182,7 +190,6 @@ async function renderManuscript(container, novelData) {
 					.replace(/{{CHAPTER_ID}}/g, chapter.id)
 			).join('');
 			const codexSection = document.createElement('div');
-			// MODIFIED: Codex section is now styled to appear below the main content grid.
 			codexSection.className = `js-codex-links-wrapper mt-4 pt-4 border-t border-base-300 ${chapter.linked_codex.length === 0 ? 'hidden' : ''}`;
 			codexSection.innerHTML = `
                 <h4 class="text-xs uppercase tracking-wider font-bold mb-2">Linked Entries</h4>
@@ -193,7 +200,6 @@ async function renderManuscript(container, novelData) {
 			
 			chapterWrapper.appendChild(titleInput);
 			chapterWrapper.appendChild(layoutGrid);
-			// MODIFIED: Appending codex section after the grid.
 			chapterWrapper.appendChild(codexSection);
 			
 			const hr = document.createElement('hr');
@@ -202,31 +208,24 @@ async function renderManuscript(container, novelData) {
 			
 			fragment.appendChild(chapterWrapper);
 			
-			// --- NEW: Generate skeleton for target content if it's empty ---
 			let initialTargetContent = chapter.target_content;
 			if (!initialTargetContent && chapter.source_content) {
-				// If target is empty but source is not, create a skeleton based on the source's markers.
 				const tempDiv = document.createElement('div');
-				tempDiv.innerHTML = chapter.source_content;
+				tempDiv.innerHTML = processedSourceHtml;
 				const markers = tempDiv.querySelectorAll('.note-wrapper');
 				
 				let skeletonHtml = '';
 				markers.forEach(markerNode => {
-					// Add the marker itself to the target content.
 					skeletonHtml += markerNode.outerHTML;
-					// Add an empty paragraph immediately after for the translator to fill.
 					skeletonHtml += '<p></p>';
 				});
 				initialTargetContent = skeletonHtml;
 			}
-			// --- END NEW LOGIC ---
 			
-			// --- Create Editors ---
-			const sourceContentView = createEditorView(sourceContentMount, chapter.source_content, true, chapter.id, 'source_content');
 			const targetContentView = createEditorView(targetContentMount, initialTargetContent, true, chapter.id, 'target_content');
 			
 			chapterEditorViews.set(chapter.id.toString(), {
-				sourceContentView, targetContentView
+				targetContentView
 			});
 		}
 	}

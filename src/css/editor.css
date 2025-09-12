@@ -1,5 +1,3 @@
-/* MODIFIED: Removed styles specific to the Novel Planner's windowing system. */
-/* Kept styles for ProseMirror, AI suggestions, toolbar, highlights, scrollbars, and document import. */
 
 i[class^="bi-"], i[class*=" bi-"] {
     display: inline-flex;
@@ -114,7 +112,7 @@ i[class^="bi-"], i[class*=" bi-"] {
     @apply block text-xs font-bold text-accent uppercase mb-2;
 }
 
-/* NEW: Styles for Act Breaks */
+/* Styles for Act Breaks */
 .act-break {
     @apply border-t-4 border-double border-primary pt-4 mt-6 bg-primary/10;
 }
@@ -128,7 +126,7 @@ i[class^="bi-"], i[class*=" bi-"] {
     @apply block text-sm font-bold text-primary uppercase mb-2;
 }
 
-/* NEW: Styles for the pop-up menu */
+/* Styles for the pop-up menu */
 #break-type-popover .menu button {
     @apply w-full flex justify-start;
 }

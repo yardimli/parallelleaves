@@ -3,7 +3,6 @@ document.addEventListener('DOMContentLoaded', () => {
 	const loadingMessage = document.getElementById('loading-message');
 	const importDocBtn = document.getElementById('import-doc-btn');
 	
-	// MODIFIED: Elements are for language settings now.
 	const proseModal = document.getElementById('prose-settings-modal');
 	const proseForm = document.getElementById('prose-settings-form');
 	const proseNovelIdInput = document.getElementById('prose-novel-id');
@@ -28,7 +27,6 @@ document.addEventListener('DOMContentLoaded', () => {
 		"English", "Spanish", "French", "German", "Mandarin Chinese", "Hindi", "Arabic", "Bengali", "Russian", "Portuguese", "Indonesian", "Urdu", "Japanese", "Swahili", "Marathi", "Telugu", "Turkish", "Korean", "Tamil", "Vietnamese", "Italian", "Javanese", "Thai", "Gujarati", "Polish", "Ukrainian", "Malayalam", "Kannada", "Oriya", "Burmese", "Norwegian", "Finnish", "Danish", "Swedish", "Dutch", "Greek", "Czech", "Hungarian", "Romanian", "Bulgarian", "Serbian", "Croatian", "Slovak", "Slovenian", "Lithuanian", "Latvian", "Estonian", "Hebrew", "Persian", "Afrikaans", "Zulu", "Xhosa", "Amharic", "Yoruba", "Igbo", "Hausa", "Nepali", "Sinhala", "Khmer", "Lao", "Mongolian", "Pashto", "Tajik", "Uzbek", "Kurdish", "Albanian", "Macedonian", "Bosnian", "Icelandic", "Irish", "Welsh", "Catalan", "Basque", "Galician", "Luxembourgish", "Maltese"
 	];
 	
-	// MODIFIED: This function now populates two select elements.
 	function populateLanguages() {
 		languages.forEach(lang => {
 			sourceLangSelect.add(new Option(lang, lang));
@@ -44,7 +42,6 @@ document.addEventListener('DOMContentLoaded', () => {
 		if (spinner) spinner.classList.toggle('hidden', !isLoading);
 	}
 	
-	// MODIFIED: Opens the language settings modal and populates it.
 	function openProseSettingsModal(novel) {
 		proseNovelIdInput.value = novel.id;
 		sourceLangSelect.value = novel.source_language || 'English';
@@ -93,7 +90,6 @@ document.addEventListener('DOMContentLoaded', () => {
 		loadingMessage.style.display = 'none';
 		
 		if (novelsData.length === 0) {
-			// MODIFIED: Updated text for translation context.
 			novelList.innerHTML = '<p class="text-base-content/70 col-span-full text-center">You haven\'t started any translation projects yet.</p>';
 			return;
 		}
@@ -118,13 +114,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         <button class="btn btn-ghost btn-sm js-meta-settings" title="Edit Meta">
                             <i class="bi bi-pencil-square text-lg"></i>
                         </button>
-                        <!-- MODIFIED: Title changed for clarity -->
                         <button class="btn btn-ghost btn-sm js-prose-settings" title="Language Settings">
                             <i class="bi bi-translate text-lg"></i>
                         </button>
                         <div class="flex-grow"></div>
                         <button class="btn btn-secondary js-open-outline">Outline</button>
-                        <!-- MODIFIED: Button text changed -->
                         <button class="btn btn-primary js-open-editor">Translate</button>
                     </div>
                 </div>
@@ -147,7 +141,6 @@ document.addEventListener('DOMContentLoaded', () => {
 		});
 	}
 	
-	// MODIFIED: Saves language settings instead of prose settings.
 	saveProseBtn.addEventListener('click', async (e) => {
 		e.preventDefault();
 		const novelId = parseInt(proseNovelIdInput.value, 10);
@@ -219,7 +212,6 @@ document.addEventListener('DOMContentLoaded', () => {
 		const novel = novelsData.find(n => n.id === novelId);
 		if (!novel) return;
 		
-		// MODIFIED: Updated confirmation text.
 		const confirmation = confirm(`Are you sure you want to permanently delete "${novel.title}"?\n\nThis action cannot be undone.`);
 		if (confirmation) {
 			try {

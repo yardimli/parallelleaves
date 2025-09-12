@@ -136,6 +136,11 @@
 		<span id="js-total-word-count" class="mr-4"></span>
 		<span id="js-word-count">No text selected</span>
 	</div>
+	<label id="theme-toggle" class="swap swap-rotate btn btn-ghost btn-circle mr-2">
+		<input type="checkbox" class="theme-controller" value="dark"/>
+		<i class="swap-off bi bi-sun-fill text-xl"></i>
+		<i class="swap-on bi bi-moon-fill text-xl"></i>
+	</label>
 </div>
 
 <!-- Main Content Area -->
@@ -195,7 +200,6 @@
 		<h3 class="js-note-modal-title font-bold text-lg">Add Note</h3>
 		<form id="note-editor-form" class="py-4 space-y-4" novalidate>
 			<input type="hidden" id="note-pos" value="">
-			<!-- NEW: Added hidden input to store the target chapter ID -->
 			<input type="hidden" id="note-chapter-id" value="">
 			<div class="form-control">
 				<label class="label"><span class="label-text">Note Content</span></label>

@@ -8,8 +8,7 @@ contextBridge.exposeInMainWorld('api', {
 	getNovelsWithCovers: () => ipcRenderer.invoke('novels:getAllWithCovers'),
 	getOneNovel: (novelId) => ipcRenderer.invoke('novels:getOne', novelId),
 	getFullManuscript: (novelId) => ipcRenderer.invoke('novels:getFullManuscript', novelId),
-	createNovel: (data) => ipcRenderer.invoke('novels:store', data),
-	// MODIFIED: This now opens the manuscript editor. The renderer-side code (dashboard.js) doesn't need to change.
+
 	openEditor: (novelId) => ipcRenderer.send('novels:openEditor', novelId),
 	openOutline: (novelId) => ipcRenderer.send('novels:openOutline', novelId),
 	getOutlineData: (novelId) => ipcRenderer.invoke('novels:getOutlineData', novelId),
@@ -18,9 +17,6 @@ contextBridge.exposeInMainWorld('api', {
 	updateNovelMeta: (data) => ipcRenderer.invoke('novels:updateMeta', data),
 	updateNovelCover: (data) => ipcRenderer.invoke('novels:updateCover', data),
 	deleteNovel: (novelId) => ipcRenderer.invoke('novels:delete', novelId),
-	
-	getStructureFiles: () => ipcRenderer.invoke('files:getStructureFiles'),
-	generateStructure: (data) => ipcRenderer.invoke('novels:generateStructure', data),
 	
 	onCoverUpdated: (callback) => ipcRenderer.on('novels:cover-updated', callback),
 	
@@ -34,7 +30,6 @@ contextBridge.exposeInMainWorld('api', {
 	getTemplate: (templateName) => ipcRenderer.invoke('templates:get', templateName),
 	
 	// Chapter <-> Codex Linking
-	// MODIFIED: Removed attachCodexToChapter as it was only used by the Planner's drag-drop UI.
 	detachCodexFromChapter: (chapterId, codexEntryId) => ipcRenderer.invoke('chapters:codex:detach', chapterId, codexEntryId),
 	
 	openChapterEditor: (data) => ipcRenderer.send('chapters:openEditor', data),

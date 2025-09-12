@@ -69,10 +69,8 @@ const buildSurroundingTextBlock = (wordsBefore, wordsAfter) => {
 
 // Export this function for use in the main prompt editor module.
 export const buildPromptJson = (formData, context) => {
-	// MODIFIED: Use the new `languageForPrompt` context variable.
 	const { selectedText, wordCount, allCodexEntries, languageForPrompt, wordsBefore, wordsAfter } = context;
 	
-	// MODIFIED: System prompt now explicitly uses the language passed in the context.
 	const system = `You are an expert prose editor.
 
 Whenever you're given text, rephrase it using the following instructions: <instructions>${formData.instructions || 'Rephrase the given text.'}</instructions>

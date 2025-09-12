@@ -438,7 +438,6 @@ function setupIpcHandlers() {
 		}
 	});
 	
-	// MODIFIED: Added a try...catch block and ensured data structure is always valid.
 	ipcMain.handle('novels:getFullManuscript', (event, novelId) => {
 		try {
 			const novel = db.prepare('SELECT id, title FROM novels WHERE id = ?').get(novelId);

@@ -1,7 +1,3 @@
-// MODIFIED: This file has been stripped down to only export the schema and NodeView
-// required by the remaining editors (Manuscript and Codex Entry).
-// All Novel Planner-specific window management and editor initialization logic has been removed.
-
 import { Schema, DOMParser } from 'prosemirror-model';
 import { schema as basicSchema } from 'prosemirror-schema-basic';
 import { addListNodes } from 'prosemirror-schema-list';
@@ -22,7 +18,7 @@ const nodes = basicSchema.spec.nodes.update('blockquote', {
 	toDOM() { return ['blockquote', 0]; },
 });
 
-// NEW: Spec for the custom 'note' node.
+// Spec for the custom 'note' node.
 const noteNodeSpec = {
 	attrs: {
 		text: { default: '' },
@@ -50,11 +46,11 @@ const noteNodeSpec = {
 	}]
 };
 
-// NEW: Add the note node to the schema spec before the horizontal rule.
+// Add the note node to the schema spec before the horizontal rule.
 const nodesWithNote = nodes.addBefore('horizontal_rule', 'note', noteNodeSpec);
 
 export const schema = new Schema({
-	nodes: addListNodes(nodesWithNote, 'paragraph+', 'block'), // MODIFIED: Use the updated nodes spec
+	nodes: addListNodes(nodesWithNote, 'paragraph+', 'block'),
 	marks: {
 		link: {
 			attrs: { href: {}, title: { default: null } },
@@ -105,7 +101,7 @@ export function getActiveEditor() {
 	return activeEditorView;
 }
 
-// NEW: A NodeView for our custom 'note' node.
+// A NodeView for our custom 'note' node.
 export class NoteNodeView {
 	constructor(node, view, getPos) {
 		this.node = node;
@@ -114,8 +110,6 @@ export class NoteNodeView {
 		
 		this.dom = document.createElement('div');
 		this.dom.className = 'note-wrapper not-prose p-1 my-1 border-l-4 border-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-600 rounded-r-md relative group';
-		// NEW: Add the `contenteditable="false"` attribute to the main wrapper.
-		// This prevents the user from being able to place a cursor inside or select text.
 		this.dom.contentEditable = false;
 		
 		this.contentDOM = document.createElement('p');
@@ -146,13 +140,11 @@ export class NoteNodeView {
 		this.dom.appendChild(controls);
 	}
 	
-	// NEW: Add a `selectNode` method.
 	// ProseMirror calls this when the node is selected. We use it to add a visual indicator.
 	selectNode() {
 		this.dom.classList.add('ProseMirror-selectednode');
 	}
 	
-	// NEW: Add a `deselectNode` method.
 	// ProseMirror calls this when the node is deselected. We use it to remove the visual indicator.
 	deselectNode() {
 		this.dom.classList.remove('ProseMirror-selectednode');
