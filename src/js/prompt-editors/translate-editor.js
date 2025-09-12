@@ -16,7 +16,14 @@ const renderCodexList = (container, context, initialState = null) => {
 		return;
 	}
 	
-	const selectedIds = initialState ? initialState.selectedCodexIds : (linkedCodexEntryIds || []).map(String);
+	// MODIFIED: Robustly determine selected IDs from initial state or linked entries.
+	// This prevents an error if `initialState` exists but `selectedCodexIds` is missing or not an array.
+	let selectedIds;
+	if (initialState && Array.isArray(initialState.selectedCodexIds)) {
+		selectedIds = initialState.selectedCodexIds;
+	} else {
+		selectedIds = (linkedCodexEntryIds || []).map(String);
+	}
 	
 	const categoriesHtml = allCodexEntries.map(category => {
 		if (!category.entries || category.entries.length === 0) {
@@ -131,7 +138,6 @@ const updatePreview = (container, context) => {
 const populateForm = (container, state) => {
 	const form = container.querySelector('#translate-editor-form');
 	if (!form) return;
-	// MODIFIED: Default to empty string if instructions are null/undefined.
 	form.elements.instructions.value = state.instructions || '';
 };
 

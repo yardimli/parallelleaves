@@ -47,6 +47,11 @@ async function callOpenRouter(payload) {
 		throw new Error('OpenRouter API key is not configured.');
 	}
 	
+	if (payload.model.endsWith("--thinking")) {
+		payload.model = payload.model.slice(0, -10); // Remove '--thinking' to get the real model ID.
+		payload.reasoning = { 'effort' : 'medium'};
+	}
+	
 	const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
 		method: 'POST',
 		headers: {
@@ -82,6 +87,12 @@ async function streamOpenRouter(payload, onChunk) {
 	if (!OPEN_ROUTER_API_KEY) {
 		throw new Error('OpenRouter API key is not configured.');
 	}
+	
+	if (payload.model.endsWith("--thinking")) {
+		payload.model = payload.model.slice(0, -10); // Remove '--thinking' to get the real model ID.
+		payload.reasoning = { 'effort' : 'medium'};
+	}
+	
 	
 	const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
 		method: 'POST',

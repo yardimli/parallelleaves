@@ -1,5 +1,3 @@
-// src/js/prompt-editors/rephrase-editor.js
-
 // This file contains the logic for the "Rephrase" prompt builder.
 
 const defaultState = {
@@ -18,8 +16,14 @@ const renderCodexList = (container, context, initialState = null) => {
 		return;
 	}
 	
-	// MODIFIED: Added a guard `|| []` to prevent an error if `linkedCodexEntryIds` is undefined.
-	const selectedIds = initialState ? initialState.selectedCodexIds : (linkedCodexEntryIds || []).map(String);
+	// MODIFIED: Robustly determine selected IDs from initial state or linked entries.
+	// This prevents an error if `initialState` exists but `selectedCodexIds` is missing or not an array.
+	let selectedIds;
+	if (initialState && Array.isArray(initialState.selectedCodexIds)) {
+		selectedIds = initialState.selectedCodexIds;
+	} else {
+		selectedIds = (linkedCodexEntryIds || []).map(String);
+	}
 	
 	const categoriesHtml = allCodexEntries.map(category => {
 		if (!category.entries || category.entries.length === 0) {
@@ -152,7 +156,6 @@ const populateForm = (container, state) => {
 	const form = container.querySelector('#rephrase-editor-form');
 	if (!form) return;
 	
-	// MODIFIED: Default to empty string if instructions are null/undefined.
 	form.elements.instructions.value = state.instructions || '';
 };
 

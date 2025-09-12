@@ -260,7 +260,6 @@ async function startAiStream(params) {
 	}
 }
 
-// MODIFIED: Accept initial state to select the saved model.
 async function populateModelDropdown(initialState = null) {
 	if (!modalEl) return;
 	const select = modalEl.querySelector('.js-llm-model-select');
@@ -281,7 +280,6 @@ async function populateModelDropdown(initialState = null) {
 			select.appendChild(option);
 		});
 		
-		// NEW: Prioritize saved model from initial state.
 		const savedModel = initialState?.model;
 		if (savedModel && models.some(m => m.id === savedModel)) {
 			select.value = savedModel;
@@ -325,12 +323,13 @@ async function handleModalApply() {
 	
 	const formDataObj = extractor(form);
 	
-	// NEW SECTION START: Save the current prompt settings for next time.
+	// Save the current prompt settings for next time.
 	const novelId = document.body.dataset.novelId;
 	if (novelId) {
 		const settingsToSave = {
 			model: model,
 			instructions: formDataObj.instructions,
+			selectedCodexIds: formDataObj.selectedCodexIds, // MODIFIED: Also save the selected codex entries.
 		};
 		// Fire-and-forget save operation.
 		window.api.updatePromptSettings({
@@ -339,7 +338,6 @@ async function handleModalApply() {
 			settings: settingsToSave
 		}).catch(err => console.error('Failed to save prompt settings:', err));
 	}
-	// NEW SECTION END
 	
 	const { state } = activeEditorView;
 	const { from, to, empty } = state.selection;
@@ -412,7 +410,6 @@ export async function openPromptEditor(context, promptId, initialState = null) {
 	customEditorPane.classList.remove('hidden');
 	
 	try {
-		// MODIFIED: Pass initial state to populateModelDropdown
 		await populateModelDropdown(initialState);
 		await loadPrompt(promptId);
 		modalEl.showModal();
