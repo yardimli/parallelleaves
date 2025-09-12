@@ -275,7 +275,32 @@ function startAiStream(params) {
 			});
 			
 			aiActionRange.to = currentInsertionPos;
+			
+			// Dispatch the transaction to update the view's state and DOM.
 			activeEditorView.dispatch(tr);
+			
+			// MODIFIED SECTION START: Replaced tr.scrollIntoView() with a more reliable DOM-based approach
+			// using requestAnimationFrame to ensure it runs after the browser has painted the DOM updates.
+			requestAnimationFrame(() => {
+				// Ensure the view hasn't been destroyed in the meantime.
+				if (!activeEditorView || activeEditorView.isDestroyed) return;
+				
+				try {
+					const { selection } = activeEditorView.state;
+					// Get the DOM node at the current cursor position.
+					const { node } = activeEditorView.domAtPos(selection.head);
+					// If it's a text node, get its parent element to scroll to.
+					const element = node.nodeType === Node.TEXT_NODE ? node.parentNode : node;
+					
+					if (element && typeof element.scrollIntoView === 'function') {
+						// Use the native browser API. 'nearest' scrolls the minimum amount required.
+						element.scrollIntoView({ block: 'nearest' });
+					}
+				} catch (e) {
+					console.error('Error scrolling editor into view:', e);
+				}
+			});
+			// MODIFIED SECTION END
 			
 		} else if (payload.done) {
 			createFloatingToolbar(activeEditorView, aiActionRange.from, aiActionRange.to, model);
@@ -379,7 +404,6 @@ async function handleModalApply() {
 		}).catch(err => console.error('Failed to save prompt settings:', err));
 	}
 	
-	// MODIFIED SECTION START: New logic to determine insertion point for translations.
 	const { state, dispatch } = activeEditorView;
 	let tr = state.tr;
 	let fromPos = state.selection.from;
@@ -389,53 +413,57 @@ async function handleModalApply() {
 		const { schema } = state;
 		const blockNumber = currentContext.translationInfo.blockNumber;
 		
+		// 1. Find the start and end positions of the target translation block.
 		let noteNodeCount = 0;
-		let targetParaNode = null;
-		let targetParaPos = -1;
+		let blockStartPos = -1;
+		let blockEndPos = state.doc.content.size;
+		let blockFound = false;
 		
-		// Find the paragraph that corresponds to the translation block number.
 		state.doc.forEach((node, pos) => {
-			if (targetParaNode) return; // Already found, exit early.
-			
 			if (node.type.name === 'note') {
 				noteNodeCount++;
-			} else if (noteNodeCount === blockNumber && node.type.name === 'paragraph') {
-				targetParaNode = node;
-				targetParaPos = pos;
+				if (noteNodeCount === blockNumber) {
+					// The content for this block starts right after this note marker.
+					blockStartPos = pos + node.nodeSize;
+					blockFound = true;
+				} else if (blockFound) {
+					// This is the note for the *next* block, so it marks the end of our block.
+					blockEndPos = pos;
+					blockFound = false; // Stop searching, we have our end position.
+				}
 			}
 		});
 		
-		if (targetParaNode) {
-			// Check if the user's cursor is already inside the target block.
-			const isSelectionInTarget = fromPos > targetParaPos && toPos < (targetParaPos + targetParaNode.nodeSize);
-			
-			if (!isSelectionInTarget) {
-				// Cursor is not in the target block, so we move it and handle new line insertion.
-				if (targetParaNode.content.size > 0) {
-					// The block is not empty, so add a new paragraph after it for the translation.
-					const insertPos = targetParaPos + targetParaNode.nodeSize;
-					tr.insert(insertPos, schema.nodes.paragraph.create());
-					fromPos = toPos = insertPos + 1; // Position inside the new paragraph.
-				} else {
-					// The block is empty, so we'll insert at its beginning.
-					fromPos = toPos = targetParaPos + 1;
-				}
-				// Set the selection in our transaction to move the cursor.
-				tr.setSelection(TextSelection.create(tr.doc, fromPos, toPos));
-			}
-			// If selection was already in target, we use the existing `fromPos` and `toPos`.
-		} else {
+		if (blockStartPos === -1) {
 			window.showAlert(`Could not find target translation block #${blockNumber}.`, 'Translation Error');
 			return;
 		}
 		
-		// Apply the transaction to move the cursor before we proceed.
-		dispatch(tr);
+		// 2. Find the last node in the block to insert after.
+		const before = state.doc.childBefore(blockEndPos);
+		let lastNodeInBlock = null;
+		let lastNodePosInBlock = -1;
+		if (before.node && before.offset >= blockStartPos) {
+			lastNodeInBlock = before.node;
+			lastNodePosInBlock = before.offset;
+		}
 		
-		// Get the final state *after* the cursor move to set up the AI action range correctly.
-		const newState = activeEditorView.state;
-		fromPos = newState.selection.from;
-		toPos = newState.selection.to;
+		// 3. Determine insertion position.
+		let insertPos;
+		if (lastNodeInBlock) {
+			// There's content in the block, so insert after the last node.
+			insertPos = lastNodePosInBlock + lastNodeInBlock.nodeSize;
+		} else {
+			// The block is empty, so insert at its beginning.
+			insertPos = blockStartPos;
+		}
+		
+		// 4. Always insert a new, empty paragraph for the translation.
+		tr.insert(insertPos, schema.nodes.paragraph.create());
+		
+		// 5. Set the cursor position inside this new paragraph, ready for streaming.
+		fromPos = toPos = insertPos + 1;
+		tr.setSelection(TextSelection.create(tr.doc, fromPos, toPos));
 	} else { // For 'rephrase' and other actions
 		if (state.selection.empty) {
 			window.showAlert('Please select text to apply this action.', 'Action Required');
@@ -443,11 +471,20 @@ async function handleModalApply() {
 		}
 	}
 	
-	originalFragment = activeEditorView.state.doc.slice(fromPos, toPos);
+	// Apply any transactions (like moving the cursor or inserting a paragraph).
+	if (tr.docChanged || tr.selectionSet) {
+		dispatch(tr);
+	}
+	
+	// Get the final state *after* any changes to get the correct positions.
+	const finalState = activeEditorView.state;
+	fromPos = finalState.selection.from;
+	toPos = finalState.selection.to;
+	
+	originalFragment = finalState.doc.slice(fromPos, toPos);
 	aiActionRange = { from: fromPos, to: toPos };
 	
-	const text = action === 'translate' ? currentContext.selectedText : activeEditorView.state.doc.textBetween(aiActionRange.from, aiActionRange.to, ' ');
-	// MODIFIED SECTION END
+	const text = action === 'translate' ? currentContext.selectedText : finalState.doc.textBetween(aiActionRange.from, aiActionRange.to, ' ');
 	
 	const wordCount = text ? text.trim().split(/\s+/).filter(Boolean).length : 0;
 	const promptContext = { ...currentContext, selectedText: text, wordCount };
