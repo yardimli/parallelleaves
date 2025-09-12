@@ -13,11 +13,11 @@
 	<div class="flex justify-between items-center mb-8">
 		<h1 class="text-4xl font-bold">My Translation Projects</h1>
 		<div class="flex items-center gap-4">
-			<label id="theme-toggle" class="swap swap-rotate btn btn-ghost btn-circle">
-				<input type="checkbox" class="theme-controller" value="dark"/>
-				<i class="swap-off bi bi-sun-fill text-2xl"></i>
-				<i class="swap-on bi bi-moon-fill text-2xl"></i>
-			</label>
+			<!-- MODIFIED SECTION START: Replaced swap component with a single button for 3-state theme switching -->
+			<button id="theme-toggle" class="btn btn-ghost btn-circle" title="Change Theme">
+				<i class="bi bi-sun-fill text-2xl"></i>
+			</button>
+			<!-- MODIFIED SECTION END -->
 			<button id="import-doc-btn" class="btn btn-neutral gap-2">
 				<i class="bi bi-file-earmark-arrow-up"></i>
 				Import Document
