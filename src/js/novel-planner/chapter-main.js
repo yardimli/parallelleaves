@@ -66,7 +66,9 @@ function createEditorView(mount, initialHtml, isEditable, chapterId, saveField) 
 				},
 				blur(view, event) {
 					const relatedTarget = event.relatedTarget;
-					if (!relatedTarget || !relatedTarget.closest('#top-toolbar')) {
+					// MODIFIED: Prevent clearing the active editor if focus moves to the toolbar OR the note editor modal.
+					// This ensures that when the note modal is open, we still know which editor to save the note to.
+					if (!relatedTarget || (!relatedTarget.closest('#top-toolbar') && !relatedTarget.closest('#note-editor-modal'))) {
 						setActiveEditor(null);
 						updateToolbarState(null);
 					}
@@ -156,12 +158,10 @@ async function renderManuscript(container, novelData) {
 			const layoutGrid = document.createElement('div');
 			layoutGrid.className = 'grid grid-cols-12 gap-6';
 			
-			// MODIFIED: Added js-source-word-count span.
 			const sourceCol = document.createElement('div');
 			sourceCol.className = 'col-span-5 prose prose-sm dark:prose-invert max-w-none';
 			sourceCol.innerHTML = `<h3 class="text-sm font-semibold uppercase tracking-wider text-base-content/70 border-b pb-1 mb-2">Source (<span class="js-source-word-count">${chapter.source_word_count.toLocaleString()} words</span>)</h3>`;
 			const sourceContentMount = document.createElement('div');
-			// MODIFIED: Removed bg-base-200/50 to show it's editable.
 			sourceContentMount.className = 'js-source-content-editable p-2 border rounded-md';
 			sourceCol.appendChild(sourceContentMount);
 			
@@ -178,7 +178,6 @@ async function renderManuscript(container, novelData) {
 			const sourceSummarySection = document.createElement('div');
 			sourceSummarySection.innerHTML = `<h4 class="text-xs uppercase tracking-wider font-bold border-b border-base-300 pb-1 mb-2">Source Summary</h4>`;
 			const sourceSummaryMount = document.createElement('div');
-			// MODIFIED: Added relative positioning and a spinner to provide feedback during AI summarization.
 			sourceSummaryMount.className = 'js-source-summary-editable text-xs p-2 border rounded-md relative';
 			sourceSummaryMount.innerHTML = `<div class="js-summary-spinner absolute inset-0 bg-base-100/80 backdrop-blur-sm flex items-center justify-center z-10 hidden"><span class="loading loading-spinner"></span></div>`;
 			sourceSummarySection.appendChild(sourceSummaryMount);
@@ -219,10 +218,29 @@ async function renderManuscript(container, novelData) {
 			
 			fragment.appendChild(chapterWrapper);
 			
+			// --- NEW: Generate skeleton for target content if it's empty ---
+			let initialTargetContent = chapter.target_content;
+			if (!initialTargetContent && chapter.source_content) {
+				// If target is empty but source is not, create a skeleton based on the source's markers.
+				const tempDiv = document.createElement('div');
+				tempDiv.innerHTML = chapter.source_content;
+				const markers = tempDiv.querySelectorAll('.note-wrapper');
+				
+				let skeletonHtml = '';
+				markers.forEach(markerNode => {
+					// Add the marker itself to the target content.
+					skeletonHtml += markerNode.outerHTML;
+					// Add an empty paragraph immediately after for the translator to fill.
+					skeletonHtml += '<p></p>';
+				});
+				initialTargetContent = skeletonHtml;
+			}
+			// --- END NEW LOGIC ---
+			
 			// --- Create Editors ---
-			// MODIFIED: Set all 'isEditable' flags to true.
 			const sourceContentView = createEditorView(sourceContentMount, chapter.source_content, true, chapter.id, 'source_content');
-			const targetContentView = createEditorView(targetContentMount, chapter.target_content, true, chapter.id, 'target_content');
+			// MODIFIED: Pass the potentially generated skeleton to the target editor.
+			const targetContentView = createEditorView(targetContentMount, initialTargetContent, true, chapter.id, 'target_content');
 			const sourceSummaryView = createEditorView(sourceSummaryMount, chapter.source_summary, true, chapter.id, 'source_summary');
 			const targetSummaryView = createEditorView(targetSummaryMount, chapter.target_summary, true, chapter.id, 'target_summary');
 			
@@ -367,7 +385,6 @@ function setupNoteEditorModal() {
 	form.addEventListener('submit', (event) => {
 		event.preventDefault();
 		
-		// MODIFIED: Logic now targets the currently focused editor via getActiveEditor.
 		const view = getActiveEditor();
 		
 		if (!view) {

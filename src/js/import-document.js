@@ -5,29 +5,26 @@ document.addEventListener('DOMContentLoaded', () => {
 	const prevMarkBtn = document.getElementById('prev-mark-btn');
 	const nextMarkBtn = document.getElementById('next-mark-btn');
 	const titleInput = document.getElementById('title');
-	// MODIFIED: Replaced authorInput with language selects.
 	const sourceLangSelect = document.getElementById('source_language');
 	const targetLangSelect = document.getElementById('target_language');
 	const documentContent = document.getElementById('document-content');
 	const importStatus = document.getElementById('js-import-status');
 	const popover = document.getElementById('break-type-popover');
+	const blockSizeInput = document.getElementById('block_size');
 	
 	let currentFilePath = null;
 	let currentMarkIndex = -1;
 	let targetedParagraph = null;
 	
-	// NEW: List of languages for the dropdowns.
 	const languages = [
 		"English", "Spanish", "French", "German", "Mandarin Chinese", "Hindi", "Arabic", "Bengali", "Russian", "Portuguese", "Indonesian", "Urdu", "Japanese", "Swahili", "Marathi", "Telugu", "Turkish", "Korean", "Tamil", "Vietnamese", "Italian", "Javanese", "Thai", "Gujarati", "Polish", "Ukrainian", "Malayalam", "Kannada", "Oriya", "Burmese", "Norwegian", "Finnish", "Danish", "Swedish", "Dutch", "Greek", "Czech", "Hungarian", "Romanian", "Bulgarian", "Serbian", "Croatian", "Slovak", "Slovenian", "Lithuanian", "Latvian", "Estonian", "Hebrew", "Persian", "Afrikaans", "Zulu", "Xhosa", "Amharic", "Yoruba", "Igbo", "Hausa", "Nepali", "Sinhala", "Khmer", "Lao", "Mongolian", "Pashto", "Tajik", "Uzbek", "Kurdish", "Albanian", "Macedonian", "Bosnian", "Icelandic", "Irish", "Welsh", "Catalan", "Basque", "Galician", "Luxembourgish", "Maltese"
 	];
 	
-	// NEW: Function to populate the language select elements.
 	function populateLanguages() {
 		languages.forEach(lang => {
 			sourceLangSelect.add(new Option(lang, lang));
 			targetLangSelect.add(new Option(lang, lang));
 		});
-		// Set default values.
 		sourceLangSelect.value = 'English';
 		targetLangSelect.value = 'Spanish';
 	}
@@ -68,7 +65,6 @@ document.addEventListener('DOMContentLoaded', () => {
 	
 	function checkFormValidity() {
 		const hasTitle = titleInput.value.trim() !== '';
-		// MODIFIED: Removed author check.
 		const hasContent = currentFilePath !== null;
 		startImportBtn.disabled = !(hasTitle && hasContent);
 		autoDetectBtn.disabled = !hasContent;
@@ -84,6 +80,45 @@ document.addEventListener('DOMContentLoaded', () => {
 	function hidePopover() {
 		popover.classList.add('hidden');
 		targetedParagraph = null;
+	}
+	
+	// MODIFIED: This function now adds the first block marker at the beginning of the chapter content.
+	/**
+	 * Processes an array of paragraph texts for a chapter, injecting translation block markers.
+	 * @param {string[]} paragraphsArray - An array of paragraph strings.
+	 * @param {number} blockSize - The number of words before inserting a marker.
+	 * @returns {string} The final HTML content for the chapter.
+	 */
+	function processChapterContentForMarkers(paragraphsArray, blockSize) {
+		if (!paragraphsArray || paragraphsArray.length === 0) {
+			return '';
+		}
+		
+		if (!blockSize || blockSize <= 0) {
+			return `<p>${paragraphsArray.join('</p><p>')}</p>`;
+		}
+		
+		// NEW: Start the HTML with the first block marker.
+		let finalHtml = '<div class="note-wrapper not-prose"><p>translation block #1</p></div>';
+		let wordCount = 0;
+		// NEW: The next block number to be inserted is now #2.
+		let blockNumber = 2;
+		
+		for (const pText of paragraphsArray) {
+			finalHtml += `<p>${pText}</p>`;
+			const wordsInP = pText.split(/\s+/).filter(Boolean).length;
+			
+			if (wordsInP > 0) {
+				wordCount += wordsInP;
+			}
+			
+			if (wordCount >= blockSize && wordsInP > 0) {
+				finalHtml += `<div class="note-wrapper not-prose"><p>translation block #${blockNumber}</p></div>`;
+				wordCount = 0;
+				blockNumber++;
+			}
+		}
+		return finalHtml;
 	}
 	
 	selectFileBtn.addEventListener('click', async () => {
@@ -189,7 +224,6 @@ document.addEventListener('DOMContentLoaded', () => {
 	titleInput.addEventListener('input', checkFormValidity);
 	
 	startImportBtn.addEventListener('click', async () => {
-		// MODIFIED: Updated validation check.
 		if (!titleInput.value.trim()) {
 			alert('Please provide a project title.');
 			return;
@@ -197,6 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		
 		setButtonLoading(startImportBtn, true);
 		
+		const blockSize = parseInt(blockSizeInput.value, 10);
 		const acts = [];
 		let currentAct = { title: 'Act 1', chapters: [] };
 		let currentChapter = { title: 'Chapter 1', content: [] };
@@ -209,7 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			
 			if (isActBreak || isChapterBreak) {
 				if (currentChapter.content.length > 0) {
-					currentChapter.content = `<p>${currentChapter.content.join('</p><p>')}</p>`;
+					currentChapter.content = processChapterContentForMarkers(currentChapter.content, blockSize);
 					currentAct.chapters.push(currentChapter);
 				}
 				
@@ -228,7 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		}
 		
 		if (currentChapter.content.length > 0) {
-			currentChapter.content = `<p>${currentChapter.content.join('</p><p>')}</p>`;
+			currentChapter.content = processChapterContentForMarkers(currentChapter.content, blockSize);
 			currentAct.chapters.push(currentChapter);
 		}
 		if (currentAct.chapters.length > 0) {
@@ -237,7 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		
 		if (acts.length === 0 && paragraphs.length > 0) {
 			const allContent = Array.from(paragraphs).map(p => p.textContent.trim());
-			currentChapter.content = `<p>${allContent.join('</p><p>')}</p>`;
+			currentChapter.content = processChapterContentForMarkers(allContent, blockSize);
 			currentAct.chapters.push(currentChapter);
 			acts.push(currentAct);
 		}
@@ -249,7 +284,6 @@ document.addEventListener('DOMContentLoaded', () => {
 		}
 		
 		try {
-			// MODIFIED: Send new data structure including languages to the backend.
 			await window.api.importDocumentAsNovel({
 				title: titleInput.value.trim(),
 				source_language: sourceLangSelect.value,
@@ -263,6 +297,5 @@ document.addEventListener('DOMContentLoaded', () => {
 		}
 	});
 	
-	// NEW: Initialize the language dropdowns on load.
 	populateLanguages();
 });
