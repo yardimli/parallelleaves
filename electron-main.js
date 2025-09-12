@@ -366,14 +366,40 @@ function setupIpcHandlers() {
 			
 			const sections = db.prepare('SELECT * FROM sections WHERE novel_id = ? ORDER BY section_order').all(novelId);
 			for (const section of sections) {
-				section.chapters = db.prepare('SELECT id, title, target_summary, target_content, chapter_order FROM chapters WHERE section_id = ? ORDER BY chapter_order').all(section.id);
+				section.chapters = db.prepare('SELECT id, title, source_content, target_content, chapter_order FROM chapters WHERE section_id = ? ORDER BY chapter_order').all(section.id);
 				
 				let sectionTotalWords = 0;
 				
 				for (const chapter of section.chapters) {
 					chapter.word_count = countWordsInHtml(chapter.target_content);
 					sectionTotalWords += chapter.word_count;
-					chapter.summary = chapter.target_summary;
+					
+					const contentToUse = chapter.target_content || chapter.source_content;
+					if (contentToUse) {
+						const textContent = contentToUse.replace(/<[^>]+>/g, ' ').replace(/\s\s+/g, ' ').trim();
+						
+						const words = textContent.split(/\s+/);
+						const wordLimitedText = words.slice(0, 200).join(' ');
+						
+						const sentences = textContent.match(/[^.!?]+[.!?]+/g) || [];
+						const sentenceLimitedText = sentences.slice(0, 5).join(' ');
+						
+						let truncatedText;
+						// Prioritize the shorter of the two truncation methods.
+						if (wordLimitedText.length > 0 && (sentenceLimitedText.length === 0 || wordLimitedText.length <= sentenceLimitedText.length)) {
+							truncatedText = wordLimitedText;
+							if (words.length > 200) truncatedText += '...';
+						} else if (sentenceLimitedText.length > 0) {
+							truncatedText = sentenceLimitedText;
+							if (sentences.length > 5) truncatedText += '...';
+						} else {
+							// Fallback for very short text without sentence terminators.
+							truncatedText = textContent;
+						}
+						chapter.summary = `<p>${truncatedText}</p>`;
+					} else {
+						chapter.summary = '<p class="italic text-base-content/60">No content.</p>';
+					}
 					
 					chapter.linked_codex = db.prepare(`
 	                    SELECT ce.id, ce.title
@@ -423,7 +449,7 @@ function setupIpcHandlers() {
 			
 			novel.sections = db.prepare('SELECT * FROM sections WHERE novel_id = ? ORDER BY section_order').all(novelId);
 			for (const section of novel.sections) {
-				section.chapters = db.prepare('SELECT id, title, source_content, target_content, source_summary, target_summary, chapter_order FROM chapters WHERE section_id = ? ORDER BY chapter_order').all(section.id);
+				section.chapters = db.prepare('SELECT id, title, source_content, target_content, chapter_order FROM chapters WHERE section_id = ? ORDER BY chapter_order').all(section.id);
 				for (const chapter of section.chapters) {
 					chapter.source_word_count = countWordsInHtml(chapter.source_content);
 					chapter.target_word_count = countWordsInHtml(chapter.target_content);
@@ -556,7 +582,7 @@ function setupIpcHandlers() {
 	
 	// --- Chapter Handlers ---
 	ipcMain.handle('chapters:updateField', (event, { chapterId, field, value }) => {
-		const allowedFields = ['title', 'target_content', 'target_summary', 'source_content', 'source_summary'];
+		const allowedFields = ['title', 'target_content', 'source_content'];
 		if (!allowedFields.includes(field)) {
 			return { success: false, message: 'Invalid field specified.' };
 		}
@@ -568,7 +594,7 @@ function setupIpcHandlers() {
 			return { success: false, message: `Failed to save ${field}.` };
 		}
 	});
-
+	
 	
 	ipcMain.handle('chapters:getLinkedCodexIds', (event, chapterId) => {
 		try {

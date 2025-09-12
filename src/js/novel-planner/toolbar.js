@@ -43,12 +43,7 @@ export function updateToolbarState(view) {
 		
 		allBtns.forEach(btn => {
 			if (btn.classList.contains('js-ai-action-btn')) {
-				const action = btn.dataset.action;
-				if (action === 'scene-summarization') {
-					btn.disabled = false;
-				} else {
-					btn.disabled = !isTextSelected;
-				}
+				btn.disabled = !isTextSelected;
 				return;
 			}
 			
@@ -240,45 +235,8 @@ async function handleToolbarAction(button) {
 		const novelData = await window.api.getOneNovel(novelId);
 		let languageForPrompt;
 		
-		if (action === 'scene-summarization') {
-			if (isChapterEditor) {
-				chapterId = toolbarConfig.getActiveChapterId ? toolbarConfig.getActiveChapterId() : null;
-				if (!chapterId) {
-					alert('Could not determine the active chapter.');
-					return;
-				}
-				const views = toolbarConfig.getChapterViews ? toolbarConfig.getChapterViews(chapterId) : null;
-				if (!views) {
-					alert('Could not find editor views for the active chapter.');
-					return;
-				}
-				
-				// MODIFIED: Determine which content to summarize based on the focused editor.
-				if (focusedEditor === views.targetContentView) {
-					// User's cursor is in the target editor.
-					selectedText = views.targetContentView.state.doc.textContent;
-					editorForPrompt = views.targetSummaryView; // Output to target summary
-					languageForPrompt = novelData.target_language || 'English';
-				} else {
-					// Fallback: Cursor is in the source editor, a summary box, or somewhere else.
-					// Default to summarizing the source content.
-					selectedText = views.sourceContentView.state.doc.textContent;
-					editorForPrompt = views.sourceSummaryView; // Output to source summary
-					languageForPrompt = novelData.source_language || 'English';
-				}
-			} else {
-				// We are in a different editor (e.g., Codex). Summarize the active editor's full content.
-				if (focusedEditor) {
-					selectedText = focusedEditor.state.doc.textContent;
-					editorForPrompt = focusedEditor; // The result will replace the current content.
-				} else {
-					alert('No active editor to summarize.');
-					return;
-				}
-				languageForPrompt = novelData.target_language || 'English';
-			}
-		} else if (focusedEditor) {
-			// For other actions like "Rephrase", use the selected text from the active editor.
+		if (focusedEditor) {
+			// For actions like "Rephrase", use the selected text from the active editor.
 			const {state} = focusedEditor;
 			const {from, to, empty} = state.selection;
 			if (!empty) {
@@ -319,7 +277,6 @@ async function handleToolbarAction(button) {
 			wordsBefore,
 			wordsAfter,
 			activeEditorView: editorForPrompt,
-			isChapterSummarization: isChapterEditor && action === 'scene-summarization',
 		};
 		openPromptEditor(context, action);
 		return;

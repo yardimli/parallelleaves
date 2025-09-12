@@ -18,7 +18,7 @@ const chapterEditorViews = new Map();
 /**
  * Triggers a debounced save for a specific field of a chapter.
  * @param {string} chapterId - The ID of the chapter being edited.
- * @param {string} field - The field to save ('title', 'source_content', 'target_content', 'source_summary', 'target_summary').
+ * @param {string} field - The field to save ('title', 'source_content', 'target_content').
  * @param {string} value - The new value of the field.
  */
 function triggerDebouncedSave(chapterId, field, value) {
@@ -155,39 +155,25 @@ async function renderManuscript(container, novelData) {
 			titleInput.placeholder = 'Chapter Title';
 			titleInput.addEventListener('input', () => triggerDebouncedSave(chapter.id, 'title', titleInput.value));
 			
+			// MODIFIED: Layout changed to a 2-column grid, removing the third metadata column.
 			const layoutGrid = document.createElement('div');
-			layoutGrid.className = 'grid grid-cols-12 gap-6';
+			layoutGrid.className = 'grid grid-cols-2 gap-6';
 			
 			const sourceCol = document.createElement('div');
-			sourceCol.className = 'col-span-5 prose prose-sm dark:prose-invert max-w-none';
+			// MODIFIED: Changed col-span to 1.
+			sourceCol.className = 'col-span-1 prose prose-sm dark:prose-invert max-w-none';
 			sourceCol.innerHTML = `<h3 class="text-sm font-semibold uppercase tracking-wider text-base-content/70 border-b pb-1 mb-2">Source (<span class="js-source-word-count">${chapter.source_word_count.toLocaleString()} words</span>)</h3>`;
 			const sourceContentMount = document.createElement('div');
 			sourceContentMount.className = 'js-source-content-editable p-2 border rounded-md';
 			sourceCol.appendChild(sourceContentMount);
 			
 			const targetCol = document.createElement('div');
-			targetCol.className = 'col-span-5 prose prose-sm dark:prose-invert max-w-none';
+			// MODIFIED: Changed col-span to 1.
+			targetCol.className = 'col-span-1 prose prose-sm dark:prose-invert max-w-none';
 			targetCol.innerHTML = `<h3 class="text-sm font-semibold uppercase tracking-wider text-base-content/70 border-b pb-1 mb-2">Target (<span class="js-target-word-count">${chapter.target_word_count.toLocaleString()} words</span>)</h3>`;
 			const targetContentMount = document.createElement('div');
 			targetContentMount.className = 'js-target-content-editable p-2 border rounded-md';
 			targetCol.appendChild(targetContentMount);
-			
-			const metaCol = document.createElement('div');
-			metaCol.className = 'col-span-2 space-y-4';
-			
-			const sourceSummarySection = document.createElement('div');
-			sourceSummarySection.innerHTML = `<h4 class="text-xs uppercase tracking-wider font-bold border-b border-base-300 pb-1 mb-2">Source Summary</h4>`;
-			const sourceSummaryMount = document.createElement('div');
-			sourceSummaryMount.className = 'js-source-summary-editable text-xs p-2 border rounded-md relative';
-			sourceSummaryMount.innerHTML = `<div class="js-summary-spinner absolute inset-0 bg-base-100/80 backdrop-blur-sm flex items-center justify-center z-10 hidden"><span class="loading loading-spinner"></span></div>`;
-			sourceSummarySection.appendChild(sourceSummaryMount);
-			
-			const targetSummarySection = document.createElement('div');
-			targetSummarySection.innerHTML = `<h4 class="text-xs uppercase tracking-wider font-bold border-b border-base-300 pb-1 mb-2">Target Summary</h4>`;
-			const targetSummaryMount = document.createElement('div');
-			targetSummaryMount.className = 'js-target-summary-editable text-xs p-2 border rounded-md relative';
-			targetSummaryMount.innerHTML = `<div class="js-summary-spinner absolute inset-0 bg-base-100/80 backdrop-blur-sm flex items-center justify-center z-10 hidden"><span class="loading loading-spinner"></span></div>`;
-			targetSummarySection.appendChild(targetSummaryMount);
 			
 			const codexTagsHtml = chapter.linked_codex.map(entry =>
 				chapterCodexTagTemplate
@@ -196,21 +182,19 @@ async function renderManuscript(container, novelData) {
 					.replace(/{{CHAPTER_ID}}/g, chapter.id)
 			).join('');
 			const codexSection = document.createElement('div');
-			codexSection.className = `js-codex-links-wrapper ${chapter.linked_codex.length === 0 ? 'hidden' : ''}`;
+			// MODIFIED: Codex section is now styled to appear below the main content grid.
+			codexSection.className = `js-codex-links-wrapper mt-4 pt-4 border-t border-base-300 ${chapter.linked_codex.length === 0 ? 'hidden' : ''}`;
 			codexSection.innerHTML = `
-                <h4 class="text-xs uppercase tracking-wider font-bold border-b border-base-300 pb-1 mb-2">Linked Entries</h4>
+                <h4 class="text-xs uppercase tracking-wider font-bold mb-2">Linked Entries</h4>
                 <div class="js-codex-tags-container flex flex-wrap gap-1">${codexTagsHtml}</div>`;
-			
-			metaCol.appendChild(sourceSummarySection);
-			metaCol.appendChild(targetSummarySection);
-			metaCol.appendChild(codexSection);
 			
 			layoutGrid.appendChild(sourceCol);
 			layoutGrid.appendChild(targetCol);
-			layoutGrid.appendChild(metaCol);
 			
 			chapterWrapper.appendChild(titleInput);
 			chapterWrapper.appendChild(layoutGrid);
+			// MODIFIED: Appending codex section after the grid.
+			chapterWrapper.appendChild(codexSection);
 			
 			const hr = document.createElement('hr');
 			hr.className = 'mt-6';
@@ -239,13 +223,10 @@ async function renderManuscript(container, novelData) {
 			
 			// --- Create Editors ---
 			const sourceContentView = createEditorView(sourceContentMount, chapter.source_content, true, chapter.id, 'source_content');
-			// MODIFIED: Pass the potentially generated skeleton to the target editor.
 			const targetContentView = createEditorView(targetContentMount, initialTargetContent, true, chapter.id, 'target_content');
-			const sourceSummaryView = createEditorView(sourceSummaryMount, chapter.source_summary, true, chapter.id, 'source_summary');
-			const targetSummaryView = createEditorView(targetSummaryMount, chapter.target_summary, true, chapter.id, 'target_summary');
 			
 			chapterEditorViews.set(chapter.id.toString(), {
-				sourceContentView, targetContentView, sourceSummaryView, targetSummaryView
+				sourceContentView, targetContentView
 			});
 		}
 	}

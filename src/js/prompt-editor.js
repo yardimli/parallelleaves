@@ -1,33 +1,21 @@
 // This file now controls the prompt editor modal within the novel editor.
 
-// Import init and buildPromptJson functions from all editor modules.
 import { init as initRephraseEditor, buildPromptJson as buildRephraseJson } from './prompt-editors/rephrase-editor.js';
-import { init as initSceneSummarizationEditor, buildPromptJson as buildSceneSummarizationJson } from './prompt-editors/scene-summarization-editor.js';
 import { getActiveEditor } from './novel-planner/content-editor.js';
 import { updateToolbarState } from './novel-planner/toolbar.js';
 import { TextSelection } from 'prosemirror-state';
 import { DOMParser } from 'prosemirror-model';
 
-// Configuration mapping prompt IDs to their respective builder modules.
 const editors = {
 	'rephrase': { name: 'Rephrase', init: initRephraseEditor },
-	'scene-summarization': { name: 'Scene Summarization', init: initSceneSummarizationEditor },
 };
 
-// Map of prompt builder functions for easy access.
 const promptBuilders = {
 	'rephrase': buildRephraseJson,
-	'scene-summarization': buildSceneSummarizationJson,
 };
 
-// Map of functions to extract structured form data.
 const formDataExtractors = {
 	'rephrase': (form) => ({
-		instructions: form.elements.instructions.value.trim(),
-		selectedCodexIds: form.elements.codex_entry ? Array.from(form.elements.codex_entry).filter(cb => cb.checked).map(cb => cb.value) : [],
-	}),
-	'scene-summarization': (form) => ({
-		words: form.elements.words.value,
 		instructions: form.elements.instructions.value.trim(),
 		selectedCodexIds: form.elements.codex_entry ? Array.from(form.elements.codex_entry).filter(cb => cb.checked).map(cb => cb.value) : [],
 	}),
@@ -209,72 +197,6 @@ function createFloatingToolbar(view, from, to, model) {
 	});
 }
 
-async function startAiSummarizationStream(params) {
-	const { prompt, model } = params;
-	
-	setEditorEditable(activeEditorView, false);
-	updateToolbarState(activeEditorView);
-	
-	const editorWrapper = activeEditorView.dom.parentElement;
-	const spinner = editorWrapper.querySelector('.js-summary-spinner');
-	if (spinner) spinner.classList.remove('hidden');
-	
-	let fullResponse = '';
-	let isFirstChunk = true;
-	
-	const onData = (payload) => {
-		if (payload.chunk) {
-			fullResponse += payload.chunk;
-			const { state, dispatch } = activeEditorView;
-			let tr = state.tr;
-			
-			if (isFirstChunk) {
-				tr.delete(0, state.doc.content.size);
-				isFirstChunk = false;
-			}
-			
-			tr.insertText(payload.chunk, tr.doc.content.size);
-			dispatch(tr);
-			
-		} else if (payload.done) {
-			const { state, dispatch } = activeEditorView;
-			const { schema } = state;
-			
-			const tempDiv = document.createElement('div');
-			tempDiv.innerText = fullResponse.trim();
-			const newContentNode = DOMParser.fromSchema(schema).parse(tempDiv);
-			
-			const finalTr = state.tr.replaceWith(0, state.doc.content.size, newContentNode.content);
-			dispatch(finalTr);
-			
-			if (spinner) spinner.classList.add('hidden');
-			setEditorEditable(activeEditorView, true);
-			activeEditorView.focus();
-			updateToolbarState(activeEditorView);
-			
-		} else if (payload.error) {
-			console.error('AI Summarization Error:', payload.error);
-			alert(`Error: ${payload.error}`);
-			
-			if (spinner) spinner.classList.add('hidden');
-			setEditorEditable(activeEditorView, true);
-			updateToolbarState(activeEditorView);
-		}
-	};
-	
-	try {
-		window.api.processCodexTextStream({ prompt, model }, onData);
-	} catch (error) {
-		console.error('AI Summarization Error:', error);
-		alert(`Error: ${error.message}`);
-		
-		if (spinner) spinner.classList.add('hidden');
-		setEditorEditable(activeEditorView, true);
-		updateToolbarState(activeEditorView);
-	}
-}
-
-
 async function startAiStream(params) {
 	const { prompt, model } = params;
 	
@@ -383,24 +305,6 @@ async function handleModalApply() {
 	
 	modalEl.close();
 	
-	// MODIFIED: This logic now correctly handles both summarization contexts.
-	if (action === 'scene-summarization') {
-		activeEditorView = currentContext.activeEditorView;
-		if (!activeEditorView) {
-			alert('Target editor not found for summarization.');
-			return;
-		}
-		
-		const formDataObj = extractor(form);
-		const wordCount = currentContext.selectedText ? currentContext.selectedText.trim().split(/\s+/).filter(Boolean).length : 0;
-		const promptContext = { ...currentContext, wordCount };
-		const prompt = builder(formDataObj, promptContext);
-		
-		await startAiSummarizationStream({ prompt, model });
-		return;
-	}
-	
-	// Original workflow for all other actions like "Rephrase".
 	activeEditorView = currentContext.activeEditorView;
 	if (!activeEditorView) {
 		alert('No active editor to apply changes to.');

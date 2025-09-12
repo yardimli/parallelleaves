@@ -15,6 +15,9 @@
 -- ALTER TABLE novels DROP COLUMN editor_state;
 -- ALTER TABLE codex_entries DROP COLUMN image_path;
 -- ALTER TABLE images DROP COLUMN codex_entry_id;
+-- MODIFICATION: Remove summary columns from chapters table.
+-- ALTER TABLE chapters DROP COLUMN source_summary;
+-- ALTER TABLE chapters DROP COLUMN target_summary;
 
 
 CREATE TABLE IF NOT EXISTS users (
@@ -71,13 +74,8 @@ CREATE TABLE IF NOT EXISTS chapters (
     novel_id INTEGER NOT NULL,
     section_id INTEGER NOT NULL,
     title TEXT NOT NULL,
-    -- MODIFIED: Renamed summary to source_summary.
-    source_summary TEXT,
-    -- NEW: Added target_summary for the translated summary.
-    target_summary TEXT,
-    -- MODIFIED: Renamed content to source_content.
+    -- MODIFIED: Removed source_summary and target_summary columns.
     source_content TEXT,
-    -- NEW: Added target_content for the translated text.
     target_content TEXT,
     status TEXT,
     chapter_order INTEGER NOT NULL,
