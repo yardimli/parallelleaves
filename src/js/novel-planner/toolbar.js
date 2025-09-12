@@ -50,10 +50,13 @@ export function updateToolbarState(view) {
 			// MODIFIED SECTION END
 			
 			if (sourceContainer) {
-				translateBtn.disabled = false;
-				const text = selection.toString();
-				const words = text.trim().split(/\s+/).filter(Boolean);
-				wordCountEl.textContent = `${words.length} word${words.length !== 1 ? 's' : ''} selected (source)`;
+				// MODIFIED: Enable button only if there's actual text content selected.
+				const text = selection.toString().trim();
+				if (text.length > 0) {
+					translateBtn.disabled = false;
+					const words = text.split(/\s+/).filter(Boolean);
+					wordCountEl.textContent = `${words.length} word${words.length !== 1 ? 's' : ''} selected (source)`;
+				}
 			}
 		}
 	}
@@ -273,38 +276,58 @@ async function handleToolbarAction(button) {
 			
 			const range = selection.getRangeAt(0);
 			
-			// MODIFIED SECTION START: Robustly find the container, handling text nodes.
 			let checkNode = range.commonAncestorContainer;
 			if (checkNode.nodeType === Node.TEXT_NODE) {
 				checkNode = checkNode.parentElement;
 			}
 			const sourceContainer = checkNode.closest('.source-content-readonly');
-			// MODIFIED SECTION END
 			
 			if (!sourceContainer) return;
 			
-			// Helper to find the last block marker that precedes a given node.
-			const findBlockMarkerForNode = (node, container) => {
-				let el = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
-				// Traverse up to find the direct child of the container
+			// MODIFIED SECTION START: New helper function to robustly find the correct block marker.
+			/**
+			 * Finds the block marker preceding a given node within the source container.
+			 * @param {Node} node - The starting node for the search (e.g., range.startContainer).
+			 * @param {HTMLElement} container - The parent source container.
+			 * @param {number} offset - The offset within the node (e.g., range.startOffset).
+			 * @returns {HTMLElement|null} The marker element or null if not found.
+			 */
+			const findBlockMarkerForNode = (node, container, offset) => {
+				let el;
+				// If the start/end of the range is the container itself, it means the range was
+				// set programmatically (e.g., by clicking the 'Translate Block' button).
+				// We use the offset to find the correct starting node for our search.
+				if (node === container) {
+					// The offset is the index of the child *after* which the range starts.
+					// So, the node we are interested in is the one at `offset - 1`.
+					el = container.childNodes[offset - 1];
+				} else {
+					// For manual selections, the node is usually a text node, so we get its parent.
+					el = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+				}
+				
+				// Traverse up the DOM tree until we find a direct child of the container.
 				while (el && el.parentElement !== container) {
 					el = el.parentElement;
 				}
 				if (!el) return null;
 				
-				// Traverse backwards through siblings to find the last preceding marker
+				// Now, from this direct child, we search backwards for the nearest preceding marker.
+				// If 'el' is the marker itself, this loop will find it on the first iteration.
 				let current = el;
 				while (current) {
-					if (current.classList.contains('note-wrapper')) {
+					if (current.nodeType === Node.ELEMENT_NODE && current.hasAttribute('data-block-number')) {
 						return current;
 					}
 					current = current.previousElementSibling;
 				}
-				return null; // In the first block
+				
+				return null; // This means the selection is in the very first block (before any markers).
 			};
 			
-			const startMarker = findBlockMarkerForNode(range.startContainer, sourceContainer);
-			const endMarker = findBlockMarkerForNode(range.endContainer, sourceContainer);
+			const startMarker = findBlockMarkerForNode(range.startContainer, sourceContainer, range.startOffset);
+			const endMarker = findBlockMarkerForNode(range.endContainer, sourceContainer, range.endOffset);
+			// MODIFIED SECTION END
 			
 			// Check if the selection crosses a block boundary.
 			if (startMarker !== endMarker) {
@@ -317,8 +340,8 @@ async function handleToolbarAction(button) {
 			const chapterItem = sourceContainer.closest('.manuscript-chapter-item');
 			const chapterId = chapterItem.dataset.chapterId;
 			
-			const blockNumberMatch = startMarker?.querySelector('p')?.textContent.match(/#(\d+)/);
-			const blockNumber = blockNumberMatch ? parseInt(blockNumberMatch[1], 10) : 1; // Default to block 1
+			// MODIFIED: Use the data-attribute from the marker directly. It's more robust than parsing text.
+			const blockNumber = startMarker ? parseInt(startMarker.dataset.blockNumber, 10) : 1;
 			
 			const targetEditorView = toolbarConfig.getChapterViews(chapterId).targetContentView;
 			
@@ -333,7 +356,7 @@ async function handleToolbarAction(button) {
 				targetLanguage: novelData.target_language || 'English',
 				activeEditorView: targetEditorView, // The target editor is where the result will go
 				translationInfo: {
-					blockNumber: blockNumber, // Keep this for potential future use
+					blockNumber: blockNumber,
 				},
 			};
 			openPromptEditor(context, 'translate', settings);

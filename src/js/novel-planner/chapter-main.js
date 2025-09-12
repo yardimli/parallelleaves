@@ -9,33 +9,33 @@ import { baseKeymap } from 'prosemirror-commands';
 import { schema, NoteNodeView, getActiveEditor, setActiveEditor } from './content-editor.js';
 import { updateToolbarState } from './toolbar.js';
 
-const debounceTimers = new Map();
+// NEW: Throttling utility to limit how often a function can be called.
+const throttle = (func, limit) => {
+	let inThrottle;
+	return function(...args) {
+		const context = this;
+		if (!inThrottle) {
+			func.apply(context, args);
+			inThrottle = true;
+			setTimeout(() => inThrottle = false, limit);
+		}
+	};
+};
+
+// NEW: Debouncing utility to delay function execution until after a pause.
+const debounce = (func, delay) => {
+	let timeout;
+	return function(...args) {
+		const context = this;
+		clearTimeout(timeout);
+		timeout = setTimeout(() => func.apply(context, args), delay);
+	};
+};
+
 let activeChapterId = null;
 let isScrollingProgrammatically = false;
 const chapterEditorViews = new Map();
 
-/**
- * Triggers a debounced save for a specific field of a chapter.
- * @param {string} chapterId - The ID of the chapter being edited.
- * @param {string} field - The field to save ('title', 'target_content').
- * @param {string} value - The new value of the field.
- */
-function triggerDebouncedSave(chapterId, field, value) {
-	const key = `chapter-${chapterId}-${field}`;
-	if (debounceTimers.has(key)) {
-		clearTimeout(debounceTimers.get(key));
-	}
-	const timer = setTimeout(async () => {
-		try {
-			await window.api.updateChapterField({ chapterId, field, value });
-		} catch (error) {
-			console.error(`Error saving ${field} for chapter ${chapterId}:`, error);
-			// MODIFIED: Replaced native alert with custom modal.
-			window.showAlert(`Could not save ${field} changes.`);
-		}
-		debounceTimers.delete(key);
-	}, 2000);
-}
 
 /**
  * Creates a ProseMirror editor view instance.
@@ -47,6 +47,22 @@ function triggerDebouncedSave(chapterId, field, value) {
  * @returns {EditorView}
  */
 function createEditorView(mount, initialHtml, isEditable, chapterId, saveField) {
+	// NEW: Create a debounced save function for this specific editor instance.
+	// This improves performance by only serializing content when the user has paused typing.
+	const debouncedContentSave = debounce(async (view) => {
+		const serializer = DOMSerializer.fromSchema(view.state.schema);
+		const fragmentContent = serializer.serializeFragment(view.state.doc.content);
+		const tempDiv = document.createElement('div');
+		tempDiv.appendChild(fragmentContent);
+		const value = tempDiv.innerHTML;
+		try {
+			await window.api.updateChapterField({ chapterId, field: saveField, value });
+		} catch (error) {
+			console.error(`Error saving ${saveField} for chapter ${chapterId}:`, error);
+			window.showAlert(`Could not save ${saveField} changes.`);
+		}
+	}, 2000); // 2 second delay
+	
 	// NEW SECTION START: Custom plugin to prevent 'note' nodes from being deleted.
 	const noteProtectionPlugin = new Plugin({
 		// This part improves the user experience for single key presses (Backspace/Delete).
@@ -166,16 +182,14 @@ function createEditorView(mount, initialHtml, isEditable, chapterId, saveField) 
 			this.updateState(newState);
 			
 			if (isEditable && transaction.docChanged) {
-				const serializer = DOMSerializer.fromSchema(this.state.schema);
-				const fragmentContent = serializer.serializeFragment(this.state.doc.content);
-				const tempDiv = document.createElement('div');
-				tempDiv.appendChild(fragmentContent);
-				triggerDebouncedSave(chapterId, saveField, tempDiv.innerHTML);
+				// MODIFIED: Serialization is removed from here. We just call the debounced function,
+				// passing the view instance. This is much more performant.
+				debouncedContentSave(this);
 				
 				if (saveField === 'target_content') {
 					const wordCount = this.state.doc.textContent.trim().split(/\s+/).filter(Boolean).length;
 					const wordCountEl = mount.closest('.manuscript-chapter-item').querySelector('.js-target-word-count');
-					if(wordCountEl) {
+					if (wordCountEl) {
 						wordCountEl.textContent = `${wordCount.toLocaleString()} words`;
 					}
 				}
@@ -244,7 +258,17 @@ async function renderManuscript(container, novelData) {
 			titleInput.value = chapter.title;
 			titleInput.className = 'text-2xl font-bold w-full bg-transparent border-0 p-0 focus:ring-0 focus:border-b-2 focus:border-indigo-500 mb-4';
 			titleInput.placeholder = 'Chapter Title';
-			titleInput.addEventListener('input', () => triggerDebouncedSave(chapter.id, 'title', titleInput.value));
+			
+			// MODIFIED: Create a debounced save function for the title input.
+			const debouncedTitleSave = debounce(async (value) => {
+				try {
+					await window.api.updateChapterField({ chapterId: chapter.id, field: 'title', value });
+				} catch (error) {
+					console.error(`Error saving title for chapter ${chapter.id}:`, error);
+					window.showAlert('Could not save title changes.');
+				}
+			}, 1500); // 1.5 second delay for title
+			titleInput.addEventListener('input', () => debouncedTitleSave(titleInput.value));
 			
 			const layoutGrid = document.createElement('div');
 			layoutGrid.className = 'grid grid-cols-2 gap-6';
@@ -624,10 +648,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 		setupNoteEditorModal();
 		setupTranslateBlockAction(); // MODIFIED: Added call to setup the new feature.
 		
-		// NEW: Listen for any selection change to update toolbar state for source panel selections.
-		document.addEventListener('selectionchange', () => {
+		// MODIFIED SECTION START: Performance optimization for toolbar updates.
+		// Toolbar updates on selection changes can be frequent and cause lag.
+		// Throttling this event handler improves editor responsiveness significantly.
+		const throttledUpdateToolbar = throttle(() => {
 			updateToolbarState(getActiveEditor());
-		});
+		}, 150); // Update at most once every 150ms.
+		
+		// Use the throttled function for the event listener.
+		document.addEventListener('selectionchange', throttledUpdateToolbar);
+		// MODIFIED SECTION END
 		
 		const chapterToLoad = initialChapterId || novelData.sections[0]?.chapters[0]?.id;
 		if (chapterToLoad) {
