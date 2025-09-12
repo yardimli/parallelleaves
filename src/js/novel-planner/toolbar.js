@@ -65,11 +65,8 @@ export function updateToolbarState(view) {
 				case 'create_codex':
 					btn.disabled = empty;
 					return;
-				// MODIFIED: Corrected the logic to enable the button only when the cursor is in an empty paragraph.
 				case 'add_note': {
 					const {$from} = state.selection;
-					// The button should be enabled only if the selection is a cursor (empty)
-					// and its parent node is a paragraph with no content.
 					const isAtEmptyPara = empty && $from.parent.type.name === 'paragraph' && $from.parent.content.size === 0;
 					btn.disabled = !isAtEmptyPara;
 					return;
@@ -224,16 +221,14 @@ function applyHighlight(color) {
 
 async function handleToolbarAction(button) {
 	if (button.classList.contains('js-ai-action-btn')) {
-		// ... (This section is unchanged)
 		const action = button.dataset.action;
 		const novelId = document.body.dataset.novelId;
 		if (!novelId) {
-			alert('Error: Could not determine the current novel.');
+			alert('Error: Could not determine the current project.');
 			return;
 		}
 		
 		const isChapterEditor = toolbarConfig.isChapterEditor;
-		const isCodexEditor = toolbarConfig.isCodexEditor;
 		
 		const activeEditor = getActiveEditor();
 		let editorForPrompt = activeEditor;
@@ -241,39 +236,43 @@ async function handleToolbarAction(button) {
 		let wordsBefore = '';
 		let wordsAfter = '';
 		let chapterId = null;
-		let povString = '';
 		
-		if (isChapterEditor && action === 'scene-summarization') {
-			chapterId = toolbarConfig.getActiveChapterId ? toolbarConfig.getActiveChapterId() : null;
-			if (!chapterId) {
-				alert('Could not determine the active chapter.');
-				return;
-			}
-			const views = toolbarConfig.getChapterViews ? toolbarConfig.getChapterViews(chapterId) : null;
-			if (!views || !views.contentView || !views.summaryView) {
-				alert('Could not find content and summary editors for the active chapter.');
-				return;
-			}
-			const contentView = views.contentView;
-			const summaryView = views.summaryView;
-			
-			editorForPrompt = summaryView;
-			
-			const activeContentEditor = getActiveEditor();
-			if (activeContentEditor && !activeContentEditor.state.selection.empty) {
-				const {from, to} = activeContentEditor.state.selection;
-				selectedText = activeContentEditor.state.doc.textBetween(from, to, ' ');
+		// MODIFIED: Logic to handle summarization is now more robust and context-aware.
+		if (action === 'scene-summarization') {
+			if (isChapterEditor) {
+				// We are in the main translation editor.
+				chapterId = toolbarConfig.getActiveChapterId ? toolbarConfig.getActiveChapterId() : null;
+				if (!chapterId) {
+					alert('Could not determine the active chapter.');
+					return;
+				}
+				const views = toolbarConfig.getChapterViews ? toolbarConfig.getChapterViews(chapterId) : null;
+				// Check for the specific views of the translation editor.
+				if (views && views.sourceContentView && views.targetSummaryView) {
+					// Summarize the SOURCE content.
+					selectedText = views.sourceContentView.state.doc.textContent;
+					// The AI will write the result into the TARGET summary editor.
+					editorForPrompt = views.targetSummaryView;
+				} else {
+					alert('Could not find source content and target summary editors for the active chapter.');
+					return;
+				}
 			} else {
-				selectedText = contentView.state.doc.textContent;
+				// We are in a different editor (e.g., Codex). Summarize the active editor's full content.
+				if (activeEditor) {
+					selectedText = activeEditor.state.doc.textContent;
+					editorForPrompt = activeEditor; // The result will replace the current content.
+				} else {
+					alert('No active editor to summarize.');
+					return;
+				}
 			}
 		} else if (activeEditor) {
+			// For other actions like "Rephrase", use the selected text from the active editor.
 			const {state} = activeEditor;
 			const {from, to, empty} = state.selection;
-			
 			if (!empty) {
 				selectedText = state.doc.textBetween(from, to, ' ');
-			} else if (action === 'scene-summarization') {
-				selectedText = state.doc.textContent;
 			}
 		}
 		
@@ -296,40 +295,10 @@ async function handleToolbarAction(button) {
 		}
 		
 		const novelData = await window.api.getOneNovel(novelId);
-		const novelLanguage = novelData.prose_language || 'English';
-		const novelTense = novelData.prose_tense || 'past';
-		
-		let povData = {
-			currentPov: novelData.prose_pov,
-			isOverride: false,
-			characters: [],
-			currentCharacterId: null,
-		};
-		
-		
-		if (povData && povData.currentPov) {
-			const povDisplayMap = {
-				'first_person': '1st Person',
-				'second_person': '2nd Person',
-				'third_person': '3rd Person',
-				'third_person_limited': '3rd Person (Limited)',
-				'third_person_omniscient': '3rd Person (Omniscient)',
-			};
-			const povTypeDisplay = povDisplayMap[povData.currentPov] || povData.currentPov;
-			let characterName = '';
-			if (povData.currentCharacterId) {
-				const character = povData.characters.find(c => String(c.id) === String(povData.currentCharacterId));
-				if (character) characterName = character.title;
-			}
-			
-			povString = `This scene is written in ${povTypeDisplay} point of view`;
-			if (characterName) povString += ` from the perspective of ${characterName}`;
-			povString += '.';
-		}
+		const novelLanguage = novelData.target_language || 'English';
 		
 		const allCodexEntries = await window.api.getAllCodexEntriesForNovel(novelId);
 		let linkedCodexEntryIds = [];
-		
 		if (chapterId) {
 			linkedCodexEntryIds = await window.api.getLinkedCodexIdsForChapter(chapterId);
 		}
@@ -339,8 +308,6 @@ async function handleToolbarAction(button) {
 			allCodexEntries,
 			linkedCodexEntryIds,
 			novelLanguage,
-			novelTense,
-			povString,
 			wordsBefore,
 			wordsAfter,
 			activeEditorView: editorForPrompt,
@@ -375,7 +342,6 @@ async function handleToolbarAction(button) {
 		} else if (command === 'add_note') {
 			if (!activeEditorView) return;
 			
-			// MODIFIED: Store the active chapter ID in the modal form before showing it.
 			const activeChapterId = toolbarConfig.getActiveChapterId ? toolbarConfig.getActiveChapterId() : null;
 			if (!activeChapterId) {
 				alert('Cannot add a note without an active chapter.');
@@ -391,8 +357,8 @@ async function handleToolbarAction(button) {
 			
 			title.textContent = 'Add Note';
 			form.reset();
-			posInput.value = ''; // Clear position, indicating a new note.
-			chapterIdInput.value = activeChapterId; // Store the target chapter ID.
+			posInput.value = '';
+			chapterIdInput.value = activeChapterId;
 			noteModal.showModal();
 			contentInput.focus();
 		} else {

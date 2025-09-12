@@ -25,7 +25,7 @@ const truncateHtml = (html, wordLimit) => {
  */
 async function renderOutline(container, sections) {
 	if (!sections || sections.length === 0) {
-		container.innerHTML = '<p class="text-base-content/70">No sections in this novel yet.</p>';
+		container.innerHTML = '<p class="text-base-content/70">No sections in this project yet.</p>';
 		return;
 	}
 	
@@ -36,7 +36,6 @@ async function renderOutline(container, sections) {
 	const fragment = document.createDocumentFragment();
 	
 	for (const section of sections) {
-		// NEW: Format the chapter stats string with pluralization and number formatting.
 		const chapterCountText = section.chapter_count === 1 ? '1 chapter' : `${section.chapter_count} chapters`;
 		const chapterStats = `${chapterCountText} - ${section.total_word_count.toLocaleString()} words`;
 		
@@ -45,7 +44,7 @@ async function renderOutline(container, sections) {
 			.replace('{{SECTION_ORDER}}', section.section_order)
 			.replace('{{SECTION_TITLE}}', section.title)
 			.replace('{{SECTION_DESCRIPTION}}', section.description || '')
-			.replace('{{CHAPTER_STATS}}', chapterStats); // MODIFIED: Populate new placeholder
+			.replace('{{CHAPTER_STATS}}', chapterStats);
 		
 		const sectionEl = document.createElement('div');
 		sectionEl.innerHTML = sectionHtml;
@@ -59,13 +58,12 @@ async function renderOutline(container, sections) {
 						.replace(/{{ENTRY_TITLE}}/g, entry.title)
 				).join('');
 				
+				// MODIFIED: Removed the replacement for POV_TYPE and POV_CHARACTER.
 				const chapterHtml = chapterTemplate
 					.replace(/{{CHAPTER_ID}}/g, chapter.id)
 					.replace('{{CHAPTER_ORDER}}', chapter.chapter_order)
 					.replace('{{CHAPTER_TITLE}}', chapter.title)
-					.replace('{{POV_TYPE}}', chapter.pov_display.type)
-					.replace('{{POV_CHARACTER}}', chapter.pov_display.character_name || '')
-					.replace('{{WORD_COUNT}}', chapter.word_count.toLocaleString()) // MODIFIED: Populate new placeholder
+					.replace('{{WORD_COUNT}}', chapter.word_count.toLocaleString())
 					.replace('{{CHAPTER_SUMMARY_HTML}}', chapter.summary || '<p class="italic text-base-content/60">No summary.</p>')
 					.replace('{{TAGS_WRAPPER_HIDDEN}}', tagsHtml ? '' : 'hidden')
 					.replace('{{CODEX_TAGS_HTML}}', tagsHtml);
@@ -87,7 +85,7 @@ async function renderOutline(container, sections) {
  */
 async function renderCodex(container, categories) {
 	if (!categories || categories.length === 0) {
-		container.innerHTML = '<p class="text-base-content/70">No codex entries in this novel yet.</p>';
+		container.innerHTML = '<p class="text-base-content/70">No codex entries in this project yet.</p>';
 		return;
 	}
 	
@@ -108,7 +106,7 @@ async function renderCodex(container, categories) {
 		if (category.entries && category.entries.length > 0) {
 			for (const entry of category.entries) {
 				const entryHtml = entryTemplate
-					.replace(/{{ENTRY_ID}}/g, entry.id) // MODIFIED: Use global replace for entry ID to ensure all instances are replaced.
+					.replace(/{{ENTRY_ID}}/g, entry.id)
 					.replace(/{{ENTRY_TITLE}}/g, entry.title)
 					.replace('{{CONTENT_HTML}}', truncateHtml(entry.content, 30));
 				
@@ -132,7 +130,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 	const codexContainer = document.getElementById('js-codex-container');
 	
 	if (!novelId) {
-		document.body.innerHTML = '<p class="text-error p-8">Error: Novel ID is missing.</p>';
+		document.body.innerHTML = '<p class="text-error p-8">Error: Project ID is missing.</p>';
 		return;
 	}
 	
@@ -145,7 +143,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 		await renderOutline(outlineContainer, data.sections);
 		await renderCodex(codexContainer, data.codex_categories);
 		
-		// Add event listeners
 		document.body.addEventListener('click', (event) => {
 			const editBtn = event.target.closest('.js-edit-chapter');
 			if (editBtn) {
@@ -154,7 +151,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 				window.api.openChapterEditor({ novelId, chapterId });
 			}
 			
-			// NEW: Add listener for codex edit button
 			const editCodexBtn = event.target.closest('.js-edit-codex-entry');
 			if (editCodexBtn) {
 				const entryId = editCodexBtn.dataset.entryId;

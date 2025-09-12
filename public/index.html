@@ -4,21 +4,20 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' file: data: https:;">
-	<title>Novel Writer - Dashboard</title>
+	<title>Translation Editor - Dashboard</title>
 	<link rel="stylesheet" href="../node_modules/bootstrap-icons/font/bootstrap-icons.css">
 	<link rel="stylesheet" href="../dist/styles.css">
 </head>
 <body>
 <div class="container mx-auto p-8">
 	<div class="flex justify-between items-center mb-8">
-		<h1 class="text-4xl font-bold">My Novels</h1>
+		<h1 class="text-4xl font-bold">My Translation Projects</h1>
 		<div class="flex items-center gap-4">
 			<label id="theme-toggle" class="swap swap-rotate btn btn-ghost btn-circle">
 				<input type="checkbox" class="theme-controller" value="dark"/>
 				<i class="swap-off bi bi-sun-fill text-2xl"></i>
 				<i class="swap-on bi bi-moon-fill text-2xl"></i>
 			</label>
-			<!-- NEW: Button to open the import document window -->
 			<button id="import-doc-btn" class="btn btn-neutral gap-2">
 				<i class="bi bi-file-earmark-arrow-up"></i>
 				Import Document
@@ -27,55 +26,40 @@
 	</div>
 	
 	<div id="novel-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-		<p id="loading-message">Loading novels...</p>
+		<p id="loading-message">Loading projects...</p>
 	</div>
 </div>
 
-<!-- Prose Settings Modal -->
+<!-- MODIFIED: "Prose Settings" modal is now "Language Settings" -->
 <dialog id="prose-settings-modal" class="modal">
 	<div class="modal-box w-11/12 max-w-2xl">
-		<h3 class="font-bold text-lg">Prose Settings</h3>
-		<p class="py-4 text-sm text-base-content/70">These settings help guide AI prose generation and other writing tools.</p>
+		<h3 class="font-bold text-lg">Language Settings</h3>
+		<p class="py-4 text-sm text-base-content/70">These settings define the source and target languages for the project and AI tools.</p>
 		<form id="prose-settings-form" class="space-y-4">
 			<input type="hidden" id="prose-novel-id" name="novelId">
 			
-			<!-- Tense -->
+			<!-- NEW: Source Language -->
 			<div class="form-control">
-				<label for="prose_tense" class="label"><span class="label-text">Tense</span></label>
-				<select id="prose_tense" name="prose_tense" class="select select-bordered">
-					<option value="past">Past Tense</option>
-					<option value="present">Present Tense</option>
-				</select>
-				<div class="label">
-					<span class="label-text-alt">e.g., "She walked" (Past) vs. "She walks" (Present).</span>
-				</div>
-			</div>
-			
-			<!-- Language -->
-			<div class="form-control">
-				<label for="prose_language" class="label"><span class="label-text">Language</span></label>
-				<select id="prose_language" name="prose_language" class="select select-bordered">
+				<label for="prose_source_language" class="label"><span class="label-text">Source Language</span></label>
+				<select id="prose_source_language" name="prose_source_language" class="select select-bordered">
 					<!-- Options populated by JS -->
 				</select>
 				<div class="label">
-					<span class="label-text-alt">Used for spell checking and AI generation.</span>
+					<span class="label-text-alt">The original language of the document.</span>
 				</div>
 			</div>
 			
-			<!-- Point of View -->
+			<!-- MODIFIED: Target Language (was just "Language") -->
 			<div class="form-control">
-				<label for="prose_pov" class="label"><span class="label-text">Point of View (POV)</span></label>
-				<select id="prose_pov" name="prose_pov" class="select select-bordered">
-					<option value="first_person">1st Person</option>
-					<option value="second_person">2nd Person</option>
-					<option value="third_person">3rd Person</option>
-					<option value="third_person_limited">3rd Person (Limited)</option>
-					<option value="third_person_omniscient">3rd Person (Omniscient)</option>
+				<label for="prose_target_language" class="label"><span class="label-text">Target Language</span></label>
+				<select id="prose_target_language" name="prose_target_language" class="select select-bordered">
+					<!-- Options populated by JS -->
 				</select>
 				<div class="label">
-					<span class="label-text-alt">The perspective from which the story is told.</span>
+					<span class="label-text-alt">The language to translate into. Used for spell checking and AI generation.</span>
 				</div>
 			</div>
+		
 		</form>
 		<div class="modal-action">
 			<form method="dialog" class="flex gap-3">
@@ -89,7 +73,7 @@
 <!-- Meta Settings Modal -->
 <dialog id="meta-settings-modal" class="modal">
 	<div class="modal-box w-11/12 max-w-4xl">
-		<h3 class="font-bold text-lg">Edit Novel Details</h3>
+		<h3 class="font-bold text-lg">Edit Project Details</h3>
 		
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-8 py-4">
 			<!-- Left Column: Details -->
@@ -131,8 +115,8 @@
 		<!-- Danger Zone (Full Width) -->
 		<div class="divider">Danger Zone</div>
 		<div class="flex justify-between items-center bg-error/10 p-4 rounded-lg">
-			<p class="text-sm">Permanently delete this novel and all its content.</p>
-			<button id="delete-novel-btn" class="btn btn-error">Delete Novel</button>
+			<p class="text-sm">Permanently delete this project and all its content.</p>
+			<button id="delete-novel-btn" class="btn btn-error">Delete Project</button>
 		</div>
 		
 		<div class="modal-action">

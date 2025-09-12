@@ -53,7 +53,6 @@ let currentPromptId = null;
 const loadPrompt = async (promptId) => {
 	if (!modalEl) return;
 	
-	// NEW: Reset the toggle preview button text since the preview is hidden by default.
 	const toggleBtn = modalEl.querySelector('.js-toggle-preview-btn');
 	if (toggleBtn) {
 		toggleBtn.textContent = 'Show Preview';
@@ -73,20 +72,16 @@ const loadPrompt = async (promptId) => {
 		return;
 	}
 	
-	// Update active item in the list
 	modalEl.querySelectorAll('.js-prompt-item').forEach(btn => {
 		btn.classList.toggle('btn-active', btn.dataset.promptId === promptId);
 	});
 	
-	// Show editor, hide placeholder
 	placeholder.classList.add('hidden');
 	customEditorPane.classList.remove('hidden');
 	
-	// Set the title and initialize the specific editor module.
 	customPromptTitle.textContent = `Prompt Builder: ${editorConfig.name}`;
 	customFormContainer.innerHTML = `<div class="p-4 text-center"><span class="loading loading-spinner"></span></div>`;
 	
-	// The init function from the module will load its template and set up logic.
 	await editorConfig.init(customFormContainer, currentContext);
 };
 
@@ -136,42 +131,32 @@ function handleFloatyDiscard() {
 	cleanupAiAction();
 }
 
-// MODIFIED: This function now reverts the text, re-selects it, and re-opens the prompt editor modal with previous settings.
 async function handleFloatyRetry() {
 	if (!isAiActionActive || !activeEditorView || !currentAiParams) return;
 	
 	const actionToRetry = currentAiParams.action;
 	const contextForRetry = currentAiParams.context;
-	const previousFormData = currentAiParams.formData; // NEW: Get previous settings.
+	const previousFormData = currentAiParams.formData;
 	
-	// 1. Remove the floating toolbar.
 	if (floatingToolbar) {
 		floatingToolbar.remove();
 		floatingToolbar = null;
 	}
 	
-	// 2. Revert the text to its original state.
 	const { state, dispatch } = activeEditorView;
 	let tr = state.tr.replace(aiActionRange.from, aiActionRange.to, originalFragment);
 	
-	// 3. Calculate the new 'to' position after replacing the text.
-	// This is important because the original fragment's length might be different from the AI-generated text.
 	const newTo = aiActionRange.from + originalFragment.size;
 	
-	// 4. Create and apply a new selection transaction.
 	tr = tr.setSelection(TextSelection.create(tr.doc, aiActionRange.from, newTo));
 	dispatch(tr);
 	
-	// 5. Make the editor editable again.
 	setEditorEditable(activeEditorView, true);
 	
-	// 6. Clean up remaining AI state flags.
 	isAiActionActive = false;
 	originalFragment = null;
-	// aiActionRange is still valid and needed for the next step.
 	updateToolbarState(activeEditorView);
 	
-	// 7. Re-open the prompt editor modal with the original context and previous form data.
 	openPromptEditor(contextForRetry, actionToRetry, previousFormData);
 }
 
@@ -224,16 +209,13 @@ function createFloatingToolbar(view, from, to, model) {
 	});
 }
 
-// MODIFIED: This function now shows a spinner within the correct chapter's summary editor.
 async function startAiSummarizationStream(params) {
 	const { prompt, model } = params;
 	
-	// The target editor is already set in `activeEditorView` by `handleModalApply`.
 	setEditorEditable(activeEditorView, false);
-	updateToolbarState(activeEditorView); // To disable buttons.
+	updateToolbarState(activeEditorView);
 	
-	// MODIFIED: Find the spinner relative to the active summary editor's parent.
-	const editorWrapper = activeEditorView.dom.parentElement; // The .js-summary-editable div
+	const editorWrapper = activeEditorView.dom.parentElement;
 	const spinner = editorWrapper.querySelector('.js-summary-spinner');
 	if (spinner) spinner.classList.remove('hidden');
 	
@@ -387,15 +369,13 @@ async function handleModalApply() {
 	const action = currentPromptId ? currentPromptId : null;
 	const form = modalEl.querySelector('.js-custom-editor-pane form');
 	
-	console.log('Applying AI Action:', { model, action, form });
-	
 	if (!model || !action || !form) {
 		alert('Could not apply action. Missing model, action, or form.');
 		return;
 	}
 	
 	const builder = promptBuilders[action];
-	const extractor = formDataExtractors[action]; // NEW: Get the correct extractor.
+	const extractor = formDataExtractors[action];
 	if (!builder || !extractor) {
 		alert(`No prompt builder or form extractor found for action: ${action}`);
 		return;
@@ -403,11 +383,11 @@ async function handleModalApply() {
 	
 	modalEl.close();
 	
-	// MODIFIED: Logic to handle the special summarization case.
-	if (currentContext.isChapterSummarization) {
-		activeEditorView = currentContext.activeEditorView; // This is the summary editor.
+	// MODIFIED: This logic now correctly handles both summarization contexts.
+	if (action === 'scene-summarization') {
+		activeEditorView = currentContext.activeEditorView;
 		if (!activeEditorView) {
-			alert('Target summary editor not found.');
+			alert('Target editor not found for summarization.');
 			return;
 		}
 		
@@ -417,10 +397,10 @@ async function handleModalApply() {
 		const prompt = builder(formDataObj, promptContext);
 		
 		await startAiSummarizationStream({ prompt, model });
-		return; // End execution here for summarization.
+		return;
 	}
 	
-	// Original workflow for all other actions.
+	// Original workflow for all other actions like "Rephrase".
 	activeEditorView = currentContext.activeEditorView;
 	if (!activeEditorView) {
 		alert('No active editor to apply changes to.');
@@ -428,28 +408,24 @@ async function handleModalApply() {
 	}
 	
 	const { state } = activeEditorView;
-	const { from, to } = state.selection;
+	const { from, to, empty } = state.selection;
 	
-	let text = state.doc.textBetween(from, to, ' ');
-	if (action === 'scene-summarization' && state.selection.empty) {
-		text = state.doc.textContent;
-	}
-	
-	if ((action !== 'scene-summarization') && state.selection.empty) {
+	if (empty) {
 		alert('Please select text to apply this action.');
 		return;
 	}
 	
+	const text = state.doc.textBetween(from, to, ' ');
+	
 	originalFragment = state.doc.slice(from, to);
 	aiActionRange = { from, to };
 	
-	const formDataObj = extractor(form); // NEW: Use extractor to get form data.
+	const formDataObj = extractor(form);
 	
 	const wordCount = text ? text.trim().split(/\s+/).filter(Boolean).length : 0;
 	const promptContext = { ...currentContext, selectedText: text, wordCount };
 	const prompt = builder(formDataObj, promptContext);
 	
-	// MODIFIED: Store the structured form data object for retries.
 	currentAiParams = { prompt, model, action, context: currentContext, formData: formDataObj };
 	
 	await startAiStream({ prompt: currentAiParams.prompt, model: currentAiParams.model });
@@ -468,11 +444,9 @@ export function setupPromptEditor() {
 		applyBtn.addEventListener('click', handleModalApply);
 	}
 	
-	// NEW: Add event listener for the toggle preview button.
 	const toggleBtn = modalEl.querySelector('.js-toggle-preview-btn');
 	if (toggleBtn) {
 		toggleBtn.addEventListener('click', () => {
-			// The preview section is inside the form container which is dynamically loaded
 			const formContainer = modalEl.querySelector('.js-custom-form-container');
 			if (!formContainer) return;
 			
@@ -496,7 +470,6 @@ export async function openPromptEditor(context, promptId, initialState = null) {
 		console.error('Prompt editor modal element not found.');
 		return;
 	}
-	// MODIFIED: Add initial state to the context for the editor builders.
 	currentContext = { ...context, initialState };
 	currentPromptId = promptId;
 	

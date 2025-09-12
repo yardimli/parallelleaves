@@ -2,13 +2,17 @@
 -- It uses INTEGER for foreign keys and TEXT for JSON data.
 
 -- For existing databases, run the following ALTER TABLE statements:
--- ALTER TABLE novels ADD COLUMN prose_tense TEXT DEFAULT 'past';
--- ALTER TABLE novels ADD COLUMN prose_language TEXT DEFAULT 'English';
--- ALTER TABLE novels ADD COLUMN prose_pov TEXT DEFAULT 'third_person_limited';
+-- ALTER TABLE novels RENAME COLUMN prose_language TO target_language;
+-- ALTER TABLE novels ADD COLUMN source_language TEXT DEFAULT 'English';
+-- ALTER TABLE novels DROP COLUMN prose_tense;
+-- ALTER TABLE novels DROP COLUMN prose_pov;
+-- ALTER TABLE chapters RENAME COLUMN content TO source_content;
+-- ALTER TABLE chapters ADD COLUMN target_content TEXT;
+-- ALTER TABLE chapters RENAME COLUMN summary TO source_summary;
+-- ALTER TABLE chapters ADD COLUMN target_summary TEXT;
 -- ALTER TABLE chapters DROP COLUMN pov;
 -- ALTER TABLE chapters DROP COLUMN pov_character_id;
 -- ALTER TABLE novels DROP COLUMN editor_state;
--- MODIFIED: Add these ALTER statements to remove codex image columns if your database already exists.
 -- ALTER TABLE codex_entries DROP COLUMN image_path;
 -- ALTER TABLE images DROP COLUMN codex_entry_id;
 
@@ -41,10 +45,10 @@ CREATE TABLE IF NOT EXISTS novels (
     synopsis TEXT,
     status TEXT NOT NULL DEFAULT 'draft',
     order_in_series INTEGER,
-    -- MODIFIED: Removed editor_state as it was for the Novel Planner.
-    prose_tense TEXT DEFAULT 'past',
-    prose_language TEXT DEFAULT 'English',
-    prose_pov TEXT DEFAULT 'third_person_limited',
+    -- NEW: Added source language for the translation project.
+    source_language TEXT DEFAULT 'English',
+    -- MODIFIED: Renamed prose_language to target_language.
+    target_language TEXT DEFAULT 'English',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -67,11 +71,16 @@ CREATE TABLE IF NOT EXISTS chapters (
     novel_id INTEGER NOT NULL,
     section_id INTEGER NOT NULL,
     title TEXT NOT NULL,
-    summary TEXT,
-    content TEXT,
+    -- MODIFIED: Renamed summary to source_summary.
+    source_summary TEXT,
+    -- NEW: Added target_summary for the translated summary.
+    target_summary TEXT,
+    -- MODIFIED: Renamed content to source_content.
+    source_content TEXT,
+    -- NEW: Added target_content for the translated text.
+    target_content TEXT,
     status TEXT,
     chapter_order INTEGER NOT NULL,
-    -- MODIFIED: Removed chapter-specific POV overrides as the UI for editing them was in the Novel Planner.
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (novel_id) REFERENCES novels(id) ON DELETE CASCADE,
@@ -94,7 +103,6 @@ CREATE TABLE IF NOT EXISTS codex_entries (
     codex_category_id INTEGER NOT NULL,
     title TEXT NOT NULL,
     content TEXT,
-    -- MODIFIED: Removed image_path column.
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (novel_id) REFERENCES novels(id) ON DELETE CASCADE,
@@ -105,7 +113,6 @@ CREATE TABLE IF NOT EXISTS images (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
     novel_id INTEGER,
-    -- MODIFIED: Removed codex_entry_id and its foreign key. This table is now only for novel covers.
     image_local_path TEXT,
     thumbnail_local_path TEXT,
     remote_url TEXT,

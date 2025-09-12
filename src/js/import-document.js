@@ -5,14 +5,32 @@ document.addEventListener('DOMContentLoaded', () => {
 	const prevMarkBtn = document.getElementById('prev-mark-btn');
 	const nextMarkBtn = document.getElementById('next-mark-btn');
 	const titleInput = document.getElementById('title');
-	const authorInput = document.getElementById('author');
+	// MODIFIED: Replaced authorInput with language selects.
+	const sourceLangSelect = document.getElementById('source_language');
+	const targetLangSelect = document.getElementById('target_language');
 	const documentContent = document.getElementById('document-content');
-	const importStatus = document.getElementById('js-import-status'); // MODIFIED: Get new status element
-	const popover = document.getElementById('break-type-popover'); // NEW: Get popover element
+	const importStatus = document.getElementById('js-import-status');
+	const popover = document.getElementById('break-type-popover');
 	
 	let currentFilePath = null;
 	let currentMarkIndex = -1;
-	let targetedParagraph = null; // NEW: To store the paragraph that was clicked
+	let targetedParagraph = null;
+	
+	// NEW: List of languages for the dropdowns.
+	const languages = [
+		"English", "Spanish", "French", "German", "Mandarin Chinese", "Hindi", "Arabic", "Bengali", "Russian", "Portuguese", "Indonesian", "Urdu", "Japanese", "Swahili", "Marathi", "Telugu", "Turkish", "Korean", "Tamil", "Vietnamese", "Italian", "Javanese", "Thai", "Gujarati", "Polish", "Ukrainian", "Malayalam", "Kannada", "Oriya", "Burmese", "Norwegian", "Finnish", "Danish", "Swedish", "Dutch", "Greek", "Czech", "Hungarian", "Romanian", "Bulgarian", "Serbian", "Croatian", "Slovak", "Slovenian", "Lithuanian", "Latvian", "Estonian", "Hebrew", "Persian", "Afrikaans", "Zulu", "Xhosa", "Amharic", "Yoruba", "Igbo", "Hausa", "Nepali", "Sinhala", "Khmer", "Lao", "Mongolian", "Pashto", "Tajik", "Uzbek", "Kurdish", "Albanian", "Macedonian", "Bosnian", "Icelandic", "Irish", "Welsh", "Catalan", "Basque", "Galician", "Luxembourgish", "Maltese"
+	];
+	
+	// NEW: Function to populate the language select elements.
+	function populateLanguages() {
+		languages.forEach(lang => {
+			sourceLangSelect.add(new Option(lang, lang));
+			targetLangSelect.add(new Option(lang, lang));
+		});
+		// Set default values.
+		sourceLangSelect.value = 'English';
+		targetLangSelect.value = 'Spanish';
+	}
 	
 	function setButtonLoading(button, isLoading) {
 		const content = button.querySelector('.js-btn-content');
@@ -29,7 +47,6 @@ document.addEventListener('DOMContentLoaded', () => {
 		nextMarkBtn.disabled = !hasMarks;
 	}
 	
-	// MODIFIED: Renamed and updated to count both acts and chapters
 	function updateStatus() {
 		const actBreaks = documentContent.querySelectorAll('.act-break').length;
 		const chapterBreaks = documentContent.querySelectorAll('.chapter-break').length;
@@ -51,22 +68,19 @@ document.addEventListener('DOMContentLoaded', () => {
 	
 	function checkFormValidity() {
 		const hasTitle = titleInput.value.trim() !== '';
-		const hasAuthor = authorInput.value.trim() !== '';
+		// MODIFIED: Removed author check.
 		const hasContent = currentFilePath !== null;
-		startImportBtn.disabled = !(hasTitle && hasAuthor && hasContent);
+		startImportBtn.disabled = !(hasTitle && hasContent);
 		autoDetectBtn.disabled = !hasContent;
 	}
 	
-	// NEW: Function to show the popover menu
 	function showPopover(event) {
 		targetedParagraph = event.target;
-		const rect = targetedParagraph.getBoundingClientRect();
 		popover.style.left = `${event.clientX}px`;
 		popover.style.top = `${event.clientY}px`;
 		popover.classList.remove('hidden');
 	}
 	
-	// NEW: Function to hide the popover menu
 	function hidePopover() {
 		popover.classList.add('hidden');
 		targetedParagraph = null;
@@ -102,19 +116,16 @@ document.addEventListener('DOMContentLoaded', () => {
 		}
 	});
 	
-	// MODIFIED: Click listener now shows the popover
 	documentContent.addEventListener('click', (event) => {
 		if (event.target.tagName === 'P') {
 			showPopover(event);
 		}
 	});
 	
-	// NEW: Handle clicks within the popover
 	popover.addEventListener('click', (event) => {
 		const action = event.target.closest('button')?.dataset.action;
 		if (!action || !targetedParagraph) return;
 		
-		// Clear existing breaks before setting a new one
 		targetedParagraph.classList.remove('act-break', 'chapter-break');
 		
 		if (action === 'set-act') {
@@ -122,14 +133,12 @@ document.addEventListener('DOMContentLoaded', () => {
 		} else if (action === 'set-chapter') {
 			targetedParagraph.classList.add('chapter-break');
 		}
-		// If action is 'remove-break', we've already removed the classes.
 		
 		currentMarkIndex = -1;
 		updateStatus();
 		hidePopover();
 	});
 	
-	// NEW: Hide popover if clicking outside of it
 	document.addEventListener('click', (event) => {
 		if (!popover.contains(event.target) && event.target !== targetedParagraph) {
 			hidePopover();
@@ -144,7 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		paragraphs.forEach(p => {
 			const text = p.textContent.trim();
 			if (isNumeric.test(text) || isRoman.test(text)) {
-				p.classList.remove('act-break'); // Ensure it's not also an act break
+				p.classList.remove('act-break');
 				p.classList.add('chapter-break');
 			}
 		});
@@ -178,12 +187,11 @@ document.addEventListener('DOMContentLoaded', () => {
 	});
 	
 	titleInput.addEventListener('input', checkFormValidity);
-	authorInput.addEventListener('input', checkFormValidity);
 	
-	// MODIFIED: The main import logic now builds a nested act/chapter structure
 	startImportBtn.addEventListener('click', async () => {
-		if (!titleInput.value.trim() || !authorInput.value.trim()) {
-			alert('Please provide a title and author.');
+		// MODIFIED: Updated validation check.
+		if (!titleInput.value.trim()) {
+			alert('Please provide a project title.');
 			return;
 		}
 		
@@ -200,31 +208,25 @@ document.addEventListener('DOMContentLoaded', () => {
 			const isChapterBreak = p.classList.contains('chapter-break');
 			
 			if (isActBreak || isChapterBreak) {
-				// Finalize the current chapter if it has content
 				if (currentChapter.content.length > 0) {
 					currentChapter.content = `<p>${currentChapter.content.join('</p><p>')}</p>`;
 					currentAct.chapters.push(currentChapter);
 				}
 				
 				if (isActBreak) {
-					// Finalize the current act if it has chapters
 					if (currentAct.chapters.length > 0) {
 						acts.push(currentAct);
 					}
-					// Start a new act
 					currentAct = { title: p.textContent.trim() || `Act ${acts.length + 1}`, chapters: [] };
 				}
 				
-				// Start a new chapter
 				currentChapter = { title: p.textContent.trim() || `Chapter ${currentAct.chapters.length + 1}`, content: [] };
 				
 			} else {
-				// This is a content paragraph
 				currentChapter.content.push(p.textContent.trim());
 			}
 		}
 		
-		// Finalize the last chapter and act after the loop
 		if (currentChapter.content.length > 0) {
 			currentChapter.content = `<p>${currentChapter.content.join('</p><p>')}</p>`;
 			currentAct.chapters.push(currentChapter);
@@ -233,7 +235,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			acts.push(currentAct);
 		}
 		
-		// If no breaks were made at all, create a default structure
 		if (acts.length === 0 && paragraphs.length > 0) {
 			const allContent = Array.from(paragraphs).map(p => p.textContent.trim());
 			currentChapter.content = `<p>${allContent.join('</p><p>')}</p>`;
@@ -248,10 +249,11 @@ document.addEventListener('DOMContentLoaded', () => {
 		}
 		
 		try {
-			// MODIFIED: Send the new data structure to the backend
+			// MODIFIED: Send new data structure including languages to the backend.
 			await window.api.importDocumentAsNovel({
 				title: titleInput.value.trim(),
-				author: authorInput.value.trim(),
+				source_language: sourceLangSelect.value,
+				target_language: targetLangSelect.value,
 				acts: acts
 			});
 		} catch (error) {
@@ -260,4 +262,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			setButtonLoading(startImportBtn, false);
 		}
 	});
+	
+	// NEW: Initialize the language dropdowns on load.
+	populateLanguages();
 });

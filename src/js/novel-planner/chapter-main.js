@@ -1,4 +1,4 @@
-// MODIFIED: This file is completely rewritten to be the entry point for the new full-manuscript editor.
+// MODIFIED: This file is completely rewritten to be the entry point for the new translation editor.
 import { setupTopToolbar } from './toolbar.js';
 import { setupPromptEditor } from '../prompt-editor.js';
 import { EditorState, Plugin } from 'prosemirror-state';
@@ -7,19 +7,18 @@ import { DOMParser, DOMSerializer } from 'prosemirror-model';
 import { history, undo, redo } from 'prosemirror-history';
 import { keymap } from 'prosemirror-keymap';
 import { baseKeymap } from 'prosemirror-commands';
-// MODIFIED: Import NoteNodeView, getActiveEditor and the full schema.
 import { schema, NoteNodeView, getActiveEditor, setActiveEditor } from './content-editor.js';
 import { updateToolbarState } from './toolbar.js';
 
 const debounceTimers = new Map();
 let activeChapterId = null;
 let isScrollingProgrammatically = false;
-const chapterEditorViews = new Map(); // NEW: Will store { summaryView, contentView } for each chapterId
+const chapterEditorViews = new Map();
 
 /**
  * Triggers a debounced save for a specific field of a chapter.
  * @param {string} chapterId - The ID of the chapter being edited.
- * @param {string} field - The field to save ('title', 'content', 'summary').
+ * @param {string} field - The field to save ('title', 'source_content', 'target_content', 'source_summary', 'target_summary').
  * @param {string} value - The new value of the field.
  */
 function triggerDebouncedSave(chapterId, field, value) {
@@ -39,180 +38,201 @@ function triggerDebouncedSave(chapterId, field, value) {
 }
 
 /**
+ * Creates a ProseMirror editor view instance.
+ * @param {HTMLElement} mount - The element to mount the editor in.
+ * @param {string} initialHtml - The initial HTML content.
+ * @param {boolean} isEditable - Whether the editor should be editable.
+ * @param {string} chapterId - The chapter ID for saving.
+ * @param {string} saveField - The database field to save to.
+ * @returns {EditorView}
+ */
+function createEditorView(mount, initialHtml, isEditable, chapterId, saveField) {
+	const editorPlugin = new Plugin({
+		props: {
+			editable: () => isEditable,
+			handleDOMEvents: {
+				focus(view) {
+					// We can now set any focused editor as the active one.
+					setActiveEditor(view);
+					updateToolbarState(view);
+					const chapterItem = view.dom.closest('.manuscript-chapter-item');
+					if (chapterItem) {
+						const currentChapterId = chapterItem.dataset.chapterId;
+						if (currentChapterId && currentChapterId !== activeChapterId) {
+							activeChapterId = currentChapterId;
+							document.getElementById('js-chapter-nav-dropdown').value = currentChapterId;
+						}
+					}
+				},
+				blur(view, event) {
+					const relatedTarget = event.relatedTarget;
+					if (!relatedTarget || !relatedTarget.closest('#top-toolbar')) {
+						setActiveEditor(null);
+						updateToolbarState(null);
+					}
+				},
+			},
+		},
+	});
+	
+	const doc = DOMParser.fromSchema(schema).parse(document.createRange().createContextualFragment(initialHtml || ''));
+	
+	return new EditorView(mount, {
+		state: EditorState.create({
+			doc: doc,
+			plugins: [history(), keymap({ 'Mod-z': undo, 'Mod-y': redo }), keymap(baseKeymap), editorPlugin],
+		}),
+		nodeViews: {
+			note(node, view, getPos) { return new NoteNodeView(node, view, getPos); }
+		},
+		dispatchTransaction(transaction) {
+			const newState = this.state.apply(transaction);
+			this.updateState(newState);
+			
+			if (isEditable && transaction.docChanged) {
+				const serializer = DOMSerializer.fromSchema(this.state.schema);
+				const fragmentContent = serializer.serializeFragment(this.state.doc.content);
+				const tempDiv = document.createElement('div');
+				tempDiv.appendChild(fragmentContent);
+				triggerDebouncedSave(chapterId, saveField, tempDiv.innerHTML);
+				
+				// Update word count for content editors
+				if (saveField === 'source_content' || saveField === 'target_content') {
+					const wordCount = this.state.doc.textContent.trim().split(/\s+/).filter(Boolean).length;
+					const wordCountSelector = saveField === 'source_content' ? '.js-source-word-count' : '.js-target-word-count';
+					const wordCountEl = mount.closest('.manuscript-chapter-item').querySelector(wordCountSelector);
+					if(wordCountEl) {
+						wordCountEl.textContent = `${wordCount.toLocaleString()} words`;
+					}
+				}
+			}
+			
+			if (transaction.selectionSet || transaction.docChanged) {
+				if (this.hasFocus()) {
+					updateToolbarState(this);
+				}
+			}
+		},
+	});
+}
+
+
+/**
  * Renders the entire manuscript into the container.
  * @param {HTMLElement} container - The manuscript container element.
  * @param {object} novelData - The full novel data.
  */
 async function renderManuscript(container, novelData) {
 	const fragment = document.createDocumentFragment();
-	let totalWordCount = 0;
+	const chapterCodexTagTemplate = await window.api.getTemplate('chapter/chapter-codex-tag');
 	
-	const chapterCodexTagTemplate = await window.api.getTemplate('chapter/chapter-codex-tag'); // NEW: Get template for tags
-	
-	novelData.sections.forEach(section => {
+	for (const section of novelData.sections) {
 		const sectionHeader = document.createElement('div');
 		sectionHeader.className = 'px-8 py-6 sticky top-0 bg-base-100/90 backdrop-blur-sm z-10 border-b border-base-300';
 		sectionHeader.innerHTML = `<h2 class="text-3xl font-bold text-indigo-500">${section.section_order}. ${section.title}</h2>`;
 		fragment.appendChild(sectionHeader);
 		
-		section.chapters.forEach(chapter => {
-			totalWordCount += chapter.word_count || 0;
-			
+		if (!section.chapters || section.chapters.length === 0) {
+			const noChaptersMessage = document.createElement('p');
+			noChaptersMessage.className = 'px-8 py-6 text-base-content/60';
+			noChaptersMessage.textContent = 'This section has no chapters yet.';
+			fragment.appendChild(noChaptersMessage);
+			continue;
+		}
+		
+		for (const chapter of section.chapters) {
 			const chapterWrapper = document.createElement('div');
 			chapterWrapper.id = `chapter-scroll-target-${chapter.id}`;
-			chapterWrapper.className = 'manuscript-chapter-item prose prose-sm dark:prose-invert max-w-none px-8 py-6';
+			chapterWrapper.className = 'manuscript-chapter-item px-8 py-6';
 			chapterWrapper.dataset.chapterId = chapter.id;
 			
-			const chapterHeader = `<p class="text-base-content/50 font-semibold">Chapter ${chapter.chapter_order} &ndash; ${chapter.word_count.toLocaleString()} words</p>`;
 			const titleInput = document.createElement('input');
 			titleInput.type = 'text';
 			titleInput.value = chapter.title;
-			titleInput.className = 'js-chapter-title-input text-2xl font-bold w-full bg-transparent border-0 p-0 focus:ring-0 focus:border-b-2 focus:border-indigo-500 flex-shrink-0 not-prose';
+			titleInput.className = 'text-2xl font-bold w-full bg-transparent border-0 p-0 focus:ring-0 focus:border-b-2 focus:border-indigo-500 mb-4';
 			titleInput.placeholder = 'Chapter Title';
+			titleInput.addEventListener('input', () => triggerDebouncedSave(chapter.id, 'title', titleInput.value));
 			
-			const layoutContainer = document.createElement('div');
-			layoutContainer.className = 'not-prose mt-6 flex flex-col md:flex-row gap-8';
+			const layoutGrid = document.createElement('div');
+			layoutGrid.className = 'grid grid-cols-12 gap-6';
 			
-			const mainContentColumn = document.createElement('div');
-			mainContentColumn.className = 'w-full md:w-3/4';
+			// MODIFIED: Added js-source-word-count span.
+			const sourceCol = document.createElement('div');
+			sourceCol.className = 'col-span-5 prose prose-sm dark:prose-invert max-w-none';
+			sourceCol.innerHTML = `<h3 class="text-sm font-semibold uppercase tracking-wider text-base-content/70 border-b pb-1 mb-2">Source (<span class="js-source-word-count">${chapter.source_word_count.toLocaleString()} words</span>)</h3>`;
+			const sourceContentMount = document.createElement('div');
+			// MODIFIED: Removed bg-base-200/50 to show it's editable.
+			sourceContentMount.className = 'js-source-content-editable p-2 border rounded-md';
+			sourceCol.appendChild(sourceContentMount);
 			
-			const contentEditorMount = document.createElement('div');
-			contentEditorMount.className = 'js-content-editable mt-2';
-			contentEditorMount.dataset.name = 'content';
-			mainContentColumn.appendChild(contentEditorMount);
+			const targetCol = document.createElement('div');
+			targetCol.className = 'col-span-5 prose prose-sm dark:prose-invert max-w-none';
+			targetCol.innerHTML = `<h3 class="text-sm font-semibold uppercase tracking-wider text-base-content/70 border-b pb-1 mb-2">Target (<span class="js-target-word-count">${chapter.target_word_count.toLocaleString()} words</span>)</h3>`;
+			const targetContentMount = document.createElement('div');
+			targetContentMount.className = 'js-target-content-editable p-2 border rounded-md';
+			targetCol.appendChild(targetContentMount);
 			
-			const metadataColumn = document.createElement('div');
-			metadataColumn.className = 'w-full md:w-1/4 flex flex-col space-y-4';
+			const metaCol = document.createElement('div');
+			metaCol.className = 'col-span-2 space-y-4';
 			
-			const summaryHeader = '<div><h3 class="text-xs uppercase tracking-wider font-bold border-b border-base-300 pb-1 mb-2">Summary</h3></div>';
-			const summaryEditorMount = document.createElement('div');
-			summaryEditorMount.className = 'js-summary-editable relative';
-			summaryEditorMount.dataset.name = 'summary';
-			summaryEditorMount.innerHTML = `
-                <div class="js-summary-spinner absolute inset-0 bg-base-100/80 backdrop-blur-sm flex items-center justify-center z-10 hidden">
-                    <div class="text-center">
-                        <span class="loading loading-spinner loading-lg"></span>
-                        <p class="mt-2 text-sm">AI is summarizing...</p>
-                    </div>
-                </div>`;
+			const sourceSummarySection = document.createElement('div');
+			sourceSummarySection.innerHTML = `<h4 class="text-xs uppercase tracking-wider font-bold border-b border-base-300 pb-1 mb-2">Source Summary</h4>`;
+			const sourceSummaryMount = document.createElement('div');
+			// MODIFIED: Removed bg-base-200/50 to show it's editable.
+			sourceSummaryMount.className = 'js-source-summary-editable text-xs p-2 border rounded-md';
+			sourceSummarySection.appendChild(sourceSummaryMount);
 			
-			const codexTagsHtml = chapter.linked_codex.map(entry => {
-				return chapterCodexTagTemplate
+			const targetSummarySection = document.createElement('div');
+			targetSummarySection.innerHTML = `<h4 class="text-xs uppercase tracking-wider font-bold border-b border-base-300 pb-1 mb-2">Target Summary</h4>`;
+			const targetSummaryMount = document.createElement('div');
+			targetSummaryMount.className = 'js-target-summary-editable text-xs p-2 border rounded-md relative';
+			targetSummaryMount.innerHTML = `<div class="js-summary-spinner absolute inset-0 bg-base-100/80 backdrop-blur-sm flex items-center justify-center z-10 hidden"><span class="loading loading-spinner"></span></div>`;
+			targetSummarySection.appendChild(targetSummaryMount);
+			
+			const codexTagsHtml = chapter.linked_codex.map(entry =>
+				chapterCodexTagTemplate
 					.replace(/{{ENTRY_ID}}/g, entry.id)
 					.replace(/{{ENTRY_TITLE}}/g, entry.title)
-					.replace(/{{CHAPTER_ID}}/g, chapter.id);
-			}).join('');
-			
+					.replace(/{{CHAPTER_ID}}/g, chapter.id)
+			).join('');
 			const codexSection = document.createElement('div');
 			codexSection.className = `js-codex-links-wrapper ${chapter.linked_codex.length === 0 ? 'hidden' : ''}`;
 			codexSection.innerHTML = `
                 <h4 class="text-xs uppercase tracking-wider font-bold border-b border-base-300 pb-1 mb-2">Linked Entries</h4>
-                <div class="js-codex-tags-container flex flex-wrap gap-2">${codexTagsHtml}</div>
-            `;
+                <div class="js-codex-tags-container flex flex-wrap gap-1">${codexTagsHtml}</div>`;
 			
-			metadataColumn.innerHTML = summaryHeader;
-			metadataColumn.appendChild(summaryEditorMount);
-			metadataColumn.appendChild(codexSection);
+			metaCol.appendChild(sourceSummarySection);
+			metaCol.appendChild(targetSummarySection);
+			metaCol.appendChild(codexSection);
 			
-			layoutContainer.appendChild(mainContentColumn);
-			layoutContainer.appendChild(metadataColumn);
+			layoutGrid.appendChild(sourceCol);
+			layoutGrid.appendChild(targetCol);
+			layoutGrid.appendChild(metaCol);
 			
-			chapterWrapper.innerHTML = chapterHeader;
 			chapterWrapper.appendChild(titleInput);
-			chapterWrapper.appendChild(layoutContainer);
-			chapterWrapper.appendChild(document.createElement('hr'));
+			chapterWrapper.appendChild(layoutGrid);
+			
+			const hr = document.createElement('hr');
+			hr.className = 'mt-6';
+			chapterWrapper.appendChild(hr);
+			
 			fragment.appendChild(chapterWrapper);
 			
-			titleInput.addEventListener('input', () => {
-				triggerDebouncedSave(chapter.id, 'title', titleInput.value);
-			});
+			// --- Create Editors ---
+			// MODIFIED: Set all 'isEditable' flags to true.
+			const sourceContentView = createEditorView(sourceContentMount, chapter.source_content, true, chapter.id, 'source_content');
+			const targetContentView = createEditorView(targetContentMount, chapter.target_content, true, chapter.id, 'target_content');
+			const sourceSummaryView = createEditorView(sourceSummaryMount, chapter.source_summary, true, chapter.id, 'source_summary');
+			const targetSummaryView = createEditorView(targetSummaryMount, chapter.target_summary, true, chapter.id, 'target_summary');
 			
-			const editorPlugin = new Plugin({
-				props: {
-					handleDOMEvents: {
-						focus(view) {
-							setActiveEditor(view);
-							updateToolbarState(view);
-							const chapterItem = view.dom.closest('.manuscript-chapter-item');
-							if (chapterItem) {
-								const chapterId = chapterItem.dataset.chapterId;
-								if (chapterId && chapterId !== activeChapterId) {
-									activeChapterId = chapterId;
-									const navDropdown = document.getElementById('js-chapter-nav-dropdown');
-									if (navDropdown) navDropdown.value = chapterId;
-								}
-							}
-						},
-						blur(view, event) {
-							const relatedTarget = event.relatedTarget;
-							if (!relatedTarget || !relatedTarget.closest('#top-toolbar')) {
-								setActiveEditor(null);
-								updateToolbarState(null);
-							}
-						},
-					},
-				},
+			chapterEditorViews.set(chapter.id.toString(), {
+				sourceContentView, targetContentView, sourceSummaryView, targetSummaryView
 			});
-			
-			const summaryDoc = DOMParser.fromSchema(schema).parse(document.createRange().createContextualFragment(chapter.summary || ''));
-			const summaryView = new EditorView(summaryEditorMount, {
-				state: EditorState.create({
-					doc: summaryDoc,
-					plugins: [history(), keymap({ 'Mod-z': undo, 'Mod-y': redo }), keymap(baseKeymap), editorPlugin],
-				}),
-				dispatchTransaction(transaction) {
-					const newState = this.state.apply(transaction);
-					this.updateState(newState);
-					if (transaction.docChanged) {
-						const serializer = DOMSerializer.fromSchema(this.state.schema);
-						const fragmentContent = serializer.serializeFragment(this.state.doc.content);
-						const tempDiv = document.createElement('div');
-						tempDiv.appendChild(fragmentContent);
-						triggerDebouncedSave(chapter.id, 'summary', tempDiv.innerHTML);
-					}
-					if (this.hasFocus()) updateToolbarState(this);
-				},
-			});
-			
-			const contentDoc = DOMParser.fromSchema(schema).parse(document.createRange().createContextualFragment(chapter.content || ''));
-			const contentView = new EditorView(contentEditorMount, {
-				state: EditorState.create({
-					doc: contentDoc,
-					plugins: [history(), keymap({ 'Mod-z': undo, 'Mod-y': redo }), keymap(baseKeymap), editorPlugin],
-				}),
-				nodeViews: {
-					note(node, view, getPos) { return new NoteNodeView(node, view, getPos); }
-				},
-				dispatchTransaction(transaction) {
-					const newState = this.state.apply(transaction);
-					this.updateState(newState);
-					if (transaction.docChanged) {
-						const serializer = DOMSerializer.fromSchema(this.state.schema);
-						const fragmentContent = serializer.serializeFragment(this.state.doc.content);
-						const tempDiv = document.createElement('div');
-						tempDiv.appendChild(fragmentContent);
-						triggerDebouncedSave(chapter.id, 'content', tempDiv.innerHTML);
-						
-						const wordCount = this.state.doc.textContent.trim().split(/\s+/).filter(Boolean).length;
-						const headerP = chapterWrapper.querySelector('p.font-semibold');
-						if (headerP) {
-							headerP.innerHTML = `Chapter ${chapter.chapter_order} &ndash; ${wordCount.toLocaleString()} words`;
-						}
-					}
-					if (transaction.selectionSet || transaction.docChanged) {
-						if (this.hasFocus()) {
-							updateToolbarState(this);
-						}
-					}
-				},
-			});
-			
-			chapterEditorViews.set(chapter.id.toString(), { summaryView, contentView });
-		});
-	});
+		}
+	}
 	
+	container.innerHTML = '';
 	container.appendChild(fragment);
-	document.getElementById('js-total-word-count').textContent = `Total: ${totalWordCount.toLocaleString()} words`;
 }
 
 
@@ -255,10 +275,12 @@ function populateNavDropdown(novelData) {
 	novelData.sections.forEach(section => {
 		const optgroup = document.createElement('optgroup');
 		optgroup.label = `${section.section_order}. ${section.title}`;
-		section.chapters.forEach(chapter => {
-			const option = new Option(`${chapter.chapter_order}. ${chapter.title}`, chapter.id);
-			optgroup.appendChild(option);
-		});
+		if (section.chapters && section.chapters.length > 0) {
+			section.chapters.forEach(chapter => {
+				const option = new Option(`${chapter.chapter_order}. ${chapter.title}`, chapter.id);
+				optgroup.appendChild(option);
+			});
+		}
 		navDropdown.appendChild(optgroup);
 	});
 	
@@ -344,15 +366,12 @@ function setupNoteEditorModal() {
 	form.addEventListener('submit', (event) => {
 		event.preventDefault();
 		
-		// MODIFIED: Retrieve the target view using the stored chapter ID instead of getActiveEditor().
-		const chapterIdInput = document.getElementById('note-chapter-id');
-		const chapterId = chapterIdInput.value;
-		const chapterViews = chapterId ? chapterEditorViews.get(chapterId) : null;
-		const view = chapterViews ? chapterViews.contentView : null;
+		// MODIFIED: Logic now targets the currently focused editor via getActiveEditor.
+		const view = getActiveEditor();
 		
 		if (!view) {
 			console.error('No active editor view to save note to.');
-			alert('Error: Could not find the target editor to save the note.'); // User-facing error
+			alert('Error: Could not find an active editor to save the note. Please click inside an editor first.');
 			return;
 		}
 		
@@ -371,7 +390,6 @@ function setupNoteEditorModal() {
 		if (pos !== null && !isNaN(pos)) {
 			tr = view.state.tr.setNodeMarkup(pos, null, { text: noteText });
 		} else {
-			// MODIFIED: This now correctly replaces the parent block (the empty paragraph)
 			const { $from } = view.state.selection;
 			const noteNode = schema.nodes.note.create({ text: noteText });
 			tr = view.state.tr.replaceRangeWith($from.start(), $from.end(), noteNode);
@@ -396,7 +414,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 	const initialChapterId = params.get('chapterId');
 	
 	if (!novelId) {
-		document.body.innerHTML = '<p class="text-error p-8">Error: Novel ID is missing.</p>';
+		document.body.innerHTML = '<p class="text-error p-8">Error: Project ID is missing.</p>';
 		return;
 	}
 	
@@ -404,10 +422,24 @@ document.addEventListener('DOMContentLoaded', async () => {
 	
 	try {
 		const novelData = await window.api.getFullManuscript(novelId);
-		document.title = `Editing: ${novelData.title}`;
+		if (!novelData || !novelData.title) {
+			throw new Error('Failed to load project data from the database.');
+		}
+		
+		document.title = `Translating: ${novelData.title}`;
 		document.getElementById('js-novel-title').textContent = novelData.title;
 		
 		const manuscriptContainer = document.getElementById('js-manuscript-container');
+		
+		if (!novelData.sections || novelData.sections.length === 0) {
+			manuscriptContainer.innerHTML = `<div class="p-8 text-center text-base-content/70">
+				<p>This project has no content yet.</p>
+				<p class="text-sm mt-2">You can import a document from the dashboard to get started.</p>
+			</div>`;
+			document.getElementById('js-chapter-nav-dropdown').disabled = true;
+			return;
+		}
+		
 		await renderManuscript(manuscriptContainer, novelData);
 		populateNavDropdown(novelData);
 		

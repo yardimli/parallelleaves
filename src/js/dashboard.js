@@ -1,14 +1,15 @@
 document.addEventListener('DOMContentLoaded', () => {
 	const novelList = document.getElementById('novel-list');
 	const loadingMessage = document.getElementById('loading-message');
-	const importDocBtn = document.getElementById('import-doc-btn'); // NEW: Get the import button
+	const importDocBtn = document.getElementById('import-doc-btn');
 	
-	// Prose Modal Elements
+	// MODIFIED: Elements are for language settings now.
 	const proseModal = document.getElementById('prose-settings-modal');
 	const proseForm = document.getElementById('prose-settings-form');
 	const proseNovelIdInput = document.getElementById('prose-novel-id');
 	const saveProseBtn = document.getElementById('save-prose-settings-btn');
-	const languageSelect = document.getElementById('prose_language');
+	const sourceLangSelect = document.getElementById('prose_source_language');
+	const targetLangSelect = document.getElementById('prose_target_language');
 	
 	// Meta Modal Elements
 	const metaModal = document.getElementById('meta-settings-modal');
@@ -21,14 +22,18 @@ document.addEventListener('DOMContentLoaded', () => {
 	const deleteNovelBtn = document.getElementById('delete-novel-btn');
 	
 	let novelsData = [];
-	let stagedCover = null; // To hold cover changes before saving
+	let stagedCover = null;
 	
 	const languages = [
 		"English", "Spanish", "French", "German", "Mandarin Chinese", "Hindi", "Arabic", "Bengali", "Russian", "Portuguese", "Indonesian", "Urdu", "Japanese", "Swahili", "Marathi", "Telugu", "Turkish", "Korean", "Tamil", "Vietnamese", "Italian", "Javanese", "Thai", "Gujarati", "Polish", "Ukrainian", "Malayalam", "Kannada", "Oriya", "Burmese", "Norwegian", "Finnish", "Danish", "Swedish", "Dutch", "Greek", "Czech", "Hungarian", "Romanian", "Bulgarian", "Serbian", "Croatian", "Slovak", "Slovenian", "Lithuanian", "Latvian", "Estonian", "Hebrew", "Persian", "Afrikaans", "Zulu", "Xhosa", "Amharic", "Yoruba", "Igbo", "Hausa", "Nepali", "Sinhala", "Khmer", "Lao", "Mongolian", "Pashto", "Tajik", "Uzbek", "Kurdish", "Albanian", "Macedonian", "Bosnian", "Icelandic", "Irish", "Welsh", "Catalan", "Basque", "Galician", "Luxembourgish", "Maltese"
 	];
 	
+	// MODIFIED: This function now populates two select elements.
 	function populateLanguages() {
-		languages.forEach(lang => languageSelect.add(new Option(lang, lang)));
+		languages.forEach(lang => {
+			sourceLangSelect.add(new Option(lang, lang));
+			targetLangSelect.add(new Option(lang, lang));
+		});
 	}
 	
 	function setButtonLoading(button, isLoading) {
@@ -39,21 +44,20 @@ document.addEventListener('DOMContentLoaded', () => {
 		if (spinner) spinner.classList.toggle('hidden', !isLoading);
 	}
 	
+	// MODIFIED: Opens the language settings modal and populates it.
 	function openProseSettingsModal(novel) {
 		proseNovelIdInput.value = novel.id;
-		proseForm.querySelector('#prose_tense').value = novel.prose_tense || 'past';
-		proseForm.querySelector('#prose_language').value = novel.prose_language || 'English';
-		proseForm.querySelector('#prose_pov').value = novel.prose_pov || 'third_person_limited';
+		sourceLangSelect.value = novel.source_language || 'English';
+		targetLangSelect.value = novel.target_language || 'English';
 		proseModal.showModal();
 	}
 	
 	function openMetaSettingsModal(novel) {
-		stagedCover = null; // Reset staged cover on modal open
+		stagedCover = null;
 		metaNovelIdInput.value = novel.id;
 		metaForm.querySelector('#meta-title').value = novel.title;
 		metaForm.querySelector('#meta-author').value = novel.author || '';
 		
-		// Set initial preview to the current cover or placeholder
 		const currentNovel = novelsData.find(n => n.id === novel.id);
 		if (currentNovel && currentNovel.cover_path) {
 			metaCoverPreview.innerHTML = `<img src="file://${currentNovel.cover_path}?t=${Date.now()}" alt="Current cover" class="w-full h-auto">`;
@@ -81,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			renderNovels();
 		} catch (error) {
 			console.error('Failed to load initial data:', error);
-			loadingMessage.textContent = 'Error loading novels.';
+			loadingMessage.textContent = 'Error loading projects.';
 		}
 	}
 	
@@ -89,7 +93,8 @@ document.addEventListener('DOMContentLoaded', () => {
 		loadingMessage.style.display = 'none';
 		
 		if (novelsData.length === 0) {
-			novelList.innerHTML = '<p class="text-base-content/70 col-span-full text-center">You haven\'t created any novels yet.</p>';
+			// MODIFIED: Updated text for translation context.
+			novelList.innerHTML = '<p class="text-base-content/70 col-span-full text-center">You haven\'t started any translation projects yet.</p>';
 			return;
 		}
 		
@@ -113,12 +118,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         <button class="btn btn-ghost btn-sm js-meta-settings" title="Edit Meta">
                             <i class="bi bi-pencil-square text-lg"></i>
                         </button>
-                        <button class="btn btn-ghost btn-sm js-prose-settings" title="Edit Prose">
-                            <i class="bi bi-sliders text-lg"></i>
+                        <!-- MODIFIED: Title changed for clarity -->
+                        <button class="btn btn-ghost btn-sm js-prose-settings" title="Language Settings">
+                            <i class="bi bi-translate text-lg"></i>
                         </button>
                         <div class="flex-grow"></div>
                         <button class="btn btn-secondary js-open-outline">Outline</button>
-                        <button class="btn btn-primary js-open-editor">Planner</button>
+                        <!-- MODIFIED: Button text changed -->
+                        <button class="btn btn-primary js-open-editor">Translate</button>
                     </div>
                 </div>
             `;
@@ -134,22 +141,21 @@ document.addEventListener('DOMContentLoaded', () => {
 	
 	// --- Event Listeners ---
 	
-	// NEW: Add event listener for the import document button
 	if (importDocBtn) {
 		importDocBtn.addEventListener('click', () => {
 			window.api.openImportWindow();
 		});
 	}
 	
+	// MODIFIED: Saves language settings instead of prose settings.
 	saveProseBtn.addEventListener('click', async (e) => {
 		e.preventDefault();
 		const novelId = parseInt(proseNovelIdInput.value, 10);
 		const formData = new FormData(proseForm);
 		const data = {
 			novelId,
-			prose_tense: formData.get('prose_tense'),
-			prose_language: formData.get('prose_language'),
-			prose_pov: formData.get('prose_pov'),
+			source_language: formData.get('prose_source_language'),
+			target_language: formData.get('prose_target_language'),
 		};
 		
 		try {
@@ -158,7 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			if (novelIndex !== -1) Object.assign(novelsData[novelIndex], data);
 			proseModal.close();
 		} catch (error) {
-			console.error('Failed to save prose settings:', error);
+			console.error('Failed to save language settings:', error);
 		}
 	});
 	
@@ -166,7 +172,6 @@ document.addEventListener('DOMContentLoaded', () => {
 		e.preventDefault();
 		const novelId = parseInt(metaNovelIdInput.value, 10);
 		
-		// Save text fields
 		const formData = new FormData(metaForm);
 		const data = {
 			novelId,
@@ -214,6 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		const novel = novelsData.find(n => n.id === novelId);
 		if (!novel) return;
 		
+		// MODIFIED: Updated confirmation text.
 		const confirmation = confirm(`Are you sure you want to permanently delete "${novel.title}"?\n\nThis action cannot be undone.`);
 		if (confirmation) {
 			try {
@@ -222,8 +228,8 @@ document.addEventListener('DOMContentLoaded', () => {
 				metaModal.close();
 				renderNovels();
 			} catch (error) {
-				console.error('Failed to delete novel:', error);
-				alert('Error deleting novel.');
+				console.error('Failed to delete project:', error);
+				alert('Error deleting project.');
 			}
 		}
 	});
@@ -240,7 +246,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		if (card) {
 			const figure = card.querySelector('figure');
 			if (figure) {
-				figure.innerHTML = `<img src="file://${imagePath}?t=${Date.now()}" alt="Cover for novel ${novelId}" class="w-full">`;
+				figure.innerHTML = `<img src="file://${imagePath}?t=${Date.now()}" alt="Cover for project ${novelId}" class="w-full">`;
 			}
 		}
 	});
