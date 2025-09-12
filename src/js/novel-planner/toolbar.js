@@ -25,6 +25,31 @@ export function updateToolbarState(view) {
 	activeEditorView = view;
 	const allBtns = toolbar.querySelectorAll('.js-toolbar-btn, .js-ai-action-btn');
 	
+	// Default state: disable everything and remove active states
+	allBtns.forEach(btn => {
+		btn.disabled = true;
+		btn.classList.remove('active');
+	});
+	const headingBtn = toolbar.querySelector('.js-heading-btn');
+	if (headingBtn) headingBtn.textContent = 'Paragraph';
+	wordCountEl.textContent = 'No text selected';
+	
+	// Check for browser selection (e.g., in the source panel)
+	const translateBtn = toolbar.querySelector('.js-ai-action-btn[data-action="translate"]');
+	if (translateBtn) {
+		const selection = window.getSelection();
+		if (selection && !selection.isCollapsed && selection.rangeCount > 0) {
+			const range = selection.getRangeAt(0);
+			const sourceContainer = range.startContainer.parentElement.closest('.source-content-readonly');
+			if (sourceContainer) {
+				translateBtn.disabled = false;
+				const text = selection.toString();
+				const words = text.trim().split(/\s+/).filter(Boolean);
+				wordCountEl.textContent = `${words.length} word${words.length !== 1 ? 's' : ''} selected (source)`;
+			}
+		}
+	}
+	
 	const isMarkActive = (state, type) => {
 		if (!type) return false;
 		const {from, $from, to, empty} = state.selection;
@@ -43,7 +68,10 @@ export function updateToolbarState(view) {
 		
 		allBtns.forEach(btn => {
 			if (btn.classList.contains('js-ai-action-btn')) {
-				btn.disabled = !isTextSelected;
+				// Only re-enable rephrase if there's a selection in a PM editor
+				if (btn.dataset.action === 'rephrase') {
+					btn.disabled = !isTextSelected;
+				}
 				return;
 			}
 			
@@ -115,7 +143,6 @@ export function updateToolbarState(view) {
 			}
 		});
 		
-		const headingBtn = toolbar.querySelector('.js-heading-btn');
 		if (headingBtn) {
 			const parent = $from.parent;
 			if (parent.type.name === 'heading') {
@@ -130,18 +157,10 @@ export function updateToolbarState(view) {
 			const text = state.doc.textBetween(from, to, ' ');
 			const words = text.trim().split(/\s+/).filter(Boolean);
 			wordCountEl.textContent = `${words.length} word${words.length !== 1 ? 's' : ''} selected`;
-		} else {
+		} else if (!translateBtn || translateBtn.disabled) { // Don't overwrite if translate is active
 			wordCountEl.textContent = 'No text selected';
 		}
 		
-	} else {
-		allBtns.forEach(btn => {
-			btn.disabled = true;
-			btn.classList.remove('active');
-		});
-		const headingBtn = toolbar.querySelector('.js-heading-btn');
-		if (headingBtn) headingBtn.textContent = 'Paragraph';
-		wordCountEl.textContent = 'No text selected';
 	}
 }
 
@@ -223,6 +242,75 @@ async function handleToolbarAction(button) {
 			return;
 		}
 		
+		const novelData = await window.api.getOneNovel(novelId);
+		
+		// MODIFIED SECTION START: Handle translation from source panel
+		if (action === 'translate') {
+			const selection = window.getSelection();
+			if (!selection || selection.isCollapsed || selection.rangeCount === 0) return;
+			
+			const range = selection.getRangeAt(0);
+			const sourceContainer = range.commonAncestorContainer.closest('.source-content-readonly');
+			if (!sourceContainer) return;
+			
+			// Helper to find the last block marker that precedes a given node.
+			const findBlockMarkerForNode = (node, container) => {
+				let el = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+				// Traverse up to find the direct child of the container
+				while (el && el.parentElement !== container) {
+					el = el.parentElement;
+				}
+				if (!el) return null;
+				
+				// Traverse backwards through siblings to find the last preceding marker
+				let current = el;
+				while (current) {
+					if (current.classList.contains('note-wrapper')) {
+						return current;
+					}
+					current = current.previousElementSibling;
+				}
+				return null; // In the first block
+			};
+			
+			const startMarker = findBlockMarkerForNode(range.startContainer, sourceContainer);
+			const endMarker = findBlockMarkerForNode(range.endContainer, sourceContainer);
+			
+			// Check if the selection crosses a block boundary.
+			if (startMarker !== endMarker) {
+				alert('Selection cannot span across multiple translation blocks. Please select text within a single block.');
+				return;
+			}
+			
+			const selectedText = selection.toString(); // Get raw text, preserving line breaks
+			
+			const chapterItem = sourceContainer.closest('.manuscript-chapter-item');
+			const chapterId = chapterItem.dataset.chapterId;
+			
+			const blockNumberMatch = startMarker?.querySelector('p')?.textContent.match(/#(\d+)/);
+			const blockNumber = blockNumberMatch ? parseInt(blockNumberMatch[1], 10) : 1; // Default to block 1
+			
+			const targetEditorView = toolbarConfig.getChapterViews(chapterId).targetContentView;
+			
+			const allCodexEntries = await window.api.getAllCodexEntriesForNovel(novelId);
+			const linkedCodexEntryIds = await window.api.getLinkedCodexIdsForChapter(chapterId);
+			
+			const context = {
+				selectedText, // The user's actual selection with line breaks
+				allCodexEntries,
+				linkedCodexEntryIds,
+				languageForPrompt: novelData.source_language || 'English',
+				targetLanguage: novelData.target_language || 'English',
+				activeEditorView: targetEditorView, // The target editor is where the result will go
+				translationInfo: {
+					blockNumber: blockNumber, // Keep this for potential future use
+				},
+			};
+			openPromptEditor(context, 'translate');
+			return;
+		}
+		// MODIFIED SECTION END
+		
 		const isChapterEditor = toolbarConfig.isChapterEditor;
 		
 		const focusedEditor = getActiveEditor();
@@ -232,7 +320,6 @@ async function handleToolbarAction(button) {
 		let wordsAfter = '';
 		let chapterId = null;
 		
-		const novelData = await window.api.getOneNovel(novelId);
 		let languageForPrompt;
 		
 		if (focusedEditor) {

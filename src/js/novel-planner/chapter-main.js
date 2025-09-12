@@ -444,12 +444,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 		setupTopToolbar({
 			isChapterEditor: true,
 			getActiveChapterId: () => activeChapterId,
-			getChapterViews: (chapterId) => chapterEditorViews.get(chapterId),
+			getChapterViews: (chapterId) => chapterEditorViews.get(chapterId.toString()), // MODIFIED: ensure chapterId is string
 		});
 		setupPromptEditor();
 		setupIntersectionObserver();
 		setupCodexUnlinking();
 		setupNoteEditorModal();
+		
+		// NEW: Listen for any selection change to update toolbar state for source panel selections.
+		document.addEventListener('selectionchange', () => {
+			updateToolbarState(getActiveEditor());
+		});
 		
 		const chapterToLoad = initialChapterId || novelData.sections[0]?.chapters[0]?.id;
 		if (chapterToLoad) {

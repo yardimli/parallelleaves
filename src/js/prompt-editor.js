@@ -1,21 +1,32 @@
 // This file now controls the prompt editor modal within the novel editor.
 
 import { init as initRephraseEditor, buildPromptJson as buildRephraseJson } from './prompt-editors/rephrase-editor.js';
+// NEW: Import the translate editor module
+import { init as initTranslateEditor, buildPromptJson as buildTranslateJson } from './prompt-editors/translate-editor.js';
 import { getActiveEditor } from './novel-planner/content-editor.js';
 import { updateToolbarState } from './novel-planner/toolbar.js';
 import { TextSelection } from 'prosemirror-state';
 import { DOMParser } from 'prosemirror-model';
 
+// NEW: Add translate to the editors map
 const editors = {
 	'rephrase': { name: 'Rephrase', init: initRephraseEditor },
+	'translate': { name: 'Translate', init: initTranslateEditor },
 };
 
+// NEW: Add translate to the prompt builders map
 const promptBuilders = {
 	'rephrase': buildRephraseJson,
+	'translate': buildTranslateJson,
 };
 
+// NEW: Add a form data extractor for the translate form
 const formDataExtractors = {
 	'rephrase': (form) => ({
+		instructions: form.elements.instructions.value.trim(),
+		selectedCodexIds: form.elements.codex_entry ? Array.from(form.elements.codex_entry).filter(cb => cb.checked).map(cb => cb.value) : [],
+	}),
+	'translate': (form) => ({
 		instructions: form.elements.instructions.value.trim(),
 		selectedCodexIds: form.elements.codex_entry ? Array.from(form.elements.codex_entry).filter(cb => cb.checked).map(cb => cb.value) : [],
 	}),
@@ -311,18 +322,23 @@ async function handleModalApply() {
 		return;
 	}
 	
+	// MODIFIED SECTION START: Unified logic for determining the replacement/insertion range.
 	const { state } = activeEditorView;
+	// For "translate", this uses the cursor in the target editor.
+	// For "rephrase", this uses the selection in the target editor.
 	const { from, to, empty } = state.selection;
 	
-	if (empty) {
+	// Rephrase requires a selection, but translate can simply insert at the cursor.
+	if (action === 'rephrase' && empty) {
 		alert('Please select text to apply this action.');
 		return;
 	}
 	
-	const text = state.doc.textBetween(from, to, ' ');
-	
 	originalFragment = state.doc.slice(from, to);
 	aiActionRange = { from, to };
+	// MODIFIED SECTION END
+	
+	const text = action === 'translate' ? currentContext.selectedText : state.doc.textBetween(aiActionRange.from, aiActionRange.to, ' ');
 	
 	const formDataObj = extractor(form);
 	
