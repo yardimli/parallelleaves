@@ -1,26 +1,22 @@
 // This file now controls the prompt editor modal within the novel editor.
 
 import { init as initRephraseEditor, buildPromptJson as buildRephraseJson } from './prompt-editors/rephrase-editor.js';
-// NEW: Import the translate editor module
 import { init as initTranslateEditor, buildPromptJson as buildTranslateJson } from './prompt-editors/translate-editor.js';
 import { getActiveEditor } from './novel-planner/content-editor.js';
 import { updateToolbarState } from './novel-planner/toolbar.js';
 import { TextSelection } from 'prosemirror-state';
 import { DOMParser } from 'prosemirror-model';
 
-// NEW: Add translate to the editors map
 const editors = {
 	'rephrase': { name: 'Rephrase', init: initRephraseEditor },
 	'translate': { name: 'Translate', init: initTranslateEditor },
 };
 
-// NEW: Add translate to the prompt builders map
 const promptBuilders = {
 	'rephrase': buildRephraseJson,
 	'translate': buildTranslateJson,
 };
 
-// NEW: Add a form data extractor for the translate form
 const formDataExtractors = {
 	'rephrase': (form) => ({
 		instructions: form.elements.instructions.value.trim(),
@@ -250,7 +246,6 @@ async function startAiStream(params) {
 			
 		} else if (payload.error) {
 			console.error('AI Action Error:', payload.error);
-			// MODIFIED: Replaced native alert with custom modal.
 			window.showAlert(payload.error);
 			handleFloatyDiscard();
 		}
@@ -260,13 +255,13 @@ async function startAiStream(params) {
 		window.api.processCodexTextStream({ prompt, model }, onData);
 	} catch (error) {
 		console.error('AI Action Error:', error);
-		// MODIFIED: Replaced native alert with custom modal.
 		window.showAlert(error.message);
 		handleFloatyDiscard();
 	}
 }
 
-async function populateModelDropdown() {
+// MODIFIED: Accept initial state to select the saved model.
+async function populateModelDropdown(initialState = null) {
 	if (!modalEl) return;
 	const select = modalEl.querySelector('.js-llm-model-select');
 	if (!select) return;
@@ -286,7 +281,11 @@ async function populateModelDropdown() {
 			select.appendChild(option);
 		});
 		
-		if (models.some(m => m.id === defaultModel)) {
+		// NEW: Prioritize saved model from initial state.
+		const savedModel = initialState?.model;
+		if (savedModel && models.some(m => m.id === savedModel)) {
+			select.value = savedModel;
+		} else if (models.some(m => m.id === defaultModel)) {
 			select.value = defaultModel;
 		} else if (models.length > 0) {
 			select.value = models[0].id;
@@ -305,7 +304,6 @@ async function handleModalApply() {
 	const form = modalEl.querySelector('.js-custom-editor-pane form');
 	
 	if (!model || !action || !form) {
-		// MODIFIED: Replaced native alert with custom modal.
 		window.showAlert('Could not apply action. Missing model, action, or form.');
 		return;
 	}
@@ -313,7 +311,6 @@ async function handleModalApply() {
 	const builder = promptBuilders[action];
 	const extractor = formDataExtractors[action];
 	if (!builder || !extractor) {
-		// MODIFIED: Replaced native alert with custom modal.
 		window.showAlert(`No prompt builder or form extractor found for action: ${action}`);
 		return;
 	}
@@ -322,31 +319,40 @@ async function handleModalApply() {
 	
 	activeEditorView = currentContext.activeEditorView;
 	if (!activeEditorView) {
-		// MODIFIED: Replaced native alert with custom modal.
 		window.showAlert('No active editor to apply changes to.');
 		return;
 	}
 	
-	// MODIFIED SECTION START: Unified logic for determining the replacement/insertion range.
+	const formDataObj = extractor(form);
+	
+	// NEW SECTION START: Save the current prompt settings for next time.
+	const novelId = document.body.dataset.novelId;
+	if (novelId) {
+		const settingsToSave = {
+			model: model,
+			instructions: formDataObj.instructions,
+		};
+		// Fire-and-forget save operation.
+		window.api.updatePromptSettings({
+			novelId: novelId,
+			promptType: action,
+			settings: settingsToSave
+		}).catch(err => console.error('Failed to save prompt settings:', err));
+	}
+	// NEW SECTION END
+	
 	const { state } = activeEditorView;
-	// For "translate", this uses the cursor in the target editor.
-	// For "rephrase", this uses the selection in the target editor.
 	const { from, to, empty } = state.selection;
 	
-	// Rephrase requires a selection, but translate can simply insert at the cursor.
 	if (action === 'rephrase' && empty) {
-		// MODIFIED: Replaced native alert with custom modal.
 		window.showAlert('Please select text to apply this action.', 'Action Required');
 		return;
 	}
 	
 	originalFragment = state.doc.slice(from, to);
 	aiActionRange = { from, to };
-	// MODIFIED SECTION END
 	
 	const text = action === 'translate' ? currentContext.selectedText : state.doc.textBetween(aiActionRange.from, aiActionRange.to, ' ');
-	
-	const formDataObj = extractor(form);
 	
 	const wordCount = text ? text.trim().split(/\s+/).filter(Boolean).length : 0;
 	const promptContext = { ...currentContext, selectedText: text, wordCount };
@@ -406,7 +412,8 @@ export async function openPromptEditor(context, promptId, initialState = null) {
 	customEditorPane.classList.remove('hidden');
 	
 	try {
-		await populateModelDropdown();
+		// MODIFIED: Pass initial state to populateModelDropdown
+		await populateModelDropdown(initialState);
 		await loadPrompt(promptId);
 		modalEl.showModal();
 		

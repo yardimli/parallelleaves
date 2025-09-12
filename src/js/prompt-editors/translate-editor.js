@@ -57,7 +57,6 @@ const renderCodexList = (container, context, initialState = null) => {
 export const buildPromptJson = (formData, context) => {
 	const { selectedText, languageForPrompt, targetLanguage, allCodexEntries } = context;
 	
-	// MODIFIED: 'selectedText' is now raw text with line breaks, no HTML parsing needed.
 	const plainTextToTranslate = selectedText;
 	
 	const system = `You are an expert literary translator. Your task is to translate a text from ${languageForPrompt} to ${targetLanguage}.
@@ -132,7 +131,8 @@ const updatePreview = (container, context) => {
 const populateForm = (container, state) => {
 	const form = container.querySelector('#translate-editor-form');
 	if (!form) return;
-	form.elements.instructions.value = state.instructions;
+	// MODIFIED: Default to empty string if instructions are null/undefined.
+	form.elements.instructions.value = state.instructions || '';
 };
 
 export const init = async (container, context) => {

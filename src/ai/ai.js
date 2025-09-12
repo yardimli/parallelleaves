@@ -231,15 +231,17 @@ async function streamProcessCodexText({ prompt, model }, onChunk) {
 /**
  * Fetches the list of available models from the OpenRouter API.
  * Caches the result for 24 hours to a file in the user's app data directory.
+ * @param {boolean} [forceRefresh=false] - If true, bypasses the cache and fetches from the API.
  * @returns {Promise<object>} The raw model data from the API or cache.
  * @throws {Error} If the API call fails.
  */
-async function getOpenRouterModels() {
+async function getOpenRouterModels(forceRefresh = false) { // MODIFIED: Added forceRefresh parameter.
 	const cachePath = path.join(app.getPath('userData'), 'temp');
 	const cacheFile = path.join(cachePath, 'openrouter_models.json');
 	const cacheDurationInSeconds = 24 * 60 * 60; // 24 hours
 	
-	if (fs.existsSync(cacheFile) && (Date.now() - fs.statSync(cacheFile).mtimeMs) / 1000 < cacheDurationInSeconds) {
+	// MODIFIED: Added forceRefresh check to bypass cache if needed.
+	if (!forceRefresh && fs.existsSync(cacheFile) && (Date.now() - fs.statSync(cacheFile).mtimeMs) / 1000 < cacheDurationInSeconds) {
 		try {
 			const cachedContent = fs.readFileSync(cacheFile, 'utf8');
 			return JSON.parse(cachedContent);

@@ -238,12 +238,27 @@ async function handleToolbarAction(button) {
 		const action = button.dataset.action;
 		const novelId = document.body.dataset.novelId;
 		if (!novelId) {
-			// MODIFIED: Replaced native alert with custom modal.
 			window.showAlert('Could not determine the current project.');
 			return;
 		}
 		
 		const novelData = await window.api.getOneNovel(novelId);
+		
+		// NEW: Parse saved prompt settings from novel data
+		let settings = {};
+		if (action === 'rephrase' && novelData.rephrase_settings) {
+			try {
+				settings = JSON.parse(novelData.rephrase_settings);
+			} catch (e) {
+				console.error('Error parsing rephrase_settings JSON', e);
+			}
+		} else if (action === 'translate' && novelData.translate_settings) {
+			try {
+				settings = JSON.parse(novelData.translate_settings);
+			} catch (e) {
+				console.error('Error parsing translate_settings JSON', e);
+			}
+		}
 		
 		// MODIFIED SECTION START: Handle translation from source panel
 		if (action === 'translate') {
@@ -279,7 +294,6 @@ async function handleToolbarAction(button) {
 			
 			// Check if the selection crosses a block boundary.
 			if (startMarker !== endMarker) {
-				// MODIFIED: Replaced native alert with custom modal.
 				window.showAlert('Selection cannot span across multiple translation blocks. Please select text within a single block.', 'Selection Error');
 				return;
 			}
@@ -308,7 +322,8 @@ async function handleToolbarAction(button) {
 					blockNumber: blockNumber, // Keep this for potential future use
 				},
 			};
-			openPromptEditor(context, 'translate');
+			// MODIFIED: Pass parsed settings as the initial state for the prompt editor.
+			openPromptEditor(context, 'translate', settings);
 			return;
 		}
 		// MODIFIED SECTION END
@@ -367,7 +382,8 @@ async function handleToolbarAction(button) {
 			wordsAfter,
 			activeEditorView: editorForPrompt,
 		};
-		openPromptEditor(context, action);
+		// MODIFIED: Pass parsed settings as the initial state for the prompt editor.
+		openPromptEditor(context, action, settings);
 		return;
 	}
 	
@@ -398,7 +414,6 @@ async function handleToolbarAction(button) {
 			
 			const activeChapterId = toolbarConfig.getActiveChapterId ? toolbarConfig.getActiveChapterId() : null;
 			if (!activeChapterId) {
-				// MODIFIED: Replaced native alert with custom modal.
 				window.showAlert('Cannot add a note without an active chapter.');
 				return;
 			}

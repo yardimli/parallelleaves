@@ -27,6 +27,7 @@ const noteNodeSpec = {
 	content: '', // No direct content, managed by NodeView and attributes.
 	draggable: false,
 	selectable: false,
+	isolating: true, // MODIFIED: Prevents cursor from entering and content from being merged.
 	toDOM(node) {
 		// This is the "serialized" version for saving. The NodeView creates the interactive version.
 		const wrapper = document.createElement('div');

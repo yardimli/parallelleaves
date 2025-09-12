@@ -336,7 +336,7 @@ function setupIpcHandlers() {
 	});
 	
 	ipcMain.handle('novels:getOne', (event, novelId) => {
-		const novel = db.prepare('SELECT id, title, source_language, target_language FROM novels WHERE id = ?').get(novelId);
+		const novel = db.prepare('SELECT id, title, source_language, target_language, rephrase_settings, translate_settings FROM novels WHERE id = ?').get(novelId);
 		if (!novel) return null;
 		
 		novel.sections = db.prepare('SELECT * FROM sections WHERE novel_id = ? ORDER BY section_order').all(novelId);
@@ -355,8 +355,24 @@ function setupIpcHandlers() {
                 SELECT * FROM codex_entries WHERE codex_category_id = ? ORDER BY title
             `).all(category.id);
 		});
-		
 		return novel;
+	});
+	
+	ipcMain.handle('novels:updatePromptSettings', (event, { novelId, promptType, settings }) => {
+		const allowedTypes = ['rephrase', 'translate'];
+		if (!allowedTypes.includes(promptType)) {
+			return { success: false, message: 'Invalid prompt type.' };
+		}
+		const settingsJson = JSON.stringify(settings);
+		const fieldName = `${promptType}_settings`;
+		
+		try {
+			db.prepare(`UPDATE novels SET ${fieldName} = ? WHERE id = ?`).run(settingsJson, novelId);
+			return { success: true };
+		} catch (error) {
+			console.error(`Failed to update prompt settings for novel ${novelId}:`, error);
+			throw new Error('Failed to update prompt settings.');
+		}
 	});
 	
 	ipcMain.handle('novels:getOutlineData', (event, novelId) => {
@@ -440,15 +456,14 @@ function setupIpcHandlers() {
 	
 	ipcMain.handle('novels:getFullManuscript', (event, novelId) => {
 		try {
-			const novel = db.prepare('SELECT id, title FROM novels WHERE id = ?').get(novelId);
+			const novel = db.prepare('SELECT * FROM novels WHERE id = ?').get(novelId);
 			if (!novel) {
-				// Return a valid-structured null object if novel not found
 				return { id: novelId, title: 'Not Found', sections: [] };
 			}
 			
 			novel.sections = db.prepare('SELECT * FROM sections WHERE novel_id = ? ORDER BY section_order').all(novelId);
 			for (const section of novel.sections) {
-				section.chapters = db.prepare('SELECT id, title, source_content, target_content, chapter_order FROM chapters WHERE section_id = ? ORDER BY chapter_order').all(section.id);
+				section.chapters = db.prepare('SELECT id, title, source_content, target_content, chapter_order FROM chapters WHERE section_id = ? ORDER BY `chapter_order`').all(section.id);
 				for (const chapter of section.chapters) {
 					chapter.source_word_count = countWordsInHtml(chapter.source_content);
 					chapter.target_word_count = countWordsInHtml(chapter.target_content);
@@ -464,7 +479,6 @@ function setupIpcHandlers() {
 			return novel;
 		} catch(error) {
 			console.error(`Error in getFullManuscript for novelId ${novelId}:`, error);
-			// In case of error, return a valid but empty structure to prevent crashes
 			return { id: novelId, title: 'Error Loading', sections: [] };
 		}
 	});
@@ -869,6 +883,21 @@ function setupIpcHandlers() {
 app.on('ready', () => {
 	db = initializeDatabase();
 	setupIpcHandlers();
+	
+	// NEW SECTION START
+	// Refresh the AI models list from OpenRouter on application startup.
+	// This ensures the cache is up-to-date for the session.
+	aiService.getOpenRouterModels(true)
+		.then(() => {
+			console.log('AI models list refreshed from OpenRouter on startup.');
+		})
+		.catch(error => {
+			// Log the error but don't prevent the app from starting.
+			// The app can still function with a stale cache or fail gracefully if no cache exists.
+			console.error('Failed to refresh AI models on startup:', error.message);
+		});
+	// NEW SECTION END
+	
 	createMainWindow();
 });
 

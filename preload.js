@@ -8,11 +8,13 @@ contextBridge.exposeInMainWorld('api', {
 	getNovelsWithCovers: () => ipcRenderer.invoke('novels:getAllWithCovers'),
 	getOneNovel: (novelId) => ipcRenderer.invoke('novels:getOne', novelId),
 	getFullManuscript: (novelId) => ipcRenderer.invoke('novels:getFullManuscript', novelId),
-
+	
 	openEditor: (novelId) => ipcRenderer.send('novels:openEditor', novelId),
 	openOutline: (novelId) => ipcRenderer.send('novels:openOutline', novelId),
 	getOutlineData: (novelId) => ipcRenderer.invoke('novels:getOutlineData', novelId),
 	updateProseSettings: (data) => ipcRenderer.invoke('novels:updateProseSettings', data),
+	// NEW: Expose the prompt settings update function.
+	updatePromptSettings: (data) => ipcRenderer.invoke('novels:updatePromptSettings', data),
 	
 	updateNovelMeta: (data) => ipcRenderer.invoke('novels:updateMeta', data),
 	updateNovelCover: (data) => ipcRenderer.invoke('novels:updateCover', data),

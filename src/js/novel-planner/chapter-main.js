@@ -47,6 +47,76 @@ function triggerDebouncedSave(chapterId, field, value) {
  * @returns {EditorView}
  */
 function createEditorView(mount, initialHtml, isEditable, chapterId, saveField) {
+	// NEW SECTION START: Custom plugin to prevent 'note' nodes from being deleted.
+	const noteProtectionPlugin = new Plugin({
+		// This part improves the user experience for single key presses (Backspace/Delete).
+		props: {
+			handleKeyDown(view, event) {
+				// We only care about Backspace and Delete.
+				if (event.key !== 'Backspace' && event.key !== 'Delete') {
+					return false; // Don't handle the event.
+				}
+				
+				const { $from, empty } = view.state.selection;
+				// This logic only applies when the cursor is collapsed (no selection).
+				if (!empty) {
+					return false;
+				}
+				
+				let adjacentNode;
+				if (event.key === 'Backspace') {
+					// Check if the cursor is at the start of a text block.
+					if ($from.parentOffset === 0) {
+						// Look for the node right before this block.
+						const nodeBefore = view.state.doc.resolve($from.pos - 1).nodeBefore;
+						if (nodeBefore && nodeBefore.type.name === 'note') {
+							adjacentNode = nodeBefore;
+						}
+					}
+				} else { // 'Delete'
+					// Check if the cursor is at the end of a text block.
+					if ($from.parentOffset === $from.parent.content.size) {
+						// Look for the node right after this block.
+						const nodeAfter = view.state.doc.nodeAt($from.pos);
+						if (nodeAfter && nodeAfter.type.name === 'note') {
+							adjacentNode = nodeAfter;
+						}
+					}
+				}
+				
+				// If we found an adjacent note, handle the event to prevent the deletion.
+				if (adjacentNode) {
+					return true;
+				}
+				
+				return false; // Otherwise, allow the default behavior.
+			},
+		},
+		// This part provides a rock-solid guarantee that no transaction can delete a note.
+		// It acts as a failsafe for selections, pastes, etc.
+		filterTransaction(tr, state) {
+			// If the document isn't changing, we can allow the transaction.
+			if (!tr.docChanged) {
+				return true;
+			}
+			
+			let noteDeleted = false;
+			// Check the old document for any 'note' nodes.
+			state.doc.descendants((node, pos) => {
+				if (node.type.name === 'note') {
+					// See if that node's position was deleted in the transaction.
+					if (tr.mapping.mapResult(pos).deleted) {
+						noteDeleted = true;
+					}
+				}
+			});
+			
+			// If a note was going to be deleted, block the entire transaction.
+			return !noteDeleted;
+		},
+	});
+	// NEW SECTION END
+	
 	const editorPlugin = new Plugin({
 		props: {
 			editable: () => isEditable,
@@ -80,7 +150,13 @@ function createEditorView(mount, initialHtml, isEditable, chapterId, saveField) 
 	return new EditorView(mount, {
 		state: EditorState.create({
 			doc: doc,
-			plugins: [history(), keymap({ 'Mod-z': undo, 'Mod-y': redo }), keymap(baseKeymap), editorPlugin],
+			plugins: [
+				history(),
+				keymap({ 'Mod-z': undo, 'Mod-y': redo }),
+				keymap(baseKeymap),
+				editorPlugin,
+				noteProtectionPlugin, // MODIFIED: Added the note protection plugin.
+			],
 		}),
 		nodeViews: {
 			note(node, view, getPos) { return new NoteNodeView(node, view, getPos); }

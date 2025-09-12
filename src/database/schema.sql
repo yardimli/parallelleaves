@@ -1,24 +1,6 @@
 -- This schema is a simplified version based on the Laravel models provided.
 -- It uses INTEGER for foreign keys and TEXT for JSON data.
 
--- For existing databases, run the following ALTER TABLE statements:
--- ALTER TABLE novels RENAME COLUMN prose_language TO target_language;
--- ALTER TABLE novels ADD COLUMN source_language TEXT DEFAULT 'English';
--- ALTER TABLE novels DROP COLUMN prose_tense;
--- ALTER TABLE novels DROP COLUMN prose_pov;
--- ALTER TABLE chapters RENAME COLUMN content TO source_content;
--- ALTER TABLE chapters ADD COLUMN target_content TEXT;
--- ALTER TABLE chapters RENAME COLUMN summary TO source_summary;
--- ALTER TABLE chapters ADD COLUMN target_summary TEXT;
--- ALTER TABLE chapters DROP COLUMN pov;
--- ALTER TABLE chapters DROP COLUMN pov_character_id;
--- ALTER TABLE novels DROP COLUMN editor_state;
--- ALTER TABLE codex_entries DROP COLUMN image_path;
--- ALTER TABLE images DROP COLUMN codex_entry_id;
--- MODIFICATION: Remove summary columns from chapters table.
--- ALTER TABLE chapters DROP COLUMN source_summary;
--- ALTER TABLE chapters DROP COLUMN target_summary;
-
 
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -52,6 +34,9 @@ CREATE TABLE IF NOT EXISTS novels (
     source_language TEXT DEFAULT 'English',
     -- MODIFIED: Renamed prose_language to target_language.
     target_language TEXT DEFAULT 'English',
+    -- NEW: Added columns to store JSON settings for AI prompts.
+    rephrase_settings TEXT,
+    translate_settings TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
