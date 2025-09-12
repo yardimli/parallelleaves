@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' file: data: https:;">
+	<title>Novel Writer - Dashboard</title>
+	<link rel="stylesheet" href="../node_modules/bootstrap-icons/font/bootstrap-icons.css">
+	<link rel="stylesheet" href="../dist/styles.css">
+</head>
+<body>
+<div class="container mx-auto p-8">
+	<div class="flex justify-between items-center mb-8">
+		<h1 class="text-4xl font-bold">My Novels</h1>
+		<div class="flex items-center gap-4">
+			<label id="theme-toggle" class="swap swap-rotate btn btn-ghost btn-circle">
+				<input type="checkbox" class="theme-controller" value="dark"/>
+				<i class="swap-off bi bi-sun-fill text-2xl"></i>
+				<i class="swap-on bi bi-moon-fill text-2xl"></i>
+			</label>
+			<!-- NEW: Button to open the import document window -->
+			<button id="import-doc-btn" class="btn btn-neutral gap-2">
+				<i class="bi bi-file-earmark-arrow-up"></i>
+				Import Document
+			</button>
+		</div>
+	</div>
+	
+	<div id="novel-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+		<p id="loading-message">Loading novels...</p>
+	</div>
+</div>
+
+<!-- Prose Settings Modal -->
+<dialog id="prose-settings-modal" class="modal">
+	<div class="modal-box w-11/12 max-w-2xl">
+		<h3 class="font-bold text-lg">Prose Settings</h3>
+		<p class="py-4 text-sm text-base-content/70">These settings help guide AI prose generation and other writing tools.</p>
+		<form id="prose-settings-form" class="space-y-4">
+			<input type="hidden" id="prose-novel-id" name="novelId">
+			
+			<!-- Tense -->
+			<div class="form-control">
+				<label for="prose_tense" class="label"><span class="label-text">Tense</span></label>
+				<select id="prose_tense" name="prose_tense" class="select select-bordered">
+					<option value="past">Past Tense</option>
+					<option value="present">Present Tense</option>
+				</select>
+				<div class="label">
+					<span class="label-text-alt">e.g., "She walked" (Past) vs. "She walks" (Present).</span>
+				</div>
+			</div>
+			
+			<!-- Language -->
+			<div class="form-control">
+				<label for="prose_language" class="label"><span class="label-text">Language</span></label>
+				<select id="prose_language" name="prose_language" class="select select-bordered">
+					<!-- Options populated by JS -->
+				</select>
+				<div class="label">
+					<span class="label-text-alt">Used for spell checking and AI generation.</span>
+				</div>
+			</div>
+			
+			<!-- Point of View -->
+			<div class="form-control">
+				<label for="prose_pov" class="label"><span class="label-text">Point of View (POV)</span></label>
+				<select id="prose_pov" name="prose_pov" class="select select-bordered">
+					<option value="first_person">1st Person</option>
+					<option value="second_person">2nd Person</option>
+					<option value="third_person">3rd Person</option>
+					<option value="third_person_limited">3rd Person (Limited)</option>
+					<option value="third_person_omniscient">3rd Person (Omniscient)</option>
+				</select>
+				<div class="label">
+					<span class="label-text-alt">The perspective from which the story is told.</span>
+				</div>
+			</div>
+		</form>
+		<div class="modal-action">
+			<form method="dialog" class="flex gap-3">
+				<button class="btn">Cancel</button>
+				<button id="save-prose-settings-btn" class="btn btn-primary">Save Settings</button>
+			</form>
+		</div>
+	</div>
+</dialog>
+
+<!-- Meta Settings Modal -->
+<dialog id="meta-settings-modal" class="modal">
+	<div class="modal-box w-11/12 max-w-4xl">
+		<h3 class="font-bold text-lg">Edit Novel Details</h3>
+		
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-8 py-4">
+			<!-- Left Column: Details -->
+			<form id="meta-settings-form" class="space-y-4">
+				<input type="hidden" id="meta-novel-id" name="novelId">
+				
+				<!-- Title -->
+				<div class="form-control">
+					<label for="meta-title" class="label"><span class="label-text">Title</span></label>
+					<input type="text" id="meta-title" name="title" class="input input-bordered" required>
+				</div>
+				
+				<!-- Author -->
+				<div class="form-control">
+					<label for="meta-author" class="label"><span class="label-text">Author</span></label>
+					<input type="text" id="meta-author" name="author" class="input input-bordered" required>
+				</div>
+			</form>
+			
+			<!-- Right Column: Cover Art -->
+			<div class="space-y-4">
+				<div id="meta-cover-preview" class="rounded-lg overflow-hidden w-full mx-auto bg-base-300 flex items-center justify-center min-h-48 text-base-content/50">
+					<!-- Preview image will be inserted here by JS -->
+					<span>No new cover selected</span>
+				</div>
+				<div class="flex gap-2 justify-center">
+					<button id="generate-cover-btn" class="btn btn-neutral w-40">
+						<span class="js-btn-content flex items-center gap-2"><i class="bi bi-magic"></i> Generate AI Cover</span>
+						<span class="js-btn-spinner animate-spin hidden"><i class="bi bi-arrow-repeat"></i></span>
+					</button>
+					<button id="upload-cover-btn" class="btn btn-neutral w-40">
+						<span class="js-btn-content flex items-center gap-2"><i class="bi bi-upload"></i> Upload Cover</span>
+						<span class="js-btn-spinner animate-spin hidden"><i class="bi bi-arrow-repeat"></i></span>
+					</button>
+				</div>
+			</div>
+		</div>
+		
+		<!-- Danger Zone (Full Width) -->
+		<div class="divider">Danger Zone</div>
+		<div class="flex justify-between items-center bg-error/10 p-4 rounded-lg">
+			<p class="text-sm">Permanently delete this novel and all its content.</p>
+			<button id="delete-novel-btn" class="btn btn-error">Delete Novel</button>
+		</div>
+		
+		<div class="modal-action">
+			<form method="dialog" class="flex gap-3">
+				<button class="btn">Cancel</button>
+				<button id="save-meta-settings-btn" class="btn btn-primary">Save Changes</button>
+			</form>
+		</div>
+	</div>
+</dialog>
+
+<dialog id="generate-cover-modal" class="modal">
+	<div class="modal-box w-11/12 max-w-4xl">
+		<h3 class="font-bold text-lg">Generate AI Cover Art</h3>
+		
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-8 py-4">
+			<!-- Left Column: Controls -->
+			<form id="generate-cover-form" class="space-y-4">
+				<div class="form-control">
+					<label for="generate-cover-prompt" class="label"><span class="label-text">Image Prompt</span></label>
+					<textarea id="generate-cover-prompt" class="textarea textarea-bordered h-48" placeholder="A lone astronaut on a red planet..."></textarea>
+				</div>
+				
+				<div class="text-center">
+					<button type="button" id="run-generate-cover-btn" class="btn btn-accent w-40">
+						<span class="js-btn-content flex items-center gap-2"><i class="bi bi-stars"></i> Generate</span>
+						<span class="js-btn-spinner animate-spin hidden"><i class="bi bi-arrow-repeat"></i></span>
+					</button>
+				</div>
+			</form>
+			
+			<!-- Right Column: Preview -->
+			<div class="space-y-4">
+				<div id="generate-cover-preview" class="min-h-64 bg-base-200 rounded-lg flex items-center justify-center">
+					<p class="text-base-content/50">Image preview will appear here</p>
+				</div>
+			</div>
+		</div>
+		
+		<div class="modal-action">
+			<form method="dialog" class="flex gap-3">
+				<button id="cancel-generate-cover-btn" class="btn">Cancel</button>
+				<button type="button" id="accept-generated-cover-btn" class="btn btn-primary" disabled>Accept Cover</button>
+			</form>
+		</div>
+	</div>
+</dialog>
+
+<script src="../src/js/theme.js"></script>
+<script src="../src/js/dashboard.js"></script>
+</body>
+</html>

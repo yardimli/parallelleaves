@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en" class="h-full">
+<head>
+	<meta charset="UTF-8"/>
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
+	<meta http-equiv="Content-Security-Policy"
+	      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' file: data: https:;">
+	<title>Codex Editor</title>
+	<link rel="stylesheet" href="../node_modules/bootstrap-icons/font/bootstrap-icons.css">
+	<link rel="stylesheet" href="../dist/styles.css">
+</head>
+<body class="h-full bg-base-100 text-base-content overflow-hidden flex flex-col">
+
+<!-- Top Toolbar -->
+<div id="top-toolbar"
+     class="flex-shrink-0 h-12 bg-base-100/80 dark:bg-base-300/80 backdrop-blur-sm flex items-center px-4 gap-2 z-50 border-b border-base-300 dark:border-base-100/10">
+	<!-- History Section -->
+	<div class="flex items-center gap-1">
+		<button type="button" class="js-toolbar-btn btn btn-ghost btn-sm btn-square" data-command="undo"
+		        title="Undo (Ctrl+Z)" disabled>
+			<i class="bi bi-arrow-counterclockwise text-lg"></i>
+		</button>
+		<button type="button" class="js-toolbar-btn btn btn-ghost btn-sm btn-square" data-command="redo"
+		        title="Redo (Ctrl+Y)" disabled>
+			<i class="bi bi-arrow-clockwise text-lg"></i>
+		</button>
+	</div>
+	<div class="divider divider-horizontal mx-0"></div>
+	<!-- Heading Dropdown -->
+	<div class="dropdown js-dropdown-container">
+		<button type="button" tabindex="0" role="button"
+		        class="js-toolbar-btn js-heading-btn btn btn-ghost btn-sm w-28 justify-start" disabled>Paragraph
+		</button>
+		<div tabindex="0" class="js-dropdown dropdown-content z-[1] menu p-1 shadow bg-base-100 rounded-box w-40">
+			<button class="js-heading-option p-2 rounded w-full text-left text-sm hover:bg-base-200" data-level="0">
+				Paragraph
+			</button>
+			<button class="js-heading-option p-2 rounded w-full text-left text-xl font-bold hover:bg-base-200"
+			        data-level="1">
+				Heading 1
+			</button>
+			<button class="js-heading-option p-2 rounded w-full text-left text-lg font-bold hover:bg-base-200"
+			        data-level="2">
+				Heading 2
+			</button>
+			<button class="js-heading-option p-2 rounded w-full text-left text-base font-bold hover:bg-base-200"
+			        data-level="3">Heading 3
+			</button>
+			<button class="js-heading-option p-2 rounded w-full text-left text-sm font-bold hover:bg-base-200"
+			        data-level="4">
+				Heading 4
+			</button>
+		</div>
+	</div>
+	<div class="divider divider-horizontal mx-0"></div>
+	<!-- Formatting Section -->
+	<div class="flex items-center gap-1">
+		<button type="button" class="js-toolbar-btn btn btn-ghost btn-sm btn-square font-bold" data-command="bold"
+		        title="Bold" disabled>B
+		</button>
+		<button type="button" class="js-toolbar-btn btn btn-ghost btn-sm btn-square italic" data-command="italic"
+		        title="Italic" disabled>I
+		</button>
+		<button type="button" class="js-toolbar-btn btn btn-ghost btn-sm btn-square underline"
+		        data-command="underline"
+		        title="Underline" disabled>U
+		</button>
+		<button type="button" class="js-toolbar-btn btn btn-ghost btn-sm btn-square line-through"
+		        data-command="strike"
+		        title="Strikethrough" disabled>S
+		</button>
+		<div class="dropdown js-dropdown-container">
+			<button type="button" tabindex="0" role="button" class="js-toolbar-btn btn btn-ghost btn-sm btn-square"
+			        title="Highlight" disabled>
+				<i class="bi bi-highlighter text-lg"></i>
+			</button>
+			<div tabindex="0" class="js-dropdown dropdown-content z-[1] menu p-1 shadow bg-base-100 rounded-box w-32">
+				<button
+					class="js-highlight-option p-1 rounded w-full text-left flex items-center gap-2 text-xs hover:bg-base-200"
+					data-bg="highlight-yellow"><span class="w-4 h-4 rounded-full"
+				                                   style="background-color: #fef08a;"></span>
+					Yellow
+				</button>
+				<button
+					class="js-highlight-option p-1 rounded w-full text-left flex items-center gap-2 text-xs hover:bg-base-200"
+					data-bg="highlight-green"><span class="w-4 h-4 rounded-full"
+				                                  style="background-color: #a7f3d0;"></span> Green
+				</button>
+				<button
+					class="js-highlight-option p-1 rounded w-full text-left flex items-center gap-2 text-xs hover:bg-base-200"
+					data-bg="highlight-blue"><span class="w-4 h-4 rounded-full"
+				                                 style="background-color: #bfdbfe;"></span> Blue
+				</button>
+				<button
+					class="js-highlight-option p-1 rounded w-full text-left flex items-center gap-2 text-xs hover:bg-base-200"
+					data-bg="highlight-red"><span class="w-4 h-4 rounded-full"
+				                                style="background-color: #fecaca;"></span> Red
+				</button>
+				<button class="js-highlight-option p-1 rounded w-full text-left text-xs hover:bg-base-200"
+				        data-bg="transparent">None
+				</button>
+			</div>
+		</div>
+	</div>
+	<div class="divider divider-horizontal mx-0"></div>
+	<!-- Block Formatting Section -->
+	<div class="flex items-center gap-1">
+		<button type="button" class="js-toolbar-btn btn btn-ghost btn-sm btn-square" data-command="bullet_list"
+		        title="Bullet List" disabled><i class="bi bi-list-ul text-lg"></i></button>
+		<button type="button" class="js-toolbar-btn btn btn-ghost btn-sm btn-square" data-command="ordered_list"
+		        title="Ordered List" disabled><i class="bi bi-list-ol text-lg"></i></button>
+		<button type="button" class="js-toolbar-btn btn btn-ghost btn-sm btn-square" data-command="blockquote"
+		        title="Blockquote" disabled><i class="bi bi-quote text-lg"></i></button>
+		<button type="button" class="js-toolbar-btn btn btn-ghost btn-sm btn-square" data-command="horizontal_rule"
+		        title="Horizontal Rule" disabled><i class="bi bi-hr text-lg"></i></button>
+	</div>
+	<div class="divider divider-horizontal mx-0"></div>
+	<div class="flex items-center gap-1">
+		<button type="button" class="js-toolbar-btn js-ai-action-btn btn btn-ghost btn-sm" data-action="rephrase"
+		        title="Rephrase Selection" disabled>Rephrase
+		</button>
+	</div>
+	<div class="flex-grow"></div>
+	<div class="flex items-center text-sm text-base-content/70">
+		<span id="js-word-count">No text selected</span>
+	</div>
+</div>
+
+<!-- Main Content Area -->
+<div class="flex-grow flex flex-col p-4 overflow-hidden space-y-4">
+	<!-- Header -->
+	<div class="flex-shrink-0 space-y-1">
+		<h2 id="js-novel-info" class="text-sm text-base-content/70">Loading...</h2>
+	</div>
+	
+	<!-- Editor Layout -->
+	<div class="flex-grow flex gap-4 min-h-0">
+		<!-- Left Column: Image -->
+		<div class="w-1/3 flex-shrink-0">
+			<div id="js-image-container" class="codex-image-container aspect-square bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden transition-opacity duration-300">
+				<img src="" alt="Image for Codex Entry" class="w-full h-full object-cover">
+			</div>
+			<div class="mt-2 space-y-2">
+				<button type="button" class="js-codex-upload-image btn btn-sm btn-block">Upload New Image</button>
+				<button type="button" class="js-codex-generate-ai btn btn-sm btn-accent btn-block">Generate with AI</button>
+			</div>
+		</div>
+		
+		<!-- Right Column: Title & Content -->
+		<!-- MODIFIED: Wrapped the right column content in a form for creation mode -->
+		<div class="w-2/3 flex flex-col min-w-0 border border-base-300 rounded-md overflow-hidden">
+			<form id="js-codex-form" class="flex flex-col h-full" novalidate>
+				<div class="flex-shrink-0 p-4 border-b border-base-300 relative">
+					<!-- NEW: Spinner for AI suggestions -->
+					<div id="js-ai-suggestion-spinner" class="absolute inset-0 bg-base-100/80 backdrop-blur-sm flex items-center justify-center z-10 hidden">
+						<div class="text-center">
+							<span class="loading loading-spinner loading-lg"></span>
+							<p class="mt-2 text-sm">AI is analyzing text...</p>
+						</div>
+					</div>
+					<input type="text" id="js-codex-title-input"
+					       class="text-3xl font-bold w-full bg-transparent border-0 p-0 focus:ring-0 focus:border-b-2 focus:border-teal-500"
+					       placeholder="Codex Entry Title" required>
+					
+					<!-- NEW: Metadata section for create mode -->
+					<div id="js-create-meta-section" class="hidden mt-4 space-y-2">
+						<div class="form-control">
+							<label for="js-codex-category" class="label"><span class="label-text">Category <span class="text-error">*</span></span></label>
+							<select id="js-codex-category" name="codex_category_id" class="select select-bordered select-sm" required>
+								<option value="">Select a category...</option>
+								<option value="new">-- Create New Category --</option>
+							</select>
+						</div>
+						<div id="js-new-category-wrapper" class="hidden pl-4 border-l-4 border-accent">
+							<label for="js-new-category-name" class="label"><span class="label-text">New Category Name</span></label>
+							<input type="text" id="js-new-category-name" name="new_category_name" class="input input-bordered input-sm">
+						</div>
+					</div>
+				</div>
+				<div class="js-pm-container flex-grow p-4 overflow-y-auto prose prose-sm dark:prose-invert max-w-none">
+					<!-- MODIFIED: Removed h-full to allow editor to grow naturally with content -->
+					<div class="js-editable" data-name="content" data-placeholder="Enter detailed content here..."></div>
+				</div>
+				<!-- NEW: Action button for create mode -->
+				<div id="js-create-action-section" class="hidden p-4 border-t border-base-300">
+					<button type="submit" class="js-create-entry-btn btn btn-primary btn-block">
+						<span class="js-btn-text">Create Entry</span>
+						<span class="js-spinner hidden animate-spin"><i class="bi bi-arrow-repeat"></i></span>
+					</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+
+<!-- Hidden container to hold the initial content for ProseMirror editors -->
+<div id="js-pm-content-source" class="hidden">
+	<div data-name="content"></div>
+</div>
+
+<!-- Prompt Editor Modal (for AI text actions) -->
+<dialog id="prompt-editor-modal" class="modal">
+	<div class="modal-box w-11/12 max-w-5xl h-[90vh] flex flex-col p-0">
+		<div class="flex flex-grow overflow-hidden">
+			<main class="w-full flex flex-col overflow-hidden">
+				<div class="js-prompt-placeholder flex-grow flex items-center justify-center">
+					<p class="text-base-content/60">Loading editor...</p>
+				</div>
+				<div class="js-custom-editor-pane hidden flex-grow flex flex-col min-h-0">
+					<div class="p-4 border-b border-base-300 flex-shrink-0">
+						<h3 class="js-custom-prompt-title text-lg font-bold"></h3>
+					</div>
+					<div class="js-custom-form-container flex-grow overflow-y-auto min-h-0">
+						<div class="p-4 text-center">
+							<span class="loading loading-spinner"></span>
+						</div>
+					</div>
+				</div>
+			</main>
+		</div>
+		<div class="modal-action px-6 py-4 border-t border-base-300 flex-shrink-0 flex justify-between items-center">
+			<div class="flex items-center gap-4">
+				<button type="button" class="js-toggle-preview-btn btn btn-ghost">Show Preview</button>
+				<select class="js-llm-model-select select select-bordered select-sm w-full max-w-xs">
+					<option disabled selected>Loading models...</option>
+				</select>
+				<button type="button" class="js-prompt-apply-btn btn btn-accent">Apply Changes</button>
+			</div>
+			<form method="dialog">
+				<button class="btn">Close</button>
+			</form>
+		</div>
+	</div>
+</dialog>
+
+<script src="../src/js/theme.js"></script>
+<script src="../dist/codex-editor-bundle.js"></script>
+</body>
+</html>

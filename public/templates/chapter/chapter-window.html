@@ -1,0 +1,16 @@
+<div class="p-4 flex flex-col h-full chapter-window-content select-text js-chapter-drop-zone transition-colors duration-300" data-chapter-id="{{CHAPTER_ID}}">
+	{{SECTION_INFO_HTML}}
+	<input type="text" name="title" value="{{CHAPTER_TITLE_ATTR}}" class="js-chapter-title-input text-2xl font-bold w-full bg-transparent border-0 p-0 focus:ring-0 focus:border-b-2 focus:border-indigo-500 flex-shrink-0" placeholder="Chapter Title">
+	<div class="prose prose-sm dark:prose-invert max-w-none flex-grow flex flex-col overflow-y-auto">
+		<div class="js-editable lead mt-2 relative flex-grow" data-name="summary" data-placeholder="Enter a short summary..."></div>
+	</div>
+	<div class="js-codex-tags-wrapper mt-4 flex-shrink-0 border-t border-gray-200 dark:border-gray-700 pt-3 {{TAGS_WRAPPER_HIDDEN}}">
+		<div class="js-codex-tags-container flex flex-wrap gap-2">{{CODEX_TAGS_HTML}}</div>
+	</div>
+	<div class="js-pov-settings-wrapper mt-4 flex-shrink-0 border-t border-gray-200 dark:border-gray-700 pt-3">
+		{{POV_SETTINGS_HTML}}
+	</div>
+	<div class="js-pm-content hidden">
+		<div data-name="summary">{{CHAPTER_SUMMARY_HTML}}</div>
+	</div>
+</div>

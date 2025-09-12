@@ -1,0 +1,7 @@
+/node_modules
+public/styles.css
+package-lock.json
+.env
+/.idea
+.scp/settings.yaml
+/dist

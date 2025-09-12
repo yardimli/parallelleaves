@@ -1,0 +1,19 @@
+<div class="p-4 flex flex-col h-full codex-entry-window-content select-text js-codex-drop-zone transition-colors duration-300" data-entry-id="{{ENTRY_ID}}" data-entry-title="{{ENTRY_TITLE_ATTR}}">
+	<div class="flex-grow flex gap-4 overflow-hidden">
+		<div class="w-1/3 flex-shrink-0">
+		</div>
+		<div class="w-2/3 flex flex-col min-w-0">
+			<div class="flex-shrink-0 prose-sm dark:prose-invert max-w-none">
+				<input type="text" name="title" value="{{ENTRY_TITLE_ATTR}}" class="js-codex-title-input text-2xl font-bold w-full bg-transparent border-0 p-0 focus:ring-0 focus:border-b-2 focus:border-teal-500" placeholder="Codex Entry Title">
+			</div>
+			<div class="mt-4 flex-grow overflow-y-auto prose prose-sm dark:prose-invert max-w-none js-codex-editable relative" data-name="content" data-placeholder="Enter detailed content here..."></div>
+		</div>
+	</div>
+	<div class="js-pm-content hidden">
+		<div data-name="content">{{CONTENT_HTML}}</div>
+	</div>
+	<div class="js-codex-tags-wrapper mt-4 flex-shrink-0 border-t border-gray-200 dark:border-gray-700 pt-3 {{LINKED_TAGS_WRAPPER_HIDDEN}}">
+		<h4 class="text-xs font-bold uppercase text-gray-500 dark:text-gray-400 mb-2">Linked Entries</h4>
+		<div class="js-codex-tags-container flex flex-wrap gap-2">{{LINKED_TAGS_HTML}}</div>
+	</div>
+</div>

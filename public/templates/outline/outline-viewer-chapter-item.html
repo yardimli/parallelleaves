@@ -1,0 +1,33 @@
+<div class="card card-compact bg-base-200 shadow" data-chapter-id="{{CHAPTER_ID}}">
+	<div class="card-body">
+		<div class="flex justify-between items-start">
+			<h3 class="card-title">{{CHAPTER_ORDER}}. {{CHAPTER_TITLE}}</h3>
+			<button type="button" class="js-edit-chapter btn btn-sm btn-ghost" data-chapter-id="{{CHAPTER_ID}}">
+				<i class="bi bi-pencil-square"></i> Edit
+			</button>
+		</div>
+		
+		<!-- POV Info -->
+		<!-- MODIFIED: Wrapped in a flex container to align word count to the right -->
+		<div class="mt-2 text-sm flex items-center justify-between">
+			<div>
+				<span class="font-semibold">{{POV_TYPE}}</span>
+				<span class="text-base-content/80 italic">{{POV_CHARACTER}}</span>
+			</div>
+			<!-- NEW: Added word count display -->
+			<span class="text-xs font-semibold text-base-content/50">{{WORD_COUNT}} words</span>
+		</div>
+		
+		<!-- Summary -->
+		<div class="prose prose-sm dark:prose-invert max-w-none mt-2">
+			{{CHAPTER_SUMMARY_HTML}}
+		</div>
+		
+		<!-- Codex Links -->
+		<div class="js-codex-tags-wrapper mt-4 flex-shrink-0 border-t border-gray-200 dark:border-gray-700 pt-3 {{TAGS_WRAPPER_HIDDEN}}">
+			<div class="flex flex-wrap gap-2">
+				{{CODEX_TAGS_HTML}}
+			</div>
+		</div>
+	</div>
+</div>

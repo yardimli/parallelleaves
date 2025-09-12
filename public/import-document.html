@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="Content-Security-Policy"
+	      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;">
+	<title>Import Document</title>
+	<link rel="stylesheet" href="../node_modules/bootstrap-icons/font/bootstrap-icons.css">
+	<link rel="stylesheet" href="../dist/styles.css">
+</head>
+<body class="h-full bg-base-100 text-base-content overflow-hidden flex flex-col">
+<!-- Header -->
+<div class="flex-shrink-0 p-4 border-b border-base-300 space-y-4">
+	<div class="flex justify-between items-center">
+		<h1 class="text-2xl font-bold">Import Document</h1>
+		<div class="flex items-center gap-2">
+			<div class="join">
+				<button id="prev-mark-btn" class="btn btn-neutral join-item" disabled title="Previous Mark">
+					<i class="bi bi-arrow-up"></i>
+				</button>
+				<button id="next-mark-btn" class="btn btn-neutral join-item" disabled title="Next Mark">
+					<i class="bi bi-arrow-down"></i>
+				</button>
+			</div>
+			<button id="auto-detect-btn" class="btn btn-neutral" disabled>
+				<i class="bi bi-magic"></i> Auto-detect Chapters
+			</button>
+			<button id="select-file-btn" class="btn btn-primary">
+				<i class="bi bi-file-earmark-text"></i> Select File (.txt, .docx)
+			</button>
+		</div>
+	</div>
+	<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+		<div class="form-control">
+			<label for="title" class="label"><span class="label-text">Novel Title</span></label>
+			<input type="text" id="title" name="title" class="input input-bordered" required>
+		</div>
+		<div class="form-control">
+			<label for="author" class="label"><span class="label-text">Author</span></label>
+			<input type="text" id="author" name="author" class="input input-bordered" required>
+		</div>
+	</div>
+</div>
+
+<!-- Main Content -->
+<div id="document-content-wrapper" class="flex-grow overflow-y-auto p-8 prose max-w-none">
+	<div id="document-content" class="space-y-4">
+		<div class="text-center text-base-content/60 py-16">
+			<i class="bi bi-file-earmark-arrow-up text-6xl"></i>
+			<p class="mt-4">Select a file to begin.</p>
+		</div>
+	</div>
+</div>
+
+<!-- Footer -->
+<div class="flex-shrink-0 p-4 border-t border-base-300 flex justify-between items-center">
+	<div class="text-sm text-base-content/70">
+		<p><i class="bi bi-info-circle-fill"></i> Click any paragraph to mark it as the start of a new chapter or act.</p>
+		<!-- MODIFIED: ID changed for a more generic status -->
+		<p id="js-import-status" class="font-bold mt-1">No content to import.</p>
+	</div>
+	<button id="start-import-btn" class="btn btn-accent w-48" disabled>
+		<span class="js-btn-content">Start Import</span>
+		<span class="js-btn-spinner animate-spin hidden">
+                <i class="bi bi-arrow-repeat"></i>
+            </span>
+	</button>
+</div>
+
+<!-- NEW: Pop-up menu for selecting break type -->
+<div id="break-type-popover" class="hidden absolute z-50">
+	<ul class="menu p-2 shadow-lg bg-base-200 rounded-box w-48">
+		<li><button data-action="set-act"><i class="bi bi-film"></i> New Act</button></li>
+		<li><button data-action="set-chapter"><i class="bi bi-card-text"></i> New Chapter</button></li>
+		<div class="divider my-1"></div>
+		<li><button data-action="remove-break"><i class="bi bi-x-circle"></i> Remove Break</button></li>
+	</ul>
+</div>
+
+<script src="../src/js/theme.js"></script>
+<script src="../src/js/import-document.js"></script>
+</body>
+</html>

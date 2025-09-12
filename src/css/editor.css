@@ -1,0 +1,200 @@
+/* Custom styles for the novel editor UI */
+.resize-handle {
+    @apply absolute bottom-0 right-0 w-4 h-4 cursor-se-resize;
+    /* A visual indicator can be added via a background image or pseudo-element if desired */
+}
+
+.resize-handle::after {
+    content: '';
+    @apply absolute bottom-1 right-1 w-2 h-2 border-r-2 border-b-2 border-gray-400;
+}
+
+.dark .resize-handle::after {
+    @apply border-gray-500;
+}
+
+.window-minimized {
+    @apply h-10 shadow-lg cursor-pointer;
+}
+
+.dragging {
+    @apply transition-none !important;
+}
+
+.active .window-title-bar {
+    @apply bg-indigo-200 dark:bg-indigo-900/70;
+}
+
+.active .window-title-bar .font-bold {
+    @apply text-black dark:text-white;
+}
+
+.window-inactive-content {
+    @apply pointer-events-none opacity-75;
+}
+
+#desktop.is-dragging .window-inactive-content {
+    @apply pointer-events-auto;
+}
+
+i[class^="bi-"], i[class*=" bi-"] {
+    display: inline-flex;
+    align-items: center;
+}
+
+.selected {
+    @apply ring-2 ring-blue-500;
+}
+
+#desktop {
+    background-image:
+            linear-gradient(to right, theme('colors.gray.200') 1px, transparent 1px),
+            linear-gradient(to bottom, theme('colors.gray.200') 1px, transparent 1px);
+    background-size: 20px 20px;
+    cursor: grab;
+    will-change: transform, top, left;
+}
+
+.dark #desktop {
+    background-image:
+            linear-gradient(to right, theme('colors.gray.800') 1px, transparent 1px),
+            linear-gradient(to bottom, theme('colors.gray.800') 1px, transparent 1px);
+}
+
+#viewport.panning #desktop {
+    cursor: grabbing;
+}
+
+.window-element {
+    cursor: pointer;
+}
+.window-element .ProseMirror {
+    cursor: text;
+}
+
+.ai-suggestion {
+    @apply text-sky-600 dark:text-sky-400 bg-sky-500/10;
+}
+
+#ai-floating-toolbar {
+    @apply absolute z-50 bg-gray-800 text-white rounded-md shadow-lg p-1 flex items-center gap-1 text-xs;
+    user-select: none;
+}
+
+#ai-floating-toolbar button {
+    @apply btn btn-ghost btn-xs text-white hover:bg-gray-700 normal-case font-normal flex items-center gap-1;
+}
+
+#ai-floating-toolbar .divider-vertical {
+    @apply w-px h-4 bg-gray-600 mx-1;
+}
+
+#top-toolbar .js-toolbar-btn {
+    @apply p-2 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors;
+}
+
+#top-toolbar .js-toolbar-btn:disabled {
+    @apply text-gray-400 dark:text-gray-500 bg-transparent cursor-not-allowed hover:bg-transparent dark:hover:bg-transparent;
+}
+
+#top-toolbar .js-toolbar-btn.active {
+    @apply bg-gray-300 dark:bg-gray-600;
+}
+
+#top-toolbar .js-toolbar-btn svg {
+    @apply w-4 h-4;
+}
+
+.highlight-yellow {
+    background-color: #fef08a;
+    color: #713f12;
+}
+.highlight-green {
+    background-color: #a7f3d0;
+    color: #14532d;
+}
+.highlight-blue {
+    background-color: #bfdbfe;
+    color: #1e3a8a;
+}
+.highlight-red {
+    background-color: #fecaca;
+    color: #7f1d1d;
+}
+
+.ProseMirror {
+    @apply min-h-full focus:outline-none;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    @apply text-gray-400 dark:text-gray-500 italic pointer-events-none h-0;
+}
+
+.prose .ProseMirror {
+    @apply p-0 focus:ring-0;
+}
+
+.dark ::-webkit-scrollbar {
+    @apply w-3 h-3;
+}
+
+.dark ::-webkit-scrollbar-track {
+    @apply bg-gray-800;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+    @apply bg-gray-600 rounded-full border-2 border-solid border-gray-800;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-500;
+}
+
+.dark .overflow-auto,
+.dark .overflow-y-auto {
+    scrollbar-width: thin;
+    scrollbar-color: theme('colors.gray.600') theme('colors.gray.800');
+}
+
+/* Styles for the Import Document page */
+#document-content p {
+    @apply cursor-pointer px-2 py-1 rounded-md transition-colors duration-200 ease-in-out;
+}
+
+#document-content p:not(.chapter-break):not(.act-break):hover {
+    @apply bg-base-200;
+}
+
+.chapter-break {
+    @apply border-t-2 border-dashed border-accent pt-4 mt-4 bg-accent/10;
+}
+
+.chapter-break:hover {
+    @apply bg-accent/20;
+}
+
+.chapter-break::before {
+    content: 'New Chapter';
+    @apply block text-xs font-bold text-accent uppercase mb-2;
+}
+
+/* NEW: Styles for Act Breaks */
+.act-break {
+    @apply border-t-4 border-double border-primary pt-4 mt-6 bg-primary/10;
+}
+
+.act-break:hover {
+    @apply bg-primary/20;
+}
+
+.act-break::before {
+    content: 'New Act';
+    @apply block text-sm font-bold text-primary uppercase mb-2;
+}
+
+/* NEW: Styles for the pop-up menu */
+#break-type-popover .menu button {
+    @apply w-full flex justify-start;
+}
