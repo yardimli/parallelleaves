@@ -41,6 +41,28 @@ let currentAiParams = null; // For the retry functionality
 let activeEditorView = null;
 let currentPromptId = null;
 
+// NEW SECTION START: Helper functions to control the AI Action spinner visibility.
+/**
+ * Shows the spinner overlay in the chapter editor.
+ */
+function showAiSpinner() {
+	const overlay = document.getElementById('ai-action-spinner-overlay');
+	if (overlay) {
+		overlay.classList.remove('hidden');
+	}
+}
+
+/**
+ * Hides the spinner overlay in the chapter editor.
+ */
+function hideAiSpinner() {
+	const overlay = document.getElementById('ai-action-spinner-overlay');
+	if (overlay) {
+		overlay.classList.add('hidden');
+	}
+}
+// NEW SECTION END
+
 /**
  * Loads a specific prompt builder into the editor pane.
  * @param {string} promptId - The ID of the prompt to load.
@@ -204,7 +226,14 @@ function createFloatingToolbar(view, from, to, model) {
 	});
 }
 
-async function startAiStream(params) {
+/**
+ * Initiates the AI text processing stream and handles the response.
+ * @param {object} params - The parameters for the AI stream.
+ * @param {object} params.prompt - The prompt object to send to the AI.
+ * @param {string} params.model - The AI model to use.
+ */
+// MODIFIED: Removed 'async' as this function initiates a stream but doesn't wait for it to finish.
+function startAiStream(params) {
 	const { prompt, model } = params;
 	
 	isAiActionActive = true;
@@ -216,6 +245,11 @@ async function startAiStream(params) {
 	
 	const onData = (payload) => {
 		if (payload.chunk) {
+			// MODIFIED: Hide spinner on receiving the first chunk of data.
+			if (isFirstChunk) {
+				hideAiSpinner();
+			}
+			
 			const { schema } = activeEditorView.state;
 			const mark = schema.marks.ai_suggestion.create();
 			let tr = activeEditorView.state.tr;
@@ -247,6 +281,8 @@ async function startAiStream(params) {
 		} else if (payload.error) {
 			console.error('AI Action Error:', payload.error);
 			window.showAlert(payload.error);
+			// MODIFIED: Hide spinner if an error occurs.
+			hideAiSpinner();
 			handleFloatyDiscard();
 		}
 	};
@@ -256,6 +292,8 @@ async function startAiStream(params) {
 	} catch (error) {
 		console.error('AI Action Error:', error);
 		window.showAlert(error.message);
+		// MODIFIED: Hide spinner if an error occurs during stream initiation.
+		hideAiSpinner();
 		handleFloatyDiscard();
 	}
 }
@@ -329,7 +367,7 @@ async function handleModalApply() {
 		const settingsToSave = {
 			model: model,
 			instructions: formDataObj.instructions,
-			selectedCodexIds: formDataObj.selectedCodexIds, // MODIFIED: Also save the selected codex entries.
+			selectedCodexIds: formDataObj.selectedCodexIds,
 		};
 		// Fire-and-forget save operation.
 		window.api.updatePromptSettings({
@@ -358,7 +396,10 @@ async function handleModalApply() {
 	
 	currentAiParams = { prompt, model, action, context: currentContext, formData: formDataObj };
 	
-	await startAiStream({ prompt: currentAiParams.prompt, model: currentAiParams.model });
+	// MODIFIED: Show spinner before starting the stream request.
+	showAiSpinner();
+	// MODIFIED: Removed 'await' as startAiStream is not an async-blocking function.
+	startAiStream({ prompt: currentAiParams.prompt, model: currentAiParams.model });
 }
 
 

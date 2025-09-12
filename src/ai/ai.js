@@ -110,28 +110,44 @@ async function streamOpenRouter(payload, onChunk) {
 	}
 	
 	let fullResponse = '';
+	// MODIFIED SECTION START: Implemented a buffer to handle incomplete stream chunks, preventing JSON parsing errors.
+	let buffer = '';
 	
 	// Process the streaming response body
 	for await (const chunk of response.body) {
-		const lines = chunk.toString('utf8').split('\n').filter(line => line.trim().startsWith('data: '));
-		for (const line of lines) {
-			const message = line.replace(/^data: /, '');
-			if (message === '[DONE]') {
-				logAiInteraction('OpenRouter (Streaming)', payload, fullResponse);
-				return; // Stream finished
-			}
-			try {
-				const parsed = JSON.parse(message);
-				const content = parsed.choices[0]?.delta?.content;
-				if (content) {
-					fullResponse += content; // Append chunk to full response.
-					onChunk(content); // Send the text chunk to the callback
+		// Append the new chunk of data to our buffer
+		buffer += chunk.toString('utf8');
+		
+		// Process all complete lines in the buffer. A line is considered complete if it ends with a newline.
+		let newlineIndex;
+		while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
+			const line = buffer.slice(0, newlineIndex).trim();
+			// Remove the processed line (including the newline character) from the buffer for the next iteration
+			buffer = buffer.slice(newlineIndex + 1);
+			
+			// SSE messages are prefixed with 'data: '. We only care about those.
+			if (line.startsWith('data: ')) {
+				const message = line.substring(6); // Get the JSON part of the message.
+				if (message === '[DONE]') {
+					logAiInteraction('OpenRouter (Streaming)', payload, fullResponse);
+					return; // Stream finished
 				}
-			} catch (error) {
-				console.error('Error parsing stream chunk:', message, error);
+				try {
+					const parsed = JSON.parse(message);
+					const content = parsed.choices[0]?.delta?.content;
+					if (content) {
+						fullResponse += content; // Append chunk to full response for logging.
+						onChunk(content); // Send the text chunk to the callback
+					}
+				} catch (error) {
+					// This catch block will now only trigger on genuinely malformed JSON,
+					// not on incomplete chunks. We log the error but continue processing.
+					console.error('Error parsing stream chunk:', message, error);
+				}
 			}
 		}
 	}
+	// MODIFIED SECTION END
 	
 	// Fallback log in case the stream ends without a [DONE] message.
 	if (fullResponse) {
@@ -246,12 +262,11 @@ async function streamProcessCodexText({ prompt, model }, onChunk) {
  * @returns {Promise<object>} The raw model data from the API or cache.
  * @throws {Error} If the API call fails.
  */
-async function getOpenRouterModels(forceRefresh = false) { // MODIFIED: Added forceRefresh parameter.
+async function getOpenRouterModels(forceRefresh = false) {
 	const cachePath = path.join(app.getPath('userData'), 'temp');
 	const cacheFile = path.join(cachePath, 'openrouter_models.json');
 	const cacheDurationInSeconds = 24 * 60 * 60; // 24 hours
 	
-	// MODIFIED: Added forceRefresh check to bypass cache if needed.
 	if (!forceRefresh && fs.existsSync(cacheFile) && (Date.now() - fs.statSync(cacheFile).mtimeMs) / 1000 < cacheDurationInSeconds) {
 		try {
 			const cachedContent = fs.readFileSync(cacheFile, 'utf8');

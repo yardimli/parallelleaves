@@ -40,7 +40,15 @@ export function updateToolbarState(view) {
 		const selection = window.getSelection();
 		if (selection && !selection.isCollapsed && selection.rangeCount > 0) {
 			const range = selection.getRangeAt(0);
-			const sourceContainer = range.startContainer.parentElement.closest('.source-content-readonly');
+			
+			// MODIFIED SECTION START: Robustly find the container, handling text nodes.
+			let checkNode = range.startContainer;
+			if (checkNode.nodeType === Node.TEXT_NODE) {
+				checkNode = checkNode.parentElement;
+			}
+			const sourceContainer = checkNode.closest('.source-content-readonly');
+			// MODIFIED SECTION END
+			
 			if (sourceContainer) {
 				translateBtn.disabled = false;
 				const text = selection.toString();
@@ -244,7 +252,6 @@ async function handleToolbarAction(button) {
 		
 		const novelData = await window.api.getOneNovel(novelId);
 		
-		// NEW: Parse saved prompt settings from novel data
 		let settings = {};
 		if (action === 'rephrase' && novelData.rephrase_settings) {
 			try {
@@ -260,13 +267,20 @@ async function handleToolbarAction(button) {
 			}
 		}
 		
-		// MODIFIED SECTION START: Handle translation from source panel
 		if (action === 'translate') {
 			const selection = window.getSelection();
 			if (!selection || selection.isCollapsed || selection.rangeCount === 0) return;
 			
 			const range = selection.getRangeAt(0);
-			const sourceContainer = range.commonAncestorContainer.closest('.source-content-readonly');
+			
+			// MODIFIED SECTION START: Robustly find the container, handling text nodes.
+			let checkNode = range.commonAncestorContainer;
+			if (checkNode.nodeType === Node.TEXT_NODE) {
+				checkNode = checkNode.parentElement;
+			}
+			const sourceContainer = checkNode.closest('.source-content-readonly');
+			// MODIFIED SECTION END
+			
 			if (!sourceContainer) return;
 			
 			// Helper to find the last block marker that precedes a given node.
@@ -322,11 +336,9 @@ async function handleToolbarAction(button) {
 					blockNumber: blockNumber, // Keep this for potential future use
 				},
 			};
-			// MODIFIED: Pass parsed settings as the initial state for the prompt editor.
 			openPromptEditor(context, 'translate', settings);
 			return;
 		}
-		// MODIFIED SECTION END
 		
 		const isChapterEditor = toolbarConfig.isChapterEditor;
 		
@@ -382,7 +394,6 @@ async function handleToolbarAction(button) {
 			wordsAfter,
 			activeEditorView: editorForPrompt,
 		};
-		// MODIFIED: Pass parsed settings as the initial state for the prompt editor.
 		openPromptEditor(context, action, settings);
 		return;
 	}

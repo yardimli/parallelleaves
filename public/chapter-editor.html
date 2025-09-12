@@ -130,22 +130,18 @@
 		<button type="button" class="js-toolbar-btn js-ai-action-btn btn btn-ghost btn-sm" data-action="rephrase"
 		        title="Rephrase Selection" disabled>Rephrase
 		</button>
-		<!-- MODIFIED SECTION START -->
 		<button type="button" class="js-toolbar-btn js-ai-action-btn btn btn-ghost btn-sm" data-action="translate"
 		        title="Translate Source Selection" disabled>Translate
 		</button>
-		<!-- MODIFIED SECTION END -->
 	</div>
 	<div class="flex-grow"></div>
 	<div class="flex items-center text-sm text-base-content/70">
 		<span id="js-total-word-count" class="mr-4"></span>
 		<span id="js-word-count">No text selected</span>
 	</div>
-	<!-- MODIFIED SECTION START: Replaced swap component with a single button for 3-state theme switching -->
 	<button id="theme-toggle" class="btn btn-ghost btn-circle mr-2" title="Change Theme">
 		<i class="bi bi-sun-fill text-xl"></i>
 	</button>
-	<!-- MODIFIED SECTION END -->
 </div>
 
 <!-- Main Content Area -->
@@ -157,7 +153,16 @@
 		</select>
 	</div>
 	
-	<div class="flex-grow flex min-h-0">
+	<!-- MODIFIED: Added relative positioning for spinner overlay -->
+	<div class="flex-grow flex min-h-0 relative">
+		<!-- MODIFIED SECTION START: Added AI Action Spinner Overlay -->
+		<div id="ai-action-spinner-overlay" class="hidden absolute inset-0 bg-base-100/80 backdrop-blur-sm flex items-center justify-center z-50">
+			<div class="text-center">
+				<span class="loading loading-spinner loading-lg"></span>
+				<p class="mt-2 text-sm">Waiting for AI response...</p>
+			</div>
+		</div>
+		<!-- MODIFIED SECTION END -->
 		<div id="js-manuscript-container" class="w-full flex flex-col overflow-y-auto">
 			<!-- Manuscript content (sections, chapters, editors) will be rendered here by JS -->
 		</div>
@@ -219,7 +224,6 @@
 	</div>
 </dialog>
 
-<!-- MODIFIED SECTION START: Added a generic alert modal -->
 <dialog id="alert-modal" class="modal">
 	<div class="modal-box w-11/12 max-w-md">
 		<h3 id="alert-modal-title" class="font-bold text-lg text-error">Error</h3>
@@ -231,7 +235,6 @@
 		</div>
 	</div>
 </dialog>
-<!-- MODIFIED SECTION END -->
 
 <script src="../src/js/theme.js"></script>
 <script src="../dist/chapter-editor-bundle.js"></script>
