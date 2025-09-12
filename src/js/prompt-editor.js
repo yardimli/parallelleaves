@@ -1,3 +1,5 @@
+// src/js/prompt-editor.js
+
 // This file now controls the prompt editor modal within the novel editor.
 
 import { init as initRephraseEditor, buildPromptJson as buildRephraseJson } from './prompt-editors/rephrase-editor.js';
@@ -377,18 +379,75 @@ async function handleModalApply() {
 		}).catch(err => console.error('Failed to save prompt settings:', err));
 	}
 	
-	const { state } = activeEditorView;
-	const { from, to, empty } = state.selection;
+	// MODIFIED SECTION START: New logic to determine insertion point for translations.
+	const { state, dispatch } = activeEditorView;
+	let tr = state.tr;
+	let fromPos = state.selection.from;
+	let toPos = state.selection.to;
 	
-	if (action === 'rephrase' && empty) {
-		window.showAlert('Please select text to apply this action.', 'Action Required');
-		return;
+	if (action === 'translate') {
+		const { schema } = state;
+		const blockNumber = currentContext.translationInfo.blockNumber;
+		
+		let noteNodeCount = 0;
+		let targetParaNode = null;
+		let targetParaPos = -1;
+		
+		// Find the paragraph that corresponds to the translation block number.
+		state.doc.forEach((node, pos) => {
+			if (targetParaNode) return; // Already found, exit early.
+			
+			if (node.type.name === 'note') {
+				noteNodeCount++;
+			} else if (noteNodeCount === blockNumber && node.type.name === 'paragraph') {
+				targetParaNode = node;
+				targetParaPos = pos;
+			}
+		});
+		
+		if (targetParaNode) {
+			// Check if the user's cursor is already inside the target block.
+			const isSelectionInTarget = fromPos > targetParaPos && toPos < (targetParaPos + targetParaNode.nodeSize);
+			
+			if (!isSelectionInTarget) {
+				// Cursor is not in the target block, so we move it and handle new line insertion.
+				if (targetParaNode.content.size > 0) {
+					// The block is not empty, so add a new paragraph after it for the translation.
+					const insertPos = targetParaPos + targetParaNode.nodeSize;
+					tr.insert(insertPos, schema.nodes.paragraph.create());
+					fromPos = toPos = insertPos + 1; // Position inside the new paragraph.
+				} else {
+					// The block is empty, so we'll insert at its beginning.
+					fromPos = toPos = targetParaPos + 1;
+				}
+				// Set the selection in our transaction to move the cursor.
+				tr.setSelection(TextSelection.create(tr.doc, fromPos, toPos));
+			}
+			// If selection was already in target, we use the existing `fromPos` and `toPos`.
+		} else {
+			window.showAlert(`Could not find target translation block #${blockNumber}.`, 'Translation Error');
+			return;
+		}
+		
+		// Apply the transaction to move the cursor before we proceed.
+		dispatch(tr);
+		
+		// Get the final state *after* the cursor move to set up the AI action range correctly.
+		const newState = activeEditorView.state;
+		fromPos = newState.selection.from;
+		toPos = newState.selection.to;
+	} else { // For 'rephrase' and other actions
+		if (state.selection.empty) {
+			window.showAlert('Please select text to apply this action.', 'Action Required');
+			return;
+		}
 	}
 	
-	originalFragment = state.doc.slice(from, to);
-	aiActionRange = { from, to };
+	originalFragment = activeEditorView.state.doc.slice(fromPos, toPos);
+	aiActionRange = { from: fromPos, to: toPos };
 	
-	const text = action === 'translate' ? currentContext.selectedText : state.doc.textBetween(aiActionRange.from, aiActionRange.to, ' ');
+	const text = action === 'translate' ? currentContext.selectedText : activeEditorView.state.doc.textBetween(aiActionRange.from, aiActionRange.to, ' ');
+	// MODIFIED SECTION END
 	
 	const wordCount = text ? text.trim().split(/\s+/).filter(Boolean).length : 0;
 	const promptContext = { ...currentContext, selectedText: text, wordCount };
