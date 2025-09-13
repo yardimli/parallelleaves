@@ -118,12 +118,117 @@ function processSourceContentForDisplay(sourceHtml) {
 	});
 }
 
+// NEW FUNCTION START: Processes source HTML to find and link codex entry terms.
+/**
+ * Finds codex entry titles and phrases in an HTML string and wraps them in links.
+ * @param {string} htmlString - The HTML content to process.
+ * @param {Array<object>} codexCategories - The array of codex categories containing entries.
+ * @returns {string} The HTML string with codex terms linked.
+ */
+function processSourceContentForCodexLinks(htmlString, codexCategories) {
+	if (!codexCategories || codexCategories.length === 0 || !htmlString) {
+		return htmlString;
+	}
+	
+	// 1. Create a flat list of terms to search for (titles and document phrases).
+	const terms = [];
+	codexCategories.forEach(category => {
+		category.entries.forEach(entry => {
+			if (entry.title) {
+				terms.push({ text: entry.title, id: entry.id });
+			}
+			if (entry.document_phrases) {
+				const phrases = entry.document_phrases.split(',').map(p => p.trim()).filter(Boolean);
+				phrases.forEach(phrase => {
+					terms.push({ text: phrase, id: entry.id });
+				});
+			}
+		});
+	});
+	
+	if (terms.length === 0) {
+		return htmlString;
+	}
+	
+	// Sort by length descending to match longer phrases first (e.g., "King Arthur" before "King").
+	terms.sort((a, b) => b.text.length - a.text.length);
+	
+	const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+	const regex = new RegExp(`\\b(${terms.map(term => escapeRegex(term.text)).join('|')})\\b`, 'gi');
+	
+	// Map lower-cased phrases back to their entry IDs for case-insensitive matching.
+	const termMap = new Map();
+	terms.forEach(term => {
+		termMap.set(term.text.toLowerCase(), term.id);
+	});
+	
+	// 2. Parse HTML and walk through all text nodes.
+	const tempDiv = document.createElement('div');
+	tempDiv.innerHTML = htmlString;
+	
+	const walker = document.createTreeWalker(tempDiv, NodeFilter.SHOW_TEXT, null, false);
+	const nodesToProcess = [];
+	let node;
+	while ((node = walker.nextNode())) {
+		// Avoid creating links inside existing links or other unwanted elements.
+		if (node.parentElement.closest('a, script, style')) {
+			continue;
+		}
+		nodesToProcess.push(node);
+	}
+	
+	// 3. For each text node, find matches and replace them with link elements.
+	nodesToProcess.forEach(textNode => {
+		const text = textNode.textContent;
+		const matches = [...text.matchAll(regex)];
+		
+		if (matches.length > 0) {
+			const fragment = document.createDocumentFragment();
+			let lastIndex = 0;
+			
+			matches.forEach(match => {
+				const matchedText = match[0];
+				const entryId = termMap.get(matchedText.toLowerCase());
+				if (!entryId) return;
+				
+				// Add text before the match.
+				if (match.index > lastIndex) {
+					fragment.appendChild(document.createTextNode(text.substring(lastIndex, match.index)));
+				}
+				
+				// Create and add the link.
+				const link = document.createElement('a');
+				link.href = '#';
+				link.className = 'codex-link';
+				link.dataset.codexEntryId = entryId;
+				link.textContent = matchedText;
+				fragment.appendChild(link);
+				
+				lastIndex = match.index + matchedText.length;
+			});
+			
+			// Add any remaining text after the last match.
+			if (lastIndex < text.length) {
+				fragment.appendChild(document.createTextNode(text.substring(lastIndex)));
+			}
+			
+			// Replace the original text node with the new fragment.
+			textNode.parentNode.replaceChild(fragment, textNode);
+		}
+	});
+	
+	// 4. Return the modified HTML.
+	return tempDiv.innerHTML;
+}
+// NEW FUNCTION END
+
 /**
  * Renders the entire manuscript into the container.
  * @param {HTMLElement} container - The manuscript container element.
  * @param {object} novelData - The full novel data.
+ * @param {Array<object>} allCodexEntries - All codex entries for the novel. // MODIFIED: Added parameter
  */
-async function renderManuscript(container, novelData) {
+async function renderManuscript(container, novelData, allCodexEntries) { // MODIFIED: Added parameter
 	console.time('renderManuscript');
 	console.log('[renderManuscript] Starting manuscript render...');
 	const fragment = document.createDocumentFragment();
@@ -176,7 +281,11 @@ async function renderManuscript(container, novelData) {
 			const sourceContentContainer = document.createElement('div');
 			sourceContentContainer.className = 'source-content-readonly';
 			
-			const processedSourceHtml = processSourceContentForDisplay(chapter.source_content || '');
+			// MODIFIED SECTION START: Process source content for both translation blocks and codex links.
+			let processedSourceHtml = processSourceContentForDisplay(chapter.source_content || '');
+			processedSourceHtml = processSourceContentForCodexLinks(processedSourceHtml, allCodexEntries);
+			// MODIFIED SECTION END
+			
 			sourceContentContainer.innerHTML = processedSourceHtml;
 			sourceCol.appendChild(sourceContentContainer);
 			
@@ -556,6 +665,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 		}
 		console.log('[Init] Manuscript data loaded successfully.');
 		
+		// NEW: Fetch all codex entries for the novel.
+		const allCodexEntries = await window.api.getAllCodexEntriesForNovel(novelId);
+		
 		document.title = `Translating: ${novelData.title}`;
 		document.getElementById('js-novel-title').textContent = novelData.title;
 		
@@ -571,7 +683,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 			return;
 		}
 		
-		await renderManuscript(manuscriptContainer, novelData);
+		await renderManuscript(manuscriptContainer, novelData, allCodexEntries); // MODIFIED: Pass codex entries
 		populateNavDropdown(novelData);
 		
 		console.log('[Init] Setting up UI components...');
@@ -596,6 +708,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 		
 		document.addEventListener('selectionchange', throttledUpdateToolbar);
 		console.log('[Init] "selectionchange" listener attached.');
+		
+		// NEW SECTION START: Add a click listener for the dynamically created codex links.
+		manuscriptContainer.addEventListener('click', (event) => {
+			const codexLink = event.target.closest('a.codex-link');
+			if (codexLink) {
+				event.preventDefault();
+				const entryId = codexLink.dataset.codexEntryId;
+				if (entryId) {
+					window.api.openCodexEditor(entryId);
+				}
+			}
+		});
+		// NEW SECTION END
 		
 		const chapterToLoad = initialChapterId || novelData.sections[0]?.chapters[0]?.id;
 		if (chapterToLoad) {

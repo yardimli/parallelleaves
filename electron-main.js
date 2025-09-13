@@ -870,7 +870,9 @@ function setupIpcHandlers() {
 		try {
 			const categories = db.prepare('SELECT id, name FROM codex_categories WHERE novel_id = ? ORDER BY name ASC').all(novelId);
 			categories.forEach(category => {
-				category.entries = db.prepare('SELECT id, title, content FROM codex_entries WHERE codex_category_id = ? ORDER BY title ASC').all(category.id);
+				// MODIFIED SECTION START: Added `document_phrases` to the query to make them available for linking.
+				category.entries = db.prepare('SELECT id, title, content, document_phrases FROM codex_entries WHERE codex_category_id = ? ORDER BY title ASC').all(category.id);
+				// MODIFIED SECTION END
 			});
 			return categories;
 		} catch (error) {
