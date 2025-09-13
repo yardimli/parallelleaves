@@ -1,19 +1,16 @@
 import { openPromptEditor } from '../prompt-editor.js';
-import { getActiveEditor } from './content-editor.js';
 
-// MODIFIED: These variables now manage communication with iframes.
+// MODIFIED: This file is now ONLY for the chapter editor and its iframe-based views.
 let activeContentWindow = null;
 let currentToolbarState = {};
 const toolbar = document.getElementById('top-toolbar');
 const wordCountEl = document.getElementById('js-word-count');
 let toolbarConfig = {};
 
-// NEW: Function to set the active iframe's content window.
 export function setActiveContentWindow(contentWindow) {
 	activeContentWindow = contentWindow;
 }
 
-// MODIFIED: This function now receives a plain state object from an iframe.
 export function updateToolbarState(newState) {
 	currentToolbarState = newState || {};
 	const allBtns = toolbar.querySelectorAll('.js-toolbar-btn, .js-ai-action-btn');
@@ -112,7 +109,6 @@ export function updateToolbarState(newState) {
 	}
 }
 
-// MODIFIED: Sends a command to the active iframe via postMessage.
 function applyCommand(command, attrs = {}) {
 	if (!activeContentWindow) return;
 	activeContentWindow.postMessage({
@@ -121,7 +117,6 @@ function applyCommand(command, attrs = {}) {
 	}, window.location.origin);
 }
 
-// MODIFIED: Sends a highlight command to the active iframe.
 function applyHighlight(color) {
 	if (!activeContentWindow) return;
 	activeContentWindow.postMessage({
@@ -129,6 +124,39 @@ function applyHighlight(color) {
 		payload: { command: 'highlight', attrs: { color } }
 	}, window.location.origin);
 }
+
+// NEW: This object implements the editor interface for an iframe-based editor.
+const createIframeEditorInterface = (contentWindow) => {
+	const post = (type, payload) => contentWindow.postMessage({ type, payload }, window.location.origin);
+	
+	return {
+		type: 'iframe',
+		getSelectionInfo: (action, translationInfo) => new Promise((resolve) => {
+			const listener = (event) => {
+				if (event.source === contentWindow && event.data.type === 'selectionResponse') {
+					window.removeEventListener('message', listener);
+					resolve(event.data.payload);
+				}
+			};
+			window.addEventListener('message', listener);
+			
+			if (action === 'translate') {
+				post('prepareForTranslate', { blockNumber: translationInfo.blockNumber });
+			} else {
+				post('prepareForRephrase');
+			}
+		}),
+		setEditable: (isEditable) => post('setEditable', { isEditable }),
+		cleanupSuggestion: () => post('cleanupAiSuggestion'),
+		discardSuggestion: (from, to, originalFragmentJson) => post('discardAiSuggestion', { from, to, originalFragmentJson }),
+		streamStart: (from, to, chunk) => post('aiStreamStart', { from, to, chunk }),
+		streamChunk: (chunk) => post('aiStreamChunk', { chunk }),
+		// For iframes, the 'done' signal is just a message. The iframe itself
+		// will post back a 'aiStreamFinished' message with the final range.
+		streamDone: (from) => post('aiStreamDone', { from }),
+	};
+};
+
 
 async function handleToolbarAction(button) {
 	if (button.classList.contains('js-ai-action-btn')) {
@@ -195,7 +223,7 @@ async function handleToolbarAction(button) {
 			const chapterId = chapterItem.dataset.chapterId;
 			const blockNumber = startMarker ? parseInt(startMarker.dataset.blockNumber, 10) : 1;
 			
-			// MODIFIED: Find the correct iframe contentWindow for the target editor.
+			// MODIFIED: Pass the iframe editor interface to openPromptEditor.
 			const targetContentWindow = toolbarConfig.getChapterViews(chapterId)?.iframe.contentWindow;
 			if (!targetContentWindow) {
 				window.showAlert('Could not find the target editor for this chapter.');
@@ -211,15 +239,16 @@ async function handleToolbarAction(button) {
 				linkedCodexEntryIds,
 				languageForPrompt: novelData.source_language || 'English',
 				targetLanguage: novelData.target_language || 'English',
-				activeEditorView: targetContentWindow, // Pass the contentWindow
+				activeEditorView: targetContentWindow, // Kept for backward compatibility in some parts
 				translationInfo: { blockNumber },
+				editorInterface: createIframeEditorInterface(targetContentWindow), // NEW
 			};
 			openPromptEditor(context, 'translate', settings);
 			return;
 		}
 		
-		const focusedEditor = getActiveEditor();
-		if (!focusedEditor) return;
+		// MODIFIED: This is for the 'rephrase' action in the chapter editor.
+		if (!activeContentWindow) return;
 		
 		const { selectionText } = currentToolbarState;
 		const chapterId = toolbarConfig.getActiveChapterId ? toolbarConfig.getActiveChapterId() : null;
@@ -232,9 +261,8 @@ async function handleToolbarAction(button) {
 			allCodexEntries,
 			linkedCodexEntryIds,
 			languageForPrompt: novelData.target_language || 'English',
-			wordsBefore: '', // Note: Getting surrounding text is complex with iframes and omitted for this refactor.
-			wordsAfter: '',
-			activeEditorView: focusedEditor,
+			activeEditorView: activeContentWindow, // Kept for backward compatibility
+			editorInterface: createIframeEditorInterface(activeContentWindow), // NEW
 		};
 		openPromptEditor(context, action, settings);
 		return;

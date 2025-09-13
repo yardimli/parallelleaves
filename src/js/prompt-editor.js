@@ -1,6 +1,10 @@
+// MODIFIED: This file is heavily refactored to use an "editor interface" pattern.
+// This allows it to interact with both direct ProseMirror views (Codex Editor)
+// and iframe-based views (Chapter Editor) without knowing the implementation details.
+
 import { init as initRephraseEditor, buildPromptJson as buildRephraseJson } from './prompt-editors/rephrase-editor.js';
 import { init as initTranslateEditor, buildPromptJson as buildTranslateJson } from './prompt-editors/translate-editor.js';
-import { updateToolbarState } from './novel-planner/toolbar.js';
+import { updateToolbarState as updateChapterToolbarState } from './novel-planner/toolbar.js';
 
 const editors = {
 	'rephrase': { name: 'Rephrase', init: initRephraseEditor },
@@ -20,7 +24,6 @@ const formDataExtractors = {
 	'translate': (form) => ({
 		instructions: form.elements.instructions.value.trim(),
 		selectedCodexIds: form.elements.codex_entry ? Array.from(form.elements.codex_entry).filter(cb => cb.checked).map(cb => cb.value) : [],
-		// NEW: Extract the number of context pairs from the form.
 		contextPairs: parseInt(form.elements.context_pairs.value, 10) || 0,
 	}),
 };
@@ -28,13 +31,13 @@ const formDataExtractors = {
 
 let modalEl;
 let currentContext;
+let currentEditorInterface; // NEW: Stores the interface to the active editor.
 
 let isAiActionActive = false;
-let originalFragment = null;
+let originalFragmentJson = null; // MODIFIED: Store as JSON for easier transport.
 let aiActionRange = null;
 let floatingToolbar = null;
 let currentAiParams = null;
-let activeContentWindow = null;
 let currentPromptId = null;
 
 function showAiSpinner() {
@@ -76,46 +79,46 @@ const loadPrompt = async (promptId) => {
 	await editorConfig.init(customFormContainer, currentContext);
 };
 
-function cleanupAiAction() {
+// MODIFIED: Uses the editor interface for all interactions.
+async function cleanupAiAction() {
 	if (floatingToolbar) {
 		floatingToolbar.remove();
 		floatingToolbar = null;
 	}
 	
-	if (activeContentWindow) {
-		activeContentWindow.postMessage({ type: 'setEditable', payload: { isEditable: true } }, window.location.origin);
-		activeContentWindow.postMessage({ type: 'cleanupAiSuggestion' }, window.location.origin);
+	if (currentEditorInterface) {
+		await currentEditorInterface.setEditable(true);
+		await currentEditorInterface.cleanupSuggestion();
 	}
 	
 	isAiActionActive = false;
-	originalFragment = null;
+	originalFragmentJson = null;
 	aiActionRange = null;
 	currentAiParams = null;
-	updateToolbarState(null);
-}
-
-function handleFloatyApply() {
-	if (!isAiActionActive || !activeContentWindow) return;
-	cleanupAiAction();
-}
-
-function handleFloatyDiscard() {
-	if (!isAiActionActive || !activeContentWindow || !originalFragment) return;
 	
-	activeContentWindow.postMessage({
-		type: 'discardAiSuggestion',
-		payload: {
-			from: aiActionRange.from,
-			to: aiActionRange.to,
-			originalFragmentJson: originalFragment,
-		}
-	}, window.location.origin);
-	
-	cleanupAiAction();
+	// For chapter editor, we need to reset its specific toolbar.
+	if (currentEditorInterface.type === 'iframe') {
+		updateChapterToolbarState(null);
+	}
 }
 
+// MODIFIED: Uses the editor interface.
+async function handleFloatyApply() {
+	if (!isAiActionActive || !currentEditorInterface) return;
+	await cleanupAiAction();
+}
+
+// MODIFIED: Uses the editor interface.
+async function handleFloatyDiscard() {
+	if (!isAiActionActive || !currentEditorInterface || !originalFragmentJson) return;
+	
+	await currentEditorInterface.discardSuggestion(aiActionRange.from, aiActionRange.to, originalFragmentJson);
+	await cleanupAiAction();
+}
+
+// MODIFIED: Uses the editor interface.
 async function handleFloatyRetry() {
-	if (!isAiActionActive || !activeContentWindow || !currentAiParams) return;
+	if (!isAiActionActive || !currentEditorInterface || !currentAiParams) return;
 	
 	const actionToRetry = currentAiParams.action;
 	const contextForRetry = currentAiParams.context;
@@ -126,31 +129,17 @@ async function handleFloatyRetry() {
 		floatingToolbar = null;
 	}
 	
-	activeContentWindow.postMessage({
-		type: 'discardAiSuggestion',
-		payload: {
-			from: aiActionRange.from,
-			to: aiActionRange.to,
-			originalFragmentJson: originalFragment,
-		}
-	}, window.location.origin);
-	
-	// MODIFIED SECTION START: Removed broken logic that caused the second error.
-	// The iframe now handles restoring the original text, and re-selecting it is not critical for the retry flow.
-	// const newTo = aiActionRange.from + originalFragment.content.size;
-	// activeContentWindow.postMessage({
-	// 	type: 'setSelection',
-	// 	payload: { from: aiActionRange.from, to: newTo }
-	// }, window.location.origin);
-	// MODIFIED SECTION END
-	
-	activeContentWindow.postMessage({ type: 'setEditable', payload: { isEditable: true } }, window.location.origin);
+	await currentEditorInterface.discardSuggestion(aiActionRange.from, aiActionRange.to, originalFragmentJson);
+	await currentEditorInterface.setEditable(true);
 	
 	isAiActionActive = false;
-	originalFragment = null;
+	originalFragmentJson = null;
 	aiActionRange = null;
 	currentAiParams = null;
-	updateToolbarState(null);
+	
+	if (currentEditorInterface.type === 'iframe') {
+		updateChapterToolbarState(null);
+	}
 	
 	openPromptEditor(contextForRetry, actionToRetry, previousFormData);
 }
@@ -187,48 +176,36 @@ function createFloatingToolbar(from, to, model) {
 	});
 }
 
-function startAiStream(params) {
+// MODIFIED: Uses the editor interface.
+async function startAiStream(params) {
 	const { prompt, model } = params;
 	
 	isAiActionActive = true;
-	updateToolbarState(null);
-	activeContentWindow.postMessage({ type: 'setEditable', payload: { isEditable: false } }, window.location.origin);
+	if (currentEditorInterface.type === 'iframe') {
+		updateChapterToolbarState(null);
+	}
+	await currentEditorInterface.setEditable(false);
 	
 	let isFirstChunk = true;
 	
-	const onData = (payload) => {
+	const onData = async (payload) => {
 		if (payload.chunk) {
 			if (isFirstChunk) {
 				hideAiSpinner();
-				activeContentWindow.postMessage({
-					type: 'aiStreamStart',
-					payload: {
-						chunk: payload.chunk,
-						from: aiActionRange.from,
-						to: aiActionRange.to
-					}
-				}, window.location.origin);
+				await currentEditorInterface.streamStart(aiActionRange.from, aiActionRange.to, payload.chunk);
 				isFirstChunk = false;
 			} else {
-				activeContentWindow.postMessage({
-					type: 'aiStreamChunk',
-					payload: {
-						chunk: payload.chunk
-					}
-				}, window.location.origin);
+				await currentEditorInterface.streamChunk(payload.chunk);
 			}
-			
 		} else if (payload.done) {
-			activeContentWindow.postMessage({
-				type: 'aiStreamDone',
-				payload: { from: aiActionRange.from }
-			}, window.location.origin);
-			
+			const finalRange = await currentEditorInterface.streamDone(aiActionRange.from);
+			aiActionRange.to = finalRange.to; // Update the end of the range
+			createFloatingToolbar(aiActionRange.from, aiActionRange.to, model);
 		} else if (payload.error) {
 			console.error('AI Action Error:', payload.error);
 			window.showAlert(payload.error);
 			hideAiSpinner();
-			handleFloatyDiscard();
+			await handleFloatyDiscard();
 		}
 	};
 	
@@ -238,7 +215,7 @@ function startAiStream(params) {
 		console.error('AI Action Error:', error);
 		window.showAlert(error.message);
 		hideAiSpinner();
-		handleFloatyDiscard();
+		await handleFloatyDiscard();
 	}
 }
 
@@ -276,11 +253,12 @@ async function populateModelDropdown(initialState = null) {
 	}
 }
 
+// MODIFIED: Uses the editor interface.
 async function handleModalApply() {
 	if (!modalEl || isAiActionActive) return;
 	
 	const model = modalEl.querySelector('.js-llm-model-select').value;
-	const action = currentPromptId ? currentPromptId : null;
+	const action = currentPromptId;
 	const form = modalEl.querySelector('.js-custom-editor-pane form');
 	
 	if (!model || !action || !form) {
@@ -297,8 +275,8 @@ async function handleModalApply() {
 	
 	modalEl.close();
 	
-	activeContentWindow = currentContext.activeEditorView;
-	if (!activeContentWindow) {
+	currentEditorInterface = currentContext.editorInterface;
+	if (!currentEditorInterface) {
 		window.showAlert('No active editor to apply changes to.');
 		return;
 	}
@@ -312,26 +290,7 @@ async function handleModalApply() {
 			.catch(err => console.error('Failed to save prompt settings:', err));
 	}
 	
-	const getSelectionFromIframe = () => new Promise((resolve) => {
-		const listener = (event) => {
-			if (event.source === activeContentWindow && event.data.type === 'selectionResponse') {
-				window.removeEventListener('message', listener);
-				resolve(event.data.payload);
-			}
-		};
-		window.addEventListener('message', listener);
-		
-		if (action === 'translate') {
-			activeContentWindow.postMessage({
-				type: 'prepareForTranslate',
-				payload: { blockNumber: currentContext.translationInfo.blockNumber }
-			}, window.location.origin);
-		} else { // 'rephrase'
-			activeContentWindow.postMessage({ type: 'prepareForRephrase' }, window.location.origin);
-		}
-	});
-	
-	const selectionInfo = await getSelectionFromIframe();
+	const selectionInfo = await currentEditorInterface.getSelectionInfo(action, currentContext.translationInfo);
 	
 	if (!selectionInfo) {
 		window.showAlert('Could not get selection from the editor. For rephrasing, please select some text.');
@@ -339,17 +298,15 @@ async function handleModalApply() {
 	}
 	
 	aiActionRange = { from: selectionInfo.from, to: selectionInfo.to };
-	originalFragment = selectionInfo.originalFragmentJson;
+	originalFragmentJson = selectionInfo.originalFragmentJson;
 	
 	const text = action === 'translate' ? currentContext.selectedText : selectionInfo.selectedText;
 	
 	const wordCount = text ? text.trim().split(/\s+/).filter(Boolean).length : 0;
 	const promptContext = { ...currentContext, selectedText: text, wordCount };
 	
-	// NEW SECTION START: Fetch translation context pairs if needed.
 	if (action === 'translate' && formDataObj.contextPairs > 0) {
 		try {
-			// The chapter ID is stored on the iframe element's dataset in chapter-main.js
 			const chapterId = currentContext.activeEditorView.frameElement.dataset.chapterId;
 			const blockNumber = currentContext.translationInfo.blockNumber;
 			
@@ -362,10 +319,8 @@ async function handleModalApply() {
 		} catch (error) {
 			console.error('Failed to fetch translation context:', error);
 			window.showAlert(`Could not fetch previous translation blocks for context. ${error.message}`);
-			// Continue without context if it fails.
 		}
 	}
-	// NEW SECTION END
 	
 	const prompt = builder(formDataObj, promptContext);
 	
@@ -402,6 +357,8 @@ export function setupPromptEditor() {
 		});
 	}
 	
+	// This listener is now only for the iframe editor, as the direct view
+	// will resolve its stream promises directly.
 	window.addEventListener('message', (event) => {
 		if (event.data.type === 'aiStreamFinished') {
 			const { from, to } = event.data.payload;
@@ -413,15 +370,22 @@ export function setupPromptEditor() {
 
 /**
  * Opens the prompt editor modal with fresh context.
- * @param {object} context
- * @param {string} promptId The ID of the prompt to open.
- * @param {object|null} initialState The form state to restore from a previous run.
+ * @param {object} context - The context for the prompt, including the `editorInterface`.
+ * @param {string} promptId - The ID of the prompt to open.
+ * @param {object|null} initialState - The form state to restore from a previous run.
  */
 export async function openPromptEditor(context, promptId, initialState = null) {
 	if (!modalEl) {
 		console.error('Prompt editor modal element not found.');
 		return;
 	}
+	// NEW: Enforce the presence of an editor interface.
+	if (!context.editorInterface) {
+		console.error('`editorInterface` is missing from the context for openPromptEditor.');
+		window.showAlert('Cannot open AI editor: Editor interface is not available.');
+		return;
+	}
+	
 	currentContext = { ...context, initialState };
 	currentPromptId = promptId;
 	
