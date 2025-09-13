@@ -29,7 +29,8 @@ const sendResize = () => {
 	// Use a small timeout to allow the DOM to render before calculating height
 	setTimeout(() => {
 		const height = document.documentElement.scrollHeight;
-		postToParent('resize', { height });
+		console.log(`[Editor Iframe] Reporting height: ${height}px`);
+		postToParent('resize', { chapterId: chapterId, height: height });
 	}, 50);
 };
 
@@ -343,6 +344,15 @@ window.addEventListener('message', (event) => {
 			document.documentElement.setAttribute('data-theme', payload.theme);
 			if (payload.theme === 'dark') document.documentElement.classList.add('dark');
 			createEditorView(document.getElementById('editor-container'), payload);
+			
+			// NEW SECTION START: Add a ResizeObserver for robust height updates.
+			// This observer will detect any size changes to the body, including those
+			// caused by font loading or window resizing, and trigger a height update.
+			const resizeObserver = new ResizeObserver(() => {
+				sendResize();
+			});
+			resizeObserver.observe(document.body);
+			// NEW SECTION END
 			break;
 		case 'command':
 			executeCommand(payload);

@@ -133,7 +133,7 @@ async function renderManuscript(container, novelData) {
 			targetCol.innerHTML = `<h3 class="!mt-0 text-sm font-semibold uppercase tracking-wider text-base-content/70 border-b pb-1 mb-2 p-4">Target (<span class="js-target-word-count">${chapter.target_word_count.toLocaleString()} words</span>)</h3>`;
 			
 			const iframe = document.createElement('iframe');
-			iframe.className = 'js-target-content-editable w-full border-0 min-h-[800px]';
+			iframe.className = 'js-target-content-editable w-full border-0 min-h-[300px]';
 			iframe.src = 'editor-iframe.html';
 			iframe.dataset.chapterId = chapter.id;
 			targetCol.appendChild(iframe);
@@ -188,6 +188,11 @@ async function renderManuscript(container, novelData) {
 			chapterEditorViews.set(chapter.id.toString(), viewInfo);
 			
 			iframe.addEventListener('load', () => {
+				// MODIFIED SECTION START: Update the contentWindow reference now that the iframe has loaded.
+				// This ensures we have the correct window object for message comparisons, fixing the resize bug.
+				viewInfo.contentWindow = iframe.contentWindow;
+				// MODIFIED SECTION END
+				
 				viewInfo.isReady = true;
 				const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
 				
