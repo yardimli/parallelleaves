@@ -12,13 +12,10 @@ contextBridge.exposeInMainWorld('api', {
 	openEditor: (novelId) => ipcRenderer.send('novels:openEditor', novelId),
 	openOutline: (novelId) => ipcRenderer.send('novels:openOutline', novelId),
 	getOutlineData: (novelId) => ipcRenderer.invoke('novels:getOutlineData', novelId),
-	// NEW: Expose the outline state checker for live refresh.
 	getOutlineState: (novelId) => ipcRenderer.invoke('novels:getOutlineState', novelId),
-	// NEW: Expose functions for codex auto-generation
 	startCodexAutogen: (data) => ipcRenderer.send('autogen:start-codex-generation', data),
 	onCodexAutogenUpdate: (callback) => ipcRenderer.on('autogen:progress-update', callback),
 	updateProseSettings: (data) => ipcRenderer.invoke('novels:updateProseSettings', data),
-	// NEW: Expose the prompt settings update function.
 	updatePromptSettings: (data) => ipcRenderer.invoke('novels:updatePromptSettings', data),
 	
 	updateNovelMeta: (data) => ipcRenderer.invoke('novels:updateMeta', data),
@@ -39,7 +36,6 @@ contextBridge.exposeInMainWorld('api', {
 	// Chapter <-> Codex Linking
 	detachCodexFromChapter: (chapterId, codexEntryId) => ipcRenderer.invoke('chapters:codex:detach', chapterId, codexEntryId),
 	
-	// NEW: Expose the translation context handler.
 	getTranslationContext: (data) => ipcRenderer.invoke('chapters:getTranslationContext', data),
 	
 	openChapterEditor: (data) => ipcRenderer.send('chapters:openEditor', data),
@@ -58,6 +54,8 @@ contextBridge.exposeInMainWorld('api', {
 	createCodexEntry: (novelId, formData) => ipcRenderer.invoke('codex-entries:store', novelId, formData),
 	suggestCodexDetails: (novelId, text) => ipcRenderer.invoke('codex-entries:suggest-details', { novelId, text }),
 	updateCodexEntry: (entryId, data) => ipcRenderer.invoke('codex-entries:update', entryId, data),
+	// NEW: Expose the delete function for codex entries.
+	deleteCodexEntry: (entryId) => ipcRenderer.invoke('codex-entries:delete', entryId),
 	getAllCodexEntriesForNovel: (novelId) => ipcRenderer.invoke('codex:getAllForNovel', novelId),
 	getCategoriesForNovel: (novelId) => ipcRenderer.invoke('codex-categories:getAllForNovel', novelId),
 	
@@ -81,9 +79,8 @@ contextBridge.exposeInMainWorld('api', {
 	},
 	getModels: () => ipcRenderer.invoke('ai:getModels'),
 	
-	// NEW SECTION START: Spellchecker APIs
+	// Spellchecker APIs
 	getAvailableSpellCheckerLanguages: () => ipcRenderer.invoke('session:getAvailableSpellCheckerLanguages'),
 	getCurrentSpellCheckerLanguage: () => ipcRenderer.invoke('session:getCurrentSpellCheckerLanguage'),
 	setSpellCheckerLanguage: (lang) => ipcRenderer.invoke('session:setSpellCheckerLanguage', lang),
-	// NEW SECTION END
 });

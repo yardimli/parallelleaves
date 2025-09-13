@@ -563,6 +563,42 @@ async function setupEditMode(entryId) {
 		titleInput.addEventListener('input', () => triggerDebouncedSave(entryId));
 		phrasesInput.addEventListener('input', () => triggerDebouncedSave(entryId));
 		
+		// MODIFIED SECTION START: Setup delete functionality
+		const deleteBtn = document.getElementById('js-delete-codex-entry-btn');
+		const deleteModal = document.getElementById('delete-confirm-modal');
+		const cancelDeleteBtn = document.getElementById('js-cancel-delete-btn');
+		const confirmDeleteBtn = document.getElementById('js-confirm-delete-btn');
+		
+		if (deleteBtn && deleteModal && cancelDeleteBtn && confirmDeleteBtn) {
+			deleteBtn.classList.remove('hidden'); // Show the delete button in edit mode
+			
+			deleteBtn.addEventListener('click', (e) => {
+				e.preventDefault();
+				deleteModal.showModal();
+			});
+			
+			cancelDeleteBtn.addEventListener('click', () => {
+				deleteModal.close();
+			});
+			
+			confirmDeleteBtn.addEventListener('click', async () => {
+				try {
+					const result = await window.api.deleteCodexEntry(entryId);
+					if (result.success) {
+						window.close(); // Close the editor window on successful deletion
+					} else {
+						throw new Error(result.message || 'Failed to delete entry.');
+					}
+				} catch (error) {
+					console.error('Error deleting codex entry:', error);
+					window.showAlert(error.message);
+				} finally {
+					deleteModal.close();
+				}
+			});
+		}
+		// MODIFIED SECTION END
+		
 	} catch (error) {
 		console.error('Failed to load codex entry data:', error);
 		document.body.innerHTML = `<p class="text-error p-8">Error: Could not load codex entry data. ${error.message}</p>`;

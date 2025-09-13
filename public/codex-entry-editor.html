@@ -121,6 +121,11 @@
 		</button>
 	</div>
 	<div class="flex-grow"></div>
+	<!-- NEW SECTION START: Delete button for edit mode -->
+	<button id="js-delete-codex-entry-btn" class="btn btn-ghost btn-sm text-error hidden">
+		<i class="bi bi-trash"></i> Delete Entry
+	</button>
+	<!-- NEW SECTION END -->
 	<div class="flex items-center text-sm text-base-content/70">
 		<span id="js-word-count">No text selected</span>
 	</div>
@@ -151,7 +156,6 @@
 					       class="text-3xl font-bold w-full bg-transparent border-0 p-0 focus:ring-0 focus:border-b-2 focus:border-teal-500"
 					       placeholder="Codex Entry Title" required>
 					
-					<!-- NEW SECTION START -->
 					<div class="mt-4">
 						<label for="js-codex-phrases-input" class="label pb-1">
 							<span class="label-text">Document Phrases</span>
@@ -161,7 +165,6 @@
 						       placeholder="e.g., phrase one, another phrase">
 						<p class="text-xs text-base-content/60 mt-1">Comma-separated phrases to link to this entry from chapter text.</p>
 					</div>
-					<!-- NEW SECTION END -->
 					
 					<div id="js-create-meta-section" class="hidden mt-4 space-y-2">
 						<div class="form-control">
@@ -177,16 +180,13 @@
 						</div>
 					</div>
 				</div>
-				<!-- MODIFIED: This is now a flex container for two editors -->
 				<div class="flex-grow flex min-h-0">
-					<!-- MODIFIED: Source Editor -->
 					<div class="w-1/2 flex flex-col border-r border-base-300">
 						<label class="p-4 pb-2 text-sm font-semibold uppercase tracking-wider text-base-content/70">Source Content</label>
 						<div class="js-pm-container flex-grow p-4 overflow-y-auto prose prose-sm dark:prose-invert max-w-none">
 							<div class="js-editable" data-name="content" data-placeholder="Enter source content here..."></div>
 						</div>
 					</div>
-					<!-- MODIFIED: Target Editor -->
 					<div class="w-1/2 flex flex-col">
 						<label class="p-4 pb-2 text-sm font-semibold uppercase tracking-wider text-base-content/70">Target Content</label>
 						<div class="js-pm-container flex-grow p-4 overflow-y-auto prose prose-sm dark:prose-invert max-w-none">
@@ -208,7 +208,6 @@
 <!-- Hidden container to hold the initial content for ProseMirror editors -->
 <div id="js-pm-content-source" class="hidden">
 	<div data-name="content"></div>
-	<!-- NEW: Added container for target content -->
 	<div data-name="target_content"></div>
 </div>
 
@@ -258,6 +257,19 @@
 		</div>
 	</div>
 </dialog>
+
+<!-- NEW DIALOG START -->
+<dialog id="delete-confirm-modal" class="modal">
+	<div class="modal-box">
+		<h3 class="font-bold text-lg text-error">Confirm Deletion</h3>
+		<p class="py-4">Are you sure you want to delete this codex entry? This action cannot be undone.</p>
+		<div class="modal-action">
+			<button id="js-cancel-delete-btn" class="btn">Cancel</button>
+			<button id="js-confirm-delete-btn" class="btn btn-error">Delete</button>
+		</div>
+	</div>
+</dialog>
+<!-- NEW DIALOG END -->
 
 <script src="../src/js/theme.js"></script>
 <script src="../dist/codex-editor-bundle.js"></script>
