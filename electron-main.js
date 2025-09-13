@@ -306,15 +306,11 @@ function createImportWindow() {
 }
 
 function setupIpcHandlers() {
-	// MODIFIED: Helper function to extract all translation pairs from chapter content.
-	// This version correctly parses the target_content HTML, which is serialized from ProseMirror
-	// and uses the text content of the note block for identification instead of a data-attribute.
 	const extractAllPairs = (sourceContent, targetContent) => {
 		if (!sourceContent || !targetContent) {
 			return [];
 		}
 		
-		// Find all translation block markers in the source content.
 		const sourceMarkers = [...sourceContent.matchAll(/{{\s*TranslationBlock-(\d+)\s*}}/gi)];
 		if (sourceMarkers.length === 0) {
 			return [];
@@ -326,20 +322,13 @@ function setupIpcHandlers() {
 			const nextMarker = sourceMarkers[i + 1];
 			const blockNumber = parseInt(currentMarker[1], 10);
 			
-			// Extract the source text for the current block.
 			const sourceStart = currentMarker.index + currentMarker[0].length;
 			const sourceEnd = nextMarker ? nextMarker.index : sourceContent.length;
 			const sourceText = sourceContent.substring(sourceStart, sourceEnd).trim();
 			
-			// Construct a regex to find the corresponding translated content in the target HTML.
-			// It looks for the content between the end of the div for the current block number
-			// and the beginning of the next block's div, or the end of the string.
 			const targetRegex = new RegExp(
-				// Match the start marker for the current block.
 				`<div class="note-wrapper not-prose"><p>Translation Block #${blockNumber}</p></div>` +
-				// Lazily capture all content (including newlines).
 				`([\\s\\S]*?)` +
-				// Stop capturing when we see the next block marker (positive lookahead) or the end of the string.
 				`(?=<div class="note-wrapper not-prose"><p>Translation Block #\\d+</p></div>|$)`,
 				'i'
 			);
@@ -440,13 +429,11 @@ function setupIpcHandlers() {
 					
 					const contentToUse = chapter.target_content || chapter.source_content;
 					if (contentToUse) {
-						// MODIFIED SECTION START: Clean up translation block markers from the summary content.
 						const cleanedContent = contentToUse
 							.replace(/{{\s*TranslationBlock-\d+\s*}}/gi, '') // For source content
 							.replace(/<div class="note-wrapper not-prose"><p>Translation Block #\d+<\/p><\/div>/gi, ''); // For target content
 						
 						const textContent = cleanedContent.replace(/<[^>]+>/g, ' ').replace(/\s\s+/g, ' ').trim();
-						// MODIFIED SECTION END
 						
 						const words = textContent.split(/\s+/);
 						const wordLimitedText = words.slice(0, 200).join(' ');
@@ -455,7 +442,6 @@ function setupIpcHandlers() {
 						const sentenceLimitedText = sentences.slice(0, 5).join(' ');
 						
 						let truncatedText;
-						// Prioritize the shorter of the two truncation methods.
 						if (wordLimitedText.length > 0 && (sentenceLimitedText.length === 0 || wordLimitedText.length <= sentenceLimitedText.length)) {
 							truncatedText = wordLimitedText;
 							if (words.length > 200) truncatedText += '...';
@@ -463,7 +449,6 @@ function setupIpcHandlers() {
 							truncatedText = sentenceLimitedText;
 							if (sentences.length > 5) truncatedText += '...';
 						} else {
-							// Fallback for very short text without sentence terminators.
 							truncatedText = textContent;
 						}
 						chapter.summary = `<p>${truncatedText}</p>`;
@@ -508,7 +493,6 @@ function setupIpcHandlers() {
 		}
 	});
 	
-	// NEW: IPC handler to get chapter and codex counts for live refresh.
 	ipcMain.handle('novels:getOutlineState', (event, novelId) => {
 		try {
 			const chapterCount = db.prepare('SELECT COUNT(id) as count FROM chapters WHERE novel_id = ?').get(novelId).count;
@@ -685,32 +669,26 @@ function setupIpcHandlers() {
 		}
 	});
 	
-	// MODIFIED: This handler is now more powerful, fetching from the previous chapter if needed.
 	ipcMain.handle('chapters:getTranslationContext', (event, { chapterId, endBlockNumber, pairCount }) => {
 		if (pairCount <= 0) {
 			return [];
 		}
 		
 		try {
-			// 1. Get current chapter data
 			const currentChapter = db.prepare('SELECT source_content, target_content, novel_id, chapter_order FROM chapters WHERE id = ?').get(chapterId);
 			if (!currentChapter) {
 				throw new Error('Current chapter not found.');
 			}
 			
-			// 2. Extract all pairs from the current chapter
 			const allPairsCurrent = extractAllPairs(currentChapter.source_content, currentChapter.target_content);
 			
-			// 3. Filter for pairs before the endBlockNumber
 			const relevantPairsCurrent = allPairsCurrent.filter(p => p.blockNumber < endBlockNumber);
 			
-			let collectedPairs = relevantPairsCurrent.slice(-pairCount); // Get the last `pairCount` items
+			let collectedPairs = relevantPairsCurrent.slice(-pairCount);
 			
-			// 4. Check if we need more pairs
 			let remainingPairsNeeded = pairCount - collectedPairs.length;
 			
 			if (remainingPairsNeeded > 0) {
-				// 5. Find the previous chapter
 				const previousChapter = db.prepare(`
                     SELECT source_content, target_content
                     FROM chapters
@@ -720,13 +698,10 @@ function setupIpcHandlers() {
                 `).get(currentChapter.novel_id, currentChapter.chapter_order);
 				
 				if (previousChapter) {
-					// 6. Extract all pairs from the previous chapter
 					const allPairsPrevious = extractAllPairs(previousChapter.source_content, previousChapter.target_content);
 					
-					// 7. Get the last `remainingPairsNeeded` from the previous chapter
 					const pairsFromPrevious = allPairsPrevious.slice(-remainingPairsNeeded);
 					
-					// 8. Prepend them to the collected pairs
 					collectedPairs = [...pairsFromPrevious, ...collectedPairs];
 				}
 			}
@@ -746,15 +721,12 @@ function setupIpcHandlers() {
 		return getTemplate(templateName);
 	});
 	
-	// NEW SECTION START: Session/Spellchecker handlers
 	ipcMain.handle('session:getAvailableSpellCheckerLanguages', (event) => {
-		// The session is associated with the window that sent the event.
 		return event.sender.session.availableSpellCheckerLanguages;
 	});
 	
 	ipcMain.handle('session:getCurrentSpellCheckerLanguage', (event) => {
 		const languages = event.sender.session.getSpellCheckerLanguages();
-		// Return the first language in the array, or null if it's empty.
 		return languages.length > 0 ? languages[0] : null;
 	});
 	
@@ -762,13 +734,10 @@ function setupIpcHandlers() {
 		try {
 			const session = event.sender.session;
 			if (lang) {
-				// Set the spellchecker to a specific language.
-				// Electron will automatically download the dictionary if needed.
 				session.setSpellCheckerLanguages([lang]);
 				console.log(`Spellchecker language set to: ${lang}`);
 				return { success: true };
 			} else {
-				// To disable the spellchecker, pass an empty array.
 				session.setSpellCheckerLanguages([]);
 				console.log('Spellchecker disabled.');
 				return { success: true };
@@ -778,9 +747,7 @@ function setupIpcHandlers() {
 			return { success: false, message: error.message };
 		}
 	});
-	// NEW SECTION END
 	
-	// NEW: Handler for the codex auto-generation process.
 	ipcMain.on('autogen:start-codex-generation', async (event, { novelId, model }) => {
 		const sender = event.sender;
 		const sendProgress = (progress, status) => {
@@ -792,19 +759,17 @@ function setupIpcHandlers() {
 		try {
 			sendProgress(0, 'Fetching novel content...');
 			
-			// 1. Get all source content
 			const chapters = db.prepare('SELECT source_content FROM chapters WHERE novel_id = ? AND source_content IS NOT NULL').all(novelId);
 			if (chapters.length === 0) {
 				sendProgress(100, 'No source content found to analyze. Process finished.');
 				return;
 			}
 			
-			// 2. Concatenate, clean, and chunk text
 			const fullText = chapters.map(c => c.source_content).join('\n');
 			const cleanedText = fullText
-				.replace(/{{\s*TranslationBlock-\d+\s*}}/gi, '') // Remove translation markers
-				.replace(/<[^>]+>/g, ' ') // Remove HTML tags
-				.replace(/\s\s+/g, ' '); // Collapse whitespace
+				.replace(/{{\s*TranslationBlock-\d+\s*}}/gi, '')
+				.replace(/<[^>]+>/g, ' ')
+				.replace(/\s\s+/g, ' ');
 			
 			const words = cleanedText.split(/\s+/);
 			const chunkSize = 5000;
@@ -820,7 +785,6 @@ function setupIpcHandlers() {
 			
 			sendProgress(5, `Found ${words.length.toLocaleString()} words, split into ${chunks.length} chunks.`);
 			
-			// 3. Get all existing codex entries and categories
 			const getExistingCodex = () => {
 				const categories = db.prepare('SELECT id, name FROM codex_categories WHERE novel_id = ?').all(novelId);
 				const codexData = {};
@@ -834,7 +798,6 @@ function setupIpcHandlers() {
 			const novel = db.prepare('SELECT source_language FROM novels WHERE id = ?').get(novelId);
 			const language = novel ? novel.source_language : 'English';
 			
-			// 4. Process each chunk
 			for (let i = 0; i < chunks.length; i++) {
 				const chunk = chunks[i];
 				const progress = 5 + Math.round((i / chunks.length) * 90);
@@ -850,23 +813,19 @@ function setupIpcHandlers() {
 					model,
 				});
 				
-				// 5. Process the AI response in a transaction
 				const processResultsTransaction = db.transaction(() => {
 					const categoriesMap = new Map(db.prepare('SELECT name, id FROM codex_categories WHERE novel_id = ?').all(novelId).map(c => [c.name, c.id]));
 					
-					// Process new entries
 					if (result.new_entries && Array.isArray(result.new_entries)) {
 						for (const entry of result.new_entries) {
 							if (!entry.category || !entry.title || !entry.content) continue;
 							
-							// Check if category exists, create if not
 							if (!categoriesMap.has(entry.category)) {
 								const catResult = db.prepare('INSERT INTO codex_categories (novel_id, name) VALUES (?, ?)').run(novelId, entry.category);
 								categoriesMap.set(entry.category, catResult.lastInsertRowid);
 							}
 							const categoryId = categoriesMap.get(entry.category);
 							
-							// Check if entry already exists (AI might hallucinate)
 							const existing = db.prepare('SELECT id FROM codex_entries WHERE title = ? AND codex_category_id = ?').get(entry.title, categoryId);
 							if (!existing) {
 								db.prepare('INSERT INTO codex_entries (novel_id, codex_category_id, title, content) VALUES (?, ?, ?, ?)').run(novelId, categoryId, entry.title, entry.content);
@@ -874,11 +833,9 @@ function setupIpcHandlers() {
 						}
 					}
 					
-					// Process updated entries
 					if (result.updated_entries && Array.isArray(result.updated_entries)) {
 						for (const entry of result.updated_entries) {
 							if (!entry.title || !entry.content) continue;
-							// Update based on title. This assumes titles are unique, which is a reasonable assumption for a codex.
 							db.prepare('UPDATE codex_entries SET content = ? WHERE novel_id = ? AND title = ?').run(entry.content, novelId, entry.title);
 						}
 					}
@@ -964,7 +921,8 @@ function setupIpcHandlers() {
 	});
 	
 	ipcMain.handle('codex-entries:store', async (event, novelId, formData) => {
-		const { title, content, codex_category_id, new_category_name } = formData;
+		// MODIFIED: Destructure new fields from formData
+		const { title, content, target_content, document_phrases, codex_category_id, new_category_name } = formData;
 		let categoryId = codex_category_id;
 		let newCategoryData = null;
 		let entryId;
@@ -978,8 +936,9 @@ function setupIpcHandlers() {
 					newCategoryData = { id: categoryId, name: new_category_name };
 				}
 				
-				const entryResult = db.prepare('INSERT INTO codex_entries (novel_id, codex_category_id, title, content) VALUES (?, ?, ?, ?)')
-					.run(novelId, categoryId, title, content);
+				// MODIFIED: Update INSERT statement with new fields
+				const entryResult = db.prepare('INSERT INTO codex_entries (novel_id, codex_category_id, title, content, target_content, document_phrases) VALUES (?, ?, ?, ?, ?, ?)')
+					.run(novelId, categoryId, title, content, target_content, document_phrases);
 				entryId = entryResult.lastInsertRowid;
 			});
 			
@@ -1005,8 +964,9 @@ function setupIpcHandlers() {
 	});
 	
 	ipcMain.handle('codex-entries:update', (event, entryId, data) => {
-		db.prepare('UPDATE codex_entries SET title = ?, content = ? WHERE id = ?')
-			.run(data.title, data.content, entryId);
+		// MODIFIED: Update statement now includes the new fields
+		db.prepare('UPDATE codex_entries SET title = ?, content = ?, target_content = ?, document_phrases = ? WHERE id = ?')
+			.run(data.title, data.content, data.target_content, data.document_phrases, entryId);
 		return {success: true, message: 'Codex entry updated successfully.'};
 	});
 	
@@ -1014,8 +974,6 @@ function setupIpcHandlers() {
 		const controller = new AbortController();
 		let streamActive = true;
 		
-		// Listen for the 'destroyed' event on the sender's WebContents.
-		// If the window is closed mid-stream, we abort the request.
 		event.sender.once('destroyed', () => {
 			if (streamActive) {
 				console.log('Window closed during AI stream. Aborting request.');
@@ -1029,14 +987,13 @@ function setupIpcHandlers() {
 		};
 		
 		const onComplete = () => {
-			streamActive = false; // Mark stream as complete.
+			streamActive = false;
 			if (event.sender.isDestroyed()) return;
 			event.sender.send(channel, {done: true});
 		};
 		
 		const onError = (error) => {
-			streamActive = false; // Mark stream as complete.
-			// Don't log "AbortError" as a critical error, it's expected.
+			streamActive = false;
 			if (error.name !== 'AbortError') {
 				console.error('Streaming AI Error:', error);
 			}
@@ -1044,12 +1001,10 @@ function setupIpcHandlers() {
 			event.sender.send(channel, {error: error.message});
 		};
 		
-		// MODIFIED: Pass the AbortController's signal to the AI service.
 		aiService.streamProcessCodexText(data, onChunk, controller.signal)
 			.then(onComplete)
 			.catch(onError);
 	});
-	// MODIFIED SECTION END
 	
 	ipcMain.handle('ai:getModels', async () => {
 		try {
@@ -1147,10 +1102,13 @@ function setupIpcHandlers() {
 	});
 	
 	ipcMain.handle('codex-entries:getOneForEditor', (event, entryId) => {
+		// MODIFIED: Select new fields from the database
 		const entry = db.prepare(`
 			SELECT
 				ce.title,
 				ce.content,
+				ce.target_content,
+				ce.document_phrases,
 				ce.novel_id,
 				n.title AS novel_title
 			FROM codex_entries ce
@@ -1172,19 +1130,13 @@ app.on('ready', () => {
 	db = initializeDatabase();
 	setupIpcHandlers();
 	
-	// NEW SECTION START
-	// Refresh the AI models list from OpenRouter on application startup.
-	// This ensures the cache is up-to-date for the session.
 	aiService.getOpenRouterModels(true)
 		.then(() => {
 			console.log('AI models list refreshed from OpenRouter on startup.');
 		})
 		.catch(error => {
-			// Log the error but don't prevent the app from starting.
-			// The app can still function with a stale cache or fail gracefully if no cache exists.
 			console.error('Failed to refresh AI models on startup:', error.message);
 		});
-	// NEW SECTION END
 	
 	createMainWindow();
 });

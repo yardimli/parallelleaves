@@ -127,9 +127,9 @@ document.addEventListener('DOMContentLoaded', () => {
 			
 			
 			novelCard.innerHTML = `
-                <figure class="cursor-pointer js-open-editor">${coverHtml}</figure>
+                <figure class="cursor-pointer js-open-outline">${coverHtml}</figure>
                 <div class="card-body">
-                    <h2 class="card-title">${novel.title}</h2>
+                    <h2 class="card-title js-open-editor cursor-pointer">${novel.title}</h2>
                     <p class="text-base-content/80">${novel.author || 'Unknown Author'}</p>
                     <div class="card-actions justify-end items-center mt-2">
                         <button class="btn btn-ghost btn-sm js-meta-settings" title="Edit Meta">
@@ -138,9 +138,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         <button class="btn btn-ghost btn-sm js-prose-settings" title="Language Settings">
                             <i class="bi bi-translate text-lg"></i>
                         </button>
-                        <div class="flex-grow"></div>
-                        <button class="btn btn-secondary js-open-outline">Outline</button>
-                        <button class="btn btn-primary js-open-editor">Translate</button>
                     </div>
                 </div>
             `;
