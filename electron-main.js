@@ -455,14 +455,6 @@ function setupIpcHandlers() {
 					} else {
 						chapter.summary = '<p class="italic text-base-content/60">No content.</p>';
 					}
-					
-					chapter.linked_codex = db.prepare(`
-	                    SELECT ce.id, ce.title
-	                    FROM codex_entries ce
-	                    JOIN chapter_codex_entry cce ON ce.id = cce.codex_entry_id
-	                    WHERE cce.chapter_id = ?
-	                    ORDER BY ce.title
-	                `).all(chapter.id);
 				}
 				
 				section.total_word_count = sectionTotalWords;
@@ -517,13 +509,6 @@ function setupIpcHandlers() {
 				for (const chapter of section.chapters) {
 					chapter.source_word_count = countWordsInHtml(chapter.source_content);
 					chapter.target_word_count = countWordsInHtml(chapter.target_content);
-					
-					chapter.linked_codex = db.prepare(`
-	                    SELECT ce.id, ce.title
-	                    FROM codex_entries ce
-	                    JOIN chapter_codex_entry cce ON ce.id = cce.codex_entry_id
-	                    WHERE cce.chapter_id = ? ORDER BY ce.title
-	                `).all(chapter.id);
 				}
 			}
 			return novel;
@@ -655,17 +640,6 @@ function setupIpcHandlers() {
 		} catch (error) {
 			console.error(`Failed to update ${field} for chapter ${chapterId}:`, error);
 			return { success: false, message: `Failed to save ${field}.` };
-		}
-	});
-	
-	
-	ipcMain.handle('chapters:getLinkedCodexIds', (event, chapterId) => {
-		try {
-			const results = db.prepare('SELECT codex_entry_id FROM chapter_codex_entry WHERE chapter_id = ?').all(chapterId);
-			return results.map(row => row.codex_entry_id);
-		} catch (error) {
-			console.error('Failed to get linked codex IDs:', error);
-			return [];
 		}
 	});
 	
@@ -888,12 +862,6 @@ function setupIpcHandlers() {
 			console.error('Failed to get categories for novel:', error);
 			return [];
 		}
-	});
-	
-	ipcMain.handle('chapters:codex:detach', (event, chapterId, codexEntryId) => {
-		db.prepare('DELETE FROM chapter_codex_entry WHERE chapter_id = ? AND codex_entry_id = ?')
-			.run(chapterId, codexEntryId);
-		return {success: true, message: 'Codex entry unlinked.'};
 	});
 	
 	ipcMain.handle('codex-entries:suggest-details', async (event, { novelId, text }) => {

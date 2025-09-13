@@ -82,9 +82,7 @@ CREATE TABLE IF NOT EXISTS codex_entries (
     codex_category_id INTEGER NOT NULL,
     title TEXT NOT NULL,
     content TEXT,
-    -- NEW: Added target content for translation/alternative versions.
     target_content TEXT,
-    -- NEW: Added comma-separated phrases for in-document highlighting/linking.
     document_phrases TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -109,24 +107,6 @@ CREATE TABLE IF NOT EXISTS images (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (novel_id) REFERENCES novels(id) ON DELETE CASCADE
-);
-
--- Pivot table for Chapter <-> CodexEntry
-CREATE TABLE IF NOT EXISTS chapter_codex_entry (
-    chapter_id INTEGER NOT NULL,
-    codex_entry_id INTEGER NOT NULL,
-    PRIMARY KEY (chapter_id, codex_entry_id),
-    FOREIGN KEY (chapter_id) REFERENCES chapters(id) ON DELETE CASCADE,
-    FOREIGN KEY (codex_entry_id) REFERENCES codex_entries(id) ON DELETE CASCADE
-);
-
--- Pivot table for CodexEntry <-> CodexEntry (self-referencing)
-CREATE TABLE IF NOT EXISTS codex_entry_links (
-    codex_entry_id INTEGER NOT NULL,
-    linked_codex_entry_id INTEGER NOT NULL,
-    PRIMARY KEY (codex_entry_id, linked_codex_entry_id),
-    FOREIGN KEY (codex_entry_id) REFERENCES codex_entries(id) ON DELETE CASCADE,
-    FOREIGN KEY (linked_codex_entry_id) REFERENCES codex_entries(id) ON DELETE CASCADE
 );
 
 -- Seed a default user if none exists

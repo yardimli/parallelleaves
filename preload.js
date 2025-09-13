@@ -33,9 +33,6 @@ contextBridge.exposeInMainWorld('api', {
 	
 	getTemplate: (templateName) => ipcRenderer.invoke('templates:get', templateName),
 	
-	// Chapter <-> Codex Linking
-	detachCodexFromChapter: (chapterId, codexEntryId) => ipcRenderer.invoke('chapters:codex:detach', chapterId, codexEntryId),
-	
 	getTranslationContext: (data) => ipcRenderer.invoke('chapters:getTranslationContext', data),
 	
 	openChapterEditor: (data) => ipcRenderer.send('chapters:openEditor', data),
@@ -44,8 +41,6 @@ contextBridge.exposeInMainWorld('api', {
 	updateChapterField: (data) => ipcRenderer.invoke('chapters:updateField', data),
 	
 	createChapter: (novelId, data) => ipcRenderer.invoke('chapters:store', novelId, data),
-	
-	getLinkedCodexIdsForChapter: (chapterId) => ipcRenderer.invoke('chapters:getLinkedCodexIds', chapterId),
 	
 	// Codex Entry Management
 	openNewCodexEditor: (data) => ipcRenderer.send('codex-entries:openNewEditor', data),

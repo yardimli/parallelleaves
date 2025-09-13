@@ -231,12 +231,10 @@ async function handleToolbarAction(button) {
 			}
 			
 			const allCodexEntries = await window.api.getAllCodexEntriesForNovel(novelId);
-			const linkedCodexEntryIds = await window.api.getLinkedCodexIdsForChapter(chapterId);
 			
 			const context = {
 				selectedText,
 				allCodexEntries,
-				linkedCodexEntryIds,
 				languageForPrompt: novelData.source_language || 'English',
 				targetLanguage: novelData.target_language || 'English',
 				activeEditorView: targetContentWindow, // Kept for backward compatibility in some parts
@@ -254,12 +252,10 @@ async function handleToolbarAction(button) {
 		const chapterId = toolbarConfig.getActiveChapterId ? toolbarConfig.getActiveChapterId() : null;
 		
 		const allCodexEntries = await window.api.getAllCodexEntriesForNovel(novelId);
-		let linkedCodexEntryIds = chapterId ? await window.api.getLinkedCodexIdsForChapter(chapterId) : [];
 		
 		const context = {
 			selectedText: selectionText,
 			allCodexEntries,
-			linkedCodexEntryIds,
 			languageForPrompt: novelData.target_language || 'English',
 			activeEditorView: activeContentWindow, // Kept for backward compatibility
 			editorInterface: createIframeEditorInterface(activeContentWindow), // NEW
