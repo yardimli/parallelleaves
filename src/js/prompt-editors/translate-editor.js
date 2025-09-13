@@ -62,41 +62,38 @@ const renderCodexList = (container, context, initialState = null) => {
     `;
 };
 
-// NEW: Helper function to build the context block from previous translations.
-const buildTranslationContextBlock = (translationPairs) => {
+// MODIFIED: This function now returns an array of message objects for conversational context.
+const buildTranslationContextBlock = (translationPairs, languageForPrompt, targetLanguage) => {
 	if (!translationPairs || translationPairs.length === 0) {
-		return '';
+		return [];
 	}
 	
-	const examples = translationPairs.map((pair, index) => {
+	const contextMessages = [];
+	translationPairs.forEach(pair => {
 		// Clean up HTML from the text content
 		const sourceText = (pair.source || '').replace(/<[^>]+>/g, ' ').replace(/\s\s+/g, ' ').trim();
 		const targetText = (pair.target || '').replace(/<[^>]+>/g, ' ').replace(/\s\s+/g, ' ').trim();
 		
-		if (!sourceText || !targetText) return '';
-		
-		return `--- Example ${index + 1} ---
-[SOURCE TEXT]
-${sourceText}
-
-[CORRESPONDING TRANSLATION]
-${targetText}
---- End Example ${index + 1} ---`;
-	}).filter(Boolean).join('\n\n');
+		if (sourceText && targetText) {
+			// Add the source text as a user message
+			contextMessages.push({
+				role: 'user',
+				content: `Translate the following text from ${languageForPrompt} to ${targetLanguage}:\n\n<text>\n${sourceText}\n</text>`
+			});
+			// Add the translated text as the assistant's response
+			contextMessages.push({
+				role: 'assistant',
+				content: targetText
+			});
+		}
+	});
 	
-	if (!examples) return '';
-	
-	return `Here are some previous translation pairs for context and style guidance.
-The AI's task is to provide ONLY the translation for the new text, not to comment on these examples.
-
-${examples}
-
-Now, your main task:`;
+	return contextMessages;
 };
 
 
+// MODIFIED: This function now builds a prompt object that includes the conversational context pairs.
 export const buildPromptJson = (formData, context) => {
-	// MODIFIED: Destructure translationPairs from context.
 	const { selectedText, languageForPrompt, targetLanguage, allCodexEntries, translationPairs } = context;
 	
 	const plainTextToTranslate = selectedText;
@@ -127,50 +124,60 @@ ${codexContent}
 		}
 	}
 	
-	// NEW: Build the context block from previous translations.
-	const translationContextBlock = buildTranslationContextBlock(translationPairs);
+	// Generate the array of context messages.
+	const contextMessages = buildTranslationContextBlock(translationPairs, languageForPrompt, targetLanguage);
 	
-	// MODIFIED: Add the new context block to the user prompt parts.
-	const userParts = [codexBlock, translationContextBlock];
-	userParts.push(`Translate the following text from ${languageForPrompt} to ${targetLanguage}:
-
-<text>
-${plainTextToTranslate}
-</text>`);
-	
-	const user = userParts.filter(Boolean).join('\n\n');
+	// The final user prompt includes the glossary (if any) and the text to translate.
+	const finalUserPromptParts = [codexBlock];
+	finalUserPromptParts.push(`Translate the following text from ${languageForPrompt} to ${targetLanguage}:\n\n<text>\n${plainTextToTranslate}\n</text>`);
+	const finalUserPrompt = finalUserPromptParts.filter(Boolean).join('\n\n');
 	
 	return {
 		system,
-		user,
+		context_pairs: contextMessages, // The new field for conversational context
+		user: finalUserPrompt,
 		ai: '',
 	};
 };
 
-const updatePreview = (container, context) => {
+// MODIFIED: This function is now async and dynamically renders the context pairs in the preview.
+const updatePreview = async (container, context) => {
 	const form = container.querySelector('#translate-editor-form');
 	if (!form) return;
 	
 	const formData = {
 		instructions: form.elements.instructions.value.trim(),
 		selectedCodexIds: form.elements.codex_entry ? Array.from(form.elements.codex_entry).filter(cb => cb.checked).map(cb => cb.value) : [],
-		// NEW: Read the context pairs value for the preview.
 		contextPairs: parseInt(form.elements.context_pairs.value, 10) || 0,
 	};
 	
 	const systemPreview = container.querySelector('.js-preview-system');
 	const userPreview = container.querySelector('.js-preview-user');
 	const aiPreview = container.querySelector('.js-preview-ai');
+	const contextPairsContainer = container.querySelector('.js-preview-context-pairs'); // Get the new container
 	
-	if (!systemPreview || !userPreview || !aiPreview) return;
+	if (!systemPreview || !userPreview || !aiPreview || !contextPairsContainer) return;
 	
-	// MODIFIED: For preview, we can't fetch real data, so we'll just show a placeholder.
-	const previewContext = { ...context };
-	if (formData.contextPairs > 0) {
-		previewContext.translationPairs = Array(formData.contextPairs).fill({
-			source: `(Example source text for block ${formData.contextPairs})...`,
-			target: `(Example translated text for block ${formData.contextPairs})...`
-		});
+	const previewContext = { ...context, translationPairs: [] }; // Start with empty pairs
+	
+	// Fetch real translation pairs for the preview if requested.
+	if (formData.contextPairs > 0 && context.translationInfo && context.activeEditorView) {
+		try {
+			const chapterId = context.activeEditorView.frameElement.dataset.chapterId;
+			const blockNumber = context.translationInfo.blockNumber;
+			
+			const pairs = await window.api.getTranslationContext({
+				chapterId: chapterId,
+				endBlockNumber: blockNumber,
+				pairCount: formData.contextPairs,
+			});
+			console.log('Fetched translation pairs for preview:', pairs);
+			previewContext.translationPairs = pairs;
+		} catch (error) {
+			console.error('Failed to fetch translation context for preview:', error);
+			userPreview.textContent = `Error fetching context: ${error.message}`;
+			return;
+		}
 	}
 	
 	try {
@@ -178,10 +185,36 @@ const updatePreview = (container, context) => {
 		systemPreview.textContent = promptJson.system;
 		userPreview.textContent = promptJson.user;
 		aiPreview.textContent = promptJson.ai || '(Empty)';
+		
+		// NEW: Render the context pairs into their dedicated preview container.
+		contextPairsContainer.innerHTML = ''; // Clear previous content
+		if (promptJson.context_pairs && promptJson.context_pairs.length > 0) {
+			promptJson.context_pairs.forEach((message, index) => {
+				const pairNumber = Math.floor(index / 2) + 1;
+				const roleTitle = message.role === 'user' ? `Context Pair ${pairNumber} (User)` : `Context Pair ${pairNumber} (Assistant)`;
+				
+				const title = document.createElement('h3');
+				title.className = 'text-lg font-semibold mt-4 font-mono';
+				title.textContent = roleTitle;
+				// Use different colors to distinguish roles
+				title.classList.add(message.role === 'user' ? 'text-info' : 'text-accent');
+				
+				const pre = document.createElement('pre');
+				pre.className = 'bg-base-200 p-4 rounded-md text-xs whitespace-pre-wrap font-mono';
+				const code = document.createElement('code');
+				code.textContent = message.content;
+				pre.appendChild(code);
+				
+				contextPairsContainer.appendChild(title);
+				contextPairsContainer.appendChild(pre);
+			});
+		}
+		
 	} catch (error) {
 		systemPreview.textContent = `Error building preview: ${error.message}`;
 		userPreview.textContent = '';
 		aiPreview.textContent = '';
+		contextPairsContainer.innerHTML = '';
 	}
 };
 
@@ -205,10 +238,12 @@ export const init = async (container, context) => {
 		
 		const form = container.querySelector('#translate-editor-form');
 		if (form) {
+			// MODIFIED: The event listener now calls the async updatePreview.
 			form.addEventListener('input', () => updatePreview(container, fullContext));
 		}
 		
-		updatePreview(container, fullContext);
+		// MODIFIED: Initial preview update is now awaited.
+		await updatePreview(container, fullContext);
 	} catch (error) {
 		container.innerHTML = `<p class="p-4 text-error">Could not load editor form.</p>`;
 		console.error(error);

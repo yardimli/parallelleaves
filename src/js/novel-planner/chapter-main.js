@@ -514,7 +514,7 @@ function setupTranslateBlockAction() {
 				} else {
 					console.warn('[TranslateBlock] Translate button was disabled after block selection, likely empty block.');
 				}
-			}, 50);
+			}, 500);
 		}
 	});
 }
@@ -648,7 +648,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 		const throttledUpdateToolbar = debounce(() => {
 			console.log('[SelectionChange] Debounced event fired. Updating toolbar state for browser selection.');
 			updateToolbarState(null); // Pass null to indicate it's not a PM editor state
-		}, 500);
+		}, 100);
 		
 		document.addEventListener('selectionchange', throttledUpdateToolbar);
 		console.log('[Init] "selectionchange" listener attached.');

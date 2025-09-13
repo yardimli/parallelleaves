@@ -204,6 +204,10 @@ async function processCodexText({ prompt, model }) {
 	if (prompt.system) {
 		messages.push({ role: 'system', content: prompt.system });
 	}
+	// MODIFIED: Add context pairs to the messages array if they exist.
+	if (prompt.context_pairs && Array.isArray(prompt.context_pairs)) {
+		messages.push(...prompt.context_pairs);
+	}
 	if (prompt.user) {
 		messages.push({ role: 'user', content: prompt.user });
 	}
@@ -239,6 +243,10 @@ async function streamProcessCodexText({ prompt, model }, onChunk, signal) {
 	const messages = [];
 	if (prompt.system) {
 		messages.push({ role: 'system', content: prompt.system });
+	}
+	// MODIFIED: Add context pairs to the messages array if they exist.
+	if (prompt.context_pairs && Array.isArray(prompt.context_pairs)) {
+		messages.push(...prompt.context_pairs);
 	}
 	if (prompt.user) {
 		messages.push({ role: 'user', content: prompt.user });

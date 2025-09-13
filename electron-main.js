@@ -306,6 +306,54 @@ function createImportWindow() {
 }
 
 function setupIpcHandlers() {
+	// MODIFIED: Helper function to extract all translation pairs from chapter content.
+	// This version correctly parses the target_content HTML, which is serialized from ProseMirror
+	// and uses the text content of the note block for identification instead of a data-attribute.
+	const extractAllPairs = (sourceContent, targetContent) => {
+		if (!sourceContent || !targetContent) {
+			return [];
+		}
+		
+		// Find all translation block markers in the source content.
+		const sourceMarkers = [...sourceContent.matchAll(/{{\s*TranslationBlock-(\d+)\s*}}/gi)];
+		if (sourceMarkers.length === 0) {
+			return [];
+		}
+		
+		const allPairs = [];
+		for (let i = 0; i < sourceMarkers.length; i++) {
+			const currentMarker = sourceMarkers[i];
+			const nextMarker = sourceMarkers[i + 1];
+			const blockNumber = parseInt(currentMarker[1], 10);
+			
+			// Extract the source text for the current block.
+			const sourceStart = currentMarker.index + currentMarker[0].length;
+			const sourceEnd = nextMarker ? nextMarker.index : sourceContent.length;
+			const sourceText = sourceContent.substring(sourceStart, sourceEnd).trim();
+			
+			// Construct a regex to find the corresponding translated content in the target HTML.
+			// It looks for the content between the end of the div for the current block number
+			// and the beginning of the next block's div, or the end of the string.
+			const targetRegex = new RegExp(
+				// Match the start marker for the current block.
+				`<div class="note-wrapper not-prose"><p>Translation Block #${blockNumber}</p></div>` +
+				// Lazily capture all content (including newlines).
+				`([\\s\\S]*?)` +
+				// Stop capturing when we see the next block marker (positive lookahead) or the end of the string.
+				`(?=<div class="note-wrapper not-prose"><p>Translation Block #\\d+</p></div>|$)`,
+				'i'
+			);
+			
+			const targetMatch = targetContent.match(targetRegex);
+			const targetText = targetMatch ? targetMatch[1].trim() : '';
+			
+			if (sourceText && targetText) {
+				allPairs.push({ blockNumber, source: sourceText, target: targetText });
+			}
+		}
+		return allPairs;
+	};
+	
 	ipcMain.on('app:open-import-window', () => {
 		createImportWindow();
 	});
@@ -619,47 +667,59 @@ function setupIpcHandlers() {
 		}
 	});
 	
-	// NEW SECTION START: Handler for fetching translation context.
+	// MODIFIED: This handler is now more powerful, fetching from the previous chapter if needed.
 	ipcMain.handle('chapters:getTranslationContext', (event, { chapterId, endBlockNumber, pairCount }) => {
 		if (pairCount <= 0) {
 			return [];
 		}
 		
 		try {
-			const chapter = db.prepare('SELECT source_content, target_content FROM chapters WHERE id = ?').get(chapterId);
-			if (!chapter || !chapter.source_content || !chapter.target_content) {
-				return [];
+			// 1. Get current chapter data
+			const currentChapter = db.prepare('SELECT source_content, target_content, novel_id, chapter_order FROM chapters WHERE id = ?').get(chapterId);
+			if (!currentChapter) {
+				throw new Error('Current chapter not found.');
 			}
 			
-			const { source_content, target_content } = chapter;
-			const pairs = [];
+			// 2. Extract all pairs from the current chapter
+			const allPairsCurrent = extractAllPairs(currentChapter.source_content, currentChapter.target_content);
 			
-			const startBlock = Math.max(1, endBlockNumber - pairCount);
+			// 3. Filter for pairs before the endBlockNumber
+			const relevantPairsCurrent = allPairsCurrent.filter(p => p.blockNumber < endBlockNumber);
 			
-			for (let i = startBlock; i < endBlockNumber; i++) {
-				// Regex for source content: {{TranslationBlock-X}}...{{TranslationBlock-Y}}
-				const sourceRegex = new RegExp(`{{\\s*TranslationBlock-${i}\\s*}}([\\s\\S]*?)(?={{\\s*TranslationBlock-${i + 1}\\s*}}|$)`, 'i');
-				const sourceMatch = source_content.match(sourceRegex);
-				const sourceText = sourceMatch ? sourceMatch[1].trim() : '';
+			let collectedPairs = relevantPairsCurrent.slice(-pairCount); // Get the last `pairCount` items
+			
+			// 4. Check if we need more pairs
+			let remainingPairsNeeded = pairCount - collectedPairs.length;
+			
+			if (remainingPairsNeeded > 0) {
+				// 5. Find the previous chapter
+				const previousChapter = db.prepare(`
+                    SELECT source_content, target_content
+                    FROM chapters
+                    WHERE novel_id = ? AND chapter_order < ?
+                    ORDER BY chapter_order DESC
+                    LIMIT 1
+                `).get(currentChapter.novel_id, currentChapter.chapter_order);
 				
-				// Regex for target content: <div data-block-number="X">...</div>...<div data-block-number="Y">
-				const targetRegex = new RegExp(`<div[^>]*data-block-number="${i}"[^>]*>[\\s\\S]*?<\\/div>([\\s\\S]*?)(?=<div[^>]*data-block-number="${i + 1}"[^>]*>|$)`, 'i');
-				const targetMatch = target_content.match(targetRegex);
-				const targetText = targetMatch ? targetMatch[1].trim() : '';
-				
-				if (sourceText && targetText) {
-					pairs.push({ source: sourceText, target: targetText });
+				if (previousChapter) {
+					// 6. Extract all pairs from the previous chapter
+					const allPairsPrevious = extractAllPairs(previousChapter.source_content, previousChapter.target_content);
+					
+					// 7. Get the last `remainingPairsNeeded` from the previous chapter
+					const pairsFromPrevious = allPairsPrevious.slice(-remainingPairsNeeded);
+					
+					// 8. Prepend them to the collected pairs
+					collectedPairs = [...pairsFromPrevious, ...collectedPairs];
 				}
 			}
 			
-			return pairs;
+			return collectedPairs;
 			
 		} catch (error) {
 			console.error(`Failed to get translation context for chapter ${chapterId}:`, error);
 			throw new Error('Failed to retrieve translation context from the database.');
 		}
 	});
-	// NEW SECTION END
 	
 	
 	// --- Editor & Template Handlers ---
