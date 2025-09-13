@@ -34,6 +34,9 @@ contextBridge.exposeInMainWorld('api', {
 	// Chapter <-> Codex Linking
 	detachCodexFromChapter: (chapterId, codexEntryId) => ipcRenderer.invoke('chapters:codex:detach', chapterId, codexEntryId),
 	
+	// NEW: Expose the translation context handler.
+	getTranslationContext: (data) => ipcRenderer.invoke('chapters:getTranslationContext', data),
+	
 	openChapterEditor: (data) => ipcRenderer.send('chapters:openEditor', data),
 	onManuscriptScrollToChapter: (callback) => ipcRenderer.on('manuscript:scrollToChapter', callback),
 	
@@ -72,4 +75,10 @@ contextBridge.exposeInMainWorld('api', {
 		};
 	},
 	getModels: () => ipcRenderer.invoke('ai:getModels'),
+	
+	// NEW SECTION START: Spellchecker APIs
+	getAvailableSpellCheckerLanguages: () => ipcRenderer.invoke('session:getAvailableSpellCheckerLanguages'),
+	getCurrentSpellCheckerLanguage: () => ipcRenderer.invoke('session:getCurrentSpellCheckerLanguage'),
+	setSpellCheckerLanguage: (lang) => ipcRenderer.invoke('session:setSpellCheckerLanguage', lang),
+	// NEW SECTION END
 });

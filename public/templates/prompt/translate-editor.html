@@ -15,6 +15,16 @@
 			<div class="js-codex-selection-container rounded-md border border-base-300 p-3">
 				<p class="text-sm text-base-content/60">Loading codex entries...</p>
 			</div>
+			
+			<!-- NEW SECTION START -->
+			<div>
+				<label for="translate-context-pairs" class="label pb-1">
+					<span class="label-text font-semibold">Previous Translation Pairs</span>
+				</label>
+				<input type="number" id="translate-context-pairs" name="context_pairs" class="input input-bordered w-full" value="4" min="0" max="10">
+				<p class="text-xs text-base-content/60 mt-1">Include N previous translation blocks as context for the AI. (0 to disable)</p>
+			</div>
+			<!-- NEW SECTION END -->
 		
 		</div>
 	</form>

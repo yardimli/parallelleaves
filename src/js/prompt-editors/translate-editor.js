@@ -3,6 +3,8 @@
 const defaultState = {
 	instructions: '',
 	selectedCodexIds: [],
+	// NEW: Added default value for context pairs.
+	contextPairs: 4,
 };
 
 const renderCodexList = (container, context, initialState = null) => {
@@ -60,9 +62,42 @@ const renderCodexList = (container, context, initialState = null) => {
     `;
 };
 
+// NEW: Helper function to build the context block from previous translations.
+const buildTranslationContextBlock = (translationPairs) => {
+	if (!translationPairs || translationPairs.length === 0) {
+		return '';
+	}
+	
+	const examples = translationPairs.map((pair, index) => {
+		// Clean up HTML from the text content
+		const sourceText = (pair.source || '').replace(/<[^>]+>/g, ' ').replace(/\s\s+/g, ' ').trim();
+		const targetText = (pair.target || '').replace(/<[^>]+>/g, ' ').replace(/\s\s+/g, ' ').trim();
+		
+		if (!sourceText || !targetText) return '';
+		
+		return `--- Example ${index + 1} ---
+[SOURCE TEXT]
+${sourceText}
+
+[CORRESPONDING TRANSLATION]
+${targetText}
+--- End Example ${index + 1} ---`;
+	}).filter(Boolean).join('\n\n');
+	
+	if (!examples) return '';
+	
+	return `Here are some previous translation pairs for context and style guidance.
+The AI's task is to provide ONLY the translation for the new text, not to comment on these examples.
+
+${examples}
+
+Now, your main task:`;
+};
+
 
 export const buildPromptJson = (formData, context) => {
-	const { selectedText, languageForPrompt, targetLanguage, allCodexEntries } = context;
+	// MODIFIED: Destructure translationPairs from context.
+	const { selectedText, languageForPrompt, targetLanguage, allCodexEntries, translationPairs } = context;
 	
 	const plainTextToTranslate = selectedText;
 	
@@ -92,7 +127,11 @@ ${codexContent}
 		}
 	}
 	
-	const userParts = [codexBlock];
+	// NEW: Build the context block from previous translations.
+	const translationContextBlock = buildTranslationContextBlock(translationPairs);
+	
+	// MODIFIED: Add the new context block to the user prompt parts.
+	const userParts = [codexBlock, translationContextBlock];
 	userParts.push(`Translate the following text from ${languageForPrompt} to ${targetLanguage}:
 
 <text>
@@ -115,6 +154,8 @@ const updatePreview = (container, context) => {
 	const formData = {
 		instructions: form.elements.instructions.value.trim(),
 		selectedCodexIds: form.elements.codex_entry ? Array.from(form.elements.codex_entry).filter(cb => cb.checked).map(cb => cb.value) : [],
+		// NEW: Read the context pairs value for the preview.
+		contextPairs: parseInt(form.elements.context_pairs.value, 10) || 0,
 	};
 	
 	const systemPreview = container.querySelector('.js-preview-system');
@@ -123,8 +164,17 @@ const updatePreview = (container, context) => {
 	
 	if (!systemPreview || !userPreview || !aiPreview) return;
 	
+	// MODIFIED: For preview, we can't fetch real data, so we'll just show a placeholder.
+	const previewContext = { ...context };
+	if (formData.contextPairs > 0) {
+		previewContext.translationPairs = Array(formData.contextPairs).fill({
+			source: `(Example source text for block ${formData.contextPairs})...`,
+			target: `(Example translated text for block ${formData.contextPairs})...`
+		});
+	}
+	
 	try {
-		const promptJson = buildPromptJson(formData, context);
+		const promptJson = buildPromptJson(formData, previewContext);
 		systemPreview.textContent = promptJson.system;
 		userPreview.textContent = promptJson.user;
 		aiPreview.textContent = promptJson.ai || '(Empty)';
@@ -139,6 +189,8 @@ const populateForm = (container, state) => {
 	const form = container.querySelector('#translate-editor-form');
 	if (!form) return;
 	form.elements.instructions.value = state.instructions || '';
+	// NEW: Populate the context pairs input from the state.
+	form.elements.context_pairs.value = state.contextPairs !== undefined ? state.contextPairs : 4;
 };
 
 export const init = async (container, context) => {

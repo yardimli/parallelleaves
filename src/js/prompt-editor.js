@@ -20,6 +20,8 @@ const formDataExtractors = {
 	'translate': (form) => ({
 		instructions: form.elements.instructions.value.trim(),
 		selectedCodexIds: form.elements.codex_entry ? Array.from(form.elements.codex_entry).filter(cb => cb.checked).map(cb => cb.value) : [],
+		// NEW: Extract the number of context pairs from the form.
+		contextPairs: parseInt(form.elements.context_pairs.value, 10) || 0,
 	}),
 };
 
@@ -343,6 +345,28 @@ async function handleModalApply() {
 	
 	const wordCount = text ? text.trim().split(/\s+/).filter(Boolean).length : 0;
 	const promptContext = { ...currentContext, selectedText: text, wordCount };
+	
+	// NEW SECTION START: Fetch translation context pairs if needed.
+	if (action === 'translate' && formDataObj.contextPairs > 0) {
+		try {
+			// The chapter ID is stored on the iframe element's dataset in chapter-main.js
+			const chapterId = currentContext.activeEditorView.frameElement.dataset.chapterId;
+			const blockNumber = currentContext.translationInfo.blockNumber;
+			
+			const pairs = await window.api.getTranslationContext({
+				chapterId: chapterId,
+				endBlockNumber: blockNumber,
+				pairCount: formDataObj.contextPairs,
+			});
+			promptContext.translationPairs = pairs;
+		} catch (error) {
+			console.error('Failed to fetch translation context:', error);
+			window.showAlert(`Could not fetch previous translation blocks for context. ${error.message}`);
+			// Continue without context if it fails.
+		}
+	}
+	// NEW SECTION END
+	
 	const prompt = builder(formDataObj, promptContext);
 	
 	currentAiParams = { prompt, model, action, context: currentContext, formData: formDataObj };

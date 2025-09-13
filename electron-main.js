@@ -619,12 +619,88 @@ function setupIpcHandlers() {
 		}
 	});
 	
+	// NEW SECTION START: Handler for fetching translation context.
+	ipcMain.handle('chapters:getTranslationContext', (event, { chapterId, endBlockNumber, pairCount }) => {
+		if (pairCount <= 0) {
+			return [];
+		}
+		
+		try {
+			const chapter = db.prepare('SELECT source_content, target_content FROM chapters WHERE id = ?').get(chapterId);
+			if (!chapter || !chapter.source_content || !chapter.target_content) {
+				return [];
+			}
+			
+			const { source_content, target_content } = chapter;
+			const pairs = [];
+			
+			const startBlock = Math.max(1, endBlockNumber - pairCount);
+			
+			for (let i = startBlock; i < endBlockNumber; i++) {
+				// Regex for source content: {{TranslationBlock-X}}...{{TranslationBlock-Y}}
+				const sourceRegex = new RegExp(`{{\\s*TranslationBlock-${i}\\s*}}([\\s\\S]*?)(?={{\\s*TranslationBlock-${i + 1}\\s*}}|$)`, 'i');
+				const sourceMatch = source_content.match(sourceRegex);
+				const sourceText = sourceMatch ? sourceMatch[1].trim() : '';
+				
+				// Regex for target content: <div data-block-number="X">...</div>...<div data-block-number="Y">
+				const targetRegex = new RegExp(`<div[^>]*data-block-number="${i}"[^>]*>[\\s\\S]*?<\\/div>([\\s\\S]*?)(?=<div[^>]*data-block-number="${i + 1}"[^>]*>|$)`, 'i');
+				const targetMatch = target_content.match(targetRegex);
+				const targetText = targetMatch ? targetMatch[1].trim() : '';
+				
+				if (sourceText && targetText) {
+					pairs.push({ source: sourceText, target: targetText });
+				}
+			}
+			
+			return pairs;
+			
+		} catch (error) {
+			console.error(`Failed to get translation context for chapter ${chapterId}:`, error);
+			throw new Error('Failed to retrieve translation context from the database.');
+		}
+	});
+	// NEW SECTION END
+	
 	
 	// --- Editor & Template Handlers ---
 	
 	ipcMain.handle('templates:get', (event, templateName) => {
 		return getTemplate(templateName);
 	});
+	
+	// NEW SECTION START: Session/Spellchecker handlers
+	ipcMain.handle('session:getAvailableSpellCheckerLanguages', (event) => {
+		// The session is associated with the window that sent the event.
+		return event.sender.session.availableSpellCheckerLanguages;
+	});
+	
+	ipcMain.handle('session:getCurrentSpellCheckerLanguage', (event) => {
+		const languages = event.sender.session.getSpellCheckerLanguages();
+		// Return the first language in the array, or null if it's empty.
+		return languages.length > 0 ? languages[0] : null;
+	});
+	
+	ipcMain.handle('session:setSpellCheckerLanguage', (event, lang) => {
+		try {
+			const session = event.sender.session;
+			if (lang) {
+				// Set the spellchecker to a specific language.
+				// Electron will automatically download the dictionary if needed.
+				session.setSpellCheckerLanguages([lang]);
+				console.log(`Spellchecker language set to: ${lang}`);
+				return { success: true };
+			} else {
+				// To disable the spellchecker, pass an empty array.
+				session.setSpellCheckerLanguages([]);
+				console.log('Spellchecker disabled.');
+				return { success: true };
+			}
+		} catch (error) {
+			console.error('Failed to set spellchecker language:', error);
+			return { success: false, message: error.message };
+		}
+	});
+	// NEW SECTION END
 	
 	ipcMain.handle('codex:getAllForNovel', (event, novelId) => {
 		try {

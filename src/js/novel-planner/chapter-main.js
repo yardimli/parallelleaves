@@ -2,6 +2,60 @@ import { setupTopToolbar, setActiveContentWindow, updateToolbarState } from './t
 import { setupPromptEditor } from '../prompt-editor.js';
 import { getActiveEditor, setActiveEditor } from './content-editor.js';
 
+// NEW: A map for language codes to human-readable names for the spellcheck dropdown.
+const languageCodeToName = {
+	'af': 'Afrikaans',
+	'bg': 'Bulgarian',
+	'ca': 'Catalan',
+	'cs': 'Czech',
+	'cy': 'Welsh',
+	'da': 'Danish',
+	'de': 'German',
+	'el': 'Greek',
+	'en-GB': 'English (UK)',
+	'en-US': 'English (US)',
+	'es': 'Spanish',
+	'es-419': 'Spanish (Latin America)',
+	'es-AR': 'Spanish (Argentina)',
+	'es-ES': 'Spanish (Spain)',
+	'es-MX': 'Spanish (Mexico)',
+	'es-US': 'Spanish (US)',
+	'et': 'Estonian',
+	'fa': 'Persian',
+	'fo': 'Faroese',
+	'fr': 'French',
+	'he': 'Hebrew',
+	'hi': 'Hindi',
+	'hr': 'Croatian',
+	'hu': 'Hungarian',
+	'hy': 'Armenian',
+	'id': 'Indonesian',
+	'it': 'Italian',
+	'ja': 'Japanese',
+	'ko': 'Korean',
+	'lt': 'Lithuanian',
+	'lv': 'Latvian',
+	'nb': 'Norwegian (Bokmål)',
+	'nl': 'Dutch',
+	'pl': 'Polish',
+	'pt-BR': 'Portuguese (Brazil)',
+	'pt-PT': 'Portuguese (Portugal)',
+	'ro': 'Romanian',
+	'ru': 'Russian',
+	'sh': 'Serbo-Croatian',
+	'sk': 'Slovak',
+	'sl': 'Slovenian',
+	'sq': 'Albanian',
+	'sr': 'Serbian',
+	'sv': 'Swedish',
+	'ta': 'Tamil',
+	'tg': 'Tajik',
+	'tr': 'Turkish',
+	'uk': 'Ukrainian',
+	'vi': 'Vietnamese',
+};
+
+
 // NEW: Debouncing utility to delay function execution until after a pause.
 const debounce = (func, delay) => {
 	let timeout;
@@ -465,6 +519,61 @@ function setupTranslateBlockAction() {
 	});
 }
 
+// NEW: This function populates and configures the spellcheck language dropdown.
+/**
+ * Populates and configures the spellcheck language dropdown.
+ */
+async function setupSpellcheckDropdown() {
+	console.log('[setupSpellcheckDropdown] Setting up...');
+	const dropdown = document.getElementById('js-spellcheck-lang-dropdown');
+	if (!dropdown) {
+		console.error('[setupSpellcheckDropdown] Dropdown element not found.');
+		return;
+	}
+	
+	try {
+		const availableLangs = await window.api.getAvailableSpellCheckerLanguages();
+		const currentLang = await window.api.getCurrentSpellCheckerLanguage();
+		
+		dropdown.innerHTML = ''; // Clear "Loading..."
+		
+		// Add an option to disable spellchecking
+		const disableOption = new Option('Disable Spellcheck', '');
+		dropdown.appendChild(disableOption);
+		
+		availableLangs.sort().forEach(code => {
+			const name = languageCodeToName[code] || code;
+			const option = new Option(name, code);
+			dropdown.appendChild(option);
+		});
+		
+		if (currentLang) {
+			dropdown.value = currentLang;
+		} else {
+			dropdown.value = ''; // Select "Disable" if none is active
+		}
+		
+		dropdown.addEventListener('change', async () => {
+			const selectedLang = dropdown.value;
+			console.log(`[Spellcheck] Language changed to: ${selectedLang}`);
+			try {
+				await window.api.setSpellCheckerLanguage(selectedLang);
+				// A small notification could be added here in the future.
+				console.log(`[Spellcheck] Language successfully set to ${selectedLang || 'Disabled'}.`);
+			} catch (error) {
+				console.error('[Spellcheck] Error setting language:', error);
+				window.showAlert('Could not set spellcheck language.');
+			}
+		});
+		
+	} catch (error) {
+		console.error('[setupSpellcheckDropdown] Failed to initialize:', error);
+		dropdown.innerHTML = '<option>Error</option>';
+		dropdown.disabled = true;
+	}
+}
+
+
 // Main Initialization
 document.addEventListener('DOMContentLoaded', async () => {
 	console.log('[DOM] DOMContentLoaded event fired. Starting initialization.');
@@ -531,6 +640,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 		setupCodexUnlinking();
 		setupNoteEditorModal();
 		setupTranslateBlockAction();
+		setupSpellcheckDropdown(); // NEW: Initialize the spellcheck dropdown.
 		console.log('[Init] UI components setup complete.');
 		
 		// MODIFIED: This listener is now for browser selection (source panel).
