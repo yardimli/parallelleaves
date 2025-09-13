@@ -215,9 +215,11 @@ function startAiStream(params) {
 			}
 			
 		} else if (payload.done) {
+			// MODIFIED: The `aiStreamDone` message now only needs the starting position.
+			// The iframe will determine the end position from its own state.
 			activeContentWindow.postMessage({
 				type: 'aiStreamDone',
-				payload: { from: aiActionRange.from, to: aiActionRange.to }
+				payload: { from: aiActionRange.from }
 			}, window.location.origin);
 			
 		} else if (payload.error) {

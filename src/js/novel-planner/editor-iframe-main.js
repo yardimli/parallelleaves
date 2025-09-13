@@ -10,7 +10,6 @@ import { schema, NoteNodeView } from './content-editor.js';
 let editorView;
 let parentOrigin; // Store the parent window's origin for security
 let chapterId;
-// MODIFIED: Renamed from `saveField` to `field` for consistency with the parent window's handler.
 let field;
 
 /**
@@ -83,7 +82,6 @@ const getToolbarState = (state) => {
  */
 function createEditorView(mount, { initialHtml, isEditable, chapterId: id, field: fieldName }) {
 	chapterId = id;
-	// MODIFIED: Assigning the received `field` name to the module-scoped variable.
 	field = fieldName;
 	
 	const noteProtectionPlugin = new Plugin({
@@ -134,7 +132,6 @@ function createEditorView(mount, { initialHtml, isEditable, chapterId: id, field
 				const fragment = serializer.serializeFragment(this.state.doc.content);
 				const tempDiv = document.createElement('div');
 				tempDiv.appendChild(fragment);
-				// MODIFIED: Sending the property as `field` to match the parent window's handler.
 				postToParent('contentChanged', { chapterId, field, value: tempDiv.innerHTML });
 			}
 			
@@ -281,29 +278,42 @@ function handleAiStreamChunk({ chunk }) {
 
 /**
  * Finalizes an AI stream action, cleaning up empty paragraphs.
- * @param {object} payload - Contains the range of the AI-generated content.
+ * @param {object} payload - Contains the starting position of the AI-generated content.
  */
-function handleAiStreamDone({ from, to }) {
+// MODIFIED SECTION START: This function now correctly calculates the range for cleanup.
+function handleAiStreamDone({ from }) {
 	const { state, dispatch } = editorView;
 	let tr = state.tr;
-	const finalTo = tr.mapping.map(to);
+	
+	// Determine the end of the generated content from the current selection.
+	const to = state.selection.to;
 	
 	const deletions = [];
-	state.doc.nodesBetween(from, finalTo, (node, pos) => {
+	// Scan the full range of the newly inserted content for empty paragraphs.
+	state.doc.nodesBetween(from, to, (node, pos) => {
+		// Ensure we are looking at a node within the generated range.
 		if (pos >= from && node.type.name === 'paragraph' && node.content.size === 0) {
 			deletions.push({ from: pos, to: pos + node.nodeSize });
 		}
 	});
 	
+	// If empty paragraphs were found, delete them in reverse order.
 	if (deletions.length > 0) {
 		for (let i = deletions.length - 1; i >= 0; i--) {
 			tr.delete(deletions[i].from, deletions[i].to);
 		}
 	}
 	
+	// Dispatch the transaction with the deletions.
 	dispatch(tr);
-	postToParent('aiStreamFinished', { from, to: tr.mapping.map(finalTo) });
+	
+	// Calculate the final 'to' position after deletions using the transaction's mapping.
+	const finalTo = tr.mapping.map(to);
+	
+	// Send a message back to the parent with the final, correct range for the floating toolbar.
+	postToParent('aiStreamFinished', { from, to: finalTo });
 }
+// MODIFIED SECTION END
 
 // NEW: Helper function to find the start and end positions of a translation block.
 function findTranslationBlockPositions(blockNumber) {
@@ -347,14 +357,10 @@ window.addEventListener('message', (event) => {
 			if (payload.theme === 'dark') document.documentElement.classList.add('dark');
 			createEditorView(document.getElementById('editor-container'), payload);
 			
-			// NEW SECTION START: Add a ResizeObserver for robust height updates.
-			// This observer will detect any size changes to the body, including those
-			// caused by font loading or window resizing, and trigger a height update.
 			const resizeObserver = new ResizeObserver(() => {
 				sendResize();
 			});
 			resizeObserver.observe(document.body);
-			// NEW SECTION END
 			break;
 		case 'command':
 			executeCommand(payload);
@@ -373,14 +379,12 @@ window.addEventListener('message', (event) => {
 			editorView.focus();
 			break;
 		}
-		// MODIFIED SECTION START: New message handlers for AI stream and preparation.
 		case 'aiStreamStart':
 			handleAiStreamStart(payload);
 			break;
 		case 'aiStreamChunk':
 			handleAiStreamChunk(payload);
 			break;
-		// MODIFIED SECTION END
 		case 'aiStreamDone':
 			handleAiStreamDone(payload);
 			break;
@@ -407,7 +411,6 @@ window.addEventListener('message', (event) => {
 			editorView.dispatch(tr);
 			break;
 		}
-		// NEW SECTION START: Handlers to prepare editor and respond with selection info.
 		case 'prepareForTranslate': {
 			const { blockNumber } = payload;
 			const { state, dispatch } = editorView;
@@ -421,13 +424,11 @@ window.addEventListener('message', (event) => {
 				return;
 			}
 			
-			// Find the last node in the block to insert after.
 			const before = state.doc.childBefore(blockEndPos);
 			let insertPos = (before.node && before.offset >= blockStartPos)
 				? before.offset + before.node.nodeSize
 				: blockStartPos;
 			
-			// Always insert a new, empty paragraph for the translation.
 			tr.insert(insertPos, schema.nodes.paragraph.create());
 			const fromPos = insertPos + 1;
 			tr.setSelection(TextSelection.create(tr.doc, fromPos));
@@ -456,6 +457,5 @@ window.addEventListener('message', (event) => {
 			});
 			break;
 		}
-		// NEW SECTION END
 	}
 });

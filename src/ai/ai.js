@@ -80,10 +80,12 @@ async function callOpenRouter(payload) {
  * A generic function to call the OpenRouter API with streaming.
  * @param {object} payload - The request body for the OpenRouter API.
  * @param {function(string): void} onChunk - Callback function to handle each received text chunk.
+ * @param {AbortSignal} [signal] - An optional AbortSignal to cancel the request.
  * @returns {Promise<void>} A promise that resolves when the stream is complete.
  * @throws {Error} If the API call fails.
  */
-async function streamOpenRouter(payload, onChunk) {
+// MODIFIED: Added `signal` parameter to accept an AbortSignal.
+async function streamOpenRouter(payload, onChunk, signal) {
 	if (!OPEN_ROUTER_API_KEY) {
 		throw new Error('OpenRouter API key is not configured.');
 	}
@@ -100,7 +102,9 @@ async function streamOpenRouter(payload, onChunk) {
 			'Authorization': `Bearer ${OPEN_ROUTER_API_KEY}`,
 			'Content-Type': 'application/json'
 		},
-		body: JSON.stringify({ ...payload, stream: true }) // Ensure streaming is enabled
+		body: JSON.stringify({ ...payload, stream: true }), // Ensure streaming is enabled
+		// MODIFIED: Pass the signal to the fetch request.
+		signal: signal,
 	});
 	
 	if (!response.ok) {
@@ -110,7 +114,6 @@ async function streamOpenRouter(payload, onChunk) {
 	}
 	
 	let fullResponse = '';
-	// MODIFIED SECTION START: Implemented a buffer to handle incomplete stream chunks, preventing JSON parsing errors.
 	let buffer = '';
 	
 	// Process the streaming response body
@@ -147,7 +150,6 @@ async function streamOpenRouter(payload, onChunk) {
 			}
 		}
 	}
-	// MODIFIED SECTION END
 	
 	// Fallback log in case the stream ends without a [DONE] message.
 	if (fullResponse) {
@@ -229,9 +231,11 @@ async function processCodexText({ prompt, model }) {
  * @param {object} params.prompt - An object with 'system', 'user', and 'ai' properties for the prompt.
  * @param {string} params.model - The LLM model to use.
  * @param {function(string): void} onChunk - Callback function to handle each received text chunk.
+ * @param {AbortSignal} [signal] - An optional AbortSignal to cancel the request.
  * @returns {Promise<void>} A promise that resolves when the stream is complete.
  */
-async function streamProcessCodexText({ prompt, model }, onChunk) {
+// MODIFIED: Added `signal` parameter.
+async function streamProcessCodexText({ prompt, model }, onChunk, signal) {
 	const messages = [];
 	if (prompt.system) {
 		messages.push({ role: 'system', content: prompt.system });
@@ -247,11 +251,12 @@ async function streamProcessCodexText({ prompt, model }, onChunk) {
 		throw new Error('Prompt is empty. Cannot call AI service.');
 	}
 	
+	// MODIFIED: Pass the signal down to the `streamOpenRouter` function.
 	await streamOpenRouter({
 		model: model,
 		messages: messages,
 		temperature: 0.7,
-	}, onChunk);
+	}, onChunk, signal);
 }
 
 

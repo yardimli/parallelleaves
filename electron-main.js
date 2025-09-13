@@ -741,27 +741,49 @@ function setupIpcHandlers() {
 		return {success: true, message: 'Codex entry updated successfully.'};
 	});
 	
+	// MODIFIED SECTION START: This handler now manages stream lifecycle and cancellation.
 	ipcMain.on('codex-entries:process-text-stream', (event, {data, channel}) => {
+		// NEW: Create an AbortController to manage the fetch request.
+		const controller = new AbortController();
+		// NEW: A flag to track if the stream is active.
+		let streamActive = true;
+		
+		// NEW: Listen for the 'destroyed' event on the sender's WebContents.
+		// If the window is closed mid-stream, we abort the request.
+		event.sender.once('destroyed', () => {
+			if (streamActive) {
+				console.log('Window closed during AI stream. Aborting request.');
+				controller.abort();
+			}
+		});
+		
 		const onChunk = (chunk) => {
 			if (event.sender.isDestroyed()) return;
 			event.sender.send(channel, {chunk});
 		};
 		
 		const onComplete = () => {
+			streamActive = false; // Mark stream as complete.
 			if (event.sender.isDestroyed()) return;
 			event.sender.send(channel, {done: true});
 		};
 		
 		const onError = (error) => {
-			console.error('Streaming AI Error:', error);
+			streamActive = false; // Mark stream as complete.
+			// Don't log "AbortError" as a critical error, it's expected.
+			if (error.name !== 'AbortError') {
+				console.error('Streaming AI Error:', error);
+			}
 			if (event.sender.isDestroyed()) return;
 			event.sender.send(channel, {error: error.message});
 		};
 		
-		aiService.streamProcessCodexText(data, onChunk)
+		// MODIFIED: Pass the AbortController's signal to the AI service.
+		aiService.streamProcessCodexText(data, onChunk, controller.signal)
 			.then(onComplete)
 			.catch(onError);
 	});
+	// MODIFIED SECTION END
 	
 	ipcMain.handle('ai:getModels', async () => {
 		try {
