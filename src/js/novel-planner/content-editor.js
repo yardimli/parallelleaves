@@ -2,7 +2,8 @@ import { Schema, DOMParser } from 'prosemirror-model';
 import { schema as basicSchema } from 'prosemirror-schema-basic';
 import { addListNodes } from 'prosemirror-schema-list';
 
-let activeEditorView = null;
+// MODIFIED: These are now managed in chapter-main.js and passed to the toolbar.
+let activeContentWindow = null;
 
 const highlightMarkSpec = (colorClass) => {
 	console.log(`[PM DEBUG] highlightMarkSpec called for color: ${colorClass}`);
@@ -103,25 +104,25 @@ export const schema = new Schema({
 });
 console.log('[PM DEBUG] Schema created successfully.');
 
-export function setActiveEditor(view) {
-	console.log('[PM DEBUG] setActiveEditor called. New view:', view);
-	activeEditorView = view;
+export function setActiveEditor(contentWindow) {
+	console.log('[PM DEBUG] setActiveEditor called. New contentWindow:', contentWindow);
+	activeContentWindow = contentWindow;
 }
 
 export function getActiveEditor() {
 	console.log('[PM DEBUG] getActiveEditor called.');
-	return activeEditorView;
+	return activeContentWindow;
 }
 
 // A NodeView for our custom 'note' node.
 export class NoteNodeView {
-	constructor(node, view, getPos) {
+	// MODIFIED: Added postMessageCallback to communicate with the parent window.
+	constructor(node, view, getPos, postMessageCallback) {
 		console.log('[PM DEBUG] NoteNodeView.constructor called.');
-		console.log('  - Initial node:', node);
-		console.log('  - Initial position:', getPos());
 		this.node = node;
 		this.view = view;
 		this.getPos = getPos;
+		this.postMessage = postMessageCallback; // NEW: Store the callback.
 		
 		this.dom = document.createElement('div');
 		this.dom.className = 'note-wrapper not-prose p-1 my-1 border-l-4 border-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-600 rounded-r-md relative group';
@@ -171,28 +172,12 @@ export class NoteNodeView {
 	openEditModal(e) {
 		e.preventDefault();
 		console.log('[PM DEBUG] NoteNodeView.openEditModal called.');
-		const noteModal = document.getElementById('note-editor-modal');
-		const form = document.getElementById('note-editor-form');
-		const title = noteModal.querySelector('.js-note-modal-title');
-		const contentInput = document.getElementById('note-content-input');
-		const posInput = document.getElementById('note-pos');
-		const chapterIdInput = document.getElementById('note-chapter-id');
-		
-		title.textContent = 'Edit Note';
-		contentInput.value = this.node.attrs.text;
-		posInput.value = this.getPos();
-		console.log(`  - Setting modal pos to: ${this.getPos()}`);
-		
-		// Find the chapterId from the parent element to populate the modal.
-		const chapterEl = this.dom.closest('.manuscript-chapter-item');
-		if(chapterEl) {
-			chapterIdInput.value = chapterEl.dataset.chapterId;
-			console.log(`  - Found and set chapterId: ${chapterEl.dataset.chapterId}`);
-		} else {
-			console.warn('[PM DEBUG] Could not find parent .manuscript-chapter-item to get chapterId.');
-		}
-		
-		noteModal.showModal();
+		// MODIFIED: Send a message to the parent to open the modal.
+		this.postMessage('openNoteModal', {
+			title: 'Edit Note',
+			content: this.node.attrs.text,
+			pos: this.getPos(),
+		});
 	}
 	
 	deleteNode(e) {
@@ -210,23 +195,15 @@ export class NoteNodeView {
 	}
 	
 	update(node) {
-		// If the node type has changed, we must re-render.
 		if (node.type !== this.node.type) {
 			return false;
 		}
 		
-		// If the note text is the only thing that can change,
-		// check if it has and update the DOM directly.
 		if (node.attrs.text !== this.node.attrs.text) {
-			const noteTextElement = this.dom.querySelector('.note-text-class'); // Or however you access it
-			if (noteTextElement) {
-				noteTextElement.textContent = node.attrs.text;
-			}
+			this.contentDOM.textContent = node.attrs.text;
 		}
 		
-		// Update the internal node reference
 		this.node = node;
-		// Return true to signal that ProseMirror doesn't need to re-render this node.
 		return true;
 	}
 }

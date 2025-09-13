@@ -1,7 +1,6 @@
 import { init as initRephraseEditor, buildPromptJson as buildRephraseJson } from './prompt-editors/rephrase-editor.js';
 import { init as initTranslateEditor, buildPromptJson as buildTranslateJson } from './prompt-editors/translate-editor.js';
 import { updateToolbarState } from './novel-planner/toolbar.js';
-import { TextSelection } from 'prosemirror-state';
 
 const editors = {
 	'rephrase': { name: 'Rephrase', init: initRephraseEditor },
@@ -28,48 +27,29 @@ const formDataExtractors = {
 let modalEl;
 let currentContext;
 
-// State variables for the AI review workflow, moved from toolbar.js
 let isAiActionActive = false;
 let originalFragment = null;
 let aiActionRange = null;
 let floatingToolbar = null;
-let currentAiParams = null; // For the retry functionality
-let activeEditorView = null;
+let currentAiParams = null;
+let activeContentWindow = null;
 let currentPromptId = null;
 
-// NEW SECTION START: Helper functions to control the AI Action spinner visibility.
-/**
- * Shows the spinner overlay in the chapter editor.
- */
 function showAiSpinner() {
 	const overlay = document.getElementById('ai-action-spinner-overlay');
-	if (overlay) {
-		overlay.classList.remove('hidden');
-	}
+	if (overlay) overlay.classList.remove('hidden');
 }
 
-/**
- * Hides the spinner overlay in the chapter editor.
- */
 function hideAiSpinner() {
 	const overlay = document.getElementById('ai-action-spinner-overlay');
-	if (overlay) {
-		overlay.classList.add('hidden');
-	}
+	if (overlay) overlay.classList.add('hidden');
 }
-// NEW SECTION END
 
-/**
- * Loads a specific prompt builder into the editor pane.
- * @param {string} promptId - The ID of the prompt to load.
- */
 const loadPrompt = async (promptId) => {
 	if (!modalEl) return;
 	
 	const toggleBtn = modalEl.querySelector('.js-toggle-preview-btn');
-	if (toggleBtn) {
-		toggleBtn.textContent = 'Show Preview';
-	}
+	if (toggleBtn) toggleBtn.textContent = 'Show Preview';
 	
 	const placeholder = modalEl.querySelector('.js-prompt-placeholder');
 	const customEditorPane = modalEl.querySelector('.js-custom-editor-pane');
@@ -85,10 +65,6 @@ const loadPrompt = async (promptId) => {
 		return;
 	}
 	
-	modalEl.querySelectorAll('.js-prompt-item').forEach(btn => {
-		btn.classList.toggle('btn-active', btn.dataset.promptId === promptId);
-	});
-	
 	placeholder.classList.add('hidden');
 	customEditorPane.classList.remove('hidden');
 	
@@ -98,54 +74,46 @@ const loadPrompt = async (promptId) => {
 	await editorConfig.init(customFormContainer, currentContext);
 };
 
-
-// --- AI Action Review Workflow (Moved from toolbar.js) ---
-
-function setEditorEditable(view, isEditable) {
-	view.setProps({
-		editable: () => isEditable,
-	});
-}
-
 function cleanupAiAction() {
 	if (floatingToolbar) {
 		floatingToolbar.remove();
 		floatingToolbar = null;
 	}
 	
-	if (activeEditorView) {
-		setEditorEditable(activeEditorView, true);
-		const { state, dispatch } = activeEditorView;
-		const { schema } = state;
-		const tr = state.tr.removeMark(0, state.doc.content.size, schema.marks.ai_suggestion);
-		dispatch(tr);
-		activeEditorView.focus();
+	if (activeContentWindow) {
+		activeContentWindow.postMessage({ type: 'setEditable', payload: { isEditable: true } }, window.location.origin);
+		activeContentWindow.postMessage({ type: 'cleanupAiSuggestion' }, window.location.origin);
 	}
 	
 	isAiActionActive = false;
 	originalFragment = null;
 	aiActionRange = null;
 	currentAiParams = null;
-	updateToolbarState(activeEditorView);
+	updateToolbarState(null);
 }
 
 function handleFloatyApply() {
-	if (!isAiActionActive || !activeEditorView) return;
+	if (!isAiActionActive || !activeContentWindow) return;
 	cleanupAiAction();
 }
 
 function handleFloatyDiscard() {
-	if (!isAiActionActive || !activeEditorView || !originalFragment) return;
+	if (!isAiActionActive || !activeContentWindow || !originalFragment) return;
 	
-	const { state, dispatch } = activeEditorView;
-	const tr = state.tr.replace(aiActionRange.from, aiActionRange.to, originalFragment);
-	dispatch(tr);
+	activeContentWindow.postMessage({
+		type: 'discardAiSuggestion',
+		payload: {
+			from: aiActionRange.from,
+			to: aiActionRange.to,
+			originalFragmentJson: originalFragment,
+		}
+	}, window.location.origin);
 	
 	cleanupAiAction();
 }
 
 async function handleFloatyRetry() {
-	if (!isAiActionActive || !activeEditorView || !currentAiParams) return;
+	if (!isAiActionActive || !activeContentWindow || !currentAiParams) return;
 	
 	const actionToRetry = currentAiParams.action;
 	const contextForRetry = currentAiParams.context;
@@ -156,28 +124,33 @@ async function handleFloatyRetry() {
 		floatingToolbar = null;
 	}
 	
-	const { state, dispatch } = activeEditorView;
-	let tr = state.tr.replace(aiActionRange.from, aiActionRange.to, originalFragment);
+	activeContentWindow.postMessage({
+		type: 'discardAiSuggestion',
+		payload: {
+			from: aiActionRange.from,
+			to: aiActionRange.to,
+			originalFragmentJson: originalFragment,
+		}
+	}, window.location.origin);
 	
-	const newTo = aiActionRange.from + originalFragment.size;
+	const newTo = aiActionRange.from + originalFragment.content.size;
+	activeContentWindow.postMessage({
+		type: 'setSelection',
+		payload: { from: aiActionRange.from, to: newTo }
+	}, window.location.origin);
 	
-	tr = tr.setSelection(TextSelection.create(tr.doc, aiActionRange.from, newTo));
-	dispatch(tr);
-	
-	setEditorEditable(activeEditorView, true);
+	activeContentWindow.postMessage({ type: 'setEditable', payload: { isEditable: true } }, window.location.origin);
 	
 	isAiActionActive = false;
 	originalFragment = null;
-	updateToolbarState(activeEditorView);
+	updateToolbarState(null);
 	
 	openPromptEditor(contextForRetry, actionToRetry, previousFormData);
 }
 
-function createFloatingToolbar(view, from, to, model) {
+function createFloatingToolbar(from, to, model) {
 	if (floatingToolbar) floatingToolbar.remove();
 	
-	const text = view.state.doc.textBetween(from, to, ' ');
-	const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
 	const modelName = model.split('/').pop() || model;
 	
 	const toolbarEl = document.createElement('div');
@@ -187,29 +160,14 @@ function createFloatingToolbar(view, from, to, model) {
         <button data-action="retry" title="Retry"><i class="bi bi-arrow-repeat"></i> Retry</button>
         <button data-action="discard" title="Discard"><i class="bi bi-x-lg"></i> Discard</button>
         <div class="divider-vertical"></div>
-        <span class="text-gray-400">${wordCount} Words, ${modelName}</span>
+        <span class="text-gray-400">${modelName}</span>
     `;
 	
-	const container = document.getElementById('viewport') || document.body;
-	container.appendChild(toolbarEl);
+	document.body.appendChild(toolbarEl);
 	floatingToolbar = toolbarEl;
 	
-	const toolbarWidth = toolbarEl.offsetWidth;
-	const toolbarHeight = toolbarEl.offsetHeight;
-	const containerRect = container.getBoundingClientRect();
-	const startCoords = view.coordsAtPos(from);
-	
-	let desiredLeft = startCoords.left - containerRect.left;
-	const finalLeft = Math.max(10, Math.min(desiredLeft, container.clientWidth - toolbarWidth - 10));
-	
-	let desiredTop = startCoords.top - containerRect.top - toolbarHeight - 5;
-	if (desiredTop < 10) {
-		desiredTop = startCoords.bottom - containerRect.top + 5;
-	}
-	const finalTop = Math.max(10, Math.min(desiredTop, container.clientHeight - toolbarHeight - 10));
-	
-	toolbarEl.style.left = `${finalLeft}px`;
-	toolbarEl.style.top = `${finalTop}px`;
+	toolbarEl.style.left = `40%`;
+	toolbarEl.style.top = `20%`;
 	
 	toolbarEl.addEventListener('mousedown', (e) => e.preventDefault());
 	toolbarEl.addEventListener('click', (e) => {
@@ -222,114 +180,49 @@ function createFloatingToolbar(view, from, to, model) {
 	});
 }
 
-/**
- * Initiates the AI text processing stream and handles the response.
- * @param {object} params - The parameters for the AI stream.
- * @param {object} params.prompt - The prompt object to send to the AI.
- * @param {string} params.model - The AI model to use.
- */
-// MODIFIED: Removed 'async' as this function initiates a stream but doesn't wait for it to finish.
+// MODIFIED: This function now sends a single "start" message and then subsequent "chunk" messages.
 function startAiStream(params) {
 	const { prompt, model } = params;
 	
 	isAiActionActive = true;
-	updateToolbarState(activeEditorView);
-	setEditorEditable(activeEditorView, false);
+	updateToolbarState(null);
+	activeContentWindow.postMessage({ type: 'setEditable', payload: { isEditable: false } }, window.location.origin);
 	
 	let isFirstChunk = true;
-	let currentInsertionPos = aiActionRange.from;
 	
 	const onData = (payload) => {
 		if (payload.chunk) {
-			// MODIFIED: Hide spinner on receiving the first chunk of data.
 			if (isFirstChunk) {
 				hideAiSpinner();
-			}
-			
-			const { schema } = activeEditorView.state;
-			const mark = schema.marks.ai_suggestion.create();
-			let tr = activeEditorView.state.tr;
-			
-			if (isFirstChunk) {
-				tr.replaceWith(aiActionRange.from, aiActionRange.to, []);
-				isFirstChunk = false;
-			}
-			
-			const parts = payload.chunk.split('\n');
-			parts.forEach((part, index) => {
-				if (part) {
-					const textNode = schema.text(part, [mark]);
-					tr.insert(currentInsertionPos, textNode);
-					currentInsertionPos += part.length;
-				}
-				if (index < parts.length - 1) {
-					tr.split(currentInsertionPos);
-					currentInsertionPos += 2;
-				}
-			});
-			
-			aiActionRange.to = currentInsertionPos;
-			
-			// Dispatch the transaction to update the view's state and DOM.
-			activeEditorView.dispatch(tr);
-			
-			// MODIFIED SECTION START: Replaced tr.scrollIntoView() with a more reliable DOM-based approach
-			// using requestAnimationFrame to ensure it runs after the browser has painted the DOM updates.
-			requestAnimationFrame(() => {
-				// Ensure the view hasn't been destroyed in the meantime.
-				if (!activeEditorView || activeEditorView.isDestroyed) return;
-				
-				try {
-					const { selection } = activeEditorView.state;
-					// Get the DOM node at the current cursor position.
-					const { node } = activeEditorView.domAtPos(selection.head);
-					// If it's a text node, get its parent element to scroll to.
-					const element = node.nodeType === Node.TEXT_NODE ? node.parentNode : node;
-					
-					if (element && typeof element.scrollIntoView === 'function') {
-						// Use the native browser API. 'nearest' scrolls the minimum amount required.
-						element.scrollIntoView({ block: 'nearest' });
+				// Send a dedicated "start" message with position info for the first chunk.
+				activeContentWindow.postMessage({
+					type: 'aiStreamStart',
+					payload: {
+						chunk: payload.chunk,
+						from: aiActionRange.from,
+						to: aiActionRange.to
 					}
-				} catch (e) {
-					console.error('Error scrolling editor into view:', e);
-				}
-			});
-			// MODIFIED SECTION END
+				}, window.location.origin);
+				isFirstChunk = false;
+			} else {
+				// Subsequent chunks don't need position info.
+				activeContentWindow.postMessage({
+					type: 'aiStreamChunk',
+					payload: {
+						chunk: payload.chunk
+					}
+				}, window.location.origin);
+			}
 			
 		} else if (payload.done) {
-			// MODIFIED SECTION START: Clean up empty paragraphs from the AI-generated content.
-			if (activeEditorView) {
-				const { from, to } = aiActionRange;
-				const { tr } = activeEditorView.state;
-				const deletions = [];
-				
-				// First, find all empty paragraphs within the generated range.
-				activeEditorView.state.doc.nodesBetween(from, to, (node, pos) => {
-					// Ensure we are within the action range and dealing with an empty paragraph.
-					if (pos >= from && node.type.name === 'paragraph' && node.content.size === 0) {
-						deletions.push({ from: pos, to: pos + node.nodeSize });
-					}
-				});
-				
-				// Apply deletions backwards to maintain valid positions.
-				if (deletions.length > 0) {
-					for (let i = deletions.length - 1; i >= 0; i--) {
-						tr.delete(deletions[i].from, deletions[i].to);
-					}
-					
-					// Update the end of the action range for the floating toolbar.
-					aiActionRange.to = tr.mapping.map(to);
-					activeEditorView.dispatch(tr);
-				}
-			}
-			// MODIFIED SECTION END
-			
-			createFloatingToolbar(activeEditorView, aiActionRange.from, aiActionRange.to, model);
+			activeContentWindow.postMessage({
+				type: 'aiStreamDone',
+				payload: { from: aiActionRange.from, to: aiActionRange.to }
+			}, window.location.origin);
 			
 		} else if (payload.error) {
 			console.error('AI Action Error:', payload.error);
 			window.showAlert(payload.error);
-			// MODIFIED: Hide spinner if an error occurs.
 			hideAiSpinner();
 			handleFloatyDiscard();
 		}
@@ -340,7 +233,6 @@ function startAiStream(params) {
 	} catch (error) {
 		console.error('AI Action Error:', error);
 		window.showAlert(error.message);
-		// MODIFIED: Hide spinner if an error occurs during stream initiation.
 		hideAiSpinner();
 		handleFloatyDiscard();
 	}
@@ -380,6 +272,7 @@ async function populateModelDropdown(initialState = null) {
 	}
 }
 
+// MODIFIED: This function now communicates with the iframe to get selection info before starting the AI stream.
 async function handleModalApply() {
 	if (!modalEl || isAiActionActive) return;
 	
@@ -401,111 +294,55 @@ async function handleModalApply() {
 	
 	modalEl.close();
 	
-	activeEditorView = currentContext.activeEditorView;
-	if (!activeEditorView) {
+	activeContentWindow = currentContext.activeEditorView;
+	if (!activeContentWindow) {
 		window.showAlert('No active editor to apply changes to.');
 		return;
 	}
 	
 	const formDataObj = extractor(form);
 	
-	// Save the current prompt settings for next time.
 	const novelId = document.body.dataset.novelId;
 	if (novelId) {
-		const settingsToSave = {
-			model: model,
-			instructions: formDataObj.instructions,
-			selectedCodexIds: formDataObj.selectedCodexIds,
-		};
-		// Fire-and-forget save operation.
-		window.api.updatePromptSettings({
-			novelId: novelId,
-			promptType: action,
-			settings: settingsToSave
-		}).catch(err => console.error('Failed to save prompt settings:', err));
+		const settingsToSave = { model, ...formDataObj };
+		window.api.updatePromptSettings({ novelId, promptType: action, settings: settingsToSave })
+			.catch(err => console.error('Failed to save prompt settings:', err));
 	}
 	
-	const { state, dispatch } = activeEditorView;
-	let tr = state.tr;
-	let fromPos = state.selection.from;
-	let toPos = state.selection.to;
-	
-	if (action === 'translate') {
-		const { schema } = state;
-		const blockNumber = currentContext.translationInfo.blockNumber;
-		
-		// 1. Find the start and end positions of the target translation block.
-		let noteNodeCount = 0;
-		let blockStartPos = -1;
-		let blockEndPos = state.doc.content.size;
-		let blockFound = false;
-		
-		state.doc.forEach((node, pos) => {
-			if (node.type.name === 'note') {
-				noteNodeCount++;
-				if (noteNodeCount === blockNumber) {
-					// The content for this block starts right after this note marker.
-					blockStartPos = pos + node.nodeSize;
-					blockFound = true;
-				} else if (blockFound) {
-					// This is the note for the *next* block, so it marks the end of our block.
-					blockEndPos = pos;
-					blockFound = false; // Stop searching, we have our end position.
-				}
+	// Use a Promise to wait for the iframe to respond with its selection information.
+	const getSelectionFromIframe = () => new Promise((resolve) => {
+		const listener = (event) => {
+			if (event.source === activeContentWindow && event.data.type === 'selectionResponse') {
+				window.removeEventListener('message', listener);
+				resolve(event.data.payload);
 			}
-		});
+		};
+		window.addEventListener('message', listener);
 		
-		if (blockStartPos === -1) {
-			window.showAlert(`Could not find target translation block #${blockNumber}.`, 'Translation Error');
-			return;
+		// Ask the iframe to prepare for the action.
+		if (action === 'translate') {
+			activeContentWindow.postMessage({
+				type: 'prepareForTranslate',
+				payload: { blockNumber: currentContext.translationInfo.blockNumber }
+			}, window.location.origin);
+		} else { // 'rephrase'
+			activeContentWindow.postMessage({ type: 'prepareForRephrase' }, window.location.origin);
 		}
-		
-		// 2. Find the last node in the block to insert after.
-		const before = state.doc.childBefore(blockEndPos);
-		let lastNodeInBlock = null;
-		let lastNodePosInBlock = -1;
-		if (before.node && before.offset >= blockStartPos) {
-			lastNodeInBlock = before.node;
-			lastNodePosInBlock = before.offset;
-		}
-		
-		// 3. Determine insertion position.
-		let insertPos;
-		if (lastNodeInBlock) {
-			// There's content in the block, so insert after the last node.
-			insertPos = lastNodePosInBlock + lastNodeInBlock.nodeSize;
-		} else {
-			// The block is empty, so insert at its beginning.
-			insertPos = blockStartPos;
-		}
-		
-		// 4. Always insert a new, empty paragraph for the translation.
-		tr.insert(insertPos, schema.nodes.paragraph.create());
-		
-		// 5. Set the cursor position inside this new paragraph, ready for streaming.
-		fromPos = toPos = insertPos + 1;
-		tr.setSelection(TextSelection.create(tr.doc, fromPos, toPos));
-	} else { // For 'rephrase' and other actions
-		if (state.selection.empty) {
-			window.showAlert('Please select text to apply this action.', 'Action Required');
-			return;
-		}
+	});
+	
+	const selectionInfo = await getSelectionFromIframe();
+	
+	if (!selectionInfo) {
+		window.showAlert('Could not get selection from the editor. For rephrasing, please select some text.');
+		return;
 	}
 	
-	// Apply any transactions (like moving the cursor or inserting a paragraph).
-	if (tr.docChanged || tr.selectionSet) {
-		dispatch(tr);
-	}
+	// Store the selection range and original content provided by the iframe.
+	aiActionRange = { from: selectionInfo.from, to: selectionInfo.to };
+	originalFragment = selectionInfo.originalFragmentJson;
 	
-	// Get the final state *after* any changes to get the correct positions.
-	const finalState = activeEditorView.state;
-	fromPos = finalState.selection.from;
-	toPos = finalState.selection.to;
-	
-	originalFragment = finalState.doc.slice(fromPos, toPos);
-	aiActionRange = { from: fromPos, to: toPos };
-	
-	const text = action === 'translate' ? currentContext.selectedText : finalState.doc.textBetween(aiActionRange.from, aiActionRange.to, ' ');
+	// For 'translate', the selected text comes from the source panel. For 'rephrase', it comes from the iframe.
+	const text = action === 'translate' ? currentContext.selectedText : selectionInfo.selectedText;
 	
 	const wordCount = text ? text.trim().split(/\s+/).filter(Boolean).length : 0;
 	const promptContext = { ...currentContext, selectedText: text, wordCount };
@@ -513,9 +350,7 @@ async function handleModalApply() {
 	
 	currentAiParams = { prompt, model, action, context: currentContext, formData: formDataObj };
 	
-	// MODIFIED: Show spinner before starting the stream request.
 	showAiSpinner();
-	// MODIFIED: Removed 'await' as startAiStream is not an async-blocking function.
 	startAiStream({ prompt: currentAiParams.prompt, model: currentAiParams.model });
 }
 
@@ -545,6 +380,14 @@ export function setupPromptEditor() {
 			toggleBtn.textContent = isHidden ? 'Show Preview' : 'Hide Preview';
 		});
 	}
+	
+	window.addEventListener('message', (event) => {
+		if (event.data.type === 'aiStreamFinished') {
+			const { from, to } = event.data.payload;
+			aiActionRange.to = to;
+			createFloatingToolbar(from, to, currentAiParams.model);
+		}
+	});
 }
 
 /**

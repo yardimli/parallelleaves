@@ -1,13 +1,6 @@
-import { setupTopToolbar } from './toolbar.js';
+import { setupTopToolbar, setActiveContentWindow, updateToolbarState } from './toolbar.js';
 import { setupPromptEditor } from '../prompt-editor.js';
-import { EditorState, Plugin } from 'prosemirror-state';
-import { EditorView } from 'prosemirror-view';
-import { DOMParser, DOMSerializer } from 'prosemirror-model';
-import { history, undo, redo } from 'prosemirror-history';
-import { keymap } from 'prosemirror-keymap';
-import { baseKeymap } from 'prosemirror-commands';
-import { schema, NoteNodeView, getActiveEditor, setActiveEditor } from './content-editor.js';
-import { updateToolbarState } from './toolbar.js';
+import { getActiveEditor, setActiveEditor } from './content-editor.js';
 
 // NEW: Debouncing utility to delay function execution until after a pause.
 const debounce = (func, delay) => {
@@ -21,177 +14,35 @@ const debounce = (func, delay) => {
 
 let activeChapterId = null;
 let isScrollingProgrammatically = false;
+// MODIFIED: This map now stores iframe information instead of direct EditorView instances.
 const chapterEditorViews = new Map();
 
-
-/**
- * Creates a ProseMirror editor view instance.
- * @param {HTMLElement} mount - The element to mount the editor in.
- * @param {string} initialHtml - The initial HTML content.
- * @param {boolean} isEditable - Whether the editor should be editable.
- * @param {string} chapterId - The chapter ID for saving.
- * @param {string} saveField - The database field to save to.
- * @returns {EditorView}
- */
-function createEditorView(mount, initialHtml, isEditable, chapterId, saveField) {
-	console.log(`[createEditorView] Initializing for chapter ${chapterId}, field: ${saveField}`);
-	const debouncedContentSave = debounce(async (view) => {
-		console.log(`[SAVE] Debounced save triggered for ${saveField}, chapter ${chapterId}...`);
-		if (saveField === 'target_content') {
-			const wordCount = view.state.doc.textContent.trim().split(/\s+/).filter(Boolean).length;
-			const wordCountEl = mount.closest('.manuscript-chapter-item').querySelector('.js-target-word-count');
+// NEW: Debounced save function for content changes received from iframes.
+const debouncedContentSave = debounce(async ({ chapterId, field, value }) => {
+	console.log(`[SAVE] Debounced save triggered for ${field}, chapter ${chapterId}...`);
+	
+	// Update word count in the parent window UI
+	if (field === 'target_content') {
+		const tempDiv = document.createElement('div');
+		tempDiv.innerHTML = value;
+		const wordCount = tempDiv.textContent.trim().split(/\s+/).filter(Boolean).length;
+		const chapterItem = document.getElementById(`chapter-scroll-target-${chapterId}`);
+		if (chapterItem) {
+			const wordCountEl = chapterItem.querySelector('.js-target-word-count');
 			if (wordCountEl) {
 				wordCountEl.textContent = `${wordCount.toLocaleString()} words`;
 			}
 		}
-		
-		const serializer = DOMSerializer.fromSchema(view.state.schema);
-		const fragmentContent = serializer.serializeFragment(view.state.doc.content);
-		const tempDiv = document.createElement('div');
-		tempDiv.appendChild(fragmentContent);
-		const value = tempDiv.innerHTML;
-		try {
-			await window.api.updateChapterField({ chapterId, field: saveField, value });
-			console.log(`[SAVE] Successfully saved ${saveField} for chapter ${chapterId}.`);
-		} catch (error) {
-			console.error(`[SAVE] Error saving ${saveField} for chapter ${chapterId}:`, error);
-			window.showAlert(`Could not save ${saveField} changes.`);
-		}
-	}, 2000); // 2 second delay
+	}
 	
-	const noteProtectionPlugin = new Plugin({
-		// This part improves the user experience for single key presses (Backspace/Delete).
-		props: {
-			handleKeyDown(view, event) {
-				if (event.key !== 'Backspace' && event.key !== 'Delete') {
-					return false;
-				}
-				console.log(`[noteProtectionPlugin] Keydown detected: ${event.key}`);
-				
-				const { $from, empty } = view.state.selection;
-				if (!empty) {
-					return false;
-				}
-				
-				let adjacentNode;
-				if (event.key === 'Backspace') {
-					if ($from.parentOffset === 0) {
-						const nodeBefore = view.state.doc.resolve($from.pos - 1).nodeBefore;
-						if (nodeBefore && nodeBefore.type.name === 'note') {
-							adjacentNode = nodeBefore;
-						}
-					}
-				} else { // 'Delete'
-					if ($from.parentOffset === $from.parent.content.size) {
-						const nodeAfter = view.state.doc.nodeAt($from.pos);
-						if (nodeAfter && nodeAfter.type.name === 'note') {
-							adjacentNode = nodeAfter;
-						}
-					}
-				}
-				
-				if (adjacentNode) {
-					console.log('[noteProtectionPlugin] Preventing deletion of adjacent note node via keydown.');
-					return true;
-				}
-				
-				return false;
-			},
-		},
-		// This part provides a rock-solid guarantee that no transaction can delete a note.
-		filterTransaction(tr, state) {
-			if (!tr.docChanged) {
-				return true;
-			}
-			
-			let noteDeleted = false;
-			state.doc.descendants((node, pos) => {
-				if (node.type.name === 'note') {
-					if (tr.mapping.mapResult(pos).deleted) {
-						noteDeleted = true;
-					}
-				}
-			});
-			
-			if (noteDeleted) {
-				console.warn('[noteProtectionPlugin] Blocking transaction that would delete a note node.');
-			}
-			return !noteDeleted;
-		},
-	});
-	
-	const editorPlugin = new Plugin({
-		props: {
-			editable: () => isEditable,
-			handleDOMEvents: {
-				focus(view) {
-					console.log(`[EditorEvent] Focus on chapter ${chapterId}, field: ${saveField}`);
-					setActiveEditor(view);
-					updateToolbarState(view);
-					const chapterItem = view.dom.closest('.manuscript-chapter-item');
-					if (chapterItem) {
-						const currentChapterId = chapterItem.dataset.chapterId;
-						if (currentChapterId && currentChapterId !== activeChapterId) {
-							console.log(`[EditorEvent] Active chapter changed to ${currentChapterId} via focus.`);
-							activeChapterId = currentChapterId;
-							document.getElementById('js-chapter-nav-dropdown').value = currentChapterId;
-						}
-					}
-				},
-				blur(view, event) {
-					const relatedTarget = event.relatedTarget;
-					console.log(`[EditorEvent] Blur on chapter ${chapterId}. Related target:`, relatedTarget);
-					if (!relatedTarget || (!relatedTarget.closest('#top-toolbar') && !relatedTarget.closest('#note-editor-modal'))) {
-						setActiveEditor(null);
-						updateToolbarState(null);
-					}
-				},
-			},
-		},
-	});
-	
-	const doc = DOMParser.fromSchema(schema).parse(document.createRange().createContextualFragment(initialHtml || ''));
-	
-	const debouncedToolbarUpdate = debounce((view) => {
-		console.log(`[dispatchTransaction] Debounced: Updating toolbar state for chapter ${chapterId}`);
-		updateToolbarState(view);
-	}, 200); // 200ms delay
-	
-	return new EditorView(mount, {
-		state: EditorState.create({
-			attributes: {
-				spellcheck: 'false',
-			},
-			doc: doc,
-			plugins: [
-				history(),
-				keymap({ 'Mod-z': undo, 'Mod-y': redo }),
-				keymap(baseKeymap),
-				editorPlugin,
-				noteProtectionPlugin,
-			],
-		}),
-		nodeViews: {
-			note(node, view, getPos) { return new NoteNodeView(node, view, getPos); }
-		},
-		dispatchTransaction(transaction) {
-			console.log(`[dispatchTransaction] Chapter ${chapterId}, DocChanged: ${transaction.docChanged}, SelectionSet: ${transaction.selectionSet}`);
-
-			const newState = this.state.apply(transaction);
-			this.updateState(newState);
-			
-			if (isEditable && transaction.docChanged) {
-				debouncedContentSave(this);
-			}
-			
-			if (transaction.selectionSet || transaction.docChanged) {
-				if (this.hasFocus()) {
-					debouncedToolbarUpdate(this);
-				}
-			}
-		},
-	});
-}
+	try {
+		await window.api.updateChapterField({ chapterId, field, value });
+		console.log(`[SAVE] Successfully saved ${field} for chapter ${chapterId}.`);
+	} catch (error) {
+		console.error(`[SAVE] Error saving ${field} for chapter ${chapterId}:`, error);
+		window.showAlert(`Could not save ${field} changes.`);
+	}
+}, 2000); // 2 second delay
 
 /**
  * Replaces {{TranslationBlock-X}} placeholders with styled HTML divs for display.
@@ -276,12 +127,17 @@ async function renderManuscript(container, novelData) {
 			sourceContentContainer.innerHTML = processedSourceHtml;
 			sourceCol.appendChild(sourceContentContainer);
 			
+			// MODIFIED SECTION START: The target editor is now an iframe.
 			const targetCol = document.createElement('div');
-			targetCol.className = 'col-span-1 prose prose-sm dark:prose-invert max-w-none p-4';
-			targetCol.innerHTML = `<h3 class="!mt-0 text-sm font-semibold uppercase tracking-wider text-base-content/70 border-b pb-1 mb-2">Target (<span class="js-target-word-count">${chapter.target_word_count.toLocaleString()} words</span>)</h3>`;
-			const targetContentMount = document.createElement('div');
-			targetContentMount.className = 'js-target-content-editable';
-			targetCol.appendChild(targetContentMount);
+			targetCol.className = 'col-span-1'; // Removed prose styles from the container
+			targetCol.innerHTML = `<h3 class="!mt-0 text-sm font-semibold uppercase tracking-wider text-base-content/70 border-b pb-1 mb-2 p-4">Target (<span class="js-target-word-count">${chapter.target_word_count.toLocaleString()} words</span>)</h3>`;
+			
+			const iframe = document.createElement('iframe');
+			iframe.className = 'js-target-content-editable w-full border-0 min-h-[800px]';
+			iframe.src = 'editor-iframe.html';
+			iframe.dataset.chapterId = chapter.id;
+			targetCol.appendChild(iframe);
+			// MODIFIED SECTION END
 			
 			const codexTagsHtml = chapter.linked_codex.map(entry =>
 				chapterCodexTagTemplate
@@ -322,11 +178,32 @@ async function renderManuscript(container, novelData) {
 				initialTargetContent = skeletonHtml;
 			}
 			
-			const targetContentView = createEditorView(targetContentMount, initialTargetContent, true, chapter.id, 'target_content');
+			// MODIFIED SECTION START: Store iframe info and initialize it on load.
+			const viewInfo = {
+				iframe: iframe,
+				contentWindow: iframe.contentWindow,
+				isReady: false,
+				initialContent: initialTargetContent,
+			};
+			chapterEditorViews.set(chapter.id.toString(), viewInfo);
 			
-			chapterEditorViews.set(chapter.id.toString(), {
-				targetContentView
+			iframe.addEventListener('load', () => {
+				viewInfo.isReady = true;
+				const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+				
+				// Send initialization data to the iframe
+				iframe.contentWindow.postMessage({
+					type: 'init',
+					payload: {
+						initialHtml: viewInfo.initialContent,
+						isEditable: true,
+						chapterId: chapter.id,
+						saveField: 'target_content',
+						theme: currentTheme,
+					}
+				}, window.location.origin);
 			});
+			// MODIFIED SECTION END
 		}
 	}
 	
@@ -489,9 +366,10 @@ function setupNoteEditorModal() {
 		event.preventDefault();
 		console.log('[NoteEditor] Form submitted.');
 		
-		const view = getActiveEditor();
-		if (!view) {
-			console.error('[NoteEditor] No active editor view to save note to.');
+		// MODIFIED: Get the active iframe's contentWindow instead of a direct view.
+		const activeContentWindow = getActiveEditor();
+		if (!activeContentWindow) {
+			console.error('[NoteEditor] No active editor iframe to save note to.');
 			window.showAlert('Could not find an active editor to save the note. Please click inside an editor first.', 'Save Error');
 			return;
 		}
@@ -506,20 +384,13 @@ function setupNoteEditorModal() {
 		}
 		
 		const pos = posInput.value ? parseInt(posInput.value, 10) : null;
-		let tr;
 		
-		if (pos !== null && !isNaN(pos)) {
-			console.log(`[NoteEditor] Updating existing note at position ${pos}.`);
-			tr = view.state.tr.setNodeMarkup(pos, null, { text: noteText });
-		} else {
-			console.log('[NoteEditor] Creating new note.');
-			const { $from } = view.state.selection;
-			const noteNode = schema.nodes.note.create({ text: noteText });
-			tr = view.state.tr.replaceRangeWith($from.start(), $from.end(), noteNode);
-		}
+		// MODIFIED: Send a message to the iframe to handle the save.
+		activeContentWindow.postMessage({
+			type: 'saveNote',
+			payload: { pos, noteText }
+		}, window.location.origin);
 		
-		view.dispatch(tr);
-		view.focus();
 		modal.close();
 		form.reset();
 	});
@@ -656,12 +527,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 		setupIntersectionObserver();
 		setupCodexUnlinking();
 		setupNoteEditorModal();
-		setupTranslateBlockAction(); // MODIFIED: Added call to setup the new feature.
+		setupTranslateBlockAction();
 		console.log('[Init] UI components setup complete.');
 		
-		const throttledUpdateToolbar = debounce(async (view) => {
-			console.log('[SelectionChange] Debounced event fired. Updating toolbar state.');
-			updateToolbarState(getActiveEditor());
+		// MODIFIED: This listener is now for browser selection (source panel).
+		// Editor selection is handled via postMessage.
+		const throttledUpdateToolbar = debounce(() => {
+			console.log('[SelectionChange] Debounced event fired. Updating toolbar state for browser selection.');
+			updateToolbarState(null); // Pass null to indicate it's not a PM editor state
 		}, 500);
 		
 		document.addEventListener('selectionchange', throttledUpdateToolbar);
@@ -697,6 +570,61 @@ document.addEventListener('DOMContentLoaded', async () => {
 			});
 			console.log('[Init] IPC listener for scrolling is ready.');
 		}
+		
+		// NEW: Global message listener for iframes
+		window.addEventListener('message', (event) => {
+			const isFromKnownIframe = Array.from(chapterEditorViews.values()).some(view => view.iframe.contentWindow === event.source);
+			if (!isFromKnownIframe) return;
+			
+			const { type, payload } = event.data;
+			const sourceWindow = event.source;
+			
+			switch (type) {
+				case 'editorFocused':
+					setActiveEditor(sourceWindow);
+					setActiveContentWindow(sourceWindow);
+					updateToolbarState(payload.state);
+					activeChapterId = payload.chapterId;
+					document.getElementById('js-chapter-nav-dropdown').value = payload.chapterId;
+					break;
+				case 'editorBlurred':
+					setTimeout(() => {
+						if (document.activeElement.closest('#top-toolbar') || document.activeElement.closest('.modal')) return;
+						setActiveEditor(null);
+						setActiveContentWindow(null);
+						updateToolbarState(null);
+					}, 100);
+					break;
+				case 'stateUpdate':
+					if (getActiveEditor() === sourceWindow) {
+						updateToolbarState(payload.state);
+					}
+					break;
+				case 'contentChanged':
+					debouncedContentSave(payload);
+					break;
+				case 'resize':
+					const viewInfo = Array.from(chapterEditorViews.values()).find(v => v.contentWindow === sourceWindow);
+					if (viewInfo) {
+						viewInfo.iframe.style.height = `${payload.height}px`;
+					}
+					break;
+				case 'openNoteModal': {
+					const noteModal = document.getElementById('note-editor-modal');
+					const form = document.getElementById('note-editor-form');
+					const title = noteModal.querySelector('.js-note-modal-title');
+					const contentInput = document.getElementById('note-content-input');
+					const posInput = document.getElementById('note-pos');
+					
+					title.textContent = payload.title;
+					contentInput.value = payload.content;
+					posInput.value = payload.pos;
+					noteModal.showModal();
+					break;
+				}
+			}
+		});
+		
 		console.log('[Init] All initialization tasks are complete.');
 		
 	} catch (error) {

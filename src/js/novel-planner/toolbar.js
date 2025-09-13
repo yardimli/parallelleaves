@@ -1,31 +1,23 @@
-import {toggleMark, setBlockType, wrapIn, lift} from 'prosemirror-commands';
-import {history, undo, redo} from 'prosemirror-history';
-import {wrapInList, liftListItem} from 'prosemirror-schema-list';
-import {openPromptEditor} from '../prompt-editor.js';
-import {getActiveEditor} from './content-editor.js';
+import { openPromptEditor } from '../prompt-editor.js';
+import { getActiveEditor } from './content-editor.js';
 
-
-let activeEditorView = null;
+// MODIFIED: These variables now manage communication with iframes.
+let activeContentWindow = null;
+let currentToolbarState = {};
 const toolbar = document.getElementById('top-toolbar');
 const wordCountEl = document.getElementById('js-word-count');
 let toolbarConfig = {};
 
-
-function isNodeActive(state, type) {
-	const {$from} = state.selection;
-	for (let i = $from.depth; i > 0; i--) {
-		if ($from.node(i).type === type) {
-			return true;
-		}
-	}
-	return false;
+// NEW: Function to set the active iframe's content window.
+export function setActiveContentWindow(contentWindow) {
+	activeContentWindow = contentWindow;
 }
 
-export function updateToolbarState(view) {
-	activeEditorView = view;
+// MODIFIED: This function now receives a plain state object from an iframe.
+export function updateToolbarState(newState) {
+	currentToolbarState = newState || {};
 	const allBtns = toolbar.querySelectorAll('.js-toolbar-btn, .js-ai-action-btn');
 	
-	// Default state: disable everything and remove active states
 	allBtns.forEach(btn => {
 		btn.disabled = true;
 		btn.classList.remove('active');
@@ -34,23 +26,14 @@ export function updateToolbarState(view) {
 	if (headingBtn) headingBtn.textContent = 'Paragraph';
 	wordCountEl.textContent = 'No text selected';
 	
-	// Check for browser selection (e.g., in the source panel)
 	const translateBtn = toolbar.querySelector('.js-ai-action-btn[data-action="translate"]');
 	if (translateBtn) {
 		const selection = window.getSelection();
 		if (selection && !selection.isCollapsed && selection.rangeCount > 0) {
 			const range = selection.getRangeAt(0);
-			
-			// MODIFIED SECTION START: Robustly find the container, handling text nodes.
-			let checkNode = range.startContainer;
-			if (checkNode.nodeType === Node.TEXT_NODE) {
-				checkNode = checkNode.parentElement;
-			}
+			let checkNode = range.startContainer.nodeType === Node.TEXT_NODE ? range.startContainer.parentElement : range.startContainer;
 			const sourceContainer = checkNode.closest('.source-content-readonly');
-			// MODIFIED SECTION END
-			
 			if (sourceContainer) {
-				// MODIFIED: Enable button only if there's actual text content selected.
 				const text = selection.toString().trim();
 				if (text.length > 0) {
 					translateBtn.disabled = false;
@@ -61,187 +44,90 @@ export function updateToolbarState(view) {
 		}
 	}
 	
-	const isMarkActive = (state, type) => {
-		if (!type) return false;
-		const {from, $from, to, empty} = state.selection;
-		if (empty) {
-			return !!(state.storedMarks || $from.marks()).some(mark => mark.type === type);
-		}
-		return state.doc.rangeHasMark(from, to, type);
-	};
-	
-	if (view && view.state) {
-		const {state} = view;
-		const {schema} = state;
-		const {from, to, empty, $from} = state.selection;
-		
-		const isTextSelected = !empty;
-		
+	if (newState) {
 		allBtns.forEach(btn => {
+			const cmd = btn.dataset.command;
 			if (btn.classList.contains('js-ai-action-btn')) {
-				// Only re-enable rephrase if there's a selection in a PM editor
-				if (btn.dataset.action === 'rephrase') {
-					btn.disabled = !isTextSelected;
-				}
+				if (btn.dataset.action === 'rephrase') btn.disabled = !newState.isTextSelected;
 				return;
 			}
 			
-			const cmd = btn.dataset.command;
-			let commandFn, markType;
+			btn.disabled = false;
 			
 			switch (cmd) {
 				case 'undo':
-					btn.disabled = !undo(state);
-					return;
+					btn.disabled = !newState.canUndo;
+					break;
 				case 'redo':
-					btn.disabled = !redo(state);
-					return;
+					btn.disabled = !newState.canRedo;
+					break;
 				case 'create_codex':
-					btn.disabled = empty;
-					return;
-				case 'add_note': {
-					const {$from} = state.selection;
-					const isAtEmptyPara = empty && $from.parent.type.name === 'paragraph' && $from.parent.content.size === 0;
-					btn.disabled = !isAtEmptyPara;
-					return;
-				}
+					btn.disabled = !newState.isTextSelected;
+					break;
+				case 'add_note':
+					btn.disabled = !newState.canAddNote;
+					break;
 				case 'bold':
-					markType = schema.marks.strong;
-					commandFn = toggleMark(markType);
+					btn.classList.toggle('active', newState.activeMarks.includes('strong'));
 					break;
 				case 'italic':
-					markType = schema.marks.em;
-					commandFn = toggleMark(markType);
+					btn.classList.toggle('active', newState.activeMarks.includes('em'));
 					break;
 				case 'underline':
-					markType = schema.marks.underline;
-					commandFn = toggleMark(markType);
+					btn.classList.toggle('active', newState.activeMarks.includes('underline'));
 					break;
 				case 'strike':
-					markType = schema.marks.strike;
-					commandFn = toggleMark(markType);
+					btn.classList.toggle('active', newState.activeMarks.includes('strike'));
 					break;
 				case 'blockquote':
-					commandFn = isNodeActive(state, schema.nodes.blockquote) ? lift : wrapIn(schema.nodes.blockquote);
-					btn.classList.toggle('active', isNodeActive(state, schema.nodes.blockquote));
+					btn.classList.toggle('active', newState.activeNodes.includes('blockquote'));
 					break;
 				case 'bullet_list':
-					commandFn = isNodeActive(state, schema.nodes.bullet_list) ? liftListItem(schema.nodes.list_item) : wrapInList(schema.nodes.bullet_list);
-					btn.classList.toggle('active', isNodeActive(state, schema.nodes.bullet_list));
+					btn.classList.toggle('active', newState.activeNodes.includes('bullet_list'));
 					break;
 				case 'ordered_list':
-					commandFn = isNodeActive(state, schema.nodes.ordered_list) ? liftListItem(schema.nodes.list_item) : wrapInList(schema.nodes.ordered_list);
-					btn.classList.toggle('active', isNodeActive(state, schema.nodes.ordered_list));
+					btn.classList.toggle('active', newState.activeNodes.includes('ordered_list'));
 					break;
-				case 'horizontal_rule':
-					btn.disabled = !((state, dispatch) => {
-						if (dispatch) dispatch(state.tr.replaceSelectionWith(schema.nodes.horizontal_rule.create()));
-						return true;
-					})(state);
-					return;
 			}
-			
 			if (btn.closest('.js-dropdown-container')) {
-				btn.disabled = !isTextSelected;
-			}
-			
-			if (commandFn) {
-				btn.disabled = !commandFn(state);
-			}
-			
-			if (markType) {
-				btn.classList.toggle('active', isMarkActive(state, markType));
+				btn.disabled = !newState.isTextSelected;
 			}
 		});
 		
 		if (headingBtn) {
-			const parent = $from.parent;
-			if (parent.type.name === 'heading') {
-				headingBtn.textContent = `Heading ${parent.attrs.level}`;
+			if (newState.headingLevel > 0) {
+				headingBtn.textContent = `Heading ${newState.headingLevel}`;
 			} else {
 				headingBtn.textContent = 'Paragraph';
 			}
-			headingBtn.disabled = !setBlockType(schema.nodes.paragraph)(state) && !setBlockType(schema.nodes.heading, {level: 1})(state);
+			headingBtn.disabled = false;
 		}
 		
-		if (isTextSelected) {
-			const text = state.doc.textBetween(from, to, ' ');
-			const words = text.trim().split(/\s+/).filter(Boolean);
+		if (newState.isTextSelected) {
+			const words = newState.selectionText.trim().split(/\s+/).filter(Boolean);
 			wordCountEl.textContent = `${words.length} word${words.length !== 1 ? 's' : ''} selected`;
-		} else if (!translateBtn || translateBtn.disabled) { // Don't overwrite if translate is active
+		} else if (!translateBtn || translateBtn.disabled) {
 			wordCountEl.textContent = 'No text selected';
 		}
-		
 	}
 }
 
+// MODIFIED: Sends a command to the active iframe via postMessage.
 function applyCommand(command, attrs = {}) {
-	if (!activeEditorView) return;
-	
-	const {state, dispatch} = activeEditorView;
-	const {schema} = state;
-	let cmd;
-	
-	switch (command) {
-		case 'bold':
-			cmd = toggleMark(schema.marks.strong);
-			break;
-		case 'italic':
-			cmd = toggleMark(schema.marks.em);
-			break;
-		case 'underline':
-			cmd = toggleMark(schema.marks.underline);
-			break;
-		case 'strike':
-			cmd = toggleMark(schema.marks.strike);
-			break;
-		case 'blockquote':
-			cmd = isNodeActive(state, schema.nodes.blockquote) ? lift : wrapIn(schema.nodes.blockquote);
-			break;
-		case 'bullet_list':
-			cmd = isNodeActive(state, schema.nodes.bullet_list) ? liftListItem(schema.nodes.list_item) : wrapInList(schema.nodes.bullet_list);
-			break;
-		case 'ordered_list':
-			cmd = isNodeActive(state, schema.nodes.ordered_list) ? liftListItem(schema.nodes.list_item) : wrapInList(schema.nodes.ordered_list);
-			break;
-		case 'horizontal_rule':
-			dispatch(state.tr.replaceSelectionWith(schema.nodes.horizontal_rule.create()));
-			break;
-		case 'heading':
-			const {level} = attrs;
-			cmd = (level === 0)
-				? setBlockType(schema.nodes.paragraph)
-				: setBlockType(schema.nodes.heading, {level});
-			break;
-	}
-	
-	if (cmd) {
-		cmd(state, dispatch);
-	}
+	if (!activeContentWindow) return;
+	activeContentWindow.postMessage({
+		type: 'command',
+		payload: { command, attrs }
+	}, window.location.origin);
 }
 
+// MODIFIED: Sends a highlight command to the active iframe.
 function applyHighlight(color) {
-	if (!activeEditorView) return;
-	
-	const {state} = activeEditorView;
-	const {schema} = state;
-	const {from, to} = state.selection;
-	let tr = state.tr;
-	
-	Object.keys(schema.marks).forEach(markName => {
-		if (markName.startsWith('highlight_')) {
-			tr = tr.removeMark(from, to, schema.marks[markName]);
-		}
-	});
-	
-	if (color !== 'transparent') {
-		const markType = schema.marks[`highlight_${color}`];
-		if (markType) {
-			tr = tr.addMark(from, to, markType.create());
-		}
-	}
-	
-	activeEditorView.dispatch(tr);
+	if (!activeContentWindow) return;
+	activeContentWindow.postMessage({
+		type: 'command',
+		payload: { command: 'highlight', attrs: { color } }
+	}, window.location.origin);
 }
 
 async function handleToolbarAction(button) {
@@ -284,187 +170,102 @@ async function handleToolbarAction(button) {
 			
 			if (!sourceContainer) return;
 			
-			// MODIFIED SECTION START: New helper function to robustly find the correct block marker.
-			/**
-			 * Finds the block marker preceding a given node within the source container.
-			 * @param {Node} node - The starting node for the search (e.g., range.startContainer).
-			 * @param {HTMLElement} container - The parent source container.
-			 * @param {number} offset - The offset within the node (e.g., range.startOffset).
-			 * @returns {HTMLElement|null} The marker element or null if not found.
-			 */
 			const findBlockMarkerForNode = (node, container, offset) => {
-				let el;
-				// If the start/end of the range is the container itself, it means the range was
-				// set programmatically (e.g., by clicking the 'Translate Block' button).
-				// We use the offset to find the correct starting node for our search.
-				if (node === container) {
-					// The offset is the index of the child *after* which the range starts.
-					// So, the node we are interested in is the one at `offset - 1`.
-					el = container.childNodes[offset - 1];
-				} else {
-					// For manual selections, the node is usually a text node, so we get its parent.
-					el = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
-				}
-				
-				// Traverse up the DOM tree until we find a direct child of the container.
-				while (el && el.parentElement !== container) {
-					el = el.parentElement;
-				}
+				let el = node === container ? container.childNodes[offset - 1] : (node.nodeType === Node.TEXT_NODE ? node.parentElement : node);
+				while (el && el.parentElement !== container) el = el.parentElement;
 				if (!el) return null;
-				
-				// Now, from this direct child, we search backwards for the nearest preceding marker.
-				// If 'el' is the marker itself, this loop will find it on the first iteration.
 				let current = el;
 				while (current) {
-					if (current.nodeType === Node.ELEMENT_NODE && current.hasAttribute('data-block-number')) {
-						return current;
-					}
+					if (current.nodeType === Node.ELEMENT_NODE && current.hasAttribute('data-block-number')) return current;
 					current = current.previousElementSibling;
 				}
-				
-				return null; // This means the selection is in the very first block (before any markers).
+				return null;
 			};
 			
 			const startMarker = findBlockMarkerForNode(range.startContainer, sourceContainer, range.startOffset);
 			const endMarker = findBlockMarkerForNode(range.endContainer, sourceContainer, range.endOffset);
-			// MODIFIED SECTION END
 			
-			// Check if the selection crosses a block boundary.
 			if (startMarker !== endMarker) {
 				window.showAlert('Selection cannot span across multiple translation blocks. Please select text within a single block.', 'Selection Error');
 				return;
 			}
 			
-			const selectedText = selection.toString(); // Get raw text, preserving line breaks
-			
+			const selectedText = selection.toString();
 			const chapterItem = sourceContainer.closest('.manuscript-chapter-item');
 			const chapterId = chapterItem.dataset.chapterId;
-			
-			// MODIFIED: Use the data-attribute from the marker directly. It's more robust than parsing text.
 			const blockNumber = startMarker ? parseInt(startMarker.dataset.blockNumber, 10) : 1;
 			
-			const targetEditorView = toolbarConfig.getChapterViews(chapterId).targetContentView;
+			// MODIFIED: Find the correct iframe contentWindow for the target editor.
+			const targetContentWindow = toolbarConfig.getChapterViews(chapterId)?.iframe.contentWindow;
+			if (!targetContentWindow) {
+				window.showAlert('Could not find the target editor for this chapter.');
+				return;
+			}
 			
 			const allCodexEntries = await window.api.getAllCodexEntriesForNovel(novelId);
 			const linkedCodexEntryIds = await window.api.getLinkedCodexIdsForChapter(chapterId);
 			
 			const context = {
-				selectedText, // The user's actual selection with line breaks
+				selectedText,
 				allCodexEntries,
 				linkedCodexEntryIds,
 				languageForPrompt: novelData.source_language || 'English',
 				targetLanguage: novelData.target_language || 'English',
-				activeEditorView: targetEditorView, // The target editor is where the result will go
-				translationInfo: {
-					blockNumber: blockNumber,
-				},
+				activeEditorView: targetContentWindow, // Pass the contentWindow
+				translationInfo: { blockNumber },
 			};
 			openPromptEditor(context, 'translate', settings);
 			return;
 		}
 		
-		const isChapterEditor = toolbarConfig.isChapterEditor;
-		
 		const focusedEditor = getActiveEditor();
-		let editorForPrompt = focusedEditor;
-		let selectedText = '';
-		let wordsBefore = '';
-		let wordsAfter = '';
-		let chapterId = null;
+		if (!focusedEditor) return;
 		
-		let languageForPrompt;
-		
-		if (focusedEditor) {
-			// For actions like "Rephrase", use the selected text from the active editor.
-			const {state} = focusedEditor;
-			const {from, to, empty} = state.selection;
-			if (!empty) {
-				selectedText = state.doc.textBetween(from, to, ' ');
-			}
-			languageForPrompt = novelData.target_language || 'English';
-		}
-		
-		if (focusedEditor) {
-			const {state} = focusedEditor;
-			const {from, to} = state.selection;
-			
-			const textBeforeSelection = state.doc.textBetween(Math.max(0, from - 1500), from);
-			const textAfterSelection = state.doc.textBetween(to, Math.min(to + 1500, state.doc.content.size));
-			
-			wordsBefore = textBeforeSelection.trim().split(/\s+/).slice(-200).join(' ');
-			wordsAfter = textAfterSelection.trim().split(/\s+/).slice(0, 200).join(' ');
-			
-			const chapterContainer = focusedEditor.dom.closest('[data-chapter-id]');
-			if (chapterContainer) {
-				chapterId = chapterContainer.dataset.chapterId;
-			} else if (isChapterEditor) {
-				chapterId = toolbarConfig.getActiveChapterId ? toolbarConfig.getActiveChapterId() : null;
-			}
-		}
+		const { selectionText } = currentToolbarState;
+		const chapterId = toolbarConfig.getActiveChapterId ? toolbarConfig.getActiveChapterId() : null;
 		
 		const allCodexEntries = await window.api.getAllCodexEntriesForNovel(novelId);
-		let linkedCodexEntryIds = [];
-		if (chapterId) {
-			linkedCodexEntryIds = await window.api.getLinkedCodexIdsForChapter(chapterId);
-		}
+		let linkedCodexEntryIds = chapterId ? await window.api.getLinkedCodexIdsForChapter(chapterId) : [];
 		
 		const context = {
-			selectedText,
+			selectedText: selectionText,
 			allCodexEntries,
 			linkedCodexEntryIds,
-			languageForPrompt,
-			wordsBefore,
-			wordsAfter,
-			activeEditorView: editorForPrompt,
+			languageForPrompt: novelData.target_language || 'English',
+			wordsBefore: '', // Note: Getting surrounding text is complex with iframes and omitted for this refactor.
+			wordsAfter: '',
+			activeEditorView: focusedEditor,
 		};
 		openPromptEditor(context, action, settings);
 		return;
 	}
 	
-	if (!activeEditorView && !button.closest('.js-dropdown-container')) {
+	if (!activeContentWindow && !button.closest('.js-dropdown-container')) {
 		return;
 	}
 	
 	const command = button.dataset.command;
 	
 	if (command) {
-		if (command === 'undo') {
-			undo(activeEditorView.state, activeEditorView.dispatch);
-		} else if (command === 'redo') {
-			redo(activeEditorView.state, activeEditorView.dispatch);
-		} else if (command === 'create_codex') {
-			if (!activeEditorView) return;
-			const {state} = activeEditorView;
-			if (state.selection.empty) return;
-			
-			const selectedText = state.doc.textBetween(state.selection.from, state.selection.to, ' ');
+		if (command === 'create_codex') {
+			if (!currentToolbarState.isTextSelected) return;
 			const novelId = document.body.dataset.novelId;
-			
-			if (novelId && selectedText) {
-				window.api.openNewCodexEditor({novelId, selectedText});
+			if (novelId && currentToolbarState.selectionText) {
+				window.api.openNewCodexEditor({ novelId, selectedText: currentToolbarState.selectionText });
 			}
 		} else if (command === 'add_note') {
-			if (!activeEditorView) return;
-			
 			const activeChapterId = toolbarConfig.getActiveChapterId ? toolbarConfig.getActiveChapterId() : null;
 			if (!activeChapterId) {
 				window.showAlert('Cannot add a note without an active chapter.');
 				return;
 			}
-			
 			const noteModal = document.getElementById('note-editor-modal');
 			const form = document.getElementById('note-editor-form');
-			const title = noteModal.querySelector('.js-note-modal-title');
-			const contentInput = document.getElementById('note-content-input');
-			const posInput = document.getElementById('note-pos');
-			const chapterIdInput = document.getElementById('note-chapter-id');
-			
-			title.textContent = 'Add Note';
 			form.reset();
-			posInput.value = '';
-			chapterIdInput.value = activeChapterId;
+			noteModal.querySelector('.js-note-modal-title').textContent = 'Add Note';
+			document.getElementById('note-pos').value = '';
 			noteModal.showModal();
-			contentInput.focus();
+			document.getElementById('note-content-input').focus();
 		} else {
 			applyCommand(command);
 		}
@@ -473,12 +274,8 @@ async function handleToolbarAction(button) {
 		if (document.activeElement) document.activeElement.blur();
 	} else if (button.classList.contains('js-heading-option')) {
 		const level = parseInt(button.dataset.level, 10);
-		applyCommand('heading', {level});
+		applyCommand('heading', { level });
 		if (document.activeElement) document.activeElement.blur();
-	}
-	
-	if (activeEditorView) {
-		activeEditorView.focus();
 	}
 }
 
