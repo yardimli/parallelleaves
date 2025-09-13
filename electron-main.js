@@ -741,14 +741,11 @@ function setupIpcHandlers() {
 		return {success: true, message: 'Codex entry updated successfully.'};
 	});
 	
-	// MODIFIED SECTION START: This handler now manages stream lifecycle and cancellation.
 	ipcMain.on('codex-entries:process-text-stream', (event, {data, channel}) => {
-		// NEW: Create an AbortController to manage the fetch request.
 		const controller = new AbortController();
-		// NEW: A flag to track if the stream is active.
 		let streamActive = true;
 		
-		// NEW: Listen for the 'destroyed' event on the sender's WebContents.
+		// Listen for the 'destroyed' event on the sender's WebContents.
 		// If the window is closed mid-stream, we abort the request.
 		event.sender.once('destroyed', () => {
 			if (streamActive) {

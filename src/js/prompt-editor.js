@@ -133,16 +133,21 @@ async function handleFloatyRetry() {
 		}
 	}, window.location.origin);
 	
-	const newTo = aiActionRange.from + originalFragment.content.size;
-	activeContentWindow.postMessage({
-		type: 'setSelection',
-		payload: { from: aiActionRange.from, to: newTo }
-	}, window.location.origin);
+	// MODIFIED SECTION START: Removed broken logic that caused the second error.
+	// The iframe now handles restoring the original text, and re-selecting it is not critical for the retry flow.
+	// const newTo = aiActionRange.from + originalFragment.content.size;
+	// activeContentWindow.postMessage({
+	// 	type: 'setSelection',
+	// 	payload: { from: aiActionRange.from, to: newTo }
+	// }, window.location.origin);
+	// MODIFIED SECTION END
 	
 	activeContentWindow.postMessage({ type: 'setEditable', payload: { isEditable: true } }, window.location.origin);
 	
 	isAiActionActive = false;
 	originalFragment = null;
+	aiActionRange = null;
+	currentAiParams = null;
 	updateToolbarState(null);
 	
 	openPromptEditor(contextForRetry, actionToRetry, previousFormData);
@@ -180,7 +185,6 @@ function createFloatingToolbar(from, to, model) {
 	});
 }
 
-// MODIFIED: This function now sends a single "start" message and then subsequent "chunk" messages.
 function startAiStream(params) {
 	const { prompt, model } = params;
 	
@@ -194,7 +198,6 @@ function startAiStream(params) {
 		if (payload.chunk) {
 			if (isFirstChunk) {
 				hideAiSpinner();
-				// Send a dedicated "start" message with position info for the first chunk.
 				activeContentWindow.postMessage({
 					type: 'aiStreamStart',
 					payload: {
@@ -205,7 +208,6 @@ function startAiStream(params) {
 				}, window.location.origin);
 				isFirstChunk = false;
 			} else {
-				// Subsequent chunks don't need position info.
 				activeContentWindow.postMessage({
 					type: 'aiStreamChunk',
 					payload: {
@@ -215,8 +217,6 @@ function startAiStream(params) {
 			}
 			
 		} else if (payload.done) {
-			// MODIFIED: The `aiStreamDone` message now only needs the starting position.
-			// The iframe will determine the end position from its own state.
 			activeContentWindow.postMessage({
 				type: 'aiStreamDone',
 				payload: { from: aiActionRange.from }
@@ -274,7 +274,6 @@ async function populateModelDropdown(initialState = null) {
 	}
 }
 
-// MODIFIED: This function now communicates with the iframe to get selection info before starting the AI stream.
 async function handleModalApply() {
 	if (!modalEl || isAiActionActive) return;
 	
@@ -311,7 +310,6 @@ async function handleModalApply() {
 			.catch(err => console.error('Failed to save prompt settings:', err));
 	}
 	
-	// Use a Promise to wait for the iframe to respond with its selection information.
 	const getSelectionFromIframe = () => new Promise((resolve) => {
 		const listener = (event) => {
 			if (event.source === activeContentWindow && event.data.type === 'selectionResponse') {
@@ -321,7 +319,6 @@ async function handleModalApply() {
 		};
 		window.addEventListener('message', listener);
 		
-		// Ask the iframe to prepare for the action.
 		if (action === 'translate') {
 			activeContentWindow.postMessage({
 				type: 'prepareForTranslate',
@@ -339,11 +336,9 @@ async function handleModalApply() {
 		return;
 	}
 	
-	// Store the selection range and original content provided by the iframe.
 	aiActionRange = { from: selectionInfo.from, to: selectionInfo.to };
 	originalFragment = selectionInfo.originalFragmentJson;
 	
-	// For 'translate', the selected text comes from the source panel. For 'rephrase', it comes from the iframe.
 	const text = action === 'translate' ? currentContext.selectedText : selectionInfo.selectedText;
 	
 	const wordCount = text ? text.trim().split(/\s+/).filter(Boolean).length : 0;

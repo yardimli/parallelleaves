@@ -1,6 +1,6 @@
 import { EditorState, Plugin, TextSelection } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
-import { DOMParser, DOMSerializer } from 'prosemirror-model';
+import { DOMParser, DOMSerializer, Fragment } from 'prosemirror-model';
 import { history, undo, redo } from 'prosemirror-history';
 import { keymap } from 'prosemirror-keymap';
 import { baseKeymap, toggleMark, setBlockType, wrapIn, lift } from 'prosemirror-commands';
@@ -210,18 +210,12 @@ function executeCommand({ command, attrs }) {
 	editorView.focus();
 }
 
-// MODIFIED SECTION START: Corrected stream handling logic.
-/**
- * Handles the start of an AI text stream.
- * @param {object} payload - The stream start details.
- */
 function handleAiStreamStart({ chunk, from, to }) {
 	const { state, dispatch } = editorView;
 	const { schema } = state;
 	const mark = schema.marks.ai_suggestion.create();
 	let tr = state.tr;
 	
-	// Replace the initial selection (e.g., the empty paragraph for translation)
 	tr.replaceWith(from, to, []);
 	let insertionPos = from;
 	
@@ -233,29 +227,21 @@ function handleAiStreamStart({ chunk, from, to }) {
 			insertionPos += part.length;
 		}
 		if (index < parts.length - 1) {
-			// Re-assign tr because split returns a new transaction.
 			tr = tr.split(insertionPos);
-			// After a split, the selection moves to the new block.
 			insertionPos = tr.selection.from;
 		}
 	});
 	
-	// Set selection at the end for the next chunk.
 	tr.setSelection(TextSelection.create(tr.doc, insertionPos));
 	dispatch(tr);
 }
 
-/**
- * Handles a subsequent chunk of text from an AI stream.
- * @param {object} payload - The stream chunk details.
- */
 function handleAiStreamChunk({ chunk }) {
 	const { state, dispatch } = editorView;
 	const { schema } = state;
 	const mark = schema.marks.ai_suggestion.create();
 	let tr = state.tr;
 	
-	// Subsequent chunks are inserted at the end of the current selection.
 	let insertionPos = state.selection.to;
 	
 	const parts = chunk.split('\n');
@@ -274,48 +260,33 @@ function handleAiStreamChunk({ chunk }) {
 	tr.setSelection(TextSelection.create(tr.doc, insertionPos));
 	dispatch(tr);
 }
-// MODIFIED SECTION END
 
-/**
- * Finalizes an AI stream action, cleaning up empty paragraphs.
- * @param {object} payload - Contains the starting position of the AI-generated content.
- */
-// MODIFIED SECTION START: This function now correctly calculates the range for cleanup.
 function handleAiStreamDone({ from }) {
 	const { state, dispatch } = editorView;
 	let tr = state.tr;
 	
-	// Determine the end of the generated content from the current selection.
 	const to = state.selection.to;
 	
 	const deletions = [];
-	// Scan the full range of the newly inserted content for empty paragraphs.
 	state.doc.nodesBetween(from, to, (node, pos) => {
-		// Ensure we are looking at a node within the generated range.
 		if (pos >= from && node.type.name === 'paragraph' && node.content.size === 0) {
 			deletions.push({ from: pos, to: pos + node.nodeSize });
 		}
 	});
 	
-	// If empty paragraphs were found, delete them in reverse order.
 	if (deletions.length > 0) {
 		for (let i = deletions.length - 1; i >= 0; i--) {
 			tr.delete(deletions[i].from, deletions[i].to);
 		}
 	}
 	
-	// Dispatch the transaction with the deletions.
 	dispatch(tr);
 	
-	// Calculate the final 'to' position after deletions using the transaction's mapping.
 	const finalTo = tr.mapping.map(to);
 	
-	// Send a message back to the parent with the final, correct range for the floating toolbar.
 	postToParent('aiStreamFinished', { from, to: finalTo });
 }
-// MODIFIED SECTION END
 
-// NEW: Helper function to find the start and end positions of a translation block.
 function findTranslationBlockPositions(blockNumber) {
 	const { doc } = editorView.state;
 	let noteNodeCount = 0;
@@ -400,8 +371,17 @@ window.addEventListener('message', (event) => {
 		}
 		case 'discardAiSuggestion': {
 			const { from, to, originalFragmentJson } = payload;
-			const originalFragment = schema.nodeFromJSON(originalFragmentJson).content;
-			const tr = editorView.state.tr.replace(from, to, originalFragment);
+			const originalFragment = Fragment.fromJSON(schema, originalFragmentJson);
+			
+			// MODIFIED SECTION START: Switched from `replace` to `replaceWith`.
+			// `replaceWith` is the correct, safer method for replacing a range with a fragment of nodes,
+			// which resolves the internal ProseMirror error.
+			let tr = editorView.state.tr.replaceWith(from, to, originalFragment);
+			// MODIFIED SECTION END
+			
+			const newTo = from + originalFragment.size;
+			tr = tr.setSelection(TextSelection.create(tr.doc, from, newTo));
+			
 			editorView.dispatch(tr);
 			break;
 		}
