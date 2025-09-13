@@ -29,7 +29,6 @@ async function renderOutline(container, sections) {
 	
 	const sectionTemplate = await window.api.getTemplate('outline/outline-viewer-section');
 	const chapterTemplate = await window.api.getTemplate('outline/outline-viewer-chapter-item');
-	const tagTemplate = await window.api.getTemplate('outline/chapter-codex-tag-readonly');
 	
 	const fragment = document.createDocumentFragment();
 	
@@ -50,20 +49,12 @@ async function renderOutline(container, sections) {
 		
 		if (section.chapters && section.chapters.length > 0) {
 			for (const chapter of section.chapters) {
-				const tagsHtml = chapter.linked_codex.map(entry =>
-					tagTemplate
-						.replace(/{{ENTRY_ID}}/g, entry.id)
-						.replace(/{{ENTRY_TITLE}}/g, entry.title)
-				).join('');
-				
 				const chapterHtml = chapterTemplate
 					.replace(/{{CHAPTER_ID}}/g, chapter.id)
 					.replace('{{CHAPTER_ORDER}}', chapter.chapter_order)
 					.replace('{{CHAPTER_TITLE}}', chapter.title)
 					.replace('{{WORD_COUNT}}', chapter.word_count.toLocaleString())
-					.replace('{{CHAPTER_SUMMARY_HTML}}', chapter.summary || '<p class="italic text-base-content/60">No summary.</p>')
-					.replace('{{TAGS_WRAPPER_HIDDEN}}', tagsHtml ? '' : 'hidden')
-					.replace('{{CODEX_TAGS_HTML}}', tagsHtml);
+					.replace('{{CHAPTER_SUMMARY_HTML}}', chapter.summary || '<p class="italic text-base-content/60">No summary.</p>');
 				
 				chaptersContainer.innerHTML += chapterHtml;
 			}
@@ -130,10 +121,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 		return;
 	}
 	
-	// MODIFIED: Flag to control auto-refresh during codex generation.
 	let isAutogenRunning = false;
 	
-	// This function is defined inside the DOMContentLoaded scope to have access to `isAutogenRunning`.
 	async function setupAutogenCodex(novelId) {
 		const autogenBtn = document.getElementById('js-autogen-codex');
 		const modal = document.getElementById('autogen-codex-modal');

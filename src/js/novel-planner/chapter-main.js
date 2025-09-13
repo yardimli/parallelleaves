@@ -127,7 +127,6 @@ async function renderManuscript(container, novelData) {
 	console.time('renderManuscript');
 	console.log('[renderManuscript] Starting manuscript render...');
 	const fragment = document.createDocumentFragment();
-	const chapterCodexTagTemplate = await window.api.getTemplate('chapter/chapter-codex-tag');
 	
 	for (const section of novelData.sections) {
 		console.log(`[renderManuscript] Rendering section "${section.title}"`);
@@ -191,26 +190,12 @@ async function renderManuscript(container, novelData) {
 			iframe.src = 'editor-iframe.html';
 			iframe.dataset.chapterId = chapter.id;
 			targetCol.appendChild(iframe);
-			// MODIFIED SECTION END
-			
-			const codexTagsHtml = chapter.linked_codex.map(entry =>
-				chapterCodexTagTemplate
-					.replace(/{{ENTRY_ID}}/g, entry.id)
-					.replace(/{{ENTRY_TITLE}}/g, entry.title)
-					.replace(/{{CHAPTER_ID}}/g, chapter.id)
-			).join('');
-			const codexSection = document.createElement('div');
-			codexSection.className = `js-codex-links-wrapper mt-4 pt-4 border-t border-base-300 ${chapter.linked_codex.length === 0 ? 'hidden' : ''}`;
-			codexSection.innerHTML = `
-                <h4 class="text-xs uppercase tracking-wider font-bold mb-2">Linked Entries</h4>
-                <div class="js-codex-tags-container flex flex-wrap gap-1">${codexTagsHtml}</div>`;
 			
 			layoutGrid.appendChild(sourceCol);
 			layoutGrid.appendChild(targetCol);
 			
 			chapterWrapper.appendChild(titleInput);
 			chapterWrapper.appendChild(layoutGrid);
-			chapterWrapper.appendChild(codexSection);
 			
 			const hr = document.createElement('hr');
 			hr.className = 'mt-6';
@@ -364,46 +349,6 @@ function scrollToChapter(chapterId) {
 	} else {
 		console.warn(`[scrollToChapter] Could not find target element for chapter ${chapterId}`);
 	}
-}
-
-/**
- * Sets up the event listener for unlinking codex entries.
- */
-function setupCodexUnlinking() {
-	console.log('[setupCodexUnlinking] Setting up listener...');
-	const container = document.getElementById('js-manuscript-container');
-	container.addEventListener('click', async (event) => {
-		const removeBtn = event.target.closest('.js-remove-codex-link');
-		if (!removeBtn) return;
-		console.log('[CodexUnlink] Remove button clicked.');
-		
-		const tag = removeBtn.closest('.js-codex-tag');
-		const chapterId = removeBtn.dataset.chapterId;
-		const codexEntryId = removeBtn.dataset.entryId;
-		const entryTitle = tag.querySelector('.js-codex-tag-title').textContent;
-		
-		if (!confirm(`Are you sure you want to unlink "${entryTitle}" from this chapter?`)) {
-			console.log('[CodexUnlink] Unlink cancelled by user.');
-			return;
-		}
-		
-		try {
-			const data = await window.api.detachCodexFromChapter(chapterId, codexEntryId);
-			if (!data.success) throw new Error(data.message || 'Failed to unlink codex entry.');
-			console.log('[CodexUnlink] Unlink successful.');
-			
-			const tagContainer = tag.parentElement;
-			tag.remove();
-			
-			if (tagContainer && tagContainer.children.length === 0) {
-				const tagsWrapper = tagContainer.closest('.js-codex-links-wrapper');
-				if (tagsWrapper) tagsWrapper.classList.add('hidden');
-			}
-		} catch (error) {
-			console.error('[CodexUnlink] Error unlinking codex entry:', error);
-			window.showAlert(error.message);
-		}
-	});
 }
 
 /**
@@ -637,7 +582,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 		});
 		setupPromptEditor();
 		setupIntersectionObserver();
-		setupCodexUnlinking();
 		setupNoteEditorModal();
 		setupTranslateBlockAction();
 		setupSpellcheckDropdown(); // NEW: Initialize the spellcheck dropdown.
@@ -661,14 +605,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 		} else {
 			console.log('[Init] No specific initial chapter to load.');
 		}
-		
-		document.body.addEventListener('click', (event) => {
-			const openBtn = event.target.closest('.js-open-codex-entry');
-			if (openBtn) {
-				console.log(`[Codex] Opening codex entry: ${openBtn.dataset.entryId}`);
-				window.api.openCodexEditor(openBtn.dataset.entryId);
-			}
-		});
 		
 		if (window.api && typeof window.api.onManuscriptScrollToChapter === 'function') {
 			window.api.onManuscriptScrollToChapter((event, chapterId) => {
