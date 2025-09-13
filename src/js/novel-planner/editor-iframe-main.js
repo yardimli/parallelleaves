@@ -10,7 +10,8 @@ import { schema, NoteNodeView } from './content-editor.js';
 let editorView;
 let parentOrigin; // Store the parent window's origin for security
 let chapterId;
-let saveField;
+// MODIFIED: Renamed from `saveField` to `field` for consistency with the parent window's handler.
+let field;
 
 /**
  * Posts a message to the parent window.
@@ -29,8 +30,7 @@ const sendResize = () => {
 	// Use a small timeout to allow the DOM to render before calculating height
 	setTimeout(() => {
 		const height = document.documentElement.scrollHeight;
-		console.log(`[Editor Iframe] Reporting height: ${height}px`);
-		postToParent('resize', { chapterId: chapterId, height: height });
+		postToParent('resize', { height });
 	}, 50);
 };
 
@@ -81,9 +81,10 @@ const getToolbarState = (state) => {
  * @param {HTMLElement} mount - The element to mount the editor in.
  * @param {object} config - The initialization configuration.
  */
-function createEditorView(mount, { initialHtml, isEditable, chapterId: id, saveField: field }) {
+function createEditorView(mount, { initialHtml, isEditable, chapterId: id, field: fieldName }) {
 	chapterId = id;
-	saveField = field;
+	// MODIFIED: Assigning the received `field` name to the module-scoped variable.
+	field = fieldName;
 	
 	const noteProtectionPlugin = new Plugin({
 		filterTransaction(tr, state) {
@@ -133,7 +134,8 @@ function createEditorView(mount, { initialHtml, isEditable, chapterId: id, saveF
 				const fragment = serializer.serializeFragment(this.state.doc.content);
 				const tempDiv = document.createElement('div');
 				tempDiv.appendChild(fragment);
-				postToParent('contentChanged', { chapterId, saveField, value: tempDiv.innerHTML });
+				// MODIFIED: Sending the property as `field` to match the parent window's handler.
+				postToParent('contentChanged', { chapterId, field, value: tempDiv.innerHTML });
 			}
 			
 			if (transaction.selectionSet || transaction.docChanged) {

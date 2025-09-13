@@ -188,10 +188,7 @@ async function renderManuscript(container, novelData) {
 			chapterEditorViews.set(chapter.id.toString(), viewInfo);
 			
 			iframe.addEventListener('load', () => {
-				// MODIFIED SECTION START: Update the contentWindow reference now that the iframe has loaded.
-				// This ensures we have the correct window object for message comparisons, fixing the resize bug.
 				viewInfo.contentWindow = iframe.contentWindow;
-				// MODIFIED SECTION END
 				
 				viewInfo.isReady = true;
 				const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
@@ -203,7 +200,8 @@ async function renderManuscript(container, novelData) {
 						initialHtml: viewInfo.initialContent,
 						isEditable: true,
 						chapterId: chapter.id,
-						saveField: 'target_content',
+						// MODIFIED: Changed property name from `saveField` to `field` to match the handler.
+						field: 'target_content',
 						theme: currentTheme,
 					}
 				}, window.location.origin);
