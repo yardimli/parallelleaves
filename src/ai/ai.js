@@ -198,10 +198,11 @@ Focus on the most prominent elements mentioned in the synopsis and chapter summa
  * @param {string} params.textChunk - A chunk of the novel text.
  * @param {string} params.existingCodexJson - A JSON string of existing codex entries.
  * @param {string} params.language - The language of the novel.
+ * @param {string} params.targetLanguage - The target language for translation.
  * @param {string} params.model - The LLM model to use.
  * @returns {Promise<object>} The parsed JSON response with new and updated entries.
  */
-async function generateCodexFromTextChunk({ textChunk, existingCodexJson, language, model }) {
+async function generateCodexFromTextChunk({ textChunk, existingCodexJson, language, targetLanguage, model }) {
 	const prompt = `
 You are a meticulous world-building assistant for a novelist. Your task is to analyze a chunk of text from a novel and identify entities that should be in a codex (an encyclopedia of the world). These entities are typically People, Locations, or Objects/Lore.
 
@@ -210,8 +211,11 @@ You are a meticulous world-building assistant for a novelist. Your task is to an
 2.  Review the **Existing Codex Entries** to understand what is already documented.
 3.  Identify new characters, locations, or significant objects/lore within the text chunk that are not in the codex.
 4.  If you find new information about an entity that is ALREADY in the codex, update its description. The new description should integrate the old and new information seamlessly.
-5.  For each new or updated entry, provide a concise title (the name of the entity) and a descriptive paragraph.
-6.  The output language must be **${language}**.
+5.  For each new or updated entry, provide:
+    - A concise title (the name of the entity).
+    - A descriptive paragraph for the 'content' field in the source language (**${language}**).
+    - A translation of the 'content' into the 'target_content' field in the target language (**${targetLanguage}**).
+    - A comma-separated list of exact phrases from the **Text Chunk** that refer to this entity for the 'document_phrases' field.
 
 **Existing Codex Entries (JSON):**
 ${existingCodexJson}
@@ -227,10 +231,14 @@ Respond with a single, valid JSON object. Do not include any text or markdown be
 - \`new_entries\`: An array of objects for entities not found in the existing codex. Each object must have:
   - \`category\`: A string, either "Characters", "Locations", or "Objects & Lore".
   - \`title\`: The name of the new entity.
-  - \`content\`: A descriptive paragraph.
+  - \`content\`: A descriptive paragraph in **${language}**.
+  - \`target_content\`: The translation of 'content' into **${targetLanguage}**.
+  - \`document_phrases\`: A comma-separated string of phrases from the text chunk.
 - \`updated_entries\`: An array of objects for entities that were in the existing codex but have new information. Each object must have:
   - \`title\`: The exact title of the existing entity to update.
-  - \`content\`: The new, complete, and updated descriptive paragraph.
+  - \`content\`: The new, complete, and updated descriptive paragraph in **${language}**.
+  - \`target_content\`: The translation of the new 'content' into **${targetLanguage}**.
+  - \`document_phrases\`: A comma-separated string of new phrases from the text chunk to be added to the entry.
 
 Example Response:
 {
@@ -238,13 +246,17 @@ Example Response:
     {
       "category": "Characters",
       "title": "Captain Eva Rostova",
-      "content": "A stern but fair captain of the starship 'Venture'. She is known for her tactical genius and unwavering loyalty to her crew."
+      "content": "A stern but fair captain of the starship 'Venture'. She is known for her tactical genius and unwavering loyalty to her crew.",
+      "target_content": "Une capitaine sévère mais juste du vaisseau 'Venture'. Elle est connue pour son génie tactique et sa loyauté indéfectible envers son équipage.",
+      "document_phrases": "Captain Eva Rostova, the captain"
     }
   ],
   "updated_entries": [
     {
       "title": "Aethelgard",
-      "content": "The capital city of the Northern Kingdom, now described as having towering spires of obsidian that glitter under the twin moons. Its streets are paved with silver cobblestones, a recent addition by the new king."
+      "content": "The capital city of the Northern Kingdom, now described as having towering spires of obsidian that glitter under the twin moons. Its streets are paved with silver cobblestones, a recent addition by the new king.",
+      "target_content": "La capitale du Royaume du Nord, maintenant décrite comme ayant des flèches imposantes d'obsidienne qui scintillent sous les deux lunes. Ses rues sont pavées de pavés d'argent, un ajout récent du nouveau roi.",
+      "document_phrases": "towering spires of obsidian, silver cobblestones"
     }
   ]
 }

@@ -772,7 +772,7 @@ function setupIpcHandlers() {
 				.replace(/\s\s+/g, ' ');
 			
 			const words = cleanedText.split(/\s+/);
-			const chunkSize = 5000;
+			const chunkSize = 10000;
 			const chunks = [];
 			for (let i = 0; i < words.length; i += chunkSize) {
 				chunks.push(words.slice(i, i + chunkSize).join(' '));
@@ -795,8 +795,10 @@ function setupIpcHandlers() {
 				return codexData;
 			};
 			
-			const novel = db.prepare('SELECT source_language FROM novels WHERE id = ?').get(novelId);
+			// MODIFIED: Fetch both source and target language
+			const novel = db.prepare('SELECT source_language, target_language FROM novels WHERE id = ?').get(novelId);
 			const language = novel ? novel.source_language : 'English';
+			const targetLanguage = novel ? novel.target_language : 'English'; // NEW
 			
 			for (let i = 0; i < chunks.length; i++) {
 				const chunk = chunks[i];
@@ -806,10 +808,12 @@ function setupIpcHandlers() {
 				const existingCodex = getExistingCodex();
 				const existingCodexJson = JSON.stringify(existingCodex, null, 2);
 				
+				// MODIFIED: Pass targetLanguage to the AI service
 				const result = await aiService.generateCodexFromTextChunk({
 					textChunk: chunk,
 					existingCodexJson,
 					language,
+					targetLanguage, // NEW
 					model,
 				});
 				
@@ -818,6 +822,7 @@ function setupIpcHandlers() {
 					
 					if (result.new_entries && Array.isArray(result.new_entries)) {
 						for (const entry of result.new_entries) {
+							// MODIFIED: Check for new fields
 							if (!entry.category || !entry.title || !entry.content) continue;
 							
 							if (!categoriesMap.has(entry.category)) {
@@ -828,15 +833,31 @@ function setupIpcHandlers() {
 							
 							const existing = db.prepare('SELECT id FROM codex_entries WHERE title = ? AND codex_category_id = ?').get(entry.title, categoryId);
 							if (!existing) {
-								db.prepare('INSERT INTO codex_entries (novel_id, codex_category_id, title, content) VALUES (?, ?, ?, ?)').run(novelId, categoryId, entry.title, entry.content);
+								// MODIFIED: Insert new fields into the database
+								db.prepare('INSERT INTO codex_entries (novel_id, codex_category_id, title, content, target_content, document_phrases) VALUES (?, ?, ?, ?, ?, ?)')
+									.run(novelId, categoryId, entry.title, entry.content, entry.target_content || '', entry.document_phrases || '');
 							}
 						}
 					}
 					
 					if (result.updated_entries && Array.isArray(result.updated_entries)) {
 						for (const entry of result.updated_entries) {
+							// MODIFIED: Check for new fields
 							if (!entry.title || !entry.content) continue;
-							db.prepare('UPDATE codex_entries SET content = ? WHERE novel_id = ? AND title = ?').run(entry.content, novelId, entry.title);
+							
+							// MODIFIED: Update new fields in the database.
+							// For document_phrases, we'll append new ones to avoid overwriting existing ones from other chunks.
+							const existingEntry = db.prepare('SELECT document_phrases FROM codex_entries WHERE novel_id = ? AND title = ?').get(novelId, entry.title);
+							let newPhrases = entry.document_phrases || '';
+							if (existingEntry && existingEntry.document_phrases) {
+								const existingSet = new Set(existingEntry.document_phrases.split(',').map(p => p.trim()).filter(Boolean));
+								const newSet = new Set(newPhrases.split(',').map(p => p.trim()).filter(Boolean));
+								const combined = new Set([...existingSet, ...newSet]);
+								newPhrases = Array.from(combined).join(', ');
+							}
+							
+							db.prepare('UPDATE codex_entries SET content = ?, target_content = ?, document_phrases = ? WHERE novel_id = ? AND title = ?')
+								.run(entry.content, entry.target_content || '', newPhrases, novelId, entry.title);
 						}
 					}
 				});
