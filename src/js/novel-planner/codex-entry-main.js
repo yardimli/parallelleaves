@@ -298,7 +298,6 @@ async function handleToolbarAction(button) {
 		const context = {
 			selectedText: currentEditorState.selectionText,
 			allCodexEntries,
-			linkedCodexEntryIds: [], // Not applicable in codex editor
 			languageForPrompt: novelData.target_language || 'English',
 			activeEditorView: view,
 			editorInterface: createDirectEditorInterface(view),

@@ -11,20 +11,11 @@ const renderCodexList = (container, context, initialState = null) => {
 	const codexContainer = container.querySelector('.js-codex-selection-container');
 	if (!codexContainer) return;
 	
-	const { allCodexEntries, linkedCodexEntryIds } = context;
+	const { allCodexEntries } = context;
 	
 	if (!allCodexEntries || allCodexEntries.length === 0) {
 		codexContainer.innerHTML = '<p class="text-sm text-base-content/60">No codex entries found for this project.</p>';
 		return;
-	}
-	
-	// MODIFIED: Robustly determine selected IDs from initial state or linked entries.
-	// This prevents an error if `initialState` exists but `selectedCodexIds` is missing or not an array.
-	let selectedIds;
-	if (initialState && Array.isArray(initialState.selectedCodexIds)) {
-		selectedIds = initialState.selectedCodexIds;
-	} else {
-		selectedIds = (linkedCodexEntryIds || []).map(String);
 	}
 	
 	const categoriesHtml = allCodexEntries.map(category => {
@@ -33,7 +24,7 @@ const renderCodexList = (container, context, initialState = null) => {
 		}
 		
 		const entriesHtml = category.entries.map(entry => {
-			const isChecked = selectedIds.includes(String(entry.id));
+			const isChecked = false;
 			return `
                 <div class="form-control">
                     <label class="label cursor-pointer justify-start gap-2 py-0.5">
