@@ -30,11 +30,8 @@ CREATE TABLE IF NOT EXISTS novels (
     synopsis TEXT,
     status TEXT NOT NULL DEFAULT 'draft',
     order_in_series INTEGER,
-    -- NEW: Added source language for the translation project.
     source_language TEXT DEFAULT 'English',
-    -- MODIFIED: Renamed prose_language to target_language.
     target_language TEXT DEFAULT 'English',
-    -- NEW: Added columns to store JSON settings for AI prompts.
     rephrase_settings TEXT,
     translate_settings TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -59,7 +56,6 @@ CREATE TABLE IF NOT EXISTS chapters (
     novel_id INTEGER NOT NULL,
     section_id INTEGER NOT NULL,
     title TEXT NOT NULL,
-    -- MODIFIED: Removed source_summary and target_summary columns.
     source_content TEXT,
     target_content TEXT,
     status TEXT,
@@ -86,11 +82,19 @@ CREATE TABLE IF NOT EXISTS codex_entries (
     codex_category_id INTEGER NOT NULL,
     title TEXT NOT NULL,
     content TEXT,
+    -- NEW: Added target content for translation/alternative versions.
+    target_content TEXT,
+    -- NEW: Added comma-separated phrases for in-document highlighting/linking.
+    document_phrases TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (novel_id) REFERENCES novels(id) ON DELETE CASCADE,
     FOREIGN KEY (codex_category_id) REFERENCES codex_categories(id) ON DELETE CASCADE
 );
+
+-- ALTER statements for existing databases:
+-- ALTER TABLE codex_entries ADD COLUMN target_content TEXT;
+-- ALTER TABLE codex_entries ADD COLUMN document_phrases TEXT;
 
 CREATE TABLE IF NOT EXISTS images (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

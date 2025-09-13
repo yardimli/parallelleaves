@@ -1,13 +1,19 @@
 // MODIFIED: This file now contains its own independent toolbar logic,
 // decoupling it from the chapter editor's toolbar.
 
-import { getCodexEditorView, setupContentEditor } from './planner-codex-content-editor.js';
+import { setupContentEditor } from './planner-codex-content-editor.js';
 import { openPromptEditor, setupPromptEditor } from '../prompt-editor.js';
 import { DOMSerializer, Fragment } from 'prosemirror-model';
 import { undo, redo } from 'prosemirror-history';
 import { toggleMark, setBlockType, wrapIn } from 'prosemirror-commands';
 import { wrapInList } from 'prosemirror-schema-list';
 import { TextSelection } from 'prosemirror-state';
+
+// --- NEW: State management for multiple editors ---
+let sourceEditorView = null;
+let targetEditorView = null;
+let activeEditorView = null; // This will hold the currently focused editor view
+const debounceTimers = new Map();
 
 // --- Helper Functions ---
 
@@ -24,6 +30,17 @@ function setButtonLoadingState(button, isLoading) {
 		if (spinner) spinner.classList.add('hidden');
 	}
 }
+
+// NEW: Helper to serialize a ProseMirror document to an HTML string.
+const serializeDocToHtml = (view) => {
+	if (!view) return '';
+	const serializer = DOMSerializer.fromSchema(view.state.schema);
+	const fragment = serializer.serializeFragment(view.state.doc.content);
+	const tempDiv = document.createElement('div');
+	tempDiv.appendChild(fragment);
+	return tempDiv.innerHTML;
+};
+
 
 // --- NEW: Editor Interface for Direct ProseMirror View ---
 const createDirectEditorInterface = (view) => {
@@ -122,8 +139,41 @@ const createDirectEditorInterface = (view) => {
 	};
 };
 
+// --- NEW: Debounced Save Logic (moved and adapted from planner-codex-content-editor.js) ---
+function triggerDebouncedSave(entryId) {
+	const key = `codex-${entryId}`;
+	if (debounceTimers.has(key)) {
+		clearTimeout(debounceTimers.get(key));
+	}
+	const timer = setTimeout(() => {
+		saveWindowContent(entryId);
+		debounceTimers.delete(key);
+	}, 2000);
+	debounceTimers.set(key, timer);
+}
 
-// --- NEW: Toolbar Logic for Codex Editor ---
+async function saveWindowContent(entryId) {
+	const titleInput = document.getElementById('js-codex-title-input');
+	const phrasesInput = document.getElementById('js-codex-phrases-input');
+	
+	const data = {
+		title: titleInput.value,
+		content: serializeDocToHtml(sourceEditorView),
+		target_content: serializeDocToHtml(targetEditorView),
+		document_phrases: phrasesInput.value,
+	};
+	
+	try {
+		const response = await window.api.updateCodexEntry(entryId, data);
+		if (!response.success) throw new Error(response.message || 'Failed to save codex entry.');
+	} catch (error) {
+		console.error('Error saving codex entry:', error);
+		window.showAlert('Could not save changes to codex entry.');
+	}
+}
+
+
+// --- MODIFIED: Toolbar Logic for Codex Editor ---
 
 let currentEditorState = null;
 
@@ -220,7 +270,7 @@ function updateCodexToolbarState(view) {
  * @param {Function} command - The ProseMirror command to execute.
  */
 function applyCommand(command) {
-	const view = getCodexEditorView();
+	const view = activeEditorView; // MODIFIED: Use the active view
 	if (view && command) {
 		command(view.state, view.dispatch);
 		view.focus();
@@ -232,7 +282,7 @@ function applyCommand(command) {
  * @param {HTMLElement} button - The clicked button element.
  */
 async function handleToolbarAction(button) {
-	const view = getCodexEditorView();
+	const view = activeEditorView; // MODIFIED: Use the active view
 	if (!view) return;
 	
 	if (button.classList.contains('js-ai-action-btn')) {
@@ -250,8 +300,8 @@ async function handleToolbarAction(button) {
 			allCodexEntries,
 			linkedCodexEntryIds: [], // Not applicable in codex editor
 			languageForPrompt: novelData.target_language || 'English',
-			activeEditorView: view, // Pass the direct EditorView instance
-			editorInterface: createDirectEditorInterface(view), // NEW: Pass the direct interface
+			activeEditorView: view,
+			editorInterface: createDirectEditorInterface(view),
 		};
 		openPromptEditor(context, action, settings);
 		return;
@@ -355,11 +405,38 @@ async function setupCreateMode(novelId, selectedText) {
 	document.getElementById('js-create-meta-section').classList.remove('hidden');
 	document.getElementById('js-create-action-section').classList.remove('hidden');
 	
-	// 2. Setup ProseMirror editor with selected text
+	// 2. Setup ProseMirror editors
 	const sourceContainer = document.getElementById('js-pm-content-source');
 	sourceContainer.querySelector('[data-name="content"]').innerHTML = `<p>${selectedText.replace(/\n/g, '</p><p>')}</p>`;
-	// MODIFIED: Pass the toolbar update callback to the editor setup.
-	setupContentEditor({ onStateChange: updateCodexToolbarState });
+	
+	const editorMounts = document.querySelectorAll('.js-editable');
+	const sourceMount = Array.from(editorMounts).find(el => el.dataset.name === 'content');
+	const targetMount = Array.from(editorMounts).find(el => el.dataset.name === 'target_content');
+	
+	const onEditorStateChange = (view) => {
+		if (view.hasFocus()) {
+			updateCodexToolbarState(view);
+		}
+	};
+	const onEditorFocus = (view) => {
+		activeEditorView = view;
+		updateCodexToolbarState(view);
+	};
+	
+	sourceEditorView = setupContentEditor(sourceMount, {
+		initialContent: sourceContainer.querySelector('[data-name="content"]'),
+		placeholder: sourceMount.dataset.placeholder,
+		onStateChange: onEditorStateChange,
+		onFocus: onEditorFocus,
+	});
+	targetEditorView = setupContentEditor(targetMount, {
+		initialContent: sourceContainer.querySelector('[data-name="target_content"]'),
+		placeholder: targetMount.dataset.placeholder,
+		onStateChange: onEditorStateChange,
+		onFocus: onEditorFocus,
+	});
+	
+	activeEditorView = sourceEditorView; // Default to source
 	setupCodexToolbar();
 	
 	// 3. Fetch categories and populate dropdown
@@ -400,15 +477,13 @@ async function setupCreateMode(novelId, selectedText) {
 		const createBtn = form.querySelector('.js-create-entry-btn');
 		setButtonLoadingState(createBtn, true);
 		
-		const editorView = getCodexEditorView();
-		const serializer = DOMSerializer.fromSchema(editorView.state.schema);
-		const fragment = serializer.serializeFragment(editorView.state.doc.content);
-		const tempDiv = document.createElement('div');
-		tempDiv.appendChild(fragment);
+		const phrasesInput = document.getElementById('js-codex-phrases-input');
 		
 		const formData = {
 			title: titleInput.value,
-			content: tempDiv.innerHTML,
+			content: serializeDocToHtml(sourceEditorView),
+			target_content: serializeDocToHtml(targetEditorView),
+			document_phrases: phrasesInput.value,
 			codex_category_id: categorySelect.value === 'new' ? null : categorySelect.value,
 			new_category_name: categorySelect.value === 'new' ? newCategoryInput.value : null,
 		};
@@ -441,14 +516,52 @@ async function setupEditMode(entryId) {
 		
 		document.getElementById('js-novel-info').textContent = `${entryData.novel_title} > Codex`;
 		document.getElementById('js-codex-title-input').value = entryData.title;
+		document.getElementById('js-codex-phrases-input').value = entryData.document_phrases || '';
 		document.title = `Editing Codex: ${entryData.title}`;
 		
 		const sourceContainer = document.getElementById('js-pm-content-source');
 		sourceContainer.querySelector('[data-name="content"]').innerHTML = entryData.content || '';
+		sourceContainer.querySelector('[data-name="target_content"]').innerHTML = entryData.target_content || '';
 		
-		// MODIFIED: Pass the toolbar update callback to the editor setup.
-		setupContentEditor({ entryId, onStateChange: updateCodexToolbarState });
+		const editorMounts = document.querySelectorAll('.js-editable');
+		const sourceMount = Array.from(editorMounts).find(el => el.dataset.name === 'content');
+		const targetMount = Array.from(editorMounts).find(el => el.dataset.name === 'target_content');
+		
+		const onEditorStateChange = (view, transaction) => {
+			if (entryId && transaction.docChanged) {
+				triggerDebouncedSave(entryId);
+			}
+			if (view.hasFocus()) {
+				updateCodexToolbarState(view);
+			}
+		};
+		const onEditorFocus = (view) => {
+			activeEditorView = view;
+			updateCodexToolbarState(view);
+		};
+		
+		sourceEditorView = setupContentEditor(sourceMount, {
+			initialContent: sourceContainer.querySelector('[data-name="content"]'),
+			placeholder: sourceMount.dataset.placeholder,
+			onStateChange: onEditorStateChange,
+			onFocus: onEditorFocus,
+		});
+		targetEditorView = setupContentEditor(targetMount, {
+			initialContent: sourceContainer.querySelector('[data-name="target_content"]'),
+			placeholder: targetMount.dataset.placeholder,
+			onStateChange: onEditorStateChange,
+			onFocus: onEditorFocus,
+		});
+		
+		activeEditorView = sourceEditorView; // Default to source
 		setupCodexToolbar();
+		updateCodexToolbarState(activeEditorView); // Initial update
+		
+		// Add input listeners for title and phrases to trigger save
+		const titleInput = document.getElementById('js-codex-title-input');
+		const phrasesInput = document.getElementById('js-codex-phrases-input');
+		titleInput.addEventListener('input', () => triggerDebouncedSave(entryId));
+		phrasesInput.addEventListener('input', () => triggerDebouncedSave(entryId));
 		
 	} catch (error) {
 		console.error('Failed to load codex entry data:', error);
@@ -471,7 +584,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 		}
 	};
 	
-	// ADDED: The prompt editor modal needs to be initialized for AI actions.
 	setupPromptEditor();
 	
 	const params = new URLSearchParams(window.location.search);

@@ -12,6 +12,11 @@ contextBridge.exposeInMainWorld('api', {
 	openEditor: (novelId) => ipcRenderer.send('novels:openEditor', novelId),
 	openOutline: (novelId) => ipcRenderer.send('novels:openOutline', novelId),
 	getOutlineData: (novelId) => ipcRenderer.invoke('novels:getOutlineData', novelId),
+	// NEW: Expose the outline state checker for live refresh.
+	getOutlineState: (novelId) => ipcRenderer.invoke('novels:getOutlineState', novelId),
+	// NEW: Expose functions for codex auto-generation
+	startCodexAutogen: (data) => ipcRenderer.send('autogen:start-codex-generation', data),
+	onCodexAutogenUpdate: (callback) => ipcRenderer.on('autogen:progress-update', callback),
 	updateProseSettings: (data) => ipcRenderer.invoke('novels:updateProseSettings', data),
 	// NEW: Expose the prompt settings update function.
 	updatePromptSettings: (data) => ipcRenderer.invoke('novels:updatePromptSettings', data),

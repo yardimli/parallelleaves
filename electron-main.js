@@ -440,7 +440,13 @@ function setupIpcHandlers() {
 					
 					const contentToUse = chapter.target_content || chapter.source_content;
 					if (contentToUse) {
-						const textContent = contentToUse.replace(/<[^>]+>/g, ' ').replace(/\s\s+/g, ' ').trim();
+						// MODIFIED SECTION START: Clean up translation block markers from the summary content.
+						const cleanedContent = contentToUse
+							.replace(/{{\s*TranslationBlock-\d+\s*}}/gi, '') // For source content
+							.replace(/<div class="note-wrapper not-prose"><p>Translation Block #\d+<\/p><\/div>/gi, ''); // For target content
+						
+						const textContent = cleanedContent.replace(/<[^>]+>/g, ' ').replace(/\s\s+/g, ' ').trim();
+						// MODIFIED SECTION END
 						
 						const words = textContent.split(/\s+/);
 						const wordLimitedText = words.slice(0, 200).join(' ');
@@ -499,6 +505,18 @@ function setupIpcHandlers() {
 		} catch (error) {
 			console.error(`Error in getOutlineData for novelId ${novelId}:`, error);
 			throw error; // Re-throw the error so the renderer process receives it
+		}
+	});
+	
+	// NEW: IPC handler to get chapter and codex counts for live refresh.
+	ipcMain.handle('novels:getOutlineState', (event, novelId) => {
+		try {
+			const chapterCount = db.prepare('SELECT COUNT(id) as count FROM chapters WHERE novel_id = ?').get(novelId).count;
+			const codexCount = db.prepare('SELECT COUNT(id) as count FROM codex_entries WHERE novel_id = ?').get(novelId).count;
+			return { success: true, chapterCount, codexCount };
+		} catch (error) {
+			console.error(`Failed to get outline state for novel ${novelId}:`, error);
+			return { success: false, message: 'Failed to get outline state.' };
 		}
 	});
 	
@@ -761,6 +779,121 @@ function setupIpcHandlers() {
 		}
 	});
 	// NEW SECTION END
+	
+	// NEW: Handler for the codex auto-generation process.
+	ipcMain.on('autogen:start-codex-generation', async (event, { novelId, model }) => {
+		const sender = event.sender;
+		const sendProgress = (progress, status) => {
+			if (!sender.isDestroyed()) {
+				sender.send('autogen:progress-update', { progress, status });
+			}
+		};
+		
+		try {
+			sendProgress(0, 'Fetching novel content...');
+			
+			// 1. Get all source content
+			const chapters = db.prepare('SELECT source_content FROM chapters WHERE novel_id = ? AND source_content IS NOT NULL').all(novelId);
+			if (chapters.length === 0) {
+				sendProgress(100, 'No source content found to analyze. Process finished.');
+				return;
+			}
+			
+			// 2. Concatenate, clean, and chunk text
+			const fullText = chapters.map(c => c.source_content).join('\n');
+			const cleanedText = fullText
+				.replace(/{{\s*TranslationBlock-\d+\s*}}/gi, '') // Remove translation markers
+				.replace(/<[^>]+>/g, ' ') // Remove HTML tags
+				.replace(/\s\s+/g, ' '); // Collapse whitespace
+			
+			const words = cleanedText.split(/\s+/);
+			const chunkSize = 5000;
+			const chunks = [];
+			for (let i = 0; i < words.length; i += chunkSize) {
+				chunks.push(words.slice(i, i + chunkSize).join(' '));
+			}
+			
+			if (chunks.length === 0) {
+				sendProgress(100, 'No text found after cleaning. Process finished.');
+				return;
+			}
+			
+			sendProgress(5, `Found ${words.length.toLocaleString()} words, split into ${chunks.length} chunks.`);
+			
+			// 3. Get all existing codex entries and categories
+			const getExistingCodex = () => {
+				const categories = db.prepare('SELECT id, name FROM codex_categories WHERE novel_id = ?').all(novelId);
+				const codexData = {};
+				for (const category of categories) {
+					const entries = db.prepare('SELECT title, content FROM codex_entries WHERE codex_category_id = ?').all(category.id);
+					codexData[category.name] = entries;
+				}
+				return codexData;
+			};
+			
+			const novel = db.prepare('SELECT source_language FROM novels WHERE id = ?').get(novelId);
+			const language = novel ? novel.source_language : 'English';
+			
+			// 4. Process each chunk
+			for (let i = 0; i < chunks.length; i++) {
+				const chunk = chunks[i];
+				const progress = 5 + Math.round((i / chunks.length) * 90);
+				sendProgress(progress, `Analyzing chunk ${i + 1} of ${chunks.length}...`);
+				
+				const existingCodex = getExistingCodex();
+				const existingCodexJson = JSON.stringify(existingCodex, null, 2);
+				
+				const result = await aiService.generateCodexFromTextChunk({
+					textChunk: chunk,
+					existingCodexJson,
+					language,
+					model,
+				});
+				
+				// 5. Process the AI response in a transaction
+				const processResultsTransaction = db.transaction(() => {
+					const categoriesMap = new Map(db.prepare('SELECT name, id FROM codex_categories WHERE novel_id = ?').all(novelId).map(c => [c.name, c.id]));
+					
+					// Process new entries
+					if (result.new_entries && Array.isArray(result.new_entries)) {
+						for (const entry of result.new_entries) {
+							if (!entry.category || !entry.title || !entry.content) continue;
+							
+							// Check if category exists, create if not
+							if (!categoriesMap.has(entry.category)) {
+								const catResult = db.prepare('INSERT INTO codex_categories (novel_id, name) VALUES (?, ?)').run(novelId, entry.category);
+								categoriesMap.set(entry.category, catResult.lastInsertRowid);
+							}
+							const categoryId = categoriesMap.get(entry.category);
+							
+							// Check if entry already exists (AI might hallucinate)
+							const existing = db.prepare('SELECT id FROM codex_entries WHERE title = ? AND codex_category_id = ?').get(entry.title, categoryId);
+							if (!existing) {
+								db.prepare('INSERT INTO codex_entries (novel_id, codex_category_id, title, content) VALUES (?, ?, ?, ?)').run(novelId, categoryId, entry.title, entry.content);
+							}
+						}
+					}
+					
+					// Process updated entries
+					if (result.updated_entries && Array.isArray(result.updated_entries)) {
+						for (const entry of result.updated_entries) {
+							if (!entry.title || !entry.content) continue;
+							// Update based on title. This assumes titles are unique, which is a reasonable assumption for a codex.
+							db.prepare('UPDATE codex_entries SET content = ? WHERE novel_id = ? AND title = ?').run(entry.content, novelId, entry.title);
+						}
+					}
+				});
+				
+				processResultsTransaction();
+			}
+			
+			sendProgress(100, 'Codex generation complete! The page will now reload.');
+			
+		} catch (error) {
+			console.error('Codex auto-generation failed:', error);
+			sendProgress(100, `An error occurred: ${error.message}`);
+		}
+	});
 	
 	ipcMain.handle('codex:getAllForNovel', (event, novelId) => {
 		try {

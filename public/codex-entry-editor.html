@@ -124,11 +124,9 @@
 	<div class="flex items-center text-sm text-base-content/70">
 		<span id="js-word-count">No text selected</span>
 	</div>
-	<!-- ADDED SECTION START -->
 	<button id="theme-toggle" class="btn btn-ghost btn-circle" title="Change Theme">
 		<i class="bi bi-sun-fill text-xl"></i>
 	</button>
-	<!-- ADDED SECTION END -->
 </div>
 
 <!-- Main Content Area -->
@@ -153,6 +151,18 @@
 					       class="text-3xl font-bold w-full bg-transparent border-0 p-0 focus:ring-0 focus:border-b-2 focus:border-teal-500"
 					       placeholder="Codex Entry Title" required>
 					
+					<!-- NEW SECTION START -->
+					<div class="mt-4">
+						<label for="js-codex-phrases-input" class="label pb-1">
+							<span class="label-text">Document Phrases</span>
+						</label>
+						<input type="text" id="js-codex-phrases-input"
+						       class="input input-bordered input-sm w-full"
+						       placeholder="e.g., phrase one, another phrase">
+						<p class="text-xs text-base-content/60 mt-1">Comma-separated phrases to link to this entry from chapter text.</p>
+					</div>
+					<!-- NEW SECTION END -->
+					
 					<div id="js-create-meta-section" class="hidden mt-4 space-y-2">
 						<div class="form-control">
 							<label for="js-codex-category" class="label"><span class="label-text">Category <span class="text-error">*</span></span></label>
@@ -167,8 +177,22 @@
 						</div>
 					</div>
 				</div>
-				<div class="js-pm-container flex-grow p-4 overflow-y-auto prose prose-sm dark:prose-invert max-w-none">
-					<div class="js-editable" data-name="content" data-placeholder="Enter detailed content here..."></div>
+				<!-- MODIFIED: This is now a flex container for two editors -->
+				<div class="flex-grow flex min-h-0">
+					<!-- MODIFIED: Source Editor -->
+					<div class="w-1/2 flex flex-col border-r border-base-300">
+						<label class="p-4 pb-2 text-sm font-semibold uppercase tracking-wider text-base-content/70">Source Content</label>
+						<div class="js-pm-container flex-grow p-4 overflow-y-auto prose prose-sm dark:prose-invert max-w-none">
+							<div class="js-editable" data-name="content" data-placeholder="Enter source content here..."></div>
+						</div>
+					</div>
+					<!-- MODIFIED: Target Editor -->
+					<div class="w-1/2 flex flex-col">
+						<label class="p-4 pb-2 text-sm font-semibold uppercase tracking-wider text-base-content/70">Target Content</label>
+						<div class="js-pm-container flex-grow p-4 overflow-y-auto prose prose-sm dark:prose-invert max-w-none">
+							<div class="js-editable" data-name="target_content" data-placeholder="Enter target/translated content here..."></div>
+						</div>
+					</div>
 				</div>
 				<div id="js-create-action-section" class="hidden p-4 border-t border-base-300">
 					<button type="submit" class="js-create-entry-btn btn btn-primary btn-block">
@@ -184,6 +208,8 @@
 <!-- Hidden container to hold the initial content for ProseMirror editors -->
 <div id="js-pm-content-source" class="hidden">
 	<div data-name="content"></div>
+	<!-- NEW: Added container for target content -->
+	<div data-name="target_content"></div>
 </div>
 
 <!-- Prompt Editor Modal (for AI text actions) -->
@@ -221,7 +247,6 @@
 	</div>
 </dialog>
 
-<!-- MODIFIED SECTION START: Added a generic alert modal -->
 <dialog id="alert-modal" class="modal">
 	<div class="modal-box w-11/12 max-w-md">
 		<h3 id="alert-modal-title" class="font-bold text-lg text-error">Error</h3>
@@ -233,7 +258,6 @@
 		</div>
 	</div>
 </dialog>
-<!-- MODIFIED SECTION END -->
 
 <script src="../src/js/theme.js"></script>
 <script src="../dist/codex-editor-bundle.js"></script>

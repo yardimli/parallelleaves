@@ -193,6 +193,73 @@ Focus on the most prominent elements mentioned in the synopsis and chapter summa
 }
 
 /**
+ * Analyzes a text chunk to create or update codex entries.
+ * @param {object} params - The parameters for generation.
+ * @param {string} params.textChunk - A chunk of the novel text.
+ * @param {string} params.existingCodexJson - A JSON string of existing codex entries.
+ * @param {string} params.language - The language of the novel.
+ * @param {string} params.model - The LLM model to use.
+ * @returns {Promise<object>} The parsed JSON response with new and updated entries.
+ */
+async function generateCodexFromTextChunk({ textChunk, existingCodexJson, language, model }) {
+	const prompt = `
+You are a meticulous world-building assistant for a novelist. Your task is to analyze a chunk of text from a novel and identify entities that should be in a codex (an encyclopedia of the world). These entities are typically People, Locations, or Objects/Lore.
+
+**Instructions:**
+1.  Read the provided **Text Chunk**.
+2.  Review the **Existing Codex Entries** to understand what is already documented.
+3.  Identify new characters, locations, or significant objects/lore within the text chunk that are not in the codex.
+4.  If you find new information about an entity that is ALREADY in the codex, update its description. The new description should integrate the old and new information seamlessly.
+5.  For each new or updated entry, provide a concise title (the name of the entity) and a descriptive paragraph.
+6.  The output language must be **${language}**.
+
+**Existing Codex Entries (JSON):**
+${existingCodexJson}
+
+**Text Chunk to Analyze:**
+<text>
+${textChunk}
+</text>
+
+**Output Format:**
+Respond with a single, valid JSON object. Do not include any text or markdown before or after the JSON. The JSON object must have two keys: \`new_entries\` and \`updated_entries\`.
+
+- \`new_entries\`: An array of objects for entities not found in the existing codex. Each object must have:
+  - \`category\`: A string, either "Characters", "Locations", or "Objects & Lore".
+  - \`title\`: The name of the new entity.
+  - \`content\`: A descriptive paragraph.
+- \`updated_entries\`: An array of objects for entities that were in the existing codex but have new information. Each object must have:
+  - \`title\`: The exact title of the existing entity to update.
+  - \`content\`: The new, complete, and updated descriptive paragraph.
+
+Example Response:
+{
+  "new_entries": [
+    {
+      "category": "Characters",
+      "title": "Captain Eva Rostova",
+      "content": "A stern but fair captain of the starship 'Venture'. She is known for her tactical genius and unwavering loyalty to her crew."
+    }
+  ],
+  "updated_entries": [
+    {
+      "title": "Aethelgard",
+      "content": "The capital city of the Northern Kingdom, now described as having towering spires of obsidian that glitter under the twin moons. Its streets are paved with silver cobblestones, a recent addition by the new king."
+    }
+  ]
+}
+`;
+	
+	return callOpenRouter({
+		model: model,
+		messages: [{ role: 'user', content: prompt }],
+		response_format: { type: 'json_object' },
+		temperature: 0.5,
+	});
+}
+
+
+/**
  * Processes a text selection using an LLM for actions like rephrasing.
  * @param {object} params - The parameters for the text processing.
  * @param {object} params.prompt - An object with 'system', 'user', and 'ai' properties for the prompt.
@@ -325,7 +392,7 @@ async function getOpenRouterModels(forceRefresh = false) {
 function processModelsForView(modelsData) {
 	const processedModels = [];
 	const positiveList = ['openai', 'anthropic', 'mistral', 'google', 'deepseek', 'mistral', 'moonshot', 'glm'];
-	const negativeList = ['free', '8b', '9b', '3b', '7b', '12b', '22b', '24b', '32b', 'gpt-4 turbo', 'oss', 'tng', 'lite', '1.5', '2.0', 'tiny', 'gemma', 'small', 'nano', ' mini', '-mini', 'nemo', 'chat', 'distill', '3.5', 'dolphin', 'codestral', 'devstral', 'magistral', 'pixtral', 'codex', 'o1-pro', 'o3-pro', 'experimental', 'preview'];
+	const negativeList = ['free', '8b', '9b', '3b', '7b', '12b', '22b', '24b', '32b', 'gpt-4 turbo', 'oss', 'tng', 'lite', '1.5', '2.0', 'tiny', 'gemma', 'small', 'nemo', 'chat', 'distill', '3.5', 'dolphin', 'codestral', 'devstral', 'magistral', 'pixtral', 'codex', 'o1-pro', 'o3-pro', 'experimental', 'preview'];
 	
 	const models = (modelsData.data || []).sort((a, b) => a.name.localeCompare(b.name));
 	
@@ -405,6 +472,7 @@ Example Response: {"title": "Captain Eva Rostova", "category_name": "Characters"
 
 module.exports = {
 	generateNovelCodex,
+	generateCodexFromTextChunk,
 	processCodexText,
 	streamProcessCodexText,
 	getOpenRouterModels,

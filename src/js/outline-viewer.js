@@ -1,4 +1,3 @@
-
 /**
  * Truncates HTML content to a specific word limit.
  * @param {string} html - The HTML string to truncate.
@@ -118,7 +117,6 @@ async function renderCodex(container, categories) {
 	container.appendChild(fragment);
 }
 
-
 document.addEventListener('DOMContentLoaded', async () => {
 	const params = new URLSearchParams(window.location.search);
 	const novelId = params.get('novelId');
@@ -132,6 +130,92 @@ document.addEventListener('DOMContentLoaded', async () => {
 		return;
 	}
 	
+	// MODIFIED: Flag to control auto-refresh during codex generation.
+	let isAutogenRunning = false;
+	
+	// This function is defined inside the DOMContentLoaded scope to have access to `isAutogenRunning`.
+	async function setupAutogenCodex(novelId) {
+		const autogenBtn = document.getElementById('js-autogen-codex');
+		const modal = document.getElementById('autogen-codex-modal');
+		const modalContent = document.getElementById('js-autogen-codex-modal-content');
+		
+		if (!autogenBtn || !modal || !modalContent) return;
+		
+		autogenBtn.addEventListener('click', async () => {
+			try {
+				// Load template and populate models
+				modalContent.innerHTML = await window.api.getTemplate('outline/autogen-codex-modal');
+				const select = modalContent.querySelector('.js-llm-model-select');
+				const result = await window.api.getModels();
+				if (result.success && result.models.length > 0) {
+					select.innerHTML = '';
+					result.models.forEach(model => {
+						const option = new Option(model.name, model.id);
+						select.appendChild(option);
+					});
+					const defaultModel = 'openai/gpt-4o-mini';
+					if (result.models.some(m => m.id === defaultModel)) {
+						select.value = defaultModel;
+					}
+				} else {
+					select.innerHTML = '<option>Error loading models</option>';
+				}
+				modal.showModal();
+			} catch (error) {
+				console.error('Failed to open autogen modal:', error);
+				modalContent.innerHTML = `<p class="text-error">Could not load the tool. ${error.message}</p>`;
+				modal.showModal();
+			}
+		});
+		
+		modalContent.addEventListener('submit', (event) => {
+			event.preventDefault();
+			const form = event.target;
+			if (!form) return;
+			
+			const model = form.querySelector('.js-llm-model-select').value;
+			if (!model) {
+				alert('Please select an AI model.');
+				return;
+			}
+			
+			// Update UI to show progress
+			const actionButtons = form.querySelector('#js-autogen-action-buttons');
+			const progressSection = form.querySelector('#js-autogen-progress-section');
+			const cancelBtn = modal.querySelector('.js-autogen-cancel-btn');
+			
+			if (actionButtons) actionButtons.classList.add('hidden');
+			if (progressSection) progressSection.classList.remove('hidden');
+			if (cancelBtn) cancelBtn.textContent = 'Close';
+			
+			// Start the backend process and set the flag
+			window.api.startCodexAutogen({ novelId, model });
+			isAutogenRunning = true;
+		});
+		
+		// Listen for progress updates from the main process
+		window.api.onCodexAutogenUpdate((event, { progress, status }) => {
+			const progressBar = document.getElementById('js-autogen-progress-bar');
+			const statusText = document.getElementById('js-autogen-status-text');
+			
+			if (progressBar) progressBar.value = progress;
+			if (statusText) statusText.textContent = status;
+			
+			if (progress >= 100) {
+				isAutogenRunning = false; // Reset the flag when the process is complete
+				setTimeout(() => {
+					if (modal.open) {
+						modal.close();
+					}
+					// Only reload if the process didn't end in an error state
+					if (!status.toLowerCase().includes('error')) {
+						window.location.reload(); // Reload to see the new entries
+					}
+				}, 2000);
+			}
+		});
+	}
+	
 	try {
 		const data = await window.api.getOutlineData(novelId);
 		
@@ -140,6 +224,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 		
 		await renderOutline(outlineContainer, data.sections);
 		await renderCodex(codexContainer, data.codex_categories);
+		
+		const addCodexBtn = document.getElementById('js-add-codex-entry');
+		if (addCodexBtn) {
+			addCodexBtn.addEventListener('click', () => {
+				window.api.openNewCodexEditor({ novelId, selectedText: '' });
+			});
+		}
+		
+		setupAutogenCodex(novelId);
 		
 		document.body.addEventListener('click', (event) => {
 			const editBtn = event.target.closest('.js-edit-chapter');
@@ -155,6 +248,38 @@ document.addEventListener('DOMContentLoaded', async () => {
 				window.api.openCodexEditor(entryId);
 			}
 		});
+		
+		let initialState = null;
+		try {
+			initialState = await window.api.getOutlineState(novelId);
+		} catch (e) {
+			console.error('Could not get initial outline state for refresh check.', e);
+		}
+		
+		const checkForUpdates = async () => {
+			// MODIFIED: Check the flag before proceeding with the refresh check.
+			if (isAutogenRunning) {
+				console.log('Auto-generation in progress, skipping outline refresh check.');
+				return;
+			}
+			
+			if (document.hidden || !initialState || !initialState.success) {
+				return;
+			}
+			try {
+				const currentState = await window.api.getOutlineState(novelId);
+				if (currentState.success) {
+					if (currentState.chapterCount !== initialState.chapterCount || currentState.codexCount !== initialState.codexCount) {
+						console.log('Changes detected, reloading outline viewer.');
+						window.location.reload();
+					}
+				}
+			} catch (error) {
+				console.error('Error checking for outline updates:', error);
+			}
+		};
+		
+		setInterval(checkForUpdates, 5000);
 		
 	} catch (error) {
 		console.error('Failed to load outline data:', error);
