@@ -210,8 +210,6 @@ function executeCommand({ command, attrs }) {
 	editorView.focus();
 }
 
-// REMOVED: All handleAiStream... functions have been removed.
-
 function findTranslationBlockPositions(blockNumber) {
 	const { doc } = editorView.state;
 	let noteNodeCount = 0;
@@ -275,26 +273,51 @@ window.addEventListener('message', (event) => {
 			editorView.focus();
 			break;
 		}
-		// REMOVED: aiStreamStart, aiStreamChunk, aiStreamDone cases
 		
-		// NEW SECTION START: Handle non-streaming content replacement
+		// MODIFIED SECTION START: This handler now applies the 'ai_suggestion' mark before inserting.
 		case 'replaceRange': {
 			const { from, to, newContentHtml } = payload;
 			const { state, dispatch } = editorView;
 			const { schema } = state;
 			
+			// 1. Parse the incoming HTML into a ProseMirror Fragment.
 			const tempDiv = document.createElement('div');
 			tempDiv.innerHTML = newContentHtml;
-			const newFragment = DOMParser.fromSchema(schema).parse(tempDiv).content;
+			const parsedFragment = DOMParser.fromSchema(schema).parse(tempDiv).content;
 			
+			// 2. Create the 'ai_suggestion' mark.
+			const mark = schema.marks.ai_suggestion.create();
+			const nodesWithMark = [];
+			
+			// 3. Iterate through the parsed nodes to apply the mark to all text.
+			parsedFragment.forEach(node => {
+				if (node.isTextblock) {
+					const contentWithMark = [];
+					node.content.forEach(child => {
+						if (child.isText) {
+							// Add the suggestion mark to the text node.
+							contentWithMark.push(child.mark(mark.addToSet(child.marks)));
+						} else {
+							contentWithMark.push(child);
+						}
+					});
+					nodesWithMark.push(node.copy(Fragment.from(contentWithMark)));
+				} else {
+					nodesWithMark.push(node);
+				}
+			});
+			const newFragment = Fragment.from(nodesWithMark);
+			
+			// 4. Replace the selection with the new, marked fragment.
 			const tr = state.tr.replaceWith(from, to, newFragment);
 			dispatch(tr);
 			
+			// 5. Notify the parent window that the replacement is complete with the final range.
 			const finalRange = { from, to: from + newFragment.size };
 			postToParent('replacementComplete', { finalRange });
 			break;
 		}
-		// NEW SECTION END
+		// MODIFIED SECTION END
 		
 		case 'setEditable':
 			editorView.setProps({ editable: () => payload.isEditable });
