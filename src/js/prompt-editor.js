@@ -187,20 +187,49 @@ async function startAiAction (params) {
 		if (result.success && result.data.choices && result.data.choices.length > 0) {
 			let newContentText = result.data.choices[0].message.content ?? 'No content generated.';
 			newContentText = newContentText.trim();
-
+			
 			const newContentHtml = '<p>' + newContentText.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>') + '</p>';
 			console.log('AI Action Result:', newContentText, newContentHtml);
 			
 			// Use the editor interface to replace the content
-			const finalRange = await currentEditorInterface.replaceRangeWithSuggestion(
+			const replacementData = await currentEditorInterface.replaceRangeWithSuggestion(
 				aiActionRange.from,
 				aiActionRange.to,
 				newContentHtml
 			);
 			
-			if (finalRange) {
-				aiActionRange.to = finalRange.to;
+			if (replacementData) {
+				console.log( replacementData );
+				aiActionRange.to = replacementData.finalRange.to;
 				createFloatingToolbar(aiActionRange.from, aiActionRange.to, model);
+
+				if (replacementData.finalRange) {
+					// Use a short timeout to allow the iframe to resize itself via its postMessage mechanism before we calculate scroll.
+					setTimeout(() => {
+						const iframeEl = currentContext.activeEditorView.frameElement;
+						const container = document.getElementById('js-manuscript-container');
+						const endCoords = replacementData.endCoords;
+						
+						if (iframeEl && container && endCoords) {
+							const iframeRect = iframeEl.getBoundingClientRect();
+							const containerRect = container.getBoundingClientRect();
+							
+							// The y-coordinate of the content's end, relative to the parent's viewport
+							const contentEndAbsoluteY = iframeRect.top + endCoords.bottom;
+							
+							// The y-coordinate of the content's end, relative to the scroll container
+							const contentEndRelativeY = contentEndAbsoluteY - containerRect.top;
+							
+							// Calculate the desired scrollTop to bring the new content into view with some padding
+							const desiredScrollTop = container.scrollTop + contentEndRelativeY - container.clientHeight + 50; // 50px padding from bottom
+							
+							// Only scroll if the content is not already visible
+							if (desiredScrollTop > container.scrollTop) {
+								container.scrollTo({top: desiredScrollTop, behavior: 'smooth'});
+							}
+						}
+					}, 100);
+				}
 			} else {
 				console.error("Editor did not return a final range after replacement.");
 				await handleFloatyDiscard();

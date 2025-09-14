@@ -284,34 +284,35 @@ window.addEventListener('message', (event) => {
 			const newFragment = DOMParser.fromSchema(schema).parseSlice(tempDiv).content;
 			let tr = state.tr.replaceWith(from, to, newFragment);
 			
-			const finalTo = from + newFragment.size;
+			let finalTo = from + newFragment.size;
 			
 			const mark = schema.marks.ai_suggestion.create();
 			tr = tr.addMark(from, finalTo, mark);
 			
 			dispatch(tr);
 			
-			setTimeout(() => {
-				// Get the FRESH state directly from the view
-				const currentState = editorView.state;
-				const $replaceStart = currentState.doc.resolve(from);
-				const nodeBefore = $replaceStart.parent;
+			// Get the FRESH state directly from the view
+			const currentState = editorView.state;
+			const $replaceStart = currentState.doc.resolve(from);
+			const nodeBefore = $replaceStart.parent;
+
+			console.log('Node before replacement start:', nodeBefore, nodeBefore ? nodeBefore.type.name : 'N/A', nodeBefore ? nodeBefore.content.size : 'N/A');
+
+			if (nodeBefore && nodeBefore.type.name === 'paragraph' && nodeBefore.content.size === 0) {
+				const paraFrom = from - nodeBefore.nodeSize;
+				const paraTo = from;
+				console.log('Deleting empty paragraph from', paraFrom, 'to', paraTo);
+
+				// Create and dispatch a NEW transaction
+				const deleteTr = currentState.tr.delete(paraFrom, paraTo);
+				editorView.dispatch(deleteTr);
 				
-				console.log('Node before replacement start:', nodeBefore, nodeBefore ? nodeBefore.type.name : 'N/A', nodeBefore ? nodeBefore.content.size : 'N/A');
-				
-				if (nodeBefore && nodeBefore.type.name === 'paragraph' && nodeBefore.content.size === 0) {
-					const paraFrom = from - nodeBefore.nodeSize;
-					const paraTo = from;
-					console.log('Deleting empty paragraph from', paraFrom, 'to', paraTo);
-					
-					// Create and dispatch a NEW transaction
-					const deleteTr = currentState.tr.delete(paraFrom, paraTo);
-					editorView.dispatch(deleteTr);
-				}
-			}, 250);
+				finalTo -= nodeBefore.nodeSize;
+			}
 			
 			const finalRange = { from, to: finalTo };
-			postToParent('replacementComplete', { finalRange });
+			const endCoords = editorView.coordsAtPos(finalTo);
+			postToParent('replacementComplete', { finalRange: finalRange, endCoords: endCoords });
 			break;
 		}
 		

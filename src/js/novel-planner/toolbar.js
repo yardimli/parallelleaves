@@ -152,7 +152,7 @@ const createIframeEditorInterface = (contentWindow) => {
 			const listener = (event) => {
 				if (event.source === contentWindow && event.data.type === 'replacementComplete') {
 					window.removeEventListener('message', listener);
-					resolve(event.data.payload.finalRange);
+					resolve({finalRange:event.data.payload.finalRange, endCoords:event.data.payload.endCoords});
 				}
 			};
 			window.addEventListener('message', listener);
