@@ -31,21 +31,21 @@ const formDataExtractors = {
 
 let modalEl;
 let currentContext;
-let currentEditorInterface; // NEW: Stores the interface to the active editor.
+let currentEditorInterface;
 
 let isAiActionActive = false;
-let originalFragmentJson = null; // MODIFIED: Store as JSON for easier transport.
+let originalFragmentJson = null;
 let aiActionRange = null;
 let floatingToolbar = null;
 let currentAiParams = null;
 let currentPromptId = null;
 
-function showAiSpinner() {
+function showAiSpinner () {
 	const overlay = document.getElementById('ai-action-spinner-overlay');
 	if (overlay) overlay.classList.remove('hidden');
 }
 
-function hideAiSpinner() {
+function hideAiSpinner () {
 	const overlay = document.getElementById('ai-action-spinner-overlay');
 	if (overlay) overlay.classList.add('hidden');
 }
@@ -80,7 +80,7 @@ const loadPrompt = async (promptId) => {
 };
 
 // MODIFIED: Uses the editor interface for all interactions.
-async function cleanupAiAction() {
+async function cleanupAiAction () {
 	if (floatingToolbar) {
 		floatingToolbar.remove();
 		floatingToolbar = null;
@@ -103,13 +103,14 @@ async function cleanupAiAction() {
 }
 
 // MODIFIED: Uses the editor interface.
-async function handleFloatyApply() {
+async function handleFloatyApply () {
 	if (!isAiActionActive || !currentEditorInterface) return;
 	await cleanupAiAction();
 }
 
 // MODIFIED: Uses the editor interface.
-async function handleFloatyDiscard() {
+async function handleFloatyDiscard () {
+	console.log('Discarding AI suggestion...', isAiActionActive, currentEditorInterface, originalFragmentJson);
 	if (!isAiActionActive || !currentEditorInterface || !originalFragmentJson) return;
 	
 	await currentEditorInterface.discardSuggestion(aiActionRange.from, aiActionRange.to, originalFragmentJson);
@@ -117,7 +118,7 @@ async function handleFloatyDiscard() {
 }
 
 // MODIFIED: Uses the editor interface.
-async function handleFloatyRetry() {
+async function handleFloatyRetry () {
 	if (!isAiActionActive || !currentEditorInterface || !currentAiParams) return;
 	
 	const actionToRetry = currentAiParams.action;
@@ -144,7 +145,7 @@ async function handleFloatyRetry() {
 	openPromptEditor(contextForRetry, actionToRetry, previousFormData);
 }
 
-function createFloatingToolbar(from, to, model) {
+function createFloatingToolbar (from, to, model) {
 	if (floatingToolbar) floatingToolbar.remove();
 	
 	const modelName = model.split('/').pop() || model;
@@ -177,7 +178,7 @@ function createFloatingToolbar(from, to, model) {
 }
 
 // MODIFIED: Uses the editor interface.
-async function startAiStream(params) {
+async function startAiStream (params) {
 	const { prompt, model } = params;
 	
 	isAiActionActive = true;
@@ -198,9 +199,25 @@ async function startAiStream(params) {
 				await currentEditorInterface.streamChunk(payload.chunk);
 			}
 		} else if (payload.done) {
+			// MODIFIED SECTION START
+			// The stream from the main process is done. Now, we notify the editor.
 			const finalRange = await currentEditorInterface.streamDone(aiActionRange.from);
-			aiActionRange.to = finalRange.to; // Update the end of the range
-			createFloatingToolbar(aiActionRange.from, aiActionRange.to, model);
+			
+			// The 'direct' editor interface (for Codex) returns the final range immediately.
+			// The 'iframe' editor interface (for Chapters) will post a message back,
+			// which is handled by a separate listener in setupPromptEditor.
+			if (currentEditorInterface.type === 'direct') {
+				if (finalRange) {
+					console.log('AI stream completed with final range (direct):', finalRange);
+					aiActionRange.to = finalRange.to; // Update the end of the range
+					createFloatingToolbar(aiActionRange.from, aiActionRange.to, model);
+				} else {
+					console.error("Direct editor's streamDone did not return a final range.");
+					await handleFloatyDiscard();
+				}
+			}
+			// For 'iframe' type, we do nothing here. The 'aiStreamFinished' message listener handles it.
+			// MODIFIED SECTION END
 		} else if (payload.error) {
 			console.error('AI Action Error:', payload.error);
 			window.showAlert(payload.error);
@@ -219,7 +236,7 @@ async function startAiStream(params) {
 	}
 }
 
-async function populateModelDropdown(initialState = null) {
+async function populateModelDropdown (initialState = null) {
 	if (!modalEl) return;
 	const select = modalEl.querySelector('.js-llm-model-select');
 	if (!select) return;
@@ -254,7 +271,7 @@ async function populateModelDropdown(initialState = null) {
 }
 
 // MODIFIED: Uses the editor interface.
-async function handleModalApply() {
+async function handleModalApply () {
 	if (!modalEl || isAiActionActive) return;
 	
 	const model = modalEl.querySelector('.js-llm-model-select').value;
@@ -334,7 +351,7 @@ async function handleModalApply() {
 /**
  * Initializes the prompt editor modal logic once, attaching the necessary event listener.
  */
-export function setupPromptEditor() {
+export function setupPromptEditor () {
 	modalEl = document.getElementById('prompt-editor-modal');
 	if (!modalEl) return;
 	
@@ -374,7 +391,7 @@ export function setupPromptEditor() {
  * @param {string} promptId - The ID of the prompt to open.
  * @param {object|null} initialState - The form state to restore from a previous run.
  */
-export async function openPromptEditor(context, promptId, initialState = null) {
+export async function openPromptEditor (context, promptId, initialState = null) {
 	if (!modalEl) {
 		console.error('Prompt editor modal element not found.');
 		return;

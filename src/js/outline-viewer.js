@@ -246,7 +246,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 		}
 		
 		const checkForUpdates = async () => {
-			// MODIFIED: Check the flag before proceeding with the refresh check.
 			if (isAutogenRunning) {
 				console.log('Auto-generation in progress, skipping outline refresh check.');
 				return;

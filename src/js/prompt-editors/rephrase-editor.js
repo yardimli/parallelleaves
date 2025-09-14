@@ -5,7 +5,6 @@ const defaultState = {
 	selectedCodexIds: [],
 };
 
-// MODIFIED: Changed the layout of the codex selection to be more compact and wrap like text.
 const renderCodexList = (container, context, initialState = null) => {
 	const codexContainer = container.querySelector('.js-codex-selection-container');
 	if (!codexContainer) return;

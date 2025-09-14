@@ -2,11 +2,9 @@ import { Schema, DOMParser } from 'prosemirror-model';
 import { schema as basicSchema } from 'prosemirror-schema-basic';
 import { addListNodes } from 'prosemirror-schema-list';
 
-// MODIFIED: These are now managed in chapter-main.js and passed to the toolbar.
 let activeContentWindow = null;
 
 const highlightMarkSpec = (colorClass) => {
-	console.log(`[PM DEBUG] highlightMarkSpec called for color: ${colorClass}`);
 	return {
 		attrs: {},
 		parseDOM: [{ tag: `span.${colorClass}` }],
@@ -31,12 +29,9 @@ const noteNodeSpec = {
 	content: '', // No direct content, managed by NodeView and attributes.
 	draggable: false,
 	selectable: false,
-	isolating: true, // MODIFIED: Prevents cursor from entering and content from being merged.
+	isolating: true,
 	toDOM(node) {
-		console.log('[PM DEBUG] noteNodeSpec.toDOM called for node:', node);
-		// This is the "serialized" version for saving. The NodeView creates the interactive version.
 		const wrapper = document.createElement('div');
-		// Add the 'note-wrapper' class for parsing and a 'prose' class to prevent nested prose styles.
 		wrapper.className = 'note-wrapper not-prose';
 		const p = document.createElement('p');
 		p.textContent = node.attrs.text;
@@ -46,10 +41,8 @@ const noteNodeSpec = {
 	parseDOM: [{
 		tag: 'div.note-wrapper',
 		getAttrs(dom) {
-			console.log('[PM DEBUG] noteNodeSpec.parseDOM.getAttrs called on DOM element:', dom);
 			const p = dom.querySelector('p');
 			const attrs = { text: p ? p.textContent : '' };
-			console.log('[PM DEBUG] Parsed attributes:', attrs);
 			return attrs;
 		}
 	}]
@@ -58,7 +51,6 @@ const noteNodeSpec = {
 // Add the note node to the schema spec before the horizontal rule.
 const nodesWithNote = nodes.addBefore('horizontal_rule', 'note', noteNodeSpec);
 
-console.log('[PM DEBUG] Creating ProseMirror Schema...');
 export const schema = new Schema({
 	nodes: addListNodes(nodesWithNote, 'paragraph+', 'block'),
 	marks: {
@@ -102,27 +94,22 @@ export const schema = new Schema({
 		},
 	},
 });
-console.log('[PM DEBUG] Schema created successfully.');
 
 export function setActiveEditor(contentWindow) {
-	console.log('[PM DEBUG] setActiveEditor called. New contentWindow:', contentWindow);
 	activeContentWindow = contentWindow;
 }
 
 export function getActiveEditor() {
-	console.log('[PM DEBUG] getActiveEditor called.');
 	return activeContentWindow;
 }
 
 // A NodeView for our custom 'note' node.
 export class NoteNodeView {
-	// MODIFIED: Added postMessageCallback to communicate with the parent window.
 	constructor(node, view, getPos, postMessageCallback) {
-		console.log('[PM DEBUG] NoteNodeView.constructor called.');
 		this.node = node;
 		this.view = view;
 		this.getPos = getPos;
-		this.postMessage = postMessageCallback; // NEW: Store the callback.
+		this.postMessage = postMessageCallback;
 		
 		this.dom = document.createElement('div');
 		this.dom.className = 'note-wrapper not-prose p-1 my-1 border-l-4 border-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-600 rounded-r-md relative group';
@@ -157,22 +144,16 @@ export class NoteNodeView {
 	}
 	
 	
-	// ProseMirror calls this when the node is selected. We use it to add a visual indicator.
 	selectNode() {
-		console.log(`[PM DEBUG] NoteNodeView.selectNode called for node at pos ${this.getPos()}`);
 		this.dom.classList.add('ProseMirror-selectednode');
 	}
 	
-	// ProseMirror calls this when the node is deselected. We use it to remove the visual indicator.
 	deselectNode() {
-		console.log(`[PM DEBUG] NoteNodeView.deselectNode called for node at pos ${this.getPos()}`);
 		this.dom.classList.remove('ProseMirror-selectednode');
 	}
 	
 	openEditModal(e) {
 		e.preventDefault();
-		console.log('[PM DEBUG] NoteNodeView.openEditModal called.');
-		// MODIFIED: Send a message to the parent to open the modal.
 		this.postMessage('openNoteModal', {
 			title: 'Edit Note',
 			content: this.node.attrs.text,
@@ -184,13 +165,11 @@ export class NoteNodeView {
 		e.preventDefault();
 		const pos = this.getPos();
 		const nodeSize = this.node.nodeSize;
-		console.log(`[PM DEBUG] NoteNodeView.deleteNode called. Deleting node at pos ${pos} with size ${nodeSize}`);
 		const tr = this.view.state.tr.delete(pos, pos + nodeSize);
 		this.view.dispatch(tr);
 	}
 	
 	stopEvent() {
-		console.log('[PM DEBUG] NoteNodeView.stopEvent called, returning true.');
 		return true;
 	}
 	

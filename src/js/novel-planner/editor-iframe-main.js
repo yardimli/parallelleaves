@@ -373,11 +373,7 @@ window.addEventListener('message', (event) => {
 			const { from, to, originalFragmentJson } = payload;
 			const originalFragment = Fragment.fromJSON(schema, originalFragmentJson);
 			
-			// MODIFIED SECTION START: Switched from `replace` to `replaceWith`.
-			// `replaceWith` is the correct, safer method for replacing a range with a fragment of nodes,
-			// which resolves the internal ProseMirror error.
 			let tr = editorView.state.tr.replaceWith(from, to, originalFragment);
-			// MODIFIED SECTION END
 			
 			const newTo = from + originalFragment.size;
 			tr = tr.setSelection(TextSelection.create(tr.doc, from, newTo));

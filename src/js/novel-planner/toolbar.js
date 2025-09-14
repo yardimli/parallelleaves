@@ -1,6 +1,5 @@
 import { openPromptEditor } from '../prompt-editor.js';
 
-// MODIFIED: This file is now ONLY for the chapter editor and its iframe-based views.
 let activeContentWindow = null;
 let currentToolbarState = {};
 const toolbar = document.getElementById('top-toolbar');
@@ -125,7 +124,6 @@ function applyHighlight(color) {
 	}, window.location.origin);
 }
 
-// NEW: This object implements the editor interface for an iframe-based editor.
 const createIframeEditorInterface = (contentWindow) => {
 	const post = (type, payload) => contentWindow.postMessage({ type, payload }, window.location.origin);
 	
@@ -223,7 +221,7 @@ async function handleToolbarAction(button) {
 			const chapterId = chapterItem.dataset.chapterId;
 			const blockNumber = startMarker ? parseInt(startMarker.dataset.blockNumber, 10) : 1;
 			
-			// MODIFIED: Pass the iframe editor interface to openPromptEditor.
+			// Pass the iframe editor interface to openPromptEditor.
 			const targetContentWindow = toolbarConfig.getChapterViews(chapterId)?.iframe.contentWindow;
 			if (!targetContentWindow) {
 				window.showAlert('Could not find the target editor for this chapter.');
@@ -239,13 +237,13 @@ async function handleToolbarAction(button) {
 				targetLanguage: novelData.target_language || 'English',
 				activeEditorView: targetContentWindow, // Kept for backward compatibility in some parts
 				translationInfo: { blockNumber },
-				editorInterface: createIframeEditorInterface(targetContentWindow), // NEW
+				editorInterface: createIframeEditorInterface(targetContentWindow),
 			};
 			openPromptEditor(context, 'translate', settings);
 			return;
 		}
 		
-		// MODIFIED: This is for the 'rephrase' action in the chapter editor.
+		// This is for the 'rephrase' action in the chapter editor.
 		if (!activeContentWindow) return;
 		
 		const { selectionText } = currentToolbarState;
@@ -258,7 +256,7 @@ async function handleToolbarAction(button) {
 			allCodexEntries,
 			languageForPrompt: novelData.target_language || 'English',
 			activeEditorView: activeContentWindow, // Kept for backward compatibility
-			editorInterface: createIframeEditorInterface(activeContentWindow), // NEW
+			editorInterface: createIframeEditorInterface(activeContentWindow),
 		};
 		openPromptEditor(context, action, settings);
 		return;

@@ -6,7 +6,6 @@ const defaultState = {
 	contextPairs: 4,
 };
 
-// NEW UTILITY FUNCTION START
 /**
  * Finds codex entry IDs within a given text by matching titles and document phrases.
  * @param {string} text - The plain text to scan.
@@ -65,9 +64,6 @@ function findCodexIdsInText(text, codexCategories) {
 	
 	return foundIds;
 }
-// NEW UTILITY FUNCTION END
-
-// MODIFIED: Changed the layout of the codex selection to be more compact and wrap like text.
 const renderCodexList = (container, context, initialState = null, preselectedIds = new Set()) => {
 	const codexContainer = container.querySelector('.js-codex-selection-container');
 	if (!codexContainer) return;
@@ -293,7 +289,6 @@ export const init = async (container, context) => {
 					pairCount: contextPairCount,
 				});
 				
-				// MODIFIED SECTION START: Combine both source and target from history for a more comprehensive scan.
 				const tempDiv = document.createElement('div');
 				const historyText = pairs.map(p => {
 					// Extract plain text from source history
@@ -305,7 +300,6 @@ export const init = async (container, context) => {
 					return sourceText + ' ' + targetText;
 				}).join(' ');
 				textToScan += ' ' + historyText;
-				// MODIFIED SECTION END
 				
 			} catch (error) {
 				console.error('Failed to fetch translation context for codex matching:', error);

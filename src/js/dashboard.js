@@ -203,7 +203,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			metaModal.close();
 		} catch (error) {
 			console.error('Failed to save meta settings:', error);
-			// MODIFIED: Replaced native alert with custom modal.
 			window.showAlert('Error saving settings: ' + error.message);
 		}
 	});
@@ -240,7 +239,6 @@ document.addEventListener('DOMContentLoaded', () => {
 				renderNovels();
 			} catch (error) {
 				console.error('Failed to delete project:', error);
-				// MODIFIED: Replaced native alert with custom modal.
 				window.showAlert('Error deleting project.');
 			}
 		}

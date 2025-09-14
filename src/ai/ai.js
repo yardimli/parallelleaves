@@ -84,7 +84,6 @@ async function callOpenRouter(payload) {
  * @returns {Promise<void>} A promise that resolves when the stream is complete.
  * @throws {Error} If the API call fails.
  */
-// MODIFIED: Added `signal` parameter to accept an AbortSignal.
 async function streamOpenRouter(payload, onChunk, signal) {
 	if (!OPEN_ROUTER_API_KEY) {
 		throw new Error('OpenRouter API key is not configured.');
@@ -102,8 +101,7 @@ async function streamOpenRouter(payload, onChunk, signal) {
 			'Authorization': `Bearer ${OPEN_ROUTER_API_KEY}`,
 			'Content-Type': 'application/json'
 		},
-		body: JSON.stringify({ ...payload, stream: true }), // Ensure streaming is enabled
-		// MODIFIED: Pass the signal to the fetch request.
+		body: JSON.stringify({ ...payload, stream: true }),
 		signal: signal,
 	});
 	
@@ -283,7 +281,6 @@ async function processCodexText({ prompt, model }) {
 	if (prompt.system) {
 		messages.push({ role: 'system', content: prompt.system });
 	}
-	// MODIFIED: Add context pairs to the messages array if they exist.
 	if (prompt.context_pairs && Array.isArray(prompt.context_pairs)) {
 		messages.push(...prompt.context_pairs);
 	}
@@ -317,13 +314,11 @@ async function processCodexText({ prompt, model }) {
  * @param {AbortSignal} [signal] - An optional AbortSignal to cancel the request.
  * @returns {Promise<void>} A promise that resolves when the stream is complete.
  */
-// MODIFIED: Added `signal` parameter.
 async function streamProcessCodexText({ prompt, model }, onChunk, signal) {
 	const messages = [];
 	if (prompt.system) {
 		messages.push({ role: 'system', content: prompt.system });
 	}
-	// MODIFIED: Add context pairs to the messages array if they exist.
 	if (prompt.context_pairs && Array.isArray(prompt.context_pairs)) {
 		messages.push(...prompt.context_pairs);
 	}
@@ -338,7 +333,6 @@ async function streamProcessCodexText({ prompt, model }, onChunk, signal) {
 		throw new Error('Prompt is empty. Cannot call AI service.');
 	}
 	
-	// MODIFIED: Pass the signal down to the `streamOpenRouter` function.
 	await streamOpenRouter({
 		model: model,
 		messages: messages,

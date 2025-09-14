@@ -2,7 +2,6 @@ import { setupTopToolbar, setActiveContentWindow, updateToolbarState } from './t
 import { setupPromptEditor } from '../prompt-editor.js';
 import { getActiveEditor, setActiveEditor } from './content-editor.js';
 
-// NEW: A map for language codes to human-readable names for the spellcheck dropdown.
 const languageCodeToName = {
 	'af': 'Afrikaans',
 	'bg': 'Bulgarian',
@@ -55,8 +54,6 @@ const languageCodeToName = {
 	'vi': 'Vietnamese',
 };
 
-
-// NEW: Debouncing utility to delay function execution until after a pause.
 const debounce = (func, delay) => {
 	let timeout;
 	return function(...args) {
@@ -68,14 +65,9 @@ const debounce = (func, delay) => {
 
 let activeChapterId = null;
 let isScrollingProgrammatically = false;
-// MODIFIED: This map now stores iframe information instead of direct EditorView instances.
 const chapterEditorViews = new Map();
 
-// NEW: Debounced save function for content changes received from iframes.
 const debouncedContentSave = debounce(async ({ chapterId, field, value }) => {
-	console.log(`[SAVE] Debounced save triggered for ${field}, chapter ${chapterId}...`);
-	
-	// Update word count in the parent window UI
 	if (field === 'target_content') {
 		const tempDiv = document.createElement('div');
 		tempDiv.innerHTML = value;
@@ -91,7 +83,6 @@ const debouncedContentSave = debounce(async ({ chapterId, field, value }) => {
 	
 	try {
 		await window.api.updateChapterField({ chapterId, field, value });
-		console.log(`[SAVE] Successfully saved ${field} for chapter ${chapterId}.`);
 	} catch (error) {
 		console.error(`[SAVE] Error saving ${field} for chapter ${chapterId}:`, error);
 		window.showAlert(`Could not save ${field} changes.`);
@@ -104,7 +95,6 @@ const debouncedContentSave = debounce(async ({ chapterId, field, value }) => {
  * @returns {string} HTML with placeholders replaced by styled divs.
  */
 function processSourceContentForDisplay(sourceHtml) {
-	console.log('[processSourceContent] Processing source HTML for display.');
 	if (!sourceHtml) return '';
 	// This regex finds all instances of {{TranslationBlock-NUMBER}} and replaces them.
 	return sourceHtml.replace(/{{TranslationBlock-(\d+)}}/g, (match, blockNumber) => {
@@ -118,7 +108,6 @@ function processSourceContentForDisplay(sourceHtml) {
 	});
 }
 
-// NEW FUNCTION START: Processes source HTML to find and link codex entry terms.
 /**
  * Finds codex entry titles and phrases in an HTML string and wraps them in links.
  * @param {string} htmlString - The HTML content to process.
@@ -220,21 +209,17 @@ function processSourceContentForCodexLinks(htmlString, codexCategories) {
 	// 4. Return the modified HTML.
 	return tempDiv.innerHTML;
 }
-// NEW FUNCTION END
 
 /**
  * Renders the entire manuscript into the container.
  * @param {HTMLElement} container - The manuscript container element.
  * @param {object} novelData - The full novel data.
- * @param {Array<object>} allCodexEntries - All codex entries for the novel. // MODIFIED: Added parameter
+ * @param {Array<object>} allCodexEntries - All codex entries for the novel.
  */
-async function renderManuscript(container, novelData, allCodexEntries) { // MODIFIED: Added parameter
-	console.time('renderManuscript');
-	console.log('[renderManuscript] Starting manuscript render...');
+async function renderManuscript(container, novelData, allCodexEntries) {
 	const fragment = document.createDocumentFragment();
 	
 	for (const section of novelData.sections) {
-		console.log(`[renderManuscript] Rendering section "${section.title}"`);
 		const sectionHeader = document.createElement('div');
 		sectionHeader.className = 'px-8 py-6 sticky top-0 bg-base-100/90 backdrop-blur-sm z-10 border-b border-base-300';
 		sectionHeader.innerHTML = `<h2 class="text-3xl font-bold text-indigo-500">${section.section_order}. ${section.title}</h2>`;
@@ -249,7 +234,6 @@ async function renderManuscript(container, novelData, allCodexEntries) { // MODI
 		}
 		
 		for (const chapter of section.chapters) {
-			console.log(`[renderManuscript] Processing chapter "${chapter.title}" (ID: ${chapter.id})`);
 			const chapterWrapper = document.createElement('div');
 			chapterWrapper.id = `chapter-scroll-target-${chapter.id}`;
 			chapterWrapper.className = 'manuscript-chapter-item px-8 py-6';
@@ -262,7 +246,6 @@ async function renderManuscript(container, novelData, allCodexEntries) { // MODI
 			titleInput.placeholder = 'Chapter Title';
 			
 			const debouncedTitleSave = debounce(async (value) => {
-				console.log(`[SAVE] Debounced title save triggered for chapter ${chapter.id}.`);
 				try {
 					await window.api.updateChapterField({ chapterId: chapter.id, field: 'title', value });
 				} catch (error) {
@@ -281,15 +264,14 @@ async function renderManuscript(container, novelData, allCodexEntries) { // MODI
 			const sourceContentContainer = document.createElement('div');
 			sourceContentContainer.className = 'source-content-readonly';
 			
-			// MODIFIED SECTION START: Process source content for both translation blocks and codex links.
+			// Process source content for both translation blocks and codex links.
 			let processedSourceHtml = processSourceContentForDisplay(chapter.source_content || '');
 			processedSourceHtml = processSourceContentForCodexLinks(processedSourceHtml, allCodexEntries);
-			// MODIFIED SECTION END
 			
 			sourceContentContainer.innerHTML = processedSourceHtml;
 			sourceCol.appendChild(sourceContentContainer);
 			
-			// MODIFIED SECTION START: The target editor is now an iframe.
+			// The target editor is now an iframe.
 			const targetCol = document.createElement('div');
 			targetCol.className = 'col-span-1'; // Removed prose styles from the container
 			targetCol.innerHTML = `<h3 class="!mt-0 text-sm font-semibold uppercase tracking-wider text-base-content/70 border-b pb-1 mb-2 p-4">Target (<span class="js-target-word-count">${chapter.target_word_count.toLocaleString()} words</span>)</h3>`;
@@ -326,7 +308,7 @@ async function renderManuscript(container, novelData, allCodexEntries) { // MODI
 				initialTargetContent = skeletonHtml;
 			}
 			
-			// MODIFIED SECTION START: Store iframe info and initialize it on load.
+			// Store iframe info and initialize it on load.
 			const viewInfo = {
 				iframe: iframe,
 				contentWindow: iframe.contentWindow,
@@ -348,20 +330,16 @@ async function renderManuscript(container, novelData, allCodexEntries) { // MODI
 						initialHtml: viewInfo.initialContent,
 						isEditable: true,
 						chapterId: chapter.id,
-						// MODIFIED: Changed property name from `saveField` to `field` to match the handler.
 						field: 'target_content',
 						theme: currentTheme,
 					}
 				}, window.location.origin);
 			});
-			// MODIFIED SECTION END
 		}
 	}
 	
 	container.innerHTML = '';
 	container.appendChild(fragment);
-	console.log('[renderManuscript] Finished manuscript render.');
-	console.timeEnd('renderManuscript');
 }
 
 
@@ -369,19 +347,16 @@ async function renderManuscript(container, novelData, allCodexEntries) { // MODI
  * Sets up the intersection observer to track the active chapter during scrolling.
  */
 function setupIntersectionObserver() {
-	console.log('[setupIntersectionObserver] Setting up...');
 	const container = document.getElementById('js-manuscript-container');
 	const navDropdown = document.getElementById('js-chapter-nav-dropdown');
 	
 	const observer = new IntersectionObserver((entries) => {
 		if (isScrollingProgrammatically) return;
-		console.log('[IntersectionObserver] Fired. Entries count:', entries.length);
 		
 		entries.forEach(entry => {
 			if (entry.isIntersecting) {
 				const chapterId = entry.target.dataset.chapterId;
 				if (chapterId && chapterId !== activeChapterId) {
-					console.log(`[IntersectionObserver] Chapter ${chapterId} is now active.`);
 					activeChapterId = chapterId;
 					navDropdown.value = chapterId;
 				}
@@ -394,7 +369,6 @@ function setupIntersectionObserver() {
 	});
 	
 	container.querySelectorAll('.manuscript-chapter-item').forEach(el => observer.observe(el));
-	console.log('[setupIntersectionObserver] Observer is now watching chapter items.');
 }
 
 /**
@@ -402,7 +376,6 @@ function setupIntersectionObserver() {
  * @param {object} novelData - The full novel data.
  */
 function populateNavDropdown(novelData) {
-	console.log('[populateNavDropdown] Populating chapter navigation dropdown.');
 	const navDropdown = document.getElementById('js-chapter-nav-dropdown');
 	navDropdown.innerHTML = '';
 	
@@ -419,7 +392,6 @@ function populateNavDropdown(novelData) {
 	});
 	
 	navDropdown.addEventListener('change', () => {
-		console.log('[NavDropdown] Change event detected, scrolling to chapter:', navDropdown.value);
 		scrollToChapter(navDropdown.value);
 	});
 }
@@ -429,13 +401,11 @@ function populateNavDropdown(novelData) {
  * @param {string} chapterId - The ID of the chapter to scroll to.
  */
 function scrollToChapter(chapterId) {
-	console.log(`[scrollToChapter] Attempting to scroll to chapter ${chapterId}`);
 	const target = document.getElementById(`chapter-scroll-target-${chapterId}`);
 	const container = document.getElementById('js-manuscript-container');
 	
 	if (target && container) {
 		isScrollingProgrammatically = true;
-		console.log('[scrollToChapter] Starting programmatic scroll.');
 		
 		const containerRect = container.getBoundingClientRect();
 		const targetRect = target.getBoundingClientRect();
@@ -452,7 +422,6 @@ function scrollToChapter(chapterId) {
 			activeChapterId = chapterId;
 		}
 		setTimeout(() => {
-			console.log('[scrollToChapter] Ending programmatic scroll flag.');
 			isScrollingProgrammatically = false;
 		}, 1000); // Increased timeout to ensure smooth scroll completes
 	} else {
@@ -464,7 +433,6 @@ function scrollToChapter(chapterId) {
  * Sets up the note editor modal for creating and editing notes.
  */
 function setupNoteEditorModal() {
-	console.log('[setupNoteEditorModal] Setting up modal...');
 	const modal = document.getElementById('note-editor-modal');
 	const form = document.getElementById('note-editor-form');
 	const closeBtn = modal.querySelector('.js-close-note-modal');
@@ -475,9 +443,7 @@ function setupNoteEditorModal() {
 	
 	form.addEventListener('submit', (event) => {
 		event.preventDefault();
-		console.log('[NoteEditor] Form submitted.');
 		
-		// MODIFIED: Get the active iframe's contentWindow instead of a direct view.
 		const activeContentWindow = getActiveEditor();
 		if (!activeContentWindow) {
 			console.error('[NoteEditor] No active editor iframe to save note to.');
@@ -496,7 +462,6 @@ function setupNoteEditorModal() {
 		
 		const pos = posInput.value ? parseInt(posInput.value, 10) : null;
 		
-		// MODIFIED: Send a message to the iframe to handle the save.
 		activeContentWindow.postMessage({
 			type: 'saveNote',
 			payload: { pos, noteText }
@@ -507,7 +472,6 @@ function setupNoteEditorModal() {
 	});
 	
 	closeBtn.addEventListener('click', () => {
-		console.log('[NoteEditor] Modal closed via button.');
 		modal.close();
 		form.reset();
 	});
@@ -517,12 +481,10 @@ function setupNoteEditorModal() {
  * Sets up the event listener for the "Translate Block" button in the source panel.
  */
 function setupTranslateBlockAction() {
-	console.log('[setupTranslateBlockAction] Setting up listener...');
 	const container = document.getElementById('js-manuscript-container');
 	container.addEventListener('click', (event) => {
 		const translateBtn = event.target.closest('.js-translate-block-btn');
 		if (!translateBtn) return;
-		console.log('[TranslateBlock] Button clicked.');
 		
 		event.preventDefault();
 		event.stopPropagation();
@@ -530,7 +492,6 @@ function setupTranslateBlockAction() {
 		const marker = translateBtn.closest('[data-block-number]');
 		const sourceContainer = marker.closest('.source-content-readonly');
 		const blockNumber = parseInt(marker.dataset.blockNumber, 10);
-		console.log(`[TranslateBlock] Found block number: ${blockNumber}`);
 		
 		if (!sourceContainer || isNaN(blockNumber)) {
 			console.error('[TranslateBlock] Could not find source container or block number for translation.');
@@ -553,7 +514,6 @@ function setupTranslateBlockAction() {
 			range.selectNodeContents(sourceContainer);
 			range.setStartAfter(startNode);
 		}
-		console.log('[TranslateBlock] Created text range for selection.');
 		
 		const selection = window.getSelection();
 		selection.removeAllRanges();
@@ -561,7 +521,6 @@ function setupTranslateBlockAction() {
 		
 		const toolbarTranslateBtn = document.querySelector('#top-toolbar .js-ai-action-btn[data-action="translate"]');
 		if (toolbarTranslateBtn) {
-			console.log('[TranslateBlock] Simulating click on top toolbar translate button.');
 			setTimeout(() => {
 				if (!toolbarTranslateBtn.disabled) {
 					toolbarTranslateBtn.click();
@@ -573,12 +532,10 @@ function setupTranslateBlockAction() {
 	});
 }
 
-// NEW: This function populates and configures the spellcheck language dropdown.
 /**
  * Populates and configures the spellcheck language dropdown.
  */
 async function setupSpellcheckDropdown() {
-	console.log('[setupSpellcheckDropdown] Setting up...');
 	const dropdown = document.getElementById('js-spellcheck-lang-dropdown');
 	if (!dropdown) {
 		console.error('[setupSpellcheckDropdown] Dropdown element not found.');
@@ -609,11 +566,9 @@ async function setupSpellcheckDropdown() {
 		
 		dropdown.addEventListener('change', async () => {
 			const selectedLang = dropdown.value;
-			console.log(`[Spellcheck] Language changed to: ${selectedLang}`);
 			try {
 				await window.api.setSpellCheckerLanguage(selectedLang);
 				// A small notification could be added here in the future.
-				console.log(`[Spellcheck] Language successfully set to ${selectedLang || 'Disabled'}.`);
 			} catch (error) {
 				console.error('[Spellcheck] Error setting language:', error);
 				window.showAlert('Could not set spellcheck language.');
@@ -630,7 +585,6 @@ async function setupSpellcheckDropdown() {
 
 // Main Initialization
 document.addEventListener('DOMContentLoaded', async () => {
-	console.log('[DOM] DOMContentLoaded event fired. Starting initialization.');
 	
 	window.showAlert = function(message, title = 'Error') {
 		const modal = document.getElementById('alert-modal');
@@ -648,7 +602,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 	const params = new URLSearchParams(window.location.search);
 	const novelId = params.get('novelId');
 	const initialChapterId = params.get('chapterId');
-	console.log(`[Init] Novel ID: ${novelId}, Initial Chapter ID: ${initialChapterId}`);
 	
 	if (!novelId) {
 		document.body.innerHTML = '<p class="text-error p-8">Error: Project ID is missing.</p>';
@@ -658,14 +611,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 	document.body.dataset.novelId = novelId;
 	
 	try {
-		console.log('[Init] Fetching full manuscript data...');
 		const novelData = await window.api.getFullManuscript(novelId);
 		if (!novelData || !novelData.title) {
 			throw new Error('Failed to load project data from the database.');
 		}
-		console.log('[Init] Manuscript data loaded successfully.');
 		
-		// NEW: Fetch all codex entries for the novel.
+		// Fetch all codex entries for the novel.
 		const allCodexEntries = await window.api.getAllCodexEntriesForNovel(novelId);
 		
 		document.title = `Translating: ${novelData.title}`;
@@ -679,14 +630,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 				<p class="text-sm mt-2">You can import a document from the dashboard to get started.</p>
 			</div>`;
 			document.getElementById('js-chapter-nav-dropdown').disabled = true;
-			console.log('[Init] No sections found. Displaying empty message.');
 			return;
 		}
 		
-		await renderManuscript(manuscriptContainer, novelData, allCodexEntries); // MODIFIED: Pass codex entries
+		await renderManuscript(manuscriptContainer, novelData, allCodexEntries);
 		populateNavDropdown(novelData);
 		
-		console.log('[Init] Setting up UI components...');
 		setupTopToolbar({
 			isChapterEditor: true,
 			getActiveChapterId: () => activeChapterId,
@@ -696,20 +645,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 		setupIntersectionObserver();
 		setupNoteEditorModal();
 		setupTranslateBlockAction();
-		setupSpellcheckDropdown(); // NEW: Initialize the spellcheck dropdown.
-		console.log('[Init] UI components setup complete.');
+		setupSpellcheckDropdown();
 		
-		// MODIFIED: This listener is now for browser selection (source panel).
-		// Editor selection is handled via postMessage.
 		const throttledUpdateToolbar = debounce(() => {
-			console.log('[SelectionChange] Debounced event fired. Updating toolbar state for browser selection.');
 			updateToolbarState(null); // Pass null to indicate it's not a PM editor state
 		}, 100);
 		
 		document.addEventListener('selectionchange', throttledUpdateToolbar);
-		console.log('[Init] "selectionchange" listener attached.');
 		
-		// NEW SECTION START: Add a click listener for the dynamically created codex links.
 		manuscriptContainer.addEventListener('click', (event) => {
 			const codexLink = event.target.closest('a.codex-link');
 			if (codexLink) {
@@ -720,20 +663,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 				}
 			}
 		});
-		// NEW SECTION END
 		
 		const chapterToLoad = initialChapterId || novelData.sections[0]?.chapters[0]?.id;
 		if (chapterToLoad) {
-			console.log(`[Init] Initial chapter to load: ${chapterToLoad}`);
 			document.getElementById('js-chapter-nav-dropdown').value = chapterToLoad;
 			setTimeout(() => scrollToChapter(chapterToLoad), 100);
-		} else {
-			console.log('[Init] No specific initial chapter to load.');
 		}
 		
 		if (window.api && typeof window.api.onManuscriptScrollToChapter === 'function') {
 			window.api.onManuscriptScrollToChapter((event, chapterId) => {
-				console.log(`[IPC] Received onManuscriptScrollToChapter event for chapter: ${chapterId}`);
 				if (chapterId) {
 					scrollToChapter(chapterId);
 					const navDropdown = document.getElementById('js-chapter-nav-dropdown');
@@ -742,10 +680,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 					}
 				}
 			});
-			console.log('[Init] IPC listener for scrolling is ready.');
 		}
 		
-		// NEW: Global message listener for iframes
 		window.addEventListener('message', (event) => {
 			const isFromKnownIframe = Array.from(chapterEditorViews.values()).some(view => view.iframe.contentWindow === event.source);
 			if (!isFromKnownIframe) return;
@@ -798,8 +734,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 				}
 			}
 		});
-		
-		console.log('[Init] All initialization tasks are complete.');
 		
 	} catch (error) {
 		console.error('Failed to load manuscript data:', error);

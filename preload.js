@@ -49,7 +49,6 @@ contextBridge.exposeInMainWorld('api', {
 	createCodexEntry: (novelId, formData) => ipcRenderer.invoke('codex-entries:store', novelId, formData),
 	suggestCodexDetails: (novelId, text) => ipcRenderer.invoke('codex-entries:suggest-details', { novelId, text }),
 	updateCodexEntry: (entryId, data) => ipcRenderer.invoke('codex-entries:update', entryId, data),
-	// NEW: Expose the delete function for codex entries.
 	deleteCodexEntry: (entryId) => ipcRenderer.invoke('codex-entries:delete', entryId),
 	getAllCodexEntriesForNovel: (novelId) => ipcRenderer.invoke('codex:getAllForNovel', novelId),
 	getCategoriesForNovel: (novelId) => ipcRenderer.invoke('codex-categories:getAllForNovel', novelId),

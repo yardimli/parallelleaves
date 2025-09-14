@@ -1,4 +1,4 @@
-// MODIFIED: This file now contains its own independent toolbar logic,
+// This file now contains its own independent toolbar logic,
 // decoupling it from the chapter editor's toolbar.
 
 import { setupContentEditor } from './planner-codex-content-editor.js';
@@ -31,7 +31,6 @@ function setButtonLoadingState(button, isLoading) {
 	}
 }
 
-// NEW: Helper to serialize a ProseMirror document to an HTML string.
 const serializeDocToHtml = (view) => {
 	if (!view) return '';
 	const serializer = DOMSerializer.fromSchema(view.state.schema);
@@ -270,7 +269,7 @@ function updateCodexToolbarState(view) {
  * @param {Function} command - The ProseMirror command to execute.
  */
 function applyCommand(command) {
-	const view = activeEditorView; // MODIFIED: Use the active view
+	const view = activeEditorView;
 	if (view && command) {
 		command(view.state, view.dispatch);
 		view.focus();
@@ -282,7 +281,7 @@ function applyCommand(command) {
  * @param {HTMLElement} button - The clicked button element.
  */
 async function handleToolbarAction(button) {
-	const view = activeEditorView; // MODIFIED: Use the active view
+	const view = activeEditorView;
 	if (!view) return;
 	
 	if (button.classList.contains('js-ai-action-btn')) {
@@ -562,7 +561,6 @@ async function setupEditMode(entryId) {
 		titleInput.addEventListener('input', () => triggerDebouncedSave(entryId));
 		phrasesInput.addEventListener('input', () => triggerDebouncedSave(entryId));
 		
-		// MODIFIED SECTION START: Setup delete functionality
 		const deleteBtn = document.getElementById('js-delete-codex-entry-btn');
 		const deleteModal = document.getElementById('delete-confirm-modal');
 		const cancelDeleteBtn = document.getElementById('js-cancel-delete-btn');
@@ -596,7 +594,6 @@ async function setupEditMode(entryId) {
 				}
 			});
 		}
-		// MODIFIED SECTION END
 		
 	} catch (error) {
 		console.error('Failed to load codex entry data:', error);

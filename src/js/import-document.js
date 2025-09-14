@@ -324,7 +324,6 @@ document.addEventListener('DOMContentLoaded', () => {
 	
 	startImportBtn.addEventListener('click', async () => {
 		if (!titleInput.value.trim()) {
-			// MODIFIED: Replaced native alert with custom modal.
 			window.showAlert('Please provide a project title.', 'Information');
 			return;
 		}
@@ -378,7 +377,6 @@ document.addEventListener('DOMContentLoaded', () => {
 		}
 		
 		if (acts.length === 0) {
-			// MODIFIED: Replaced native alert with custom modal.
 			window.showAlert('No content to import.', 'Information');
 			setButtonLoading(startImportBtn, false);
 			return;
@@ -393,7 +391,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			});
 		} catch (error) {
 			console.error('Import failed:', error);
-			// MODIFIED: Replaced native alert with custom modal.
 			window.showAlert(`Error during import: ${error.message}`);
 			setButtonLoading(startImportBtn, false);
 		}

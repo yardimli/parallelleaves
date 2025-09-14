@@ -41,7 +41,7 @@ const codexSchema = new Schema({
 
 // --- Editor Setup ---
 
-// NEW: A plugin to handle showing a placeholder text on an empty editor.
+// plugin to handle showing a placeholder text on an empty editor.
 const placeholderPlugin = (placeholderText) => new Plugin({
 	props: {
 		decorations(state) {
@@ -62,7 +62,6 @@ const placeholderPlugin = (placeholderText) => new Plugin({
 });
 
 
-// MODIFIED: `setupContentEditor` is now a factory function that returns the view.
 export function setupContentEditor(mount, options = {}) {
 	const { initialContent, placeholder, onStateChange, onFocus } = options;
 	
@@ -78,7 +77,7 @@ export function setupContentEditor(mount, options = {}) {
 				keymap({ 'Mod-z': undo, 'Mod-y': redo, 'Shift-Mod-z': redo }),
 				keymap(baseKeymap),
 				placeholderPlugin(placeholder || ''),
-				// NEW: Plugin to handle focus events for tracking the active editor.
+				//  Plugin to handle focus events for tracking the active editor.
 				new Plugin({
 					props: {
 						handleDOMEvents: {

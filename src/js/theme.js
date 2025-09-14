@@ -1,6 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
 	const themeToggle = document.getElementById('theme-toggle');
-	// NEW: An array of themes to cycle through.
 	const themes = ['light', 'paper', 'dark'];
 	
 	/**

@@ -845,7 +845,6 @@ function setupIpcHandlers() {
 			const categories = db.prepare('SELECT id, name FROM codex_categories WHERE novel_id = ? ORDER BY name ASC').all(novelId);
 			categories.forEach(category => {
 				category.entries = db.prepare('SELECT id, title, content, target_content, document_phrases FROM codex_entries WHERE codex_category_id = ? ORDER BY title ASC').all(category.id);
-				// MODIFIED SECTION END
 			});
 			return categories;
 		} catch (error) {
@@ -950,11 +949,8 @@ function setupIpcHandlers() {
 		return {success: true, message: 'Codex entry updated successfully.'};
 	});
 	
-	// NEW HANDLER START: Handle the deletion of a codex entry.
 	ipcMain.handle('codex-entries:delete', (event, entryId) => {
 		try {
-			// The database schema uses ON DELETE CASCADE for foreign keys,
-			// so deleting the entry will also remove links from the pivot table.
 			const result = db.prepare('DELETE FROM codex_entries WHERE id = ?').run(entryId);
 			if (result.changes === 0) {
 				return { success: false, message: 'Codex entry not found.' };
@@ -965,7 +961,6 @@ function setupIpcHandlers() {
 			throw new Error('Failed to delete the codex entry from the database.');
 		}
 	});
-	// NEW HANDLER END
 	
 	ipcMain.on('codex-entries:process-text-stream', (event, {data, channel}) => {
 		const controller = new AbortController();
