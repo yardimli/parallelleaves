@@ -291,13 +291,32 @@ window.addEventListener('message', (event) => {
 			
 			dispatch(tr);
 			
+			setTimeout(() => {
+				// Get the FRESH state directly from the view
+				const currentState = editorView.state;
+				const $replaceStart = currentState.doc.resolve(from);
+				const nodeBefore = $replaceStart.parent;
+				
+				console.log('Node before replacement start:', nodeBefore, nodeBefore ? nodeBefore.type.name : 'N/A', nodeBefore ? nodeBefore.content.size : 'N/A');
+				
+				if (nodeBefore && nodeBefore.type.name === 'paragraph' && nodeBefore.content.size === 0) {
+					const paraFrom = from - nodeBefore.nodeSize;
+					const paraTo = from;
+					console.log('Deleting empty paragraph from', paraFrom, 'to', paraTo);
+					
+					// Create and dispatch a NEW transaction
+					const deleteTr = currentState.tr.delete(paraFrom, paraTo);
+					editorView.dispatch(deleteTr);
+				}
+			}, 250);
+			
 			const finalRange = { from, to: finalTo };
 			postToParent('replacementComplete', { finalRange });
 			break;
 		}
 		
 		case 'setEditable':
-			editorView.setProps({ editable: () => payload.isEditable });
+			//editorView.setProps({ editable: () => payload.isEditable });
 			break;
 		case 'cleanupAiSuggestion': {
 			const { tr } = editorView.state;
