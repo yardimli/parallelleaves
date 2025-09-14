@@ -31,10 +31,10 @@ const formDataExtractors = {
 
 let modalEl;
 let currentContext;
-let currentEditorInterface;
+let currentEditorInterface; // NEW: Stores the interface to the active editor.
 
 let isAiActionActive = false;
-let originalFragmentJson = null;
+let originalFragmentJson = null; // MODIFIED: Store as JSON for easier transport.
 let aiActionRange = null;
 let floatingToolbar = null;
 let currentAiParams = null;
@@ -315,7 +315,10 @@ async function handleModalApply () {
 	}
 	
 	aiActionRange = { from: selectionInfo.from, to: selectionInfo.to };
-	originalFragmentJson = selectionInfo.originalFragmentJson;
+	// MODIFIED SECTION START: Ensure originalFragmentJson is never null. For translations, it's an empty
+	// selection, so its JSON representation is an empty array. This prevents errors when discarding.
+	originalFragmentJson = selectionInfo.originalFragmentJson || [];
+	// MODIFIED SECTION END
 	
 	const text = action === 'translate' ? currentContext.selectedText : selectionInfo.selectedText;
 	
