@@ -30,7 +30,7 @@ const formDataExtractors = {
 
 let modalEl;
 let currentContext;
-let currentEditorInterface; // NEW: Stores the interface to the active editor.
+let currentEditorInterface; // Stores the interface to the active editor.
 
 let isAiActionActive = false;
 let originalFragmentJson = null;
@@ -107,7 +107,7 @@ async function handleFloatyApply () {
 async function handleFloatyDiscard () {
 	if (!isAiActionActive || !currentEditorInterface || !originalFragmentJson) return;
 	
-	await currentEditorInterface.discardSuggestion(aiActionRange.from, aiActionRange.to, originalFragmentJson);
+	await currentEditorInterface.discardAiSuggestion(aiActionRange.from, aiActionRange.to, originalFragmentJson);
 	await cleanupAiAction();
 }
 
@@ -123,7 +123,7 @@ async function handleFloatyRetry () {
 		floatingToolbar = null;
 	}
 	
-	await currentEditorInterface.discardSuggestion(aiActionRange.from, aiActionRange.to, originalFragmentJson);
+	await currentEditorInterface.discardAiSuggestion(aiActionRange.from, aiActionRange.to, originalFragmentJson);
 	await currentEditorInterface.setEditable(true);
 	
 	isAiActionActive = false;
@@ -170,7 +170,6 @@ function createFloatingToolbar (from, to, model) {
 	});
 }
 
-// NEW: Non-streaming function to handle the entire AI action.
 async function startAiAction (params) {
 	const { prompt, model } = params;
 	
@@ -182,13 +181,15 @@ async function startAiAction (params) {
 	showAiSpinner();
 	
 	try {
-		const result = await window.api.processCodexText({ prompt, model });
+		const result = await window.api.processLLMText({ prompt, model });
 		hideAiSpinner();
 		
 		if (result.success && result.data.choices && result.data.choices.length > 0) {
-			const newContentText = result.data.choices[0].message.content;
-			// Convert plain text to HTML paragraphs for ProseMirror
+			let newContentText = result.data.choices[0].message.content ?? 'No content generated.';
+			newContentText = newContentText.trim();
+
 			const newContentHtml = '<p>' + newContentText.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>') + '</p>';
+			console.log('AI Action Result:', newContentText, newContentHtml);
 			
 			// Use the editor interface to replace the content
 			const finalRange = await currentEditorInterface.replaceRangeWithSuggestion(
@@ -352,9 +353,6 @@ export function setupPromptEditor () {
 			toggleBtn.textContent = isHidden ? 'Show Preview' : 'Hide Preview';
 		});
 	}
-	
-	// REMOVED: The message listener for 'aiStreamFinished' is no longer needed
-	// because the new `replaceRangeWithSuggestion` method uses a promise.
 }
 
 /**

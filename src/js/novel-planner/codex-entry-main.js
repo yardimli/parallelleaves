@@ -9,7 +9,7 @@ import { toggleMark, setBlockType, wrapIn } from 'prosemirror-commands';
 import { wrapInList } from 'prosemirror-schema-list';
 import { TextSelection } from 'prosemirror-state';
 
-// --- NEW: State management for multiple editors ---
+// --- State management for multiple editors ---
 let sourceEditorView = null;
 let targetEditorView = null;
 let activeEditorView = null; // This will hold the currently focused editor view
@@ -66,7 +66,7 @@ const createDirectEditorInterface = (view) => {
 			view.dispatch(tr);
 			view.focus();
 		},
-		discardSuggestion: (from, to, originalFragmentJson) => {
+		discardAiSuggestion: (from, to, originalFragmentJson) => {
 			const originalFragment = Fragment.fromJSON(schema, originalFragmentJson);
 			let tr = view.state.tr.replaceWith(from, to, originalFragment);
 			const newTo = from + originalFragment.size;
@@ -74,7 +74,6 @@ const createDirectEditorInterface = (view) => {
 			view.dispatch(tr);
 		},
 		
-		// MODIFIED SECTION START: This method now applies the 'ai_suggestion' mark to the incoming content.
 		replaceRangeWithSuggestion: (from, to, newContentHtml) => {
 			return new Promise((resolve) => {
 				const { state, dispatch } = view;
@@ -82,44 +81,31 @@ const createDirectEditorInterface = (view) => {
 				// 1. Parse the incoming HTML into a ProseMirror Fragment.
 				const tempDiv = document.createElement('div');
 				tempDiv.innerHTML = newContentHtml;
-				const parsedFragment = DOMParser.fromSchema(schema).parse(tempDiv).content;
+				const newFragment = DOMParser.fromSchema(schema).parseSlice(tempDiv).content;
 				
-				// 2. Create the 'ai_suggestion' mark.
+				// 2. Create a transaction that replaces the content.
+				let tr = state.tr.replaceWith(from, to, newFragment);
+				
+				// 3. Calculate the range of the newly inserted content.
+				const insertedRange = {
+					from: from,
+					to: from + newFragment.size
+				};
+				
+				// 4. Add the 'ai_suggestion' mark to that range.
 				const mark = schema.marks.ai_suggestion.create();
-				const nodesWithMark = [];
+				tr = tr.addMark(insertedRange.from, insertedRange.to, mark);
 				
-				// 3. Iterate through the parsed nodes to apply the mark to all text.
-				parsedFragment.forEach(node => {
-					if (node.isTextblock) {
-						const contentWithMark = [];
-						node.content.forEach(child => {
-							if (child.isText) {
-								// Add the suggestion mark to the text node.
-								contentWithMark.push(child.mark(mark.addToSet(child.marks)));
-							} else {
-								contentWithMark.push(child);
-							}
-						});
-						nodesWithMark.push(node.copy(Fragment.from(contentWithMark)));
-					} else {
-						nodesWithMark.push(node);
-					}
-				});
-				const newFragment = Fragment.from(nodesWithMark);
-				
-				// 4. Replace the selection with the new, marked fragment.
-				const tr = state.tr.replaceWith(from, to, newFragment);
+				// 5. Dispatch the combined transaction.
 				dispatch(tr);
 				
-				const finalRange = { from, to: from + newFragment.size };
-				resolve(finalRange);
+				// 6. The final range is the same as the inserted range.
+				resolve(insertedRange);
 			});
 		},
-		// MODIFIED SECTION END
 	};
 };
 
-// --- NEW: Debounced Save Logic (moved and adapted from planner-codex-content-editor.js) ---
 function triggerDebouncedSave(entryId) {
 	const key = `codex-${entryId}`;
 	if (debounceTimers.has(key)) {

@@ -30,17 +30,13 @@ contextBridge.exposeInMainWorld('api', {
 	importDocumentAsNovel: (data) => ipcRenderer.invoke('document:import', data),
 	
 	// --- Editor Specific APIs ---
-	
 	getTemplate: (templateName) => ipcRenderer.invoke('templates:get', templateName),
-	
 	getTranslationContext: (data) => ipcRenderer.invoke('chapters:getTranslationContext', data),
 	
 	openChapterEditor: (data) => ipcRenderer.send('chapters:openEditor', data),
 	onManuscriptScrollToChapter: (callback) => ipcRenderer.on('manuscript:scrollToChapter', callback),
 	
 	updateChapterField: (data) => ipcRenderer.invoke('chapters:updateField', data),
-	
-	createChapter: (novelId, data) => ipcRenderer.invoke('chapters:store', novelId, data),
 	
 	// Codex Entry Management
 	openNewCodexEditor: (data) => ipcRenderer.send('codex-entries:openNewEditor', data),
@@ -53,9 +49,8 @@ contextBridge.exposeInMainWorld('api', {
 	getAllCodexEntriesForNovel: (novelId) => ipcRenderer.invoke('codex:getAllForNovel', novelId),
 	getCategoriesForNovel: (novelId) => ipcRenderer.invoke('codex-categories:getAllForNovel', novelId),
 	
-	// MODIFIED: Replaced streaming function with a non-streaming invoke
-	processCodexText: (data) => ipcRenderer.invoke('codex-entries:process-text', data),
-	
+	//LLM
+	processLLMText: (data) => ipcRenderer.invoke('llm:process-text', data),
 	getModels: () => ipcRenderer.invoke('ai:getModels'),
 	
 	// Spellchecker APIs

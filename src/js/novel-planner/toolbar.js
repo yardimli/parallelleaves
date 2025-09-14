@@ -146,10 +146,8 @@ const createIframeEditorInterface = (contentWindow) => {
 		}),
 		setEditable: (isEditable) => post('setEditable', { isEditable }),
 		cleanupSuggestion: () => post('cleanupAiSuggestion'),
-		discardSuggestion: (from, to, originalFragmentJson) => post('discardSuggestion', { from, to, originalFragmentJson }),
-		// REMOVED: streamStart, streamChunk, streamDone methods
+		discardAiSuggestion: (from, to, originalFragmentJson) => post('discardAiSuggestion', { from, to, originalFragmentJson }),
 		
-		// NEW SECTION START: Method to replace content and wait for completion
 		replaceRangeWithSuggestion: (from, to, newContentHtml) => new Promise((resolve) => {
 			const listener = (event) => {
 				if (event.source === contentWindow && event.data.type === 'replacementComplete') {
@@ -160,7 +158,6 @@ const createIframeEditorInterface = (contentWindow) => {
 			window.addEventListener('message', listener);
 			post('replaceRange', { from, to, newContentHtml });
 		}),
-		// NEW SECTION END
 	};
 };
 

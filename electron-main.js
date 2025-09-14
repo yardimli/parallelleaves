@@ -962,19 +962,15 @@ function setupIpcHandlers() {
 		}
 	});
 	
-	// REMOVED: The streaming 'on' handler for 'codex-entries:process-text-stream'
-	
-	// NEW SECTION START: Non-streaming 'handle' for AI text processing
-	ipcMain.handle('codex-entries:process-text', async (event, data) => {
+	ipcMain.handle('llm:process-text', async (event, data) => {
 		try {
-			const result = await aiService.processCodexText(data);
+			const result = await aiService.processLLMText(data);
 			return { success: true, data: result };
 		} catch (error) {
 			console.error('AI Processing Error in main process:', error);
 			return { success: false, error: error.message };
 		}
 	});
-	// NEW SECTION END
 	
 	ipcMain.handle('ai:getModels', async () => {
 		try {

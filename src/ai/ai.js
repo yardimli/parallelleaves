@@ -4,11 +4,7 @@ const path = require('path');
 const { app } = require('electron');
 require('dotenv').config(); // Ensure .env variables are loaded
 
-// NEW: URL for the PHP proxy script. This should be added to your .env file.
-// e.g., AI_PROXY_URL=https://your-server.com/ai-proxy.php
 const AI_PROXY_URL = process.env.AI_PROXY_URL;
-
-// REMOVED: logAiInteraction function is no longer needed as the client doesn't handle the API key.
 
 /**
  * A generic function to call the AI proxy.
@@ -17,7 +13,6 @@ const AI_PROXY_URL = process.env.AI_PROXY_URL;
  * @throws {Error} If the API call fails.
  */
 async function callOpenRouter(payload) {
-	// MODIFIED: Check for proxy URL instead of API key
 	if (!AI_PROXY_URL) {
 		throw new Error('AI Proxy URL is not configured.');
 	}
@@ -27,7 +22,6 @@ async function callOpenRouter(payload) {
 		payload.reasoning = { 'effort' : 'medium'};
 	}
 	
-	// MODIFIED: Call the proxy script
 	const response = await fetch(`${AI_PROXY_URL}?action=chat`, {
 		method: 'POST',
 		headers: {
@@ -65,8 +59,6 @@ async function callOpenRouter(payload) {
 	
 	return data; // Return the full response for non-JSON-object requests
 }
-
-// REMOVED: streamOpenRouter function is no longer needed.
 
 /**
  * Generates codex entries based on a novel outline.
@@ -189,7 +181,7 @@ Example Response:
  * @param {string} params.model - The LLM model to use.
  * @returns {Promise<object>} The AI response object.
  */
-async function processCodexText({ prompt, model }) {
+async function processLLMText({ prompt, model }) {
 	const messages = [];
 	if (prompt.system) {
 		messages.push({ role: 'system', content: prompt.system });
@@ -216,7 +208,7 @@ async function processCodexText({ prompt, model }) {
 	});
 }
 
-// REMOVED: streamProcessCodexText function is no longer needed.
+// REMOVED: streamprocessLLMText function is no longer needed.
 
 /**
  * Fetches the list of available models from the AI Proxy.
@@ -360,7 +352,7 @@ Example Response: {"title": "Captain Eva Rostova", "category_name": "Characters"
 module.exports = {
 	generateNovelCodex,
 	generateCodexFromTextChunk,
-	processCodexText,
+	processLLMText,
 	getOpenRouterModels,
 	processModelsForView,
 	suggestCodexDetails,
