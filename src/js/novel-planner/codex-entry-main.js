@@ -3,7 +3,7 @@
 
 import { setupContentEditor } from './planner-codex-content-editor.js';
 import { openPromptEditor, setupPromptEditor } from '../prompt-editor.js';
-import { DOMSerializer, Fragment } from 'prosemirror-model';
+import { DOMSerializer, Fragment, DOMParser } from 'prosemirror-model'; // MODIFIED: Added DOMParser
 import { undo, redo } from 'prosemirror-history';
 import { toggleMark, setBlockType, wrapIn } from 'prosemirror-commands';
 import { wrapInList } from 'prosemirror-schema-list';
@@ -41,7 +41,7 @@ const serializeDocToHtml = (view) => {
 };
 
 
-// --- NEW: Editor Interface for Direct ProseMirror View ---
+// --- MODIFIED: Editor Interface for Direct ProseMirror View ---
 const createDirectEditorInterface = (view) => {
 	const { schema } = view.state;
 	
@@ -73,68 +73,25 @@ const createDirectEditorInterface = (view) => {
 			tr = tr.setSelection(TextSelection.create(tr.doc, from, newTo));
 			view.dispatch(tr);
 		},
-		streamStart: (from, to, chunk) => {
-			const { state, dispatch } = view;
-			const mark = schema.marks.ai_suggestion.create();
-			let tr = state.tr.replaceWith(from, to, []);
-			let insertionPos = from;
-			
-			const parts = chunk.split('\n');
-			parts.forEach((part, index) => {
-				if (part) {
-					tr.insert(insertionPos, schema.text(part, [mark]));
-					insertionPos += part.length;
-				}
-				if (index < parts.length - 1) {
-					tr = tr.split(insertionPos);
-					insertionPos = tr.selection.from;
-				}
+		// REMOVED: streamStart, streamChunk, streamDone methods
+		
+		// NEW SECTION START: Method to replace content non-streamingly
+		replaceRangeWithSuggestion: (from, to, newContentHtml) => {
+			return new Promise((resolve) => {
+				const { state, dispatch } = view;
+				
+				const tempDiv = document.createElement('div');
+				tempDiv.innerHTML = newContentHtml;
+				const newFragment = DOMParser.fromSchema(schema).parse(tempDiv).content;
+				
+				const tr = state.tr.replaceWith(from, to, newFragment);
+				dispatch(tr);
+				
+				const finalRange = { from, to: from + newFragment.size };
+				resolve(finalRange);
 			});
-			tr.setSelection(TextSelection.create(tr.doc, insertionPos));
-			dispatch(tr);
 		},
-		streamChunk: (chunk) => {
-			const { state, dispatch } = view;
-			const mark = schema.marks.ai_suggestion.create();
-			let tr = state.tr;
-			let insertionPos = state.selection.to;
-			
-			const parts = chunk.split('\n');
-			parts.forEach((part, index) => {
-				if (part) {
-					tr.insert(insertionPos, schema.text(part, [mark]));
-					insertionPos += part.length;
-				}
-				if (index < parts.length - 1) {
-					tr = tr.split(insertionPos);
-					insertionPos = tr.selection.from;
-				}
-			});
-			tr.setSelection(TextSelection.create(tr.doc, insertionPos));
-			dispatch(tr);
-		},
-		streamDone: (from) => {
-			const { state, dispatch } = view;
-			let tr = state.tr;
-			const to = state.selection.to;
-			
-			// Clean up empty paragraphs that might be inserted by line breaks
-			const deletions = [];
-			state.doc.nodesBetween(from, to, (node, pos) => {
-				if (pos >= from && node.type.name === 'paragraph' && node.content.size === 0) {
-					deletions.push({ from: pos, to: pos + node.nodeSize });
-				}
-			});
-			if (deletions.length > 0) {
-				for (let i = deletions.length - 1; i >= 0; i--) {
-					tr.delete(deletions[i].from, deletions[i].to);
-				}
-			}
-			dispatch(tr);
-			
-			// Return the final range for the floating toolbar
-			return { from, to: tr.mapping.map(to) };
-		},
+		// NEW SECTION END
 	};
 };
 

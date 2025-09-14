@@ -53,24 +53,9 @@ contextBridge.exposeInMainWorld('api', {
 	getAllCodexEntriesForNovel: (novelId) => ipcRenderer.invoke('codex:getAllForNovel', novelId),
 	getCategoriesForNovel: (novelId) => ipcRenderer.invoke('codex-categories:getAllForNovel', novelId),
 	
-	// Codex AI & Image Actions
-	processCodexTextStream: (data, onData) => {
-		const channel = `ai-text-chunk-${Date.now()}-${Math.random()}`;
-		
-		const listener = (event, payload) => {
-			onData(payload);
-			if (payload.done || payload.error) {
-				ipcRenderer.removeListener(channel, listener);
-			}
-		};
-		
-		ipcRenderer.on(channel, listener);
-		ipcRenderer.send('codex-entries:process-text-stream', {data, channel});
-		
-		return () => {
-			ipcRenderer.removeListener(channel, listener);
-		};
-	},
+	// MODIFIED: Replaced streaming function with a non-streaming invoke
+	processCodexText: (data) => ipcRenderer.invoke('codex-entries:process-text', data),
+	
 	getModels: () => ipcRenderer.invoke('ai:getModels'),
 	
 	// Spellchecker APIs

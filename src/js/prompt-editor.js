@@ -1,6 +1,5 @@
-// MODIFIED: This file is heavily refactored to use an "editor interface" pattern.
-// This allows it to interact with both direct ProseMirror views (Codex Editor)
-// and iframe-based views (Chapter Editor) without knowing the implementation details.
+// MODIFIED: This file is heavily refactored to use an "editor interface" pattern
+// and non-streaming AI calls.
 
 import { init as initRephraseEditor, buildPromptJson as buildRephraseJson } from './prompt-editors/rephrase-editor.js';
 import { init as initTranslateEditor, buildPromptJson as buildTranslateJson } from './prompt-editors/translate-editor.js';
@@ -34,7 +33,7 @@ let currentContext;
 let currentEditorInterface; // NEW: Stores the interface to the active editor.
 
 let isAiActionActive = false;
-let originalFragmentJson = null; // MODIFIED: Store as JSON for easier transport.
+let originalFragmentJson = null;
 let aiActionRange = null;
 let floatingToolbar = null;
 let currentAiParams = null;
@@ -79,7 +78,6 @@ const loadPrompt = async (promptId) => {
 	await editorConfig.init(customFormContainer, currentContext);
 };
 
-// MODIFIED: Uses the editor interface for all interactions.
 async function cleanupAiAction () {
 	if (floatingToolbar) {
 		floatingToolbar.remove();
@@ -96,28 +94,23 @@ async function cleanupAiAction () {
 	aiActionRange = null;
 	currentAiParams = null;
 	
-	// For chapter editor, we need to reset its specific toolbar.
 	if (currentEditorInterface.type === 'iframe') {
 		updateChapterToolbarState(null);
 	}
 }
 
-// MODIFIED: Uses the editor interface.
 async function handleFloatyApply () {
 	if (!isAiActionActive || !currentEditorInterface) return;
 	await cleanupAiAction();
 }
 
-// MODIFIED: Uses the editor interface.
 async function handleFloatyDiscard () {
-	console.log('Discarding AI suggestion...', isAiActionActive, currentEditorInterface, originalFragmentJson);
 	if (!isAiActionActive || !currentEditorInterface || !originalFragmentJson) return;
 	
 	await currentEditorInterface.discardSuggestion(aiActionRange.from, aiActionRange.to, originalFragmentJson);
 	await cleanupAiAction();
 }
 
-// MODIFIED: Uses the editor interface.
 async function handleFloatyRetry () {
 	if (!isAiActionActive || !currentEditorInterface || !currentAiParams) return;
 	
@@ -177,8 +170,8 @@ function createFloatingToolbar (from, to, model) {
 	});
 }
 
-// MODIFIED: Uses the editor interface.
-async function startAiStream (params) {
+// NEW: Non-streaming function to handle the entire AI action.
+async function startAiAction (params) {
 	const { prompt, model } = params;
 	
 	isAiActionActive = true;
@@ -186,48 +179,35 @@ async function startAiStream (params) {
 		updateChapterToolbarState(null);
 	}
 	await currentEditorInterface.setEditable(false);
-	
-	let isFirstChunk = true;
-	
-	const onData = async (payload) => {
-		if (payload.chunk) {
-			if (isFirstChunk) {
-				hideAiSpinner();
-				await currentEditorInterface.streamStart(aiActionRange.from, aiActionRange.to, payload.chunk);
-				isFirstChunk = false;
-			} else {
-				await currentEditorInterface.streamChunk(payload.chunk);
-			}
-		} else if (payload.done) {
-			// MODIFIED SECTION START
-			// The stream from the main process is done. Now, we notify the editor.
-			const finalRange = await currentEditorInterface.streamDone(aiActionRange.from);
-			
-			// The 'direct' editor interface (for Codex) returns the final range immediately.
-			// The 'iframe' editor interface (for Chapters) will post a message back,
-			// which is handled by a separate listener in setupPromptEditor.
-			if (currentEditorInterface.type === 'direct') {
-				if (finalRange) {
-					console.log('AI stream completed with final range (direct):', finalRange);
-					aiActionRange.to = finalRange.to; // Update the end of the range
-					createFloatingToolbar(aiActionRange.from, aiActionRange.to, model);
-				} else {
-					console.error("Direct editor's streamDone did not return a final range.");
-					await handleFloatyDiscard();
-				}
-			}
-			// For 'iframe' type, we do nothing here. The 'aiStreamFinished' message listener handles it.
-			// MODIFIED SECTION END
-		} else if (payload.error) {
-			console.error('AI Action Error:', payload.error);
-			window.showAlert(payload.error);
-			hideAiSpinner();
-			await handleFloatyDiscard();
-		}
-	};
+	showAiSpinner();
 	
 	try {
-		window.api.processCodexTextStream({ prompt, model }, onData);
+		const result = await window.api.processCodexText({ prompt, model });
+		hideAiSpinner();
+		
+		if (result.success && result.data.choices && result.data.choices.length > 0) {
+			const newContentText = result.data.choices[0].message.content;
+			// Convert plain text to HTML paragraphs for ProseMirror
+			const newContentHtml = '<p>' + newContentText.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>') + '</p>';
+			
+			// Use the editor interface to replace the content
+			const finalRange = await currentEditorInterface.replaceRangeWithSuggestion(
+				aiActionRange.from,
+				aiActionRange.to,
+				newContentHtml
+			);
+			
+			if (finalRange) {
+				aiActionRange.to = finalRange.to;
+				createFloatingToolbar(aiActionRange.from, aiActionRange.to, model);
+			} else {
+				console.error("Editor did not return a final range after replacement.");
+				await handleFloatyDiscard();
+			}
+		} else {
+			const errorMessage = result.error || (result.data.error ? result.data.error.message : 'Unknown AI error.');
+			throw new Error(errorMessage);
+		}
 	} catch (error) {
 		console.error('AI Action Error:', error);
 		window.showAlert(error.message);
@@ -270,7 +250,6 @@ async function populateModelDropdown (initialState = null) {
 	}
 }
 
-// MODIFIED: Uses the editor interface.
 async function handleModalApply () {
 	if (!modalEl || isAiActionActive) return;
 	
@@ -315,10 +294,7 @@ async function handleModalApply () {
 	}
 	
 	aiActionRange = { from: selectionInfo.from, to: selectionInfo.to };
-	// MODIFIED SECTION START: Ensure originalFragmentJson is never null. For translations, it's an empty
-	// selection, so its JSON representation is an empty array. This prevents errors when discarding.
 	originalFragmentJson = selectionInfo.originalFragmentJson || [];
-	// MODIFIED SECTION END
 	
 	const text = action === 'translate' ? currentContext.selectedText : selectionInfo.selectedText;
 	
@@ -346,8 +322,8 @@ async function handleModalApply () {
 	
 	currentAiParams = { prompt, model, action, context: currentContext, formData: formDataObj };
 	
-	showAiSpinner();
-	startAiStream({ prompt: currentAiParams.prompt, model: currentAiParams.model });
+	// MODIFIED: Call the new non-streaming function
+	startAiAction({ prompt: currentAiParams.prompt, model: currentAiParams.model });
 }
 
 
@@ -377,15 +353,8 @@ export function setupPromptEditor () {
 		});
 	}
 	
-	// This listener is now only for the iframe editor, as the direct view
-	// will resolve its stream promises directly.
-	window.addEventListener('message', (event) => {
-		if (event.data.type === 'aiStreamFinished') {
-			const { from, to } = event.data.payload;
-			aiActionRange.to = to;
-			createFloatingToolbar(from, to, currentAiParams.model);
-		}
-	});
+	// REMOVED: The message listener for 'aiStreamFinished' is no longer needed
+	// because the new `replaceRangeWithSuggestion` method uses a promise.
 }
 
 /**
@@ -399,7 +368,6 @@ export async function openPromptEditor (context, promptId, initialState = null) 
 		console.error('Prompt editor modal element not found.');
 		return;
 	}
-	// NEW: Enforce the presence of an editor interface.
 	if (!context.editorInterface) {
 		console.error('`editorInterface` is missing from the context for openPromptEditor.');
 		window.showAlert('Cannot open AI editor: Editor interface is not available.');

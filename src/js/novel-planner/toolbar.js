@@ -146,12 +146,21 @@ const createIframeEditorInterface = (contentWindow) => {
 		}),
 		setEditable: (isEditable) => post('setEditable', { isEditable }),
 		cleanupSuggestion: () => post('cleanupAiSuggestion'),
-		discardSuggestion: (from, to, originalFragmentJson) => post('discardAiSuggestion', { from, to, originalFragmentJson }),
-		streamStart: (from, to, chunk) => post('aiStreamStart', { from, to, chunk }),
-		streamChunk: (chunk) => post('aiStreamChunk', { chunk }),
-		// For iframes, the 'done' signal is just a message. The iframe itself
-		// will post back a 'aiStreamFinished' message with the final range.
-		streamDone: (from) => post('aiStreamDone', { from }),
+		discardSuggestion: (from, to, originalFragmentJson) => post('discardSuggestion', { from, to, originalFragmentJson }),
+		// REMOVED: streamStart, streamChunk, streamDone methods
+		
+		// NEW SECTION START: Method to replace content and wait for completion
+		replaceRangeWithSuggestion: (from, to, newContentHtml) => new Promise((resolve) => {
+			const listener = (event) => {
+				if (event.source === contentWindow && event.data.type === 'replacementComplete') {
+					window.removeEventListener('message', listener);
+					resolve(event.data.payload.finalRange);
+				}
+			};
+			window.addEventListener('message', listener);
+			post('replaceRange', { from, to, newContentHtml });
+		}),
+		// NEW SECTION END
 	};
 };
 

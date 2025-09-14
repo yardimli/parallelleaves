@@ -4,47 +4,22 @@ const path = require('path');
 const { app } = require('electron');
 require('dotenv').config(); // Ensure .env variables are loaded
 
-const OPEN_ROUTER_API_KEY = process.env.OPEN_ROUTER_API_KEY;
+// NEW: URL for the PHP proxy script. This should be added to your .env file.
+// e.g., AI_PROXY_URL=https://your-server.com/ai-proxy.php
+const AI_PROXY_URL = process.env.AI_PROXY_URL;
+
+// REMOVED: logAiInteraction function is no longer needed as the client doesn't handle the API key.
 
 /**
- * Logs an AI interaction to a file in the user's data directory.
- * @param {string} service - The name of the AI service being called.
- * @param {object|string} prompt - The prompt or payload sent to the AI.
- * @param {object|string} response - The response received from the AI.
- */
-function logAiInteraction(service, prompt, response) {
-	try {
-		const logPath = path.join(app.getPath('userData'), 'ai_interactions.log');
-		const timestamp = new Date().toISOString();
-		
-		const formattedPrompt = typeof prompt === 'object' ? JSON.stringify(prompt, null, 2) : prompt;
-		const formattedResponse = typeof response === 'object' ? JSON.stringify(response, null, 2) : response;
-		
-		const logEntry = `
-==================================================
-Timestamp: ${timestamp}
-Service: ${service}
------------------- Prompt ------------------
-${formattedPrompt}
------------------- Response ------------------
-${formattedResponse}
-==================================================\n\n`;
-		
-		fs.appendFileSync(logPath, logEntry);
-	} catch (error) {
-		console.error('Failed to write to AI log file:', error);
-	}
-}
-
-/**
- * A generic function to call the OpenRouter API.
+ * A generic function to call the AI proxy.
  * @param {object} payload - The request body for the OpenRouter API.
  * @returns {Promise<any>} The JSON response from the API.
  * @throws {Error} If the API call fails.
  */
 async function callOpenRouter(payload) {
-	if (!OPEN_ROUTER_API_KEY) {
-		throw new Error('OpenRouter API key is not configured.');
+	// MODIFIED: Check for proxy URL instead of API key
+	if (!AI_PROXY_URL) {
+		throw new Error('AI Proxy URL is not configured.');
 	}
 	
 	if (payload.model.endsWith("--thinking")) {
@@ -52,10 +27,10 @@ async function callOpenRouter(payload) {
 		payload.reasoning = { 'effort' : 'medium'};
 	}
 	
-	const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+	// MODIFIED: Call the proxy script
+	const response = await fetch(`${AI_PROXY_URL}?action=chat`, {
 		method: 'POST',
 		headers: {
-			'Authorization': `Bearer ${OPEN_ROUTER_API_KEY}`,
 			'Content-Type': 'application/json'
 		},
 		body: JSON.stringify(payload)
@@ -63,97 +38,35 @@ async function callOpenRouter(payload) {
 	
 	if (!response.ok) {
 		const errorText = await response.text();
-		console.error('OpenRouter API Error:', errorText);
-		throw new Error(`OpenRouter API Error: ${response.status} ${errorText}`);
-	}
-	
-	const data = await response.json();
-	// The actual content is a JSON string within the response, so we parse it.
-	const finalContent = JSON.parse(data.choices[0].message.content);
-	
-	logAiInteraction('OpenRouter (Non-streaming)', payload, finalContent);
-	
-	return finalContent;
-}
-
-/**
- * A generic function to call the OpenRouter API with streaming.
- * @param {object} payload - The request body for the OpenRouter API.
- * @param {function(string): void} onChunk - Callback function to handle each received text chunk.
- * @param {AbortSignal} [signal] - An optional AbortSignal to cancel the request.
- * @returns {Promise<void>} A promise that resolves when the stream is complete.
- * @throws {Error} If the API call fails.
- */
-async function streamOpenRouter(payload, onChunk, signal) {
-	if (!OPEN_ROUTER_API_KEY) {
-		throw new Error('OpenRouter API key is not configured.');
-	}
-	
-	if (payload.model.endsWith("--thinking")) {
-		payload.model = payload.model.slice(0, -10); // Remove '--thinking' to get the real model ID.
-		payload.reasoning = { 'effort' : 'medium'};
-	}
-	
-	
-	const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-		method: 'POST',
-		headers: {
-			'Authorization': `Bearer ${OPEN_ROUTER_API_KEY}`,
-			'Content-Type': 'application/json'
-		},
-		body: JSON.stringify({ ...payload, stream: true }),
-		signal: signal,
-	});
-	
-	if (!response.ok) {
-		const errorText = await response.text();
-		console.error('OpenRouter API Error:', errorText);
-		throw new Error(`OpenRouter API Error: ${response.status} ${errorText}`);
-	}
-	
-	let fullResponse = '';
-	let buffer = '';
-	
-	// Process the streaming response body
-	for await (const chunk of response.body) {
-		// Append the new chunk of data to our buffer
-		buffer += chunk.toString('utf8');
-		
-		// Process all complete lines in the buffer. A line is considered complete if it ends with a newline.
-		let newlineIndex;
-		while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
-			const line = buffer.slice(0, newlineIndex).trim();
-			// Remove the processed line (including the newline character) from the buffer for the next iteration
-			buffer = buffer.slice(newlineIndex + 1);
-			
-			// SSE messages are prefixed with 'data: '. We only care about those.
-			if (line.startsWith('data: ')) {
-				const message = line.substring(6); // Get the JSON part of the message.
-				if (message === '[DONE]') {
-					logAiInteraction('OpenRouter (Streaming)', payload, fullResponse);
-					return; // Stream finished
-				}
-				try {
-					const parsed = JSON.parse(message);
-					const content = parsed.choices[0]?.delta?.content;
-					if (content) {
-						fullResponse += content; // Append chunk to full response for logging.
-						onChunk(content); // Send the text chunk to the callback
-					}
-				} catch (error) {
-					// This catch block will now only trigger on genuinely malformed JSON,
-					// not on incomplete chunks. We log the error but continue processing.
-					console.error('Error parsing stream chunk:', message, error);
-				}
-			}
+		console.error('AI Proxy Error:', errorText);
+		// Try to parse the error for a cleaner message
+		try {
+			const errorJson = JSON.parse(errorText);
+			const message = errorJson.error?.message || errorText;
+			throw new Error(`AI Proxy Error: ${response.status} ${message}`);
+		} catch (e) {
+			throw new Error(`AI Proxy Error: ${response.status} ${errorText}`);
 		}
 	}
 	
-	// Fallback log in case the stream ends without a [DONE] message.
-	if (fullResponse) {
-		logAiInteraction('OpenRouter (Streaming)', payload, fullResponse);
+	const data = await response.json();
+	
+	// The actual content might be a JSON string within the response, so we parse it.
+	// This is specific to prompts that request a JSON object.
+	if (payload.response_format?.type === 'json_object' && data.choices?.[0]?.message?.content) {
+		try {
+			return JSON.parse(data.choices[0].message.content);
+		} catch (e) {
+			console.error("Failed to parse nested JSON from AI response:", e);
+			// Return the raw content if parsing fails, maybe it's not JSON as expected.
+			return data.choices[0].message.content;
+		}
 	}
+	
+	return data; // Return the full response for non-JSON-object requests
 }
+
+// REMOVED: streamOpenRouter function is no longer needed.
 
 /**
  * Generates codex entries based on a novel outline.
@@ -274,7 +187,7 @@ Example Response:
  * @param {object} params - The parameters for the text processing.
  * @param {object} params.prompt - An object with 'system', 'user', and 'ai' properties for the prompt.
  * @param {string} params.model - The LLM model to use.
- * @returns {Promise<object>} The parsed JSON response with the processed text.
+ * @returns {Promise<object>} The AI response object.
  */
 async function processCodexText({ prompt, model }) {
 	const messages = [];
@@ -295,54 +208,18 @@ async function processCodexText({ prompt, model }) {
 		throw new Error('Prompt is empty. Cannot call AI service.');
 	}
 	
-	// NOTE: This function relies on the prompt instructing the AI to return a valid JSON object.
-	// The `callOpenRouter` function will attempt to parse the response as JSON.
+	// This function calls the proxy which returns the full AI response.
 	return callOpenRouter({
 		model: model,
 		messages: messages,
-		response_format: { type: 'json_object' }, // Assuming JSON is still desired for this non-streaming version.
 		temperature: 0.7,
 	});
 }
 
-/**
- * Processes a text selection using an LLM with streaming for actions like rephrasing.
- * @param {object} params - The parameters for the text processing.
- * @param {object} params.prompt - An object with 'system', 'user', and 'ai' properties for the prompt.
- * @param {string} params.model - The LLM model to use.
- * @param {function(string): void} onChunk - Callback function to handle each received text chunk.
- * @param {AbortSignal} [signal] - An optional AbortSignal to cancel the request.
- * @returns {Promise<void>} A promise that resolves when the stream is complete.
- */
-async function streamProcessCodexText({ prompt, model }, onChunk, signal) {
-	const messages = [];
-	if (prompt.system) {
-		messages.push({ role: 'system', content: prompt.system });
-	}
-	if (prompt.context_pairs && Array.isArray(prompt.context_pairs)) {
-		messages.push(...prompt.context_pairs);
-	}
-	if (prompt.user) {
-		messages.push({ role: 'user', content: prompt.user });
-	}
-	if (prompt.ai) {
-		messages.push({ role: 'assistant', content: prompt.ai });
-	}
-	
-	if (messages.length === 0) {
-		throw new Error('Prompt is empty. Cannot call AI service.');
-	}
-	
-	await streamOpenRouter({
-		model: model,
-		messages: messages,
-		temperature: 0.7,
-	}, onChunk, signal);
-}
-
+// REMOVED: streamProcessCodexText function is no longer needed.
 
 /**
- * Fetches the list of available models from the OpenRouter API.
+ * Fetches the list of available models from the AI Proxy.
  * Caches the result for 24 hours to a file in the user's app data directory.
  * @param {boolean} [forceRefresh=false] - If true, bypasses the cache and fetches from the API.
  * @returns {Promise<object>} The raw model data from the API or cache.
@@ -363,19 +240,23 @@ async function getOpenRouterModels(forceRefresh = false) {
 		}
 	}
 	
-	const response = await fetch('https://openrouter.ai/api/v1/models', {
+	// MODIFIED: Check for proxy URL
+	if (!AI_PROXY_URL) {
+		throw new Error('AI Proxy URL is not configured.');
+	}
+	
+	// MODIFIED: Call the proxy script with the get_models action
+	const response = await fetch(`${AI_PROXY_URL}?action=get_models`, {
 		method: 'GET',
 		headers: {
 			'Accept': 'application/json',
-			'HTTP-Referer': 'https://github.com/locutusdeborg/novel-skriver', // Example referrer
-			'X-Title': 'Parallel Leaves',
 		},
 	});
 	
 	if (!response.ok) {
 		const errorText = await response.text();
-		console.error('OpenRouter Models API Error:', errorText);
-		throw new Error(`OpenRouter Models API Error: ${response.status} ${errorText}`);
+		console.error('AI Proxy Models API Error:', errorText);
+		throw new Error(`AI Proxy Models API Error: ${response.status} ${errorText}`);
 	}
 	
 	const modelsData = await response.json();
@@ -480,7 +361,6 @@ module.exports = {
 	generateNovelCodex,
 	generateCodexFromTextChunk,
 	processCodexText,
-	streamProcessCodexText,
 	getOpenRouterModels,
 	processModelsForView,
 	suggestCodexDetails,

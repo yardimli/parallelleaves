@@ -210,82 +210,7 @@ function executeCommand({ command, attrs }) {
 	editorView.focus();
 }
 
-function handleAiStreamStart({ chunk, from, to }) {
-	const { state, dispatch } = editorView;
-	const { schema } = state;
-	const mark = schema.marks.ai_suggestion.create();
-	let tr = state.tr;
-	
-	tr.replaceWith(from, to, []);
-	let insertionPos = from;
-	
-	const parts = chunk.split('\n');
-	parts.forEach((part, index) => {
-		if (part) {
-			const textNode = schema.text(part, [mark]);
-			tr.insert(insertionPos, textNode);
-			insertionPos += part.length;
-		}
-		if (index < parts.length - 1) {
-			tr = tr.split(insertionPos);
-			insertionPos = tr.selection.from;
-		}
-	});
-	
-	tr.setSelection(TextSelection.create(tr.doc, insertionPos));
-	dispatch(tr);
-}
-
-function handleAiStreamChunk({ chunk }) {
-	const { state, dispatch } = editorView;
-	const { schema } = state;
-	const mark = schema.marks.ai_suggestion.create();
-	let tr = state.tr;
-	
-	let insertionPos = state.selection.to;
-	
-	const parts = chunk.split('\n');
-	parts.forEach((part, index) => {
-		if (part) {
-			const textNode = schema.text(part, [mark]);
-			tr.insert(insertionPos, textNode);
-			insertionPos += part.length;
-		}
-		if (index < parts.length - 1) {
-			tr = tr.split(insertionPos);
-			insertionPos = tr.selection.from;
-		}
-	});
-	
-	tr.setSelection(TextSelection.create(tr.doc, insertionPos));
-	dispatch(tr);
-}
-
-function handleAiStreamDone({ from }) {
-	const { state, dispatch } = editorView;
-	let tr = state.tr;
-	
-	const to = state.selection.to;
-	
-	const deletions = [];
-	state.doc.nodesBetween(from, to, (node, pos) => {
-		if (pos >= from && node.type.name === 'paragraph' && node.content.size === 0) {
-			deletions.push({ from: pos, to: pos + node.nodeSize });
-		}
-	});
-	
-	if (deletions.length > 0) {
-		for (let i = deletions.length - 1; i >= 0; i--) {
-			tr.delete(deletions[i].from, deletions[i].to);
-		}
-	}
-	
-	dispatch(tr);
-	
-	const finalTo = tr.mapping.map(to);
-	
-	postToParent('aiStreamFinished', { from, to: finalTo });
-}
+// REMOVED: All handleAiStream... functions have been removed.
 
 function findTranslationBlockPositions(blockNumber) {
 	const { doc } = editorView.state;
@@ -350,15 +275,27 @@ window.addEventListener('message', (event) => {
 			editorView.focus();
 			break;
 		}
-		case 'aiStreamStart':
-			handleAiStreamStart(payload);
+		// REMOVED: aiStreamStart, aiStreamChunk, aiStreamDone cases
+		
+		// NEW SECTION START: Handle non-streaming content replacement
+		case 'replaceRange': {
+			const { from, to, newContentHtml } = payload;
+			const { state, dispatch } = editorView;
+			const { schema } = state;
+			
+			const tempDiv = document.createElement('div');
+			tempDiv.innerHTML = newContentHtml;
+			const newFragment = DOMParser.fromSchema(schema).parse(tempDiv).content;
+			
+			const tr = state.tr.replaceWith(from, to, newFragment);
+			dispatch(tr);
+			
+			const finalRange = { from, to: from + newFragment.size };
+			postToParent('replacementComplete', { finalRange });
 			break;
-		case 'aiStreamChunk':
-			handleAiStreamChunk(payload);
-			break;
-		case 'aiStreamDone':
-			handleAiStreamDone(payload);
-			break;
+		}
+		// NEW SECTION END
+		
 		case 'setEditable':
 			editorView.setProps({ editable: () => payload.isEditable });
 			break;

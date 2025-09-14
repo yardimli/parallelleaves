@@ -962,41 +962,19 @@ function setupIpcHandlers() {
 		}
 	});
 	
-	ipcMain.on('codex-entries:process-text-stream', (event, {data, channel}) => {
-		const controller = new AbortController();
-		let streamActive = true;
-		
-		event.sender.once('destroyed', () => {
-			if (streamActive) {
-				console.log('Window closed during AI stream. Aborting request.');
-				controller.abort();
-			}
-		});
-		
-		const onChunk = (chunk) => {
-			if (event.sender.isDestroyed()) return;
-			event.sender.send(channel, {chunk});
-		};
-		
-		const onComplete = () => {
-			streamActive = false;
-			if (event.sender.isDestroyed()) return;
-			event.sender.send(channel, {done: true});
-		};
-		
-		const onError = (error) => {
-			streamActive = false;
-			if (error.name !== 'AbortError') {
-				console.error('Streaming AI Error:', error);
-			}
-			if (event.sender.isDestroyed()) return;
-			event.sender.send(channel, {error: error.message});
-		};
-		
-		aiService.streamProcessCodexText(data, onChunk, controller.signal)
-			.then(onComplete)
-			.catch(onError);
+	// REMOVED: The streaming 'on' handler for 'codex-entries:process-text-stream'
+	
+	// NEW SECTION START: Non-streaming 'handle' for AI text processing
+	ipcMain.handle('codex-entries:process-text', async (event, data) => {
+		try {
+			const result = await aiService.processCodexText(data);
+			return { success: true, data: result };
+		} catch (error) {
+			console.error('AI Processing Error in main process:', error);
+			return { success: false, error: error.message };
+		}
 	});
+	// NEW SECTION END
 	
 	ipcMain.handle('ai:getModels', async () => {
 		try {
