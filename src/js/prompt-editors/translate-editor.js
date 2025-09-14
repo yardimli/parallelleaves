@@ -3,11 +3,71 @@
 const defaultState = {
 	instructions: '',
 	selectedCodexIds: [],
-	// NEW: Added default value for context pairs.
 	contextPairs: 4,
 };
 
-const renderCodexList = (container, context, initialState = null) => {
+// NEW UTILITY FUNCTION START
+/**
+ * Finds codex entry IDs within a given text by matching titles and document phrases.
+ * @param {string} text - The plain text to scan.
+ * @param {Array<object>} codexCategories - The array of codex categories containing entries.
+ * @returns {Set<string>} A set of found codex entry IDs.
+ */
+function findCodexIdsInText(text, codexCategories) {
+	if (!codexCategories || codexCategories.length === 0 || !text) {
+		return new Set();
+	}
+	
+	// 1. Create a flat list of terms to search for (titles and document phrases).
+	const terms = [];
+	codexCategories.forEach(category => {
+		(category.entries || []).forEach(entry => {
+			if (entry.title) {
+				terms.push({ text: entry.title, id: entry.id });
+			}
+			if (entry.document_phrases) {
+				const phrases = entry.document_phrases.split(',').map(p => p.trim()).filter(Boolean);
+				phrases.forEach(phrase => {
+					terms.push({ text: phrase, id: entry.id });
+				});
+			}
+		});
+	});
+	
+	if (terms.length === 0) {
+		return new Set();
+	}
+	
+	// Sort by length descending to match longer phrases first (e.g., "King Arthur" before "King").
+	terms.sort((a, b) => b.text.length - a.text.length);
+	
+	const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+	// Create a regex that matches any of the terms as whole words.
+	const regex = new RegExp(`\\b(${terms.map(term => escapeRegex(term.text)).join('|')})\\b`, 'gi');
+	
+	// Map lower-cased phrases back to their entry IDs for case-insensitive matching.
+	const termMap = new Map();
+	terms.forEach(term => {
+		termMap.set(term.text.toLowerCase(), term.id);
+	});
+	
+	// 2. Find all matches in the text and collect the corresponding entry IDs.
+	const foundIds = new Set();
+	const matches = [...text.matchAll(regex)];
+	
+	matches.forEach(match => {
+		const matchedText = match[0];
+		const entryId = termMap.get(matchedText.toLowerCase());
+		if (entryId) {
+			foundIds.add(entryId.toString());
+		}
+	});
+	
+	return foundIds;
+}
+// NEW UTILITY FUNCTION END
+
+const renderCodexList = (container, context, initialState = null, preselectedIds = new Set()) => {
 	const codexContainer = container.querySelector('.js-codex-selection-container');
 	if (!codexContainer) return;
 	
@@ -24,7 +84,7 @@ const renderCodexList = (container, context, initialState = null) => {
 		}
 		
 		const entriesHtml = category.entries.map(entry => {
-			const isChecked = false;
+			const isChecked = preselectedIds.has(entry.id.toString());
 			return `
                 <div class="form-control">
                     <label class="label cursor-pointer justify-start gap-2 py-0.5">
@@ -53,7 +113,6 @@ const renderCodexList = (container, context, initialState = null) => {
     `;
 };
 
-// MODIFIED: This function now returns an array of message objects for conversational context.
 const buildTranslationContextBlock = (translationPairs, languageForPrompt, targetLanguage) => {
 	if (!translationPairs || translationPairs.length === 0) {
 		return [];
@@ -61,17 +120,14 @@ const buildTranslationContextBlock = (translationPairs, languageForPrompt, targe
 	
 	const contextMessages = [];
 	translationPairs.forEach(pair => {
-		// Clean up HTML from the text content
 		const sourceText = (pair.source || '').replace(/<[^>]+>/g, ' ').replace(/\s\s+/g, ' ').trim();
 		const targetText = (pair.target || '').replace(/<[^>]+>/g, ' ').replace(/\s\s+/g, ' ').trim();
 		
 		if (sourceText && targetText) {
-			// Add the source text as a user message
 			contextMessages.push({
 				role: 'user',
 				content: `Translate the following text from ${languageForPrompt} to ${targetLanguage}:\n\n<text>\n${sourceText}\n</text>`
 			});
-			// Add the translated text as the assistant's response
 			contextMessages.push({
 				role: 'assistant',
 				content: targetText
@@ -83,7 +139,6 @@ const buildTranslationContextBlock = (translationPairs, languageForPrompt, targe
 };
 
 
-// MODIFIED: This function now builds a prompt object that includes the conversational context pairs.
 export const buildPromptJson = (formData, context) => {
 	const { selectedText, languageForPrompt, targetLanguage, allCodexEntries, translationPairs } = context;
 	
@@ -115,23 +170,20 @@ ${codexContent}
 		}
 	}
 	
-	// Generate the array of context messages.
 	const contextMessages = buildTranslationContextBlock(translationPairs, languageForPrompt, targetLanguage);
 	
-	// The final user prompt includes the glossary (if any) and the text to translate.
 	const finalUserPromptParts = [codexBlock];
 	finalUserPromptParts.push(`Translate the following text from ${languageForPrompt} to ${targetLanguage}:\n\n<text>\n${plainTextToTranslate}\n</text>`);
 	const finalUserPrompt = finalUserPromptParts.filter(Boolean).join('\n\n');
 	
 	return {
 		system,
-		context_pairs: contextMessages, // The new field for conversational context
+		context_pairs: contextMessages,
 		user: finalUserPrompt,
 		ai: '',
 	};
 };
 
-// MODIFIED: This function is now async and dynamically renders the context pairs in the preview.
 const updatePreview = async (container, context) => {
 	const form = container.querySelector('#translate-editor-form');
 	if (!form) return;
@@ -145,13 +197,12 @@ const updatePreview = async (container, context) => {
 	const systemPreview = container.querySelector('.js-preview-system');
 	const userPreview = container.querySelector('.js-preview-user');
 	const aiPreview = container.querySelector('.js-preview-ai');
-	const contextPairsContainer = container.querySelector('.js-preview-context-pairs'); // Get the new container
+	const contextPairsContainer = container.querySelector('.js-preview-context-pairs');
 	
 	if (!systemPreview || !userPreview || !aiPreview || !contextPairsContainer) return;
 	
-	const previewContext = { ...context, translationPairs: [] }; // Start with empty pairs
+	const previewContext = { ...context, translationPairs: [] };
 	
-	// Fetch real translation pairs for the preview if requested.
 	if (formData.contextPairs > 0 && context.translationInfo && context.activeEditorView) {
 		try {
 			const chapterId = context.activeEditorView.frameElement.dataset.chapterId;
@@ -177,8 +228,7 @@ const updatePreview = async (container, context) => {
 		userPreview.textContent = promptJson.user;
 		aiPreview.textContent = promptJson.ai || '(Empty)';
 		
-		// NEW: Render the context pairs into their dedicated preview container.
-		contextPairsContainer.innerHTML = ''; // Clear previous content
+		contextPairsContainer.innerHTML = '';
 		if (promptJson.context_pairs && promptJson.context_pairs.length > 0) {
 			promptJson.context_pairs.forEach((message, index) => {
 				const pairNumber = Math.floor(index / 2) + 1;
@@ -187,7 +237,6 @@ const updatePreview = async (container, context) => {
 				const title = document.createElement('h3');
 				title.className = 'text-lg font-semibold mt-4 font-mono';
 				title.textContent = roleTitle;
-				// Use different colors to distinguish roles
 				title.classList.add(message.role === 'user' ? 'text-info' : 'text-accent');
 				
 				const pre = document.createElement('pre');
@@ -213,7 +262,6 @@ const populateForm = (container, state) => {
 	const form = container.querySelector('#translate-editor-form');
 	if (!form) return;
 	form.elements.instructions.value = state.instructions || '';
-	// NEW: Populate the context pairs input from the state.
 	form.elements.context_pairs.value = state.contextPairs !== undefined ? state.contextPairs : 4;
 };
 
@@ -222,19 +270,59 @@ export const init = async (container, context) => {
 		const templateHtml = await window.api.getTemplate('prompt/translate-editor');
 		container.innerHTML = templateHtml;
 		
+		const { selectedText, allCodexEntries, translationInfo, activeEditorView } = context;
+		
+		// 1. Get text from current selection. This is already plain text.
+		let textToScan = selectedText;
+		
+		// 2. Get text from historical pairs.
+		const formForDefaults = container.querySelector('#translate-editor-form');
+		const contextPairCount = formForDefaults ? parseInt(formForDefaults.elements.context_pairs.value, 10) : (context.initialState?.contextPairs || defaultState.contextPairs);
+		
+		if (contextPairCount > 0 && translationInfo && activeEditorView) {
+			try {
+				const chapterId = activeEditorView.frameElement.dataset.chapterId;
+				const blockNumber = translationInfo.blockNumber;
+				const pairs = await window.api.getTranslationContext({
+					chapterId: chapterId,
+					endBlockNumber: blockNumber,
+					pairCount: contextPairCount,
+				});
+				
+				// MODIFIED SECTION START: Combine both source and target from history for a more comprehensive scan.
+				const tempDiv = document.createElement('div');
+				const historyText = pairs.map(p => {
+					// Extract plain text from source history
+					tempDiv.innerHTML = p.source || '';
+					const sourceText = tempDiv.textContent || tempDiv.innerText || '';
+					// Extract plain text from target (translated) history
+					tempDiv.innerHTML = p.target || '';
+					const targetText = tempDiv.textContent || tempDiv.innerText || '';
+					return sourceText + ' ' + targetText;
+				}).join(' ');
+				textToScan += ' ' + historyText;
+				// MODIFIED SECTION END
+				
+			} catch (error) {
+				console.error('Failed to fetch translation context for codex matching:', error);
+			}
+		}
+		
+		// 3. Find matching codex entries in the combined text.
+		const preselectedIds = findCodexIdsInText(textToScan, allCodexEntries);
+		
 		const fullContext = { ...context };
 		
 		populateForm(container, context.initialState || defaultState);
-		renderCodexList(container, fullContext, context.initialState);
+		renderCodexList(container, fullContext, context.initialState, preselectedIds);
 		
 		const form = container.querySelector('#translate-editor-form');
 		if (form) {
-			// MODIFIED: The event listener now calls the async updatePreview.
 			form.addEventListener('input', () => updatePreview(container, fullContext));
 		}
 		
-		// MODIFIED: Initial preview update is now awaited.
 		await updatePreview(container, fullContext);
+		
 	} catch (error) {
 		container.innerHTML = `<p class="p-4 text-error">Could not load editor form.</p>`;
 		console.error(error);
