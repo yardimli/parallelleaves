@@ -5,6 +5,7 @@ const defaultState = {
 	selectedCodexIds: [],
 };
 
+// MODIFIED: Changed the layout of the codex selection to be more compact and wrap like text.
 const renderCodexList = (container, context, initialState = null) => {
 	const codexContainer = container.querySelector('.js-codex-selection-container');
 	if (!codexContainer) return;
@@ -22,21 +23,19 @@ const renderCodexList = (container, context, initialState = null) => {
 		}
 		
 		const entriesHtml = category.entries.map(entry => {
-			const isChecked = false;
+			const isChecked = false; // Rephrase editor doesn't pre-select.
 			return `
-                <div class="form-control">
-                    <label class="label cursor-pointer justify-start gap-2 py-0.5">
-                        <input type="checkbox" name="codex_entry" value="${entry.id}" ${isChecked ? 'checked' : ''} class="checkbox checkbox-xs" />
-                        <span class="label-text text-sm">${entry.title}</span>
-                    </label>
-                </div>
+                <label class="inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap">
+                    <input type="checkbox" name="codex_entry" value="${entry.id}" ${isChecked ? 'checked' : ''} class="checkbox checkbox-xs" />
+                    <span class="label-text text-sm">${entry.title}</span>
+                </label>
             `;
 		}).join('');
 		
 		return `
-            <div class="break-inside-avoid mb-4">
-                <h4 class="label-text font-semibold mb-1 text-base-content/80 border-b border-base-300 pb-1">${category.name}</h4>
-                <div class="space-y-1 pt-1">
+            <div class="py-1">
+                <div class="label-text font-semibold text-base-content/80 mr-2">${category.name}:</div>
+                <div class="inline-flex flex-wrap items-center gap-x-4 gap-y-1">
                     ${entriesHtml}
                 </div>
             </div>
@@ -45,7 +44,7 @@ const renderCodexList = (container, context, initialState = null) => {
 	
 	codexContainer.innerHTML = `
         <h4 class="label-text font-semibold mb-2">Use Codex Entries</h4>
-        <div class="max-h-72 overflow-y-auto pr-2" style="column-count: 2; column-gap: 1.5rem;">
+        <div class="max-h-72 overflow-y-auto pr-2 space-y-1">
             ${categoriesHtml}
         </div>
     `;

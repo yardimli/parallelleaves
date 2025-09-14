@@ -468,7 +468,7 @@ function setupIpcHandlers() {
 			
 			for (const category of codexCategories) {
 				category.entries = db.prepare(`
-	            SELECT id, title, content
+	            SELECT id, title, content, target_content
 	            FROM codex_entries
 	            WHERE codex_category_id = ? ORDER BY title
 	        `).all(category.id);
@@ -844,8 +844,7 @@ function setupIpcHandlers() {
 		try {
 			const categories = db.prepare('SELECT id, name FROM codex_categories WHERE novel_id = ? ORDER BY name ASC').all(novelId);
 			categories.forEach(category => {
-				// MODIFIED SECTION START: Added `document_phrases` to the query to make them available for linking.
-				category.entries = db.prepare('SELECT id, title, content, document_phrases FROM codex_entries WHERE codex_category_id = ? ORDER BY title ASC').all(category.id);
+				category.entries = db.prepare('SELECT id, title, content, target_content, document_phrases FROM codex_entries WHERE codex_category_id = ? ORDER BY title ASC').all(category.id);
 				// MODIFIED SECTION END
 			});
 			return categories;
