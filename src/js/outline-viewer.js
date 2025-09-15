@@ -1,4 +1,4 @@
-import { initI18n, t } from './i18n.js';
+import { initI18n, t, applyTranslationsTo } from './i18n.js'; // MODIFIED: Import applyTranslationsTo
 
 /**
  * Truncates HTML content to a specific word limit.
@@ -25,7 +25,6 @@ const truncateHtml = (html, wordLimit) => {
  */
 async function renderOutline(container, sections) {
 	if (!sections || sections.length === 0) {
-		// MODIFIED: Use translation
 		container.innerHTML = `<p class="text-base-content/70">${t('outline.noSections')}</p>`;
 		return;
 	}
@@ -36,11 +35,9 @@ async function renderOutline(container, sections) {
 	const fragment = document.createDocumentFragment();
 	
 	for (const section of sections) {
-		// MODIFIED SECTION START: Use translation for chapter count pluralization
 		const chapterLabel = section.chapter_count === 1 ? t('outline.chapterLabel_one') : t('outline.chapterLabel_other');
 		const chapterCountText = `${section.chapter_count} ${chapterLabel}`;
 		const chapterStats = `${chapterCountText} - ${section.total_word_count.toLocaleString()} ${t('common.words')}`;
-		// MODIFIED SECTION END
 		
 		let sectionHtml = sectionTemplate
 			.replace('{{SECTION_ID}}', section.id)
@@ -55,7 +52,6 @@ async function renderOutline(container, sections) {
 		
 		if (section.chapters && section.chapters.length > 0) {
 			for (const chapter of section.chapters) {
-				// MODIFIED: Use translation for summary fallback
 				const summaryHtml = chapter.summary || `<p class="italic text-base-content/60">${t('outline.noSummary')}</p>`;
 				const chapterHtml = chapterTemplate
 					.replace(/{{CHAPTER_ID}}/g, chapter.id)
@@ -67,7 +63,6 @@ async function renderOutline(container, sections) {
 				chaptersContainer.innerHTML += chapterHtml;
 			}
 		} else {
-			// MODIFIED: Use translation
 			chaptersContainer.innerHTML = `<p class="text-base-content/70 text-sm">${t('outline.noChapters')}</p>`;
 		}
 		fragment.appendChild(sectionEl.firstElementChild);
@@ -82,7 +77,6 @@ async function renderOutline(container, sections) {
  */
 async function renderCodex(container, categories) {
 	if (!categories || categories.length === 0) {
-		// MODIFIED: Use translation
 		container.innerHTML = `<p class="text-base-content/70">${t('outline.noCodexEntries')}</p>`;
 		return;
 	}
@@ -111,7 +105,6 @@ async function renderCodex(container, categories) {
 				entriesContainer.innerHTML += entryHtml;
 			}
 		} else {
-			// MODIFIED: Use translation
 			entriesContainer.innerHTML = `<p class="text-base-content/70 text-sm col-span-full">${t('outline.noEntriesInCategory')}</p>`;
 		}
 		fragment.appendChild(categoryEl.firstElementChild);
@@ -120,7 +113,6 @@ async function renderCodex(container, categories) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-	// MODIFIED: Initialize i18n
 	await initI18n();
 	
 	const params = new URLSearchParams(window.location.search);
@@ -131,7 +123,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 	const codexContainer = document.getElementById('js-codex-container');
 	
 	if (!novelId) {
-		// MODIFIED: Use translation
 		document.body.innerHTML = `<p class="text-error p-8">${t('outline.errorProjectMissing')}</p>`;
 		return;
 	}
@@ -149,6 +140,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 			try {
 				// Load template and populate models
 				modalContent.innerHTML = await window.api.getTemplate('outline/autogen-codex-modal');
+				applyTranslationsTo(modalContent); // MODIFIED: Apply translations to the modal content
 				const select = modalContent.querySelector('.js-llm-model-select');
 				const result = await window.api.getModels();
 				if (result.success && result.models.length > 0) {
@@ -162,13 +154,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 						select.value = defaultModel;
 					}
 				} else {
-					// MODIFIED: Use translation
 					select.innerHTML = `<option>${t('outline.autoGenModal.errorLoadModels')}</option>`;
 				}
 				modal.showModal();
 			} catch (error) {
 				console.error('Failed to open autogen modal:', error);
-				// MODIFIED: Use translation
 				modalContent.innerHTML = `<p class="text-error">${t('outline.autoGenModal.errorLoadTool', { message: error.message })}</p>`;
 				modal.showModal();
 			}
@@ -181,7 +171,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			
 			const model = form.querySelector('.js-llm-model-select').value;
 			if (!model) {
-				// MODIFIED: Use translation
 				alert(t('outline.autoGenModal.alertSelectModel'));
 				return;
 			}
@@ -206,7 +195,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			const statusText = document.getElementById('js-autogen-status-text');
 			
 			if (progressBar) progressBar.value = progress;
-			// MODIFIED: Check for a translation key first
 			if (statusText) {
 				statusText.textContent = statusKey ? t(statusKey, statusParams || {}) : status;
 			}
@@ -229,13 +217,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 	try {
 		const data = await window.api.getOutlineData(novelId);
 		
-		// MODIFIED SECTION START: Update title correctly after loading
 		document.title = data.novel_title;
 		novelTitleEl.textContent = data.novel_title;
-		// MODIFIED SECTION END
 		
 		await renderOutline(outlineContainer, data.sections);
 		await renderCodex(codexContainer, data.codex_categories);
+		
+		// MODIFIED SECTION START: Apply translations to the newly rendered content
+		applyTranslationsTo(outlineContainer);
+		applyTranslationsTo(codexContainer);
+		// MODIFIED SECTION END
 		
 		const addCodexBtn = document.getElementById('js-add-codex-entry');
 		if (addCodexBtn) {
@@ -294,7 +285,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 		
 	} catch (error) {
 		console.error('Failed to load outline data:', error);
-		// MODIFIED: Use translation
 		document.body.innerHTML = `<p class="text-error p-8">${t('outline.errorLoad', { message: error.message })}</p>`;
 	}
 });

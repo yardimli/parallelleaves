@@ -227,7 +227,18 @@
       "contextInfo": "Bağlamsal Bilgi",
       "contextHelp": "En iyi sonuçlar için ilgili bağlamsal bilgiler otomatik olarak yapay zekaya gönderilir.",
       "loadingCodex": "Kodeks girdileri yükleniyor...",
-      "useCodex": "Kodeks Girdilerini Kullan"
+      "useCodex": "Kodeks Girdilerini Kullan",
+      "system": {
+        "base": "You are an expert prose editor.\n\nWhenever you're given text, rephrase it using the following instructions: <instructions>{instructions}</instructions>\n\nImitiate and keep the current writing style, and leave mannerisms, word choice and sentence structure intact.\nYou are free to remove redundant lines of speech. Keep the same tense and stylistic choices. Use {language} spelling and grammar.\n\nOnly return the rephrased text, nothing else.",
+        "defaultInstruction": "Rephrase the given text."
+      },
+      "user": {
+        "codexBlock": "Take into account the following glossary of characters/locations/items/lore... when writing your response:\n<codex>\n{codexContent}\n</codex>",
+        "surroundingTextBlock": "For contextual information, refer to surrounding words in the scene, DO NOT REPEAT THEM:\n<textBefore>\n{wordsBefore}\n</textBefore>\n<textAfter>\n{wordsAfter}\n</textAfter>",
+        "surroundingTextBlockBeforeOnly": "For contextual information, refer to surrounding words in the scene, DO NOT REPEAT THEM:\n<textBefore>\n{wordsBefore}\n</textBefore>",
+        "surroundingTextBlockAfterOnly": "For contextual information, refer to surrounding words in the scene, DO NOT REPEAT THEM:\n<textAfter>\n{wordsAfter}\n</textAfter>",
+        "textToRewrite": "Text to rewrite:\n<text words=\"{wordCount}\">\n{text}\n</text>"
+      }
     },
     "translate": {
       "title": "Çevir",
@@ -239,7 +250,17 @@
       "loadingCodex": "Kodeks girdileri yükleniyor...",
       "useCodex": "Kodeks Girdilerini Sözlük Olarak Kullan",
       "prevPairs": "Önceki Çeviri Çiftleri",
-      "prevPairsHelp": "Zekai için bağlam olarak N önceki çeviri bloğunu dahil et. (Devre dışı bırakmak için 0)"
+      "prevPairsHelp": "Zekai için bağlam olarak N önceki çeviri bloğunu dahil et. (Devre dışı bırakmak için 0)",
+      "system": {
+        "base": "You are an expert literary translator. Your task is to translate a text from {sourceLanguage} to {targetLanguage}.\nPreserve the original tone, style, and literary devices as much as possible. Maintain the original paragraph breaks.\n\n{instructionsBlock}\n\nOnly return the translated text, nothing else.",
+        "instructionsBlock": "Follow these specific instructions: <instructions>{instructions}</instructions>"
+      },
+      "user": {
+        "codexBlock": "Use the following glossary for consistent translation of key terms. Do not translate the terms literally if the glossary provides a specific translation or context.\n<glossary>\n{codexContent}\n</glossary>",
+        "codexEntry": "Term ({sourceLanguage}): {title}\nDescription/Translation Hint: {content}\n\nTranslation in {targetLanguage}: {translation}",
+        "codexEntryNoTranslation": "(No specific translation provided)",
+        "textToTranslate": "Translate the following text from {sourceLanguage} to {targetLanguage}:\n\n<text>\n{text}\n</text>"
+      }
     },
     "preview": {
       "title": "Canlı Komut Önizlemesi",

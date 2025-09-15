@@ -1,4 +1,4 @@
-import { t } from '../i18n.js';
+import { t, applyTranslationsTo } from '../i18n.js'; // MODIFIED: Import applyTranslationsTo
 
 const defaultState = {
 	instructions: '',
@@ -41,7 +41,6 @@ const renderCodexList = (container, context, initialState = null) => {
         `;
 	}).join('');
 	
-	// MODIFIED: Use translation for "Use Codex Entries"
 	codexContainer.innerHTML = `
         <h4 class="label-text font-semibold mb-2">${t('prompt.rephrase.useCodex')}</h4>
         <div class="max-h-72 overflow-y-auto pr-2 space-y-1">
@@ -54,28 +53,24 @@ const buildSurroundingTextBlock = (wordsBefore, wordsAfter) => {
 	if (!wordsBefore && !wordsAfter) {
 		return '';
 	}
-	let block = 'For contextual information, refer to surrounding words in the scene, DO NOT REPEAT THEM:\n';
+	if (wordsBefore && wordsAfter) {
+		return t('prompt.rephrase.user.surroundingTextBlock', { wordsBefore, wordsAfter });
+	}
 	if (wordsBefore) {
-		block += `<textBefore>\n${wordsBefore}\n</textBefore>\n`;
+		return t('prompt.rephrase.user.surroundingTextBlockBeforeOnly', { wordsBefore });
 	}
-	if (wordsAfter) {
-		block += `<textAfter>\n${wordsAfter}\n</textAfter>\n`;
-	}
-	return block;
+	// if (wordsAfter)
+	return t('prompt.rephrase.user.surroundingTextBlockAfterOnly', { wordsAfter });
 };
 
-// Export this function for use in the main prompt editor module.
 export const buildPromptJson = (formData, context) => {
 	const { selectedText, wordCount, allCodexEntries, languageForPrompt, wordsBefore, wordsAfter } = context;
 	
-	const system = `You are an expert prose editor.
-
-Whenever you're given text, rephrase it using the following instructions: <instructions>${formData.instructions || 'Rephrase the given text.'}</instructions>
-
-Imitiate and keep the current writing style, and leave mannerisms, word choice and sentence structure intact.
-You are free to remove redundant lines of speech. Keep the same tense and stylistic choices. Use ${languageForPrompt || 'English'} spelling and grammar.
-
-Only return the rephrased text, nothing else.`;
+	const instructions = formData.instructions || t('prompt.rephrase.system.defaultInstruction');
+	const system = t('prompt.rephrase.system.base', {
+		instructions: instructions,
+		language: languageForPrompt || 'English'
+	});
 	
 	let codexBlock = '';
 	const allEntriesFlat = allCodexEntries.flatMap(category => category.entries);
@@ -89,10 +84,7 @@ Only return the rephrased text, nothing else.`;
 				return `Title: ${entry.title}\nContent: ${plainContent.trim()}`;
 			}).join('\n\n');
 			
-			codexBlock = `Take into account the following glossary of characters/locations/items/lore... when writing your response:
-<codex>
-${codexContent}
-</codex>`;
+			codexBlock = t('prompt.rephrase.user.codexBlock', { codexContent });
 		}
 	}
 	
@@ -104,7 +96,10 @@ ${codexContent}
 	if (surroundingText) {
 		userParts.push(surroundingText);
 	}
-	userParts.push(`Text to rewrite:\n<text words="${wordCount}">\n${wordCount > 0 ? truncatedText : '{message}'}\n</text>`);
+	userParts.push(t('prompt.rephrase.user.textToRewrite', {
+		wordCount: wordCount,
+		text: wordCount > 0 ? truncatedText : '{message}'
+	}));
 	
 	const user = userParts.filter(Boolean).join('\n\n');
 	
@@ -153,6 +148,7 @@ export const init = async (container, context) => {
 	try {
 		const templateHtml = await window.api.getTemplate('prompt/rephrase-editor');
 		container.innerHTML = templateHtml;
+		applyTranslationsTo(container); // MODIFIED: Apply translations to the newly added content
 		
 		const wordCount = context.selectedText ? context.selectedText.trim().split(/\s+/).filter(Boolean).length : 0;
 		const fullContext = { ...context, wordCount };
@@ -168,7 +164,6 @@ export const init = async (container, context) => {
 		
 		updatePreview(container, fullContext);
 	} catch (error) {
-		// MODIFIED: Use translation for error message
 		container.innerHTML = `<p class="p-4 text-error">${t('prompt.errorLoadForm')}</p>`;
 		console.error(error);
 	}

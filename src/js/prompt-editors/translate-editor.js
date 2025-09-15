@@ -1,4 +1,4 @@
-import { t } from '../i18n.js';
+import { t, applyTranslationsTo } from '../i18n.js'; // MODIFIED: Import applyTranslationsTo
 
 const defaultState = {
 	instructions: '',
@@ -100,7 +100,6 @@ const renderCodexList = (container, context, initialState = null, preselectedIds
         `;
 	}).join('');
 	
-	// MODIFIED: Use translation for "Use Codex Entries as Glossary"
 	codexContainer.innerHTML = `
         <h4 class="label-text font-semibold mb-2">${t('prompt.translate.useCodex')}</h4>
         <div class="max-h-72 overflow-y-auto pr-2 space-y-1">
@@ -122,7 +121,11 @@ const buildTranslationContextBlock = (translationPairs, languageForPrompt, targe
 		if (sourceText && targetText) {
 			contextMessages.push({
 				role: 'user',
-				content: `Translate the following text from ${languageForPrompt} to ${targetLanguage}:\n\n<text>\n${sourceText}\n</text>`
+				content: t('prompt.translate.user.textToTranslate', {
+					sourceLanguage: languageForPrompt,
+					targetLanguage: targetLanguage,
+					text: sourceText
+				})
 			});
 			contextMessages.push({
 				role: 'assistant',
@@ -140,12 +143,15 @@ export const buildPromptJson = (formData, context) => {
 	
 	const plainTextToTranslate = selectedText;
 	
-	const system = `You are an expert literary translator. Your task is to translate a text from ${languageForPrompt} to ${targetLanguage}.
-Preserve the original tone, style, and literary devices as much as possible. Maintain the original paragraph breaks.
-
-${formData.instructions ? `Follow these specific instructions: <instructions>${formData.instructions}</instructions>` : ''}
-
-Only return the translated text, nothing else.`;
+	const instructionsBlock = formData.instructions
+		? t('prompt.translate.system.instructionsBlock', { instructions: formData.instructions })
+		: '';
+	
+	const system = t('prompt.translate.system.base', {
+		sourceLanguage: languageForPrompt,
+		targetLanguage: targetLanguage,
+		instructionsBlock: instructionsBlock
+	}).trim();
 	
 	let codexBlock = '';
 	if (formData.selectedCodexIds && formData.selectedCodexIds.length > 0) {
@@ -161,20 +167,27 @@ Only return the translated text, nothing else.`;
 				tempTranslationHintDiv.innerHTML = entry.target_content || '';
 				const plainTranslationHint = tempTranslationHintDiv.textContent || tempTranslationHintDiv.innerText || '';
 				
-				return `Term (${languageForPrompt}): ${entry.title}\nDescription/Translation Hint: ${plainContent.trim()} \n\nTranslation in ${targetLanguage}: ${plainTranslationHint.trim() || '(No specific translation provided)'}`;
+				return t('prompt.translate.user.codexEntry', {
+					sourceLanguage: languageForPrompt,
+					title: entry.title,
+					content: plainContent.trim(),
+					targetLanguage: targetLanguage,
+					translation: plainTranslationHint.trim() || t('prompt.translate.user.codexEntryNoTranslation')
+				});
 			}).join('\n\n');
 			
-			codexBlock = `Use the following glossary for consistent translation of key terms. Do not translate the terms literally if the glossary provides a specific translation or context.
-<glossary>
-${codexContent}
-</glossary>`;
+			codexBlock = t('prompt.translate.user.codexBlock', { codexContent });
 		}
 	}
 	
 	const contextMessages = buildTranslationContextBlock(translationPairs, languageForPrompt, targetLanguage);
 	
 	const finalUserPromptParts = [codexBlock];
-	finalUserPromptParts.push(`Translate the following text from ${languageForPrompt} to ${targetLanguage}:\n\n<text>\n${plainTextToTranslate}\n</text>`);
+	finalUserPromptParts.push(t('prompt.translate.user.textToTranslate', {
+		sourceLanguage: languageForPrompt,
+		targetLanguage: targetLanguage,
+		text: plainTextToTranslate
+	}));
 	const finalUserPrompt = finalUserPromptParts.filter(Boolean).join('\n\n');
 	
 	return {
@@ -270,6 +283,7 @@ export const init = async (container, context) => {
 	try {
 		const templateHtml = await window.api.getTemplate('prompt/translate-editor');
 		container.innerHTML = templateHtml;
+		applyTranslationsTo(container); // MODIFIED: Apply translations to the newly added content
 		
 		const { selectedText, allCodexEntries, translationInfo, activeEditorView } = context;
 		
@@ -323,7 +337,6 @@ export const init = async (container, context) => {
 		await updatePreview(container, fullContext);
 		
 	} catch (error) {
-		// MODIFIED: Use translation for error message
 		container.innerHTML = `<p class="p-4 text-error">${t('prompt.errorLoadForm')}</p>`;
 		console.error(error);
 	}

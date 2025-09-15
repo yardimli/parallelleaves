@@ -81,11 +81,29 @@ function translateElement(element) {
 	}
 }
 
+// NEW SECTION START: Exportable function to translate a specific DOM tree
+/**
+ * Scans a given DOM element and its children and applies all translations.
+ * @param {HTMLElement} rootElement - The root element to start scanning from.
+ */
+export function applyTranslationsTo(rootElement) {
+	if (!rootElement) return;
+	
+	// Also check the root element itself, not just its children
+	if (rootElement.matches('[data-i18n], [data-i18n-title], [data-i18n-placeholder]')) {
+		translateElement(rootElement);
+	}
+	
+	rootElement.querySelectorAll('[data-i18n], [data-i18n-title], [data-i18n-placeholder]').forEach(translateElement);
+}
+// NEW SECTION END
+
 /**
  * Scans the entire document and applies all translations.
  */
 function applyTranslations() {
-	document.querySelectorAll('[data-i18n], [data-i18n-title], [data-i18n-placeholder]').forEach(translateElement);
+	// MODIFIED: Use the new targeted function
+	applyTranslationsTo(document.body);
 	document.documentElement.lang = localStorage.getItem(LANG_KEY) || 'en';
 }
 
@@ -93,7 +111,7 @@ function applyTranslations() {
  * Populates the language switcher dropdown menu.
  */
 function populateLanguageSwitcher() {
-	const menus = document.querySelectorAll('#js-lang-switcher-menu'); // MODIFIED: Select all menus
+	const menus = document.querySelectorAll('#js-lang-switcher-menu');
 	if (menus.length === 0) return;
 	
 	const currentLang = localStorage.getItem(LANG_KEY) || 'en';
@@ -130,7 +148,6 @@ async function setLanguage(lang) {
 	await loadLanguage(lang);
 	applyTranslations();
 	populateLanguageSwitcher();
-	// MODIFIED: Reload the page to ensure all JS-generated content is re-translated
 	window.location.reload();
 }
 
