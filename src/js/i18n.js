@@ -1,10 +1,13 @@
 const LANG_KEY = 'app_lang';
 let translations = {};
 
-const supportedLanguages = {
+// MODIFIED SECTION START: Exported supportedLanguages
+export const supportedLanguages = {
 	en: 'English',
-	tr: 'Türkçe'
+	tr: 'Türkçe',
+	tlh: 'tlhIngan Hol'
 };
+// MODIFIED SECTION END
 
 /**
  * Fetches and loads a language file.
@@ -55,17 +58,12 @@ export function t(key, substitutions = {}) {
 function translateElement(element) {
 	const key = element.dataset.i18n;
 	if (key) {
-		// For elements like <title>, we should only set textContent.
-		// For others, it might be safer to set innerText if they could contain other nodes,
-		// but the current usage is for simple text nodes.
 		if (element.children.length === 0 || element.tagName.toLowerCase() === 'title') {
 			element.textContent = t(key);
 		} else {
-			// If the element has children, find the first text node and replace it.
-			// This is a simple approach for buttons like "<i>icon</i> Text".
 			for (const node of element.childNodes) {
 				if (node.nodeType === Node.TEXT_NODE && node.textContent.trim().length > 0) {
-					node.textContent = ` ${t(key)} `; // Add spaces for padding
+					node.textContent = ` ${t(key)} `;
 					break;
 				}
 			}
@@ -81,7 +79,6 @@ function translateElement(element) {
 	}
 }
 
-// NEW SECTION START: Exportable function to translate a specific DOM tree
 /**
  * Scans a given DOM element and its children and applies all translations.
  * @param {HTMLElement} rootElement - The root element to start scanning from.
@@ -89,20 +86,17 @@ function translateElement(element) {
 export function applyTranslationsTo(rootElement) {
 	if (!rootElement) return;
 	
-	// Also check the root element itself, not just its children
 	if (rootElement.matches('[data-i18n], [data-i18n-title], [data-i18n-placeholder]')) {
 		translateElement(rootElement);
 	}
 	
 	rootElement.querySelectorAll('[data-i18n], [data-i18n-title], [data-i18n-placeholder]').forEach(translateElement);
 }
-// NEW SECTION END
 
 /**
  * Scans the entire document and applies all translations.
  */
 function applyTranslations() {
-	// MODIFIED: Use the new targeted function
 	applyTranslationsTo(document.body);
 	document.documentElement.lang = localStorage.getItem(LANG_KEY) || 'en';
 }
@@ -143,7 +137,7 @@ function populateLanguageSwitcher() {
  * Sets the application language, saves it, and re-renders the UI.
  * @param {string} lang - The language code to set.
  */
-async function setLanguage(lang) {
+export async function setLanguage(lang) {
 	localStorage.setItem(LANG_KEY, lang);
 	await loadLanguage(lang);
 	applyTranslations();
@@ -179,6 +173,11 @@ export async function initI18n(isDashboard = false) {
 					await setAndApply('tr');
 					modal.close();
 					resolve('tr');
+				};
+				document.getElementById('select-lang-tlh').onclick = async () => {
+					await setAndApply('tlh');
+					modal.close();
+					resolve('tlh');
 				};
 			} else {
 				setAndApply('en').then(() => resolve('en'));

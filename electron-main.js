@@ -1,11 +1,12 @@
-const {app, BrowserWindow, Menu, MenuItem, ipcMain, dialog} = require('electron');
+const {app, BrowserWindow, Menu, MenuItem, ipcMain, dialog, shell} = require('electron');
 const path = require('path');
 const url = require('url');
 const fetch = require('node-fetch');
 const fs = require('fs');
 const mammoth = require('mammoth');
 
-require('dotenv').config();
+// MODIFIED: Removed dotenv and added a direct require for the new config file.
+const config = require('./config.js');
 
 const {initializeDatabase} = require('./src/database/database.js');
 const aiService = require('./src/ai/ai.js');
@@ -17,8 +18,59 @@ let chapterEditorWindows = new Map();
 let outlineWindows = new Map();
 let codexEditorWindows = new Map();
 let importWindow = null;
+let currentUserSession = null;
 
-// --- Template and HTML Helper Functions (No changes here, skipped for brevity) ---
+// NEW SECTION START: Session Persistence
+const SESSION_FILE_PATH = path.join(app.getPath('userData'), 'session.json');
+
+/**
+ * Saves the current user session to a file.
+ * @param {object} session - The session object to save.
+ */
+function saveSession(session) {
+	try {
+		fs.writeFileSync(SESSION_FILE_PATH, JSON.stringify(session), 'utf8');
+	} catch (error) {
+		console.error('Failed to save session:', error);
+	}
+}
+
+/**
+ * Loads the user session from a file on startup.
+ */
+function loadSession() {
+	try {
+		if (fs.existsSync(SESSION_FILE_PATH)) {
+			const sessionData = fs.readFileSync(SESSION_FILE_PATH, 'utf8');
+			const session = JSON.parse(sessionData);
+			// Basic validation to ensure it's a plausible session object
+			if (session && session.token && session.user) {
+				currentUserSession = session;
+				console.log('Session loaded successfully for user:', session.user.username);
+			}
+		}
+	} catch (error) {
+		console.error('Failed to load session, clearing corrupted file:', error);
+		// If file is corrupt, clear it to prevent future errors
+		clearSession();
+	}
+}
+
+/**
+ * Deletes the saved session file (on logout).
+ */
+function clearSession() {
+	try {
+		if (fs.existsSync(SESSION_FILE_PATH)) {
+			fs.unlinkSync(SESSION_FILE_PATH);
+		}
+	} catch (error) {
+		console.error('Failed to clear session file:', error);
+	}
+}
+// NEW SECTION END
+
+// --- Template and HTML Helper Functions ---
 function getTemplate(templateName) {
 	const templatePath = path.join(__dirname, 'public', 'templates', `${templateName}.html`);
 	try {
@@ -36,7 +88,7 @@ function countWordsInHtml(html) {
 	return words.length;
 }
 
-// --- Window Creation Functions (No changes here, skipped for brevity) ---
+// --- Window Creation Functions ---
 function createMainWindow() {
 	mainWindow = new BrowserWindow({
 		width: 1400,
@@ -73,8 +125,6 @@ function createMainWindow() {
 		if (params.misspelledWord) {
 			menu.append(
 				new MenuItem({
-					// MODIFIED: This string is hard to translate without a major refactor.
-					// For now, it remains in English, but a key has been added for future implementation.
 					label: 'Add to dictionary',
 					click: () => mainWindow.webContents.session.addWordToSpellCheckerDictionary(params.misspelledWord)
 				})
@@ -308,7 +358,7 @@ function createImportWindow() {
 }
 
 function setupIpcHandlers() {
-	// NEW HANDLER START: For reading language files.
+	// --- I18n Handler ---
 	ipcMain.handle('i18n:get-lang-file', (event, lang) => {
 		const langPath = path.join(__dirname, 'public', 'lang', `${lang}.json`);
 		try {
@@ -318,7 +368,59 @@ function setupIpcHandlers() {
 			throw new Error(`Could not load language file: ${lang}.json`);
 		}
 	});
-	// NEW HANDLER END
+	
+	// --- Authentication Handlers ---
+	// MODIFIED: URLs are now sourced from the config.js file.
+	const LOGIN_API_URL = config.LOGIN_API_URL;
+	const REGISTER_URL = config.REGISTER_URL;
+	
+	ipcMain.handle('auth:login', async (event, credentials) => {
+		try {
+			if (!LOGIN_API_URL) throw new Error('Login API URL is not configured in config.js.');
+			
+			const response = await fetch(LOGIN_API_URL, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(credentials)
+			});
+			
+			const data = await response.json();
+			
+			if (response.ok && data.success) {
+				currentUserSession = {
+					token: data.token,
+					user: data.user
+				};
+				// MODIFIED: Save the session to a file for persistence.
+				saveSession(currentUserSession);
+				return { success: true, session: currentUserSession };
+			} else {
+				return { success: false, message: data.message || 'Login failed' };
+			}
+		} catch (error) {
+			console.error('Login error:', error);
+			return { success: false, message: error.message };
+		}
+	});
+	
+	ipcMain.handle('auth:logout', () => {
+		// MODIFIED: Clear the persisted session file on logout.
+		clearSession();
+		currentUserSession = null;
+		return { success: true };
+	});
+	
+	ipcMain.handle('auth:get-session', () => {
+		return currentUserSession;
+	});
+	
+	ipcMain.on('auth:open-register-url', () => {
+		if (REGISTER_URL) {
+			shell.openExternal(REGISTER_URL);
+		} else {
+			console.error('REGISTER_URL is not defined in config.js file.');
+		}
+	});
 	
 	const extractAllPairs = (sourceContent, targetContent) => {
 		if (!sourceContent || !targetContent) {
@@ -444,8 +546,8 @@ function setupIpcHandlers() {
 					const contentToUse = chapter.target_content || chapter.source_content;
 					if (contentToUse) {
 						const cleanedContent = contentToUse
-							.replace(/{{\s*TranslationBlock-\d+\s*}}/gi, '') // For source content
-							.replace(/<div class="note-wrapper not-prose"><p>Translation Block #\d+<\/p><\/div>/gi, ''); // For target content
+							.replace(/{{\s*TranslationBlock-\d+\s*}}/gi, '')
+							.replace(/<div class="note-wrapper not-prose"><p>Translation Block #\d+<\/p><\/div>/gi, '');
 						
 						const textContent = cleanedContent.replace(/<[^>]+>/g, ' ').replace(/\s\s+/g, ' ').trim();
 						
@@ -467,7 +569,6 @@ function setupIpcHandlers() {
 						}
 						chapter.summary = `<p>${truncatedText}</p>`;
 					} else {
-						// MODIFIED: Use translation key for summary fallback
 						chapter.summary = `<p class="italic text-base-content/60" data-i18n="electron.noContent"></p>`;
 					}
 				}
@@ -496,7 +597,7 @@ function setupIpcHandlers() {
 			};
 		} catch (error) {
 			console.error(`Error in getOutlineData for novelId ${novelId}:`, error);
-			throw error; // Re-throw the error so the renderer process receives it
+			throw error;
 		}
 	});
 	
@@ -561,7 +662,7 @@ function setupIpcHandlers() {
 		}
 	});
 	
-	ipcMain.handle('novels:updateCover', async (event, {novelId, coverInfo}) => {
+	ipcMain.handle('novels:updateNovelCover ', async (event, {novelId, coverInfo}) => {
 		let localPath;
 		let imageType = 'unknown';
 		
@@ -750,7 +851,6 @@ function setupIpcHandlers() {
 			
 			const chapters = db.prepare('SELECT source_content FROM chapters WHERE novel_id = ? AND source_content IS NOT NULL').all(novelId);
 			if (chapters.length === 0) {
-				// MODIFIED: Send translation key
 				sendProgress(100, 'No source content found to analyze. Process finished.', 'electron.codexGenNoSource');
 				return;
 			}
@@ -769,7 +869,6 @@ function setupIpcHandlers() {
 			}
 			
 			if (chunks.length === 0) {
-				// MODIFIED: Send translation key
 				sendProgress(100, 'No text found after cleaning. Process finished.', 'electron.codexGenNoText');
 				return;
 			}
@@ -798,12 +897,14 @@ function setupIpcHandlers() {
 				const existingCodex = getExistingCodex();
 				const existingCodexJson = JSON.stringify(existingCodex, null, 2);
 				
+				const token = currentUserSession ? currentUserSession.token : null;
 				const result = await aiService.generateCodexFromTextChunk({
 					textChunk: chunk,
 					existingCodexJson,
 					language,
 					targetLanguage,
 					model,
+					token,
 				});
 				
 				const processResultsTransaction = db.transaction(() => {
@@ -849,12 +950,10 @@ function setupIpcHandlers() {
 				processResultsTransaction();
 			}
 			
-			// MODIFIED: Send translation key
 			sendProgress(100, 'Codex generation complete! The page will now reload.', 'electron.codexGenComplete');
 			
 		} catch (error) {
 			console.error('Codex auto-generation failed:', error);
-			// MODIFIED: Send translation key
 			sendProgress(100, `An error occurred: ${error.message}`, 'electron.codexGenError', { message: error.message });
 		}
 	});
@@ -890,16 +989,19 @@ function setupIpcHandlers() {
 				categoryNames.push('Characters', 'Locations', 'Items', 'Lore');
 			}
 			
-			const model = process.env.OPEN_ROUTER_MODEL || 'openai/gpt-4o-mini';
+			// MODIFIED: Default model is now sourced from config.js
+			const model = config.OPEN_ROUTER_MODEL || 'openai/gpt-4o-mini';
 			
 			const novel = db.prepare('SELECT target_language FROM novels WHERE id = ?').get(novelId);
 			const targetLanguage = novel ? novel.target_language : 'English';
 			
+			const token = currentUserSession ? currentUserSession.token : null;
 			const suggestion = await aiService.suggestCodexDetails({
 				text,
 				categories: categoryNames,
 				targetLanguage: targetLanguage,
 				model,
+				token,
 			});
 			
 			let categoryId = null;
@@ -981,9 +1083,11 @@ function setupIpcHandlers() {
 		}
 	});
 	
+	// --- LLM Handlers ---
 	ipcMain.handle('llm:process-text', async (event, data) => {
 		try {
-			const result = await aiService.processLLMText(data);
+			const token = currentUserSession ? currentUserSession.token : null;
+			const result = await aiService.processLLMText({ ...data, token });
 			return { success: true, data: result };
 		} catch (error) {
 			console.error('AI Processing Error in main process:', error);
@@ -993,8 +1097,9 @@ function setupIpcHandlers() {
 	
 	ipcMain.handle('ai:getModels', async () => {
 		try {
-			const modelsData = await aiService.getOpenRouterModels();
-			const processedModels = aiService.processModelsForView(modelsData);
+			const token = currentUserSession ? currentUserSession.token : null;
+			// MODIFIED: The data from getOpenRouterModels is now already processed by the server.
+			const processedModels = await aiService.getOpenRouterModels(false, token);
 			return {success: true, models: processedModels};
 		} catch (error) {
 			console.error('Failed to get or process AI models:', error);
@@ -1039,7 +1144,7 @@ function setupIpcHandlers() {
 			throw new Error('Invalid data provided for import.');
 		}
 		
-		const userId = 1;
+		const userId = currentUserSession ? currentUserSession.user.id : 1;
 		
 		const importTransaction = db.transaction(() => {
 			const novelResult = db.prepare(
@@ -1112,15 +1217,9 @@ function setupIpcHandlers() {
 // --- App Lifecycle Events ---
 app.on('ready', () => {
 	db = initializeDatabase();
+	// MODIFIED: Load any persisted session before setting up the app.
+	loadSession();
 	setupIpcHandlers();
-	
-	aiService.getOpenRouterModels(true)
-		.then(() => {
-			console.log('AI models list refreshed from OpenRouter on startup.');
-		})
-		.catch(error => {
-			console.error('Failed to refresh AI models on startup:', error.message);
-		});
 	
 	createMainWindow();
 });

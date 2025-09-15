@@ -1,4 +1,4 @@
-import { initI18n, t, applyTranslationsTo } from './i18n.js'; // MODIFIED: Import applyTranslationsTo
+import { initI18n, t, applyTranslationsTo, setLanguage, supportedLanguages } from './i18n.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
 	await initI18n(true);
@@ -22,9 +22,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 		}
 	};
 	
+	// --- DOM Elements ---
 	const novelList = document.getElementById('novel-list');
 	const loadingMessage = document.getElementById('loading-message');
 	const importDocBtn = document.getElementById('import-doc-btn');
+	const authContainer = document.getElementById('auth-container');
+	const loginModal = document.getElementById('login-modal');
+	const loginForm = document.getElementById('login-form');
+	const loginErrorMsg = document.getElementById('login-error-message');
+	const loginSubmitBtn = document.getElementById('login-submit-btn');
+	const loginLangSelect = document.getElementById('login-language');
 	
 	const proseModal = document.getElementById('prose-settings-modal');
 	const proseForm = document.getElementById('prose-settings-form');
@@ -54,6 +61,96 @@ document.addEventListener('DOMContentLoaded', async () => {
 		languages.forEach(lang => {
 			sourceLangSelect.add(new Option(lang, lang));
 			targetLangSelect.add(new Option(lang, lang));
+		});
+	}
+	
+	// --- Authentication Logic ---
+	
+	function populateLoginLanguageSelect() {
+		const currentLang = localStorage.getItem('app_lang') || 'en';
+		loginLangSelect.innerHTML = '';
+		for (const [code, name] of Object.entries(supportedLanguages)) {
+			const option = new Option(name, code);
+			if (code === currentLang) {
+				option.selected = true;
+			}
+			loginLangSelect.add(option);
+		}
+	}
+	
+	// MODIFIED SECTION START: Updated to use i18n function for dynamic text
+	function updateAuthUI(session) {
+		if (session && session.user) {
+			authContainer.innerHTML = `
+                <span class="font-semibold">${t('dashboard.welcome', { username: session.user.username })}</span>
+                <button id="logout-btn" class="btn btn-ghost btn-sm">${t('dashboard.signOut')}</button>
+            `;
+			document.getElementById('logout-btn').addEventListener('click', handleLogout);
+			loadInitialData(); // Load projects only when logged in
+		} else {
+			authContainer.innerHTML = `
+                <button id="login-btn" class="btn btn-primary">${t('dashboard.signIn')}</button>
+            `;
+			document.getElementById('login-btn').addEventListener('click', () => loginModal.showModal());
+			
+			novelList.innerHTML = `<p class="text-base-content/70 col-span-full text-center">${t('dashboard.signInPrompt')}</p>`;
+			loadingMessage.style.display = 'none';
+			
+			loginModal.showModal();
+		}
+	}
+	// MODIFIED SECTION END
+	
+	async function handleLogin(event) {
+		event.preventDefault();
+		loginErrorMsg.classList.add('hidden');
+		setButtonLoading(loginSubmitBtn, true);
+		
+		const username = loginForm.elements.username.value;
+		const password = loginForm.elements.password.value;
+		const lang = loginForm.elements.language.value;
+		
+		try {
+			const result = await window.api.login({ username, password });
+			if (result.success) {
+				if (lang !== (localStorage.getItem('app_lang') || 'en')) {
+					await setLanguage(lang);
+				} else {
+					loginModal.close();
+					updateAuthUI(result.session);
+				}
+			} else {
+				// MODIFIED: Translate error message key from server
+				loginErrorMsg.textContent = t(result.message) || t('dashboard.login.failed');
+				loginErrorMsg.classList.remove('hidden');
+			}
+		} catch (error) {
+			loginErrorMsg.textContent = error.message;
+			loginErrorMsg.classList.remove('hidden');
+		} finally {
+			setButtonLoading(loginSubmitBtn, false);
+		}
+	}
+	
+	async function handleLogout() {
+		await window.api.logout();
+		updateAuthUI(null);
+	}
+	
+	async function initAuth() {
+		const session = await window.api.getSession();
+		updateAuthUI(session);
+		populateLoginLanguageSelect();
+		loginForm.addEventListener('submit', handleLogin);
+		
+		loginLangSelect.addEventListener('change', async (e) => {
+			const newLang = e.target.value;
+			await setLanguage(newLang);
+		});
+		
+		document.getElementById('signup-link').addEventListener('click', (e) => {
+			e.preventDefault();
+			window.api.openExternalRegister();
 		});
 	}
 	
@@ -152,7 +249,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 			novelList.appendChild(novelCard);
 		});
 		
-		applyTranslationsTo(novelList); // MODIFIED: Apply translations to the newly created cards
+		applyTranslationsTo(novelList);
 	}
 	
 	// --- Event Listeners ---
@@ -267,6 +364,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 		}
 	});
 	
+	// --- Initializations ---
 	populateLanguages();
-	loadInitialData();
+	initAuth();
 });

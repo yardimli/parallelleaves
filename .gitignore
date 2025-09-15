@@ -2,6 +2,7 @@
 public/styles.css
 package-lock.json
 .env
+server/.env
 /.idea
 .scp/settings.yaml
 /dist

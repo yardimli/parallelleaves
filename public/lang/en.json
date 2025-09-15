@@ -34,6 +34,19 @@
     "loadingProjects": "Loading projects...",
     "noProjects": "You haven't started any translation projects yet.",
     "errorLoading": "Error loading projects.",
+    "welcome": "Welcome, {username}",
+    "signOut": "Sign Out",
+    "signIn": "Sign In",
+    "signInPrompt": "Please sign in to view your projects.",
+    "login": {
+      "title": "Sign In",
+      "username": "Username",
+      "password": "Password",
+      "noAccount": "Don't have an account?",
+      "signUp": "Sign Up",
+      "signIn": "Sign In",
+      "failed": "Login failed. Please check your credentials."
+    },
     "proseSettings": {
       "title": "Language Settings",
       "description": "These settings define the source and target languages for the project and AI tools.",
@@ -289,5 +302,12 @@
     "codexGenNoText": "No text found after cleaning. Process finished.",
     "codexGenComplete": "Codex generation complete! The page will now reload.",
     "codexGenError": "An error occurred: {message}"
+  },
+  "error": {
+    "credentialsRequired": "Username and password are required.",
+    "invalidCredentials": "Invalid username or password.",
+    "dbConnection": "Database connection failed.",
+    "unexpected": "An unexpected error occurred.",
+    "methodNotAllowed": "Method Not Allowed."
   }
 }

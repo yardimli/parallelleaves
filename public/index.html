@@ -13,7 +13,9 @@
 	<div class="flex justify-between items-center mb-8">
 		<h1 class="text-4xl font-bold" data-i18n="dashboard.title">My Translation Projects</h1>
 		<div class="flex items-center gap-4">
-			<!-- MODIFIED SECTION START: Added language switcher dropdown -->
+			<div id="auth-container" class="flex items-center gap-4">
+				<!-- This will be populated by dashboard.js -->
+			</div>
 			<div class="dropdown dropdown-end">
 				<button tabindex="0" role="button" class="btn btn-ghost btn-circle" data-i18n-title="common.changeLanguage">
 					<i class="bi bi-translate text-2xl"></i>
@@ -25,7 +27,6 @@
 			<button id="theme-toggle" class="btn btn-ghost btn-circle" data-i18n-title="common.changeTheme">
 				<i class="bi bi-sun-fill text-2xl"></i>
 			</button>
-			<!-- MODIFIED SECTION END -->
 			<button id="import-doc-btn" class="btn btn-neutral gap-2">
 				<i class="bi bi-file-earmark-arrow-up"></i>
 				<span data-i18n="dashboard.importDocument">Import Document</span>
@@ -182,18 +183,52 @@
 	</div>
 </dialog>
 
-<!-- NEW SECTION START: Initial language selection modal -->
+<!-- MODIFIED SECTION START: Login Modal internationalized -->
+<dialog id="login-modal" class="modal">
+	<div class="modal-box w-11/12 max-w-sm">
+		<h3 class="font-bold text-lg" data-i18n="dashboard.login.title">Sign In</h3>
+		<form id="login-form" class="space-y-4 py-4">
+			<div class="form-control">
+				<label for="login-username" class="label"><span class="label-text" data-i18n="dashboard.login.username">Username</span></label>
+				<input type="text" id="login-username" name="username" class="input input-bordered" required>
+			</div>
+			<div class="form-control">
+				<label for="login-password" class="label"><span class="label-text" data-i18n="dashboard.login.password">Password</span></label>
+				<input type="password" id="login-password" name="password" class="input input-bordered" required>
+			</div>
+			<div class="form-control">
+				<label for="login-language" class="label"><span class="label-text" data-i18n="common.changeLanguage">Change Language</span></label>
+				<select id="login-language" name="language" class="select select-bordered">
+					<!-- Populated by JS -->
+				</select>
+			</div>
+			<p id="login-error-message" class="text-error text-sm hidden"></p>
+		</form>
+		<div class="text-center text-sm mt-4">
+			<span data-i18n="dashboard.login.noAccount">Don't have an account?</span>
+			<a id="signup-link" href="#" class="link link-primary" data-i18n="dashboard.login.signUp">Sign Up</a>
+		</div>
+		<div class="modal-action">
+			<form method="dialog" class="flex gap-3 w-full">
+				<button class="btn flex-1" data-i18n="common.cancel">Cancel</button>
+				<button id="login-submit-btn" type="submit" form="login-form" class="btn btn-primary flex-1" data-i18n="dashboard.login.signIn">Sign In</button>
+			</form>
+		</div>
+	</div>
+</dialog>
+<!-- MODIFIED SECTION END -->
+
 <dialog id="language-selection-modal" class="modal modal-bottom sm:modal-middle">
 	<div class="modal-box">
 		<h3 class="font-bold text-lg" data-i18n="dashboard.langSelect.title">Select a Language</h3>
 		<p class="py-4" data-i18n="dashboard.langSelect.description">Please choose your preferred language for the application interface.</p>
 		<div class="modal-action">
 			<button id="select-lang-tr" class="btn">Türkçe</button>
+			<button id="select-lang-tlh" class="btn">tlhIngan Hol</button>
 			<button id="select-lang-en" class="btn btn-primary">English</button>
 		</div>
 	</div>
 </dialog>
-<!-- NEW SECTION END -->
 
 <script src="../src/js/theme.js"></script>
 <script type="module" src="../src/js/dashboard.js"></script>

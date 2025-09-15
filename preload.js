@@ -3,8 +3,13 @@ const {contextBridge, ipcRenderer} = require('electron');
 contextBridge.exposeInMainWorld('api', {
 	// --- App Level ---
 	openImportWindow: () => ipcRenderer.send('app:open-import-window'),
-	// NEW: IPC handler for getting language files
 	getLangFile: (lang) => ipcRenderer.invoke('i18n:get-lang-file', lang),
+	// NEW SECTION START: Auth APIs
+	login: (credentials) => ipcRenderer.invoke('auth:login', credentials),
+	logout: () => ipcRenderer.invoke('auth:logout'),
+	getSession: () => ipcRenderer.invoke('auth:get-session'),
+	openExternalRegister: () => ipcRenderer.send('auth:open-register-url'),
+	// NEW SECTION END
 	
 	// --- Dashboard/Novel Creation ---
 	getNovelsWithCovers: () => ipcRenderer.invoke('novels:getAllWithCovers'),
@@ -21,7 +26,7 @@ contextBridge.exposeInMainWorld('api', {
 	updatePromptSettings: (data) => ipcRenderer.invoke('novels:updatePromptSettings', data),
 	
 	updateNovelMeta: (data) => ipcRenderer.invoke('novels:updateMeta', data),
-	updateNovelCover: (data) => ipcRenderer.invoke('novels:updateCover', data),
+	updateNovelCover: (data) => ipcRenderer.invoke('novels:updateNovelCover', data),
 	deleteNovel: (novelId) => ipcRenderer.invoke('novels:delete', novelId),
 	
 	onCoverUpdated: (callback) => ipcRenderer.on('novels:cover-updated', callback),
