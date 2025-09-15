@@ -1,11 +1,15 @@
-document.addEventListener('DOMContentLoaded', () => {
-	// ADDED SECTION START
+import { initI18n, t } from './i18n.js';
+
+document.addEventListener('DOMContentLoaded', async () => { // MODIFIED: Make async
+                                                            // MODIFIED: Initialize i18n and wait for it to complete
+	await initI18n(true);
+	
 	/**
 	 * Displays a custom modal alert to prevent focus issues with native alerts.
 	 * @param {string} message - The message to display.
 	 * @param {string} [title='Error'] - The title for the alert modal.
 	 */
-	window.showAlert = function(message, title = 'Error') {
+	window.showAlert = function(message, title = t('common.error')) { // MODIFIED
 		const modal = document.getElementById('alert-modal');
 		if (modal) {
 			const modalTitle = modal.querySelector('#alert-modal-title');
@@ -18,7 +22,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			alert(message);
 		}
 	};
-	// ADDED SECTION END
 	
 	const novelList = document.getElementById('novel-list');
 	const loadingMessage = document.getElementById('loading-message');
@@ -78,9 +81,11 @@ document.addEventListener('DOMContentLoaded', () => {
 		
 		const currentNovel = novelsData.find(n => n.id === novel.id);
 		if (currentNovel && currentNovel.cover_path) {
-			metaCoverPreview.innerHTML = `<img src="file://${currentNovel.cover_path}?t=${Date.now()}" alt="Current cover" class="w-full h-auto">`;
+			// MODIFIED: Use translated alt text
+			metaCoverPreview.innerHTML = `<img src="file://${currentNovel.cover_path}?t=${Date.now()}" alt="${t('dashboard.metaSettings.altCurrentCover')}" class="w-full h-auto">`;
 		} else {
-			metaCoverPreview.innerHTML = `<img src="./assets/book-placeholder.png" alt="No Cover" class="w-full h-auto">`;
+			// MODIFIED: Use translated alt text
+			metaCoverPreview.innerHTML = `<img src="./assets/book-placeholder.png" alt="${t('dashboard.metaSettings.altNoCover')}" class="w-full h-auto">`;
 		}
 		
 		metaModal.showModal();
@@ -93,7 +98,8 @@ document.addEventListener('DOMContentLoaded', () => {
 		const card = novelList.querySelector(`[data-novel-id='${novelId}']`);
 		if (card) {
 			card.querySelector('.card-title').textContent = novel.title;
-			card.querySelector('.text-base-content\\/80').textContent = novel.author || 'Unknown Author';
+			// MODIFIED: Use translated fallback text
+			card.querySelector('.text-base-content\\/80').textContent = novel.author || t('common.unknownAuthor');
 		}
 	}
 	
@@ -103,7 +109,8 @@ document.addEventListener('DOMContentLoaded', () => {
 			renderNovels();
 		} catch (error) {
 			console.error('Failed to load initial data:', error);
-			loadingMessage.textContent = 'Error loading projects.';
+			// MODIFIED: Use translated error message
+			loadingMessage.textContent = t('dashboard.errorLoading');
 		}
 	}
 	
@@ -111,7 +118,8 @@ document.addEventListener('DOMContentLoaded', () => {
 		loadingMessage.style.display = 'none';
 		
 		if (novelsData.length === 0) {
-			novelList.innerHTML = '<p class="text-base-content/70 col-span-full text-center">You haven\'t started any translation projects yet.</p>';
+			// MODIFIED: Use translated message for no projects
+			novelList.innerHTML = `<p class="text-base-content/70 col-span-full text-center" data-i18n="dashboard.noProjects">${t('dashboard.noProjects')}</p>`;
 			return;
 		}
 		
@@ -121,21 +129,22 @@ document.addEventListener('DOMContentLoaded', () => {
 			novelCard.className = 'card card-compact bg-base-200 shadow-xl transition-shadow';
 			novelCard.dataset.novelId = novel.id;
 			
+			// MODIFIED: Use translated alt text
 			const coverHtml = novel.cover_path
-				? `<img src="file://${novel.cover_path}" alt="Cover for ${novel.title}" class="w-full">`
-				: `<img src="./assets/book-placeholder.png" alt="No Cover" class="w-full h-auto">`;
+				? `<img src="file://${novel.cover_path}" alt="${t('dashboard.metaSettings.altCoverFor', { title: novel.title })}" class="w-full">`
+				: `<img src="./assets/book-placeholder.png" alt="${t('dashboard.metaSettings.altNoCover')}" class="w-full h-auto">`;
 			
 			
 			novelCard.innerHTML = `
                 <figure class="cursor-pointer js-open-outline">${coverHtml}</figure>
                 <div class="card-body">
                     <h2 class="card-title js-open-editor cursor-pointer">${novel.title}</h2>
-                    <p class="text-base-content/80">${novel.author || 'Unknown Author'}</p>
+                    <p class="text-base-content/80">${novel.author || t('common.unknownAuthor')}</p>
                     <div class="card-actions justify-end items-center mt-2">
-                        <button class="btn btn-ghost btn-sm js-meta-settings" title="Edit Meta">
+                        <button class="btn btn-ghost btn-sm js-meta-settings" data-i18n-title="common.edit">
                             <i class="bi bi-pencil-square text-lg"></i>
                         </button>
-                        <button class="btn btn-ghost btn-sm js-prose-settings" title="Language Settings">
+                        <button class="btn btn-ghost btn-sm js-prose-settings" data-i18n-title="dashboard.proseSettings.title">
                             <i class="bi bi-translate text-lg"></i>
                         </button>
                     </div>
@@ -210,7 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	generateCoverBtn.addEventListener('click', async () => {
 		const novelId = parseInt(metaNovelIdInput.value, 10);
 		genCoverPrompt.value = '';
-		genCoverPreview.innerHTML = `<p class="text-base-content/50">Image preview will appear here</p>`;
+		genCoverPreview.innerHTML = `<p class="text-base-content/50" data-i18n="dashboard.generateCover.preview">${t('dashboard.generateCover.preview')}</p>`;
 		acceptGenCoverBtn.disabled = true;
 		genCoverModal.showModal();
 		
@@ -221,7 +230,8 @@ document.addEventListener('DOMContentLoaded', () => {
 		const filePath = await window.api.showOpenImageDialog();
 		if (filePath) {
 			stagedCover = { type: 'local', data: filePath };
-			metaCoverPreview.innerHTML = `<img src="file://${filePath}" alt="Staged cover" class="w-full h-auto">`;
+			// MODIFIED: Use translated alt text
+			metaCoverPreview.innerHTML = `<img src="file://${filePath}" alt="${t('dashboard.metaSettings.altStagedCover')}" class="w-full h-auto">`;
 		}
 	});
 	
@@ -230,7 +240,8 @@ document.addEventListener('DOMContentLoaded', () => {
 		const novel = novelsData.find(n => n.id === novelId);
 		if (!novel) return;
 		
-		const confirmation = confirm(`Are you sure you want to permanently delete "${novel.title}"?\n\nThis action cannot be undone.`);
+		// MODIFIED: Use translated confirmation message
+		const confirmation = confirm(t('dashboard.metaSettings.deleteConfirm', { title: novel.title }));
 		if (confirmation) {
 			try {
 				await window.api.deleteNovel(novelId);
@@ -239,7 +250,8 @@ document.addEventListener('DOMContentLoaded', () => {
 				renderNovels();
 			} catch (error) {
 				console.error('Failed to delete project:', error);
-				window.showAlert('Error deleting project.');
+				// MODIFIED: Use translated alert
+				window.showAlert(t('dashboard.metaSettings.errorDelete'));
 			}
 		}
 	});
@@ -256,7 +268,10 @@ document.addEventListener('DOMContentLoaded', () => {
 		if (card) {
 			const figure = card.querySelector('figure');
 			if (figure) {
-				figure.innerHTML = `<img src="file://${imagePath}?t=${Date.now()}" alt="Cover for project ${novelId}" class="w-full">`;
+				// MODIFIED: Use translated alt text
+				const novel = novelsData.find(n => n.id === novelId);
+				const altText = t('dashboard.metaSettings.altCoverFor', { title: novel ? novel.title : novelId });
+				figure.innerHTML = `<img src="file://${imagePath}?t=${Date.now()}" alt="${altText}" class="w-full">`;
 			}
 		}
 	});

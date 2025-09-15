@@ -306,6 +306,18 @@ function createImportWindow() {
 }
 
 function setupIpcHandlers() {
+	// NEW HANDLER START: For reading language files.
+	ipcMain.handle('i18n:get-lang-file', (event, lang) => {
+		const langPath = path.join(__dirname, 'public', 'lang', `${lang}.json`);
+		try {
+			return fs.readFileSync(langPath, 'utf8');
+		} catch (error) {
+			console.error(`Failed to read language file: ${lang}`, error);
+			throw new Error(`Could not load language file: ${lang}.json`);
+		}
+	});
+	// NEW HANDLER END
+	
 	const extractAllPairs = (sourceContent, targetContent) => {
 		if (!sourceContent || !targetContent) {
 			return [];

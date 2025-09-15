@@ -4,64 +4,72 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' file: data: https:;">
-	<title>Translation Editor - Dashboard</title>
+	<title data-i18n="dashboard.title">My Translation Projects</title>
 	<link rel="stylesheet" href="../node_modules/bootstrap-icons/font/bootstrap-icons.css">
 	<link rel="stylesheet" href="../dist/styles.css">
 </head>
 <body>
 <div class="container mx-auto p-8">
 	<div class="flex justify-between items-center mb-8">
-		<h1 class="text-4xl font-bold">My Translation Projects</h1>
+		<h1 class="text-4xl font-bold" data-i18n="dashboard.title">My Translation Projects</h1>
 		<div class="flex items-center gap-4">
-			<!-- MODIFIED SECTION START: Replaced swap component with a single button for 3-state theme switching -->
-			<button id="theme-toggle" class="btn btn-ghost btn-circle" title="Change Theme">
+			<!-- MODIFIED SECTION START: Added language switcher dropdown -->
+			<div class="dropdown dropdown-end">
+				<button tabindex="0" role="button" class="btn btn-ghost btn-circle" data-i18n-title="common.changeLanguage">
+					<i class="bi bi-translate text-2xl"></i>
+				</button>
+				<ul tabindex="0" id="js-lang-switcher-menu" class="dropdown-content z-[1] menu p-2 shadow bg-base-200 rounded-box w-32">
+					<!-- Populated by i18n.js -->
+				</ul>
+			</div>
+			<button id="theme-toggle" class="btn btn-ghost btn-circle" data-i18n-title="common.changeTheme">
 				<i class="bi bi-sun-fill text-2xl"></i>
 			</button>
 			<!-- MODIFIED SECTION END -->
 			<button id="import-doc-btn" class="btn btn-neutral gap-2">
 				<i class="bi bi-file-earmark-arrow-up"></i>
-				Import Document
+				<span data-i18n="dashboard.importDocument">Import Document</span>
 			</button>
 		</div>
 	</div>
 	
 	<div id="novel-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-		<p id="loading-message">Loading projects...</p>
+		<p id="loading-message" data-i18n="dashboard.loadingProjects">Loading projects...</p>
 	</div>
 </div>
 
 <dialog id="prose-settings-modal" class="modal">
 	<div class="modal-box w-11/12 max-w-2xl">
-		<h3 class="font-bold text-lg">Language Settings</h3>
-		<p class="py-4 text-sm text-base-content/70">These settings define the source and target languages for the project and AI tools.</p>
+		<h3 class="font-bold text-lg" data-i18n="dashboard.proseSettings.title">Language Settings</h3>
+		<p class="py-4 text-sm text-base-content/70" data-i18n="dashboard.proseSettings.description">These settings define the source and target languages for the project and AI tools.</p>
 		<form id="prose-settings-form" class="space-y-4">
 			<input type="hidden" id="prose-novel-id" name="novelId">
 			
 			<div class="form-control">
-				<label for="prose_source_language" class="label"><span class="label-text">Source Language</span></label>
+				<label for="prose_source_language" class="label"><span class="label-text" data-i18n="dashboard.proseSettings.sourceLanguage">Source Language</span></label>
 				<select id="prose_source_language" name="prose_source_language" class="select select-bordered">
 					<!-- Options populated by JS -->
 				</select>
 				<div class="label">
-					<span class="label-text-alt">The original language of the document.</span>
+					<span class="label-text-alt" data-i18n="dashboard.proseSettings.sourceLanguageHelp">The original language of the document.</span>
 				</div>
 			</div>
 			
 			<div class="form-control">
-				<label for="prose_target_language" class="label"><span class="label-text">Target Language</span></label>
+				<label for="prose_target_language" class="label"><span class="label-text" data-i18n="dashboard.proseSettings.targetLanguage">Target Language</span></label>
 				<select id="prose_target_language" name="prose_target_language" class="select select-bordered">
 					<!-- Options populated by JS -->
 				</select>
 				<div class="label">
-					<span class="label-text-alt">The language to translate into. Used for spell checking and AI generation.</span>
+					<span class="label-text-alt" data-i18n="dashboard.proseSettings.targetLanguageHelp">The language to translate into. Used for spell checking and AI generation.</span>
 				</div>
 			</div>
 		
 		</form>
 		<div class="modal-action">
 			<form method="dialog" class="flex gap-3">
-				<button class="btn">Cancel</button>
-				<button id="save-prose-settings-btn" class="btn btn-primary">Save Settings</button>
+				<button class="btn" data-i18n="common.cancel">Cancel</button>
+				<button id="save-prose-settings-btn" class="btn btn-primary" data-i18n="dashboard.proseSettings.saveButton">Save Settings</button>
 			</form>
 		</div>
 	</div>
@@ -70,7 +78,7 @@
 <!-- Meta Settings Modal -->
 <dialog id="meta-settings-modal" class="modal">
 	<div class="modal-box w-11/12 max-w-4xl">
-		<h3 class="font-bold text-lg">Edit Project Details</h3>
+		<h3 class="font-bold text-lg" data-i18n="dashboard.metaSettings.title">Edit Project Details</h3>
 		
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-8 py-4">
 			<!-- Left Column: Details -->
@@ -79,13 +87,13 @@
 				
 				<!-- Title -->
 				<div class="form-control">
-					<label for="meta-title" class="label"><span class="label-text">Title</span></label>
+					<label for="meta-title" class="label"><span class="label-text" data-i18n="dashboard.metaSettings.projectTitle">Title</span></label>
 					<input type="text" id="meta-title" name="title" class="input input-bordered" required>
 				</div>
 				
 				<!-- Author -->
 				<div class="form-control">
-					<label for="meta-author" class="label"><span class="label-text">Author</span></label>
+					<label for="meta-author" class="label"><span class="label-text" data-i18n="dashboard.metaSettings.author">Author</span></label>
 					<input type="text" id="meta-author" name="author" class="input input-bordered" required>
 				</div>
 			</form>
@@ -94,15 +102,15 @@
 			<div class="space-y-4">
 				<div id="meta-cover-preview" class="rounded-lg overflow-hidden w-full mx-auto bg-base-300 flex items-center justify-center min-h-48 text-base-content/50">
 					<!-- Preview image will be inserted here by JS -->
-					<span>No new cover selected</span>
+					<span data-i18n="dashboard.metaSettings.noCover">No new cover selected</span>
 				</div>
 				<div class="flex gap-2 justify-center">
 					<button id="generate-cover-btn" class="btn btn-neutral w-40">
-						<span class="js-btn-content flex items-center gap-2"><i class="bi bi-magic"></i> Generate AI Cover</span>
+						<span class="js-btn-content flex items-center gap-2"><i class="bi bi-magic"></i> <span data-i18n="dashboard.metaSettings.generateCover">Generate AI Cover</span></span>
 						<span class="js-btn-spinner animate-spin hidden"><i class="bi bi-arrow-repeat"></i></span>
 					</button>
 					<button id="upload-cover-btn" class="btn btn-neutral w-40">
-						<span class="js-btn-content flex items-center gap-2"><i class="bi bi-upload"></i> Upload Cover</span>
+						<span class="js-btn-content flex items-center gap-2"><i class="bi bi-upload"></i> <span data-i18n="dashboard.metaSettings.uploadCover">Upload Cover</span></span>
 						<span class="js-btn-spinner animate-spin hidden"><i class="bi bi-arrow-repeat"></i></span>
 					</button>
 				</div>
@@ -110,16 +118,16 @@
 		</div>
 		
 		<!-- Danger Zone (Full Width) -->
-		<div class="divider">Danger Zone</div>
+		<div class="divider" data-i18n="dashboard.metaSettings.dangerZone">Danger Zone</div>
 		<div class="flex justify-between items-center bg-error/10 p-4 rounded-lg">
-			<p class="text-sm">Permanently delete this project and all its content.</p>
-			<button id="delete-novel-btn" class="btn btn-error">Delete Project</button>
+			<p class="text-sm" data-i18n="dashboard.metaSettings.dangerZoneDesc">Permanently delete this project and all its content.</p>
+			<button id="delete-novel-btn" class="btn btn-error" data-i18n="dashboard.metaSettings.deleteProject">Delete Project</button>
 		</div>
 		
 		<div class="modal-action">
 			<form method="dialog" class="flex gap-3">
-				<button class="btn">Cancel</button>
-				<button id="save-meta-settings-btn" class="btn btn-primary">Save Changes</button>
+				<button class="btn" data-i18n="common.cancel">Cancel</button>
+				<button id="save-meta-settings-btn" class="btn btn-primary" data-i18n="dashboard.metaSettings.saveButton">Save Changes</button>
 			</form>
 		</div>
 	</div>
@@ -127,19 +135,19 @@
 
 <dialog id="generate-cover-modal" class="modal">
 	<div class="modal-box w-11/12 max-w-4xl">
-		<h3 class="font-bold text-lg">Generate AI Cover Art</h3>
+		<h3 class="font-bold text-lg" data-i18n="dashboard.generateCover.title">Generate AI Cover Art</h3>
 		
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-8 py-4">
 			<!-- Left Column: Controls -->
 			<form id="generate-cover-form" class="space-y-4">
 				<div class="form-control">
-					<label for="generate-cover-prompt" class="label"><span class="label-text">Image Prompt</span></label>
+					<label for="generate-cover-prompt" class="label"><span class="label-text" data-i18n="dashboard.generateCover.prompt">Image Prompt</span></label>
 					<textarea id="generate-cover-prompt" class="textarea textarea-bordered h-48" placeholder="A lone astronaut on a red planet..."></textarea>
 				</div>
 				
 				<div class="text-center">
 					<button type="button" id="run-generate-cover-btn" class="btn btn-accent w-40">
-						<span class="js-btn-content flex items-center gap-2"><i class="bi bi-stars"></i> Generate</span>
+						<span class="js-btn-content flex items-center gap-2"><i class="bi bi-stars"></i> <span data-i18n="dashboard.generateCover.generate">Generate</span></span>
 						<span class="js-btn-spinner animate-spin hidden"><i class="bi bi-arrow-repeat"></i></span>
 					</button>
 				</div>
@@ -148,35 +156,46 @@
 			<!-- Right Column: Preview -->
 			<div class="space-y-4">
 				<div id="generate-cover-preview" class="min-h-64 bg-base-200 rounded-lg flex items-center justify-center">
-					<p class="text-base-content/50">Image preview will appear here</p>
+					<p class="text-base-content/50" data-i18n="dashboard.generateCover.preview">Image preview will appear here</p>
 				</div>
 			</div>
 		</div>
 		
 		<div class="modal-action">
 			<form method="dialog" class="flex gap-3">
-				<button id="cancel-generate-cover-btn" class="btn">Cancel</button>
-				<button type="button" id="accept-generated-cover-btn" class="btn btn-primary" disabled>Accept Cover</button>
+				<button id="cancel-generate-cover-btn" class="btn" data-i18n="common.cancel">Cancel</button>
+				<button type="button" id="accept-generated-cover-btn" class="btn btn-primary" disabled data-i18n="dashboard.generateCover.accept">Accept Cover</button>
 			</form>
 		</div>
 	</div>
 </dialog>
 
-<!-- MODIFIED SECTION START: Added a generic alert modal -->
 <dialog id="alert-modal" class="modal">
 	<div class="modal-box w-11/12 max-w-md">
-		<h3 id="alert-modal-title" class="font-bold text-lg text-error">Error</h3>
+		<h3 id="alert-modal-title" class="font-bold text-lg text-error" data-i18n="common.error">Error</h3>
 		<p id="alert-modal-content" class="py-4"></p>
 		<div class="modal-action">
 			<form method="dialog">
-				<button class="btn">Close</button>
+				<button class="btn" data-i18n="common.close">Close</button>
 			</form>
 		</div>
 	</div>
 </dialog>
-<!-- MODIFIED SECTION END -->
+
+<!-- NEW SECTION START: Initial language selection modal -->
+<dialog id="language-selection-modal" class="modal modal-bottom sm:modal-middle">
+	<div class="modal-box">
+		<h3 class="font-bold text-lg" data-i18n="dashboard.langSelect.title">Select a Language</h3>
+		<p class="py-4" data-i18n="dashboard.langSelect.description">Please choose your preferred language for the application interface.</p>
+		<div class="modal-action">
+			<button id="select-lang-tr" class="btn">Türkçe</button>
+			<button id="select-lang-en" class="btn btn-primary">English</button>
+		</div>
+	</div>
+</dialog>
+<!-- NEW SECTION END -->
 
 <script src="../src/js/theme.js"></script>
-<script src="../src/js/dashboard.js"></script>
+<script type="module" src="../src/js/dashboard.js"></script>
 </body>
 </html>

@@ -5,7 +5,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<meta http-equiv="Content-Security-Policy"
 	      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;">
-	<title>Import Document</title>
+	<title data-i18n="import.title">Import Document</title>
 	<link rel="stylesheet" href="../node_modules/bootstrap-icons/font/bootstrap-icons.css">
 	<link rel="stylesheet" href="../dist/styles.css">
 </head>
@@ -13,41 +13,41 @@
 <!-- Header -->
 <div class="flex-shrink-0 p-4 border-b border-base-300 space-y-4">
 	<div class="flex justify-between items-center">
-		<h1 class="text-2xl font-bold">Import Document for Translation</h1>
+		<h1 class="text-2xl font-bold" data-i18n="import.title">Import Document for Translation</h1>
 		<div class="flex items-center gap-2">
 			<div class="join">
-				<button id="prev-mark-btn" class="btn btn-neutral join-item" disabled title="Previous Mark">
+				<button id="prev-mark-btn" class="btn btn-neutral join-item" disabled data-i18n-title="import.prevMark">
 					<i class="bi bi-arrow-up"></i>
 				</button>
-				<button id="next-mark-btn" class="btn btn-neutral join-item" disabled title="Next Mark">
+				<button id="next-mark-btn" class="btn btn-neutral join-item" disabled data-i18n-title="import.nextMark">
 					<i class="bi bi-arrow-down"></i>
 				</button>
 			</div>
 			<button id="auto-detect-btn" class="btn btn-neutral" disabled>
-				<i class="bi bi-magic"></i> Auto-detect Chapters
+				<i class="bi bi-magic"></i> <span data-i18n="import.autoDetect">Auto-detect Chapters</span>
 			</button>
 			<button id="select-file-btn" class="btn btn-primary">
-				<i class="bi bi-file-earmark-text"></i> Select File (.txt, .docx)
+				<i class="bi bi-file-earmark-text"></i> <span data-i18n="import.selectFile">Select File (.txt, .docx)</span>
 			</button>
 		</div>
 	</div>
 	<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 		<div class="form-control">
-			<label for="title" class="label"><span class="label-text">Project Title</span></label>
+			<label for="title" class="label"><span class="label-text" data-i18n="import.projectTitle">Project Title</span></label>
 			<input type="text" id="title" name="title" class="input input-bordered" required>
 		</div>
 		<div class="form-control">
-			<label for="block_size" class="label"><span class="label-text">Block Size (Words)</span></label>
+			<label for="block_size" class="label"><span class="label-text" data-i18n="import.blockSize">Block Size (Words)</span></label>
 			<input type="number" id="block_size" name="block_size" class="input input-bordered" value="500" step="50" min="50">
 		</div>
 		<div class="form-control">
-			<label for="source_language" class="label"><span class="label-text">Source Language</span></label>
+			<label for="source_language" class="label"><span class="label-text" data-i18n="import.sourceLanguage">Source Language</span></label>
 			<select id="source_language" name="source_language" class="select select-bordered" required>
 				<!-- Options populated by JS -->
 			</select>
 		</div>
 		<div class="form-control">
-			<label for="target_language" class="label"><span class="label-text">Target Language</span></label>
+			<label for="target_language" class="label"><span class="label-text" data-i18n="import.targetLanguage">Target Language</span></label>
 			<select id="target_language" name="target_language" class="select select-bordered" required>
 				<!-- Options populated by JS -->
 			</select>
@@ -60,7 +60,7 @@
 	<div id="document-content" class="space-y-4">
 		<div class="text-center text-base-content/60 py-16">
 			<i class="bi bi-file-earmark-arrow-up text-6xl"></i>
-			<p class="mt-4">Select a file to begin.</p>
+			<p class="mt-4" data-i18n="import.begin">Select a file to begin.</p>
 		</div>
 	</div>
 </div>
@@ -68,11 +68,11 @@
 <!-- Footer -->
 <div class="flex-shrink-0 p-4 border-t border-base-300 flex justify-between items-center">
 	<div class="text-sm text-base-content/70">
-		<p><i class="bi bi-info-circle-fill"></i> Click any paragraph to mark it as the start of a new chapter or act.</p>
-		<p id="js-import-status" class="font-bold mt-1">No content to import.</p>
+		<p><i class="bi bi-info-circle-fill"></i> <span data-i18n="import.instructions">Click any paragraph to mark it as the start of a new chapter or act.</span></p>
+		<p id="js-import-status" class="font-bold mt-1" data-i18n="import.status">No content to import.</p>
 	</div>
 	<button id="start-import-btn" class="btn btn-accent w-48" disabled>
-		<span class="js-btn-content">Start Import</span>
+		<span class="js-btn-content" data-i18n="import.startImport">Start Import</span>
 		<span class="js-btn-spinner animate-spin hidden">
                 <i class="bi bi-arrow-repeat"></i>
             </span>
@@ -82,21 +82,21 @@
 <!-- Pop-up menu for selecting break type -->
 <div id="break-type-popover" class="hidden absolute z-50">
 	<ul class="menu p-2 shadow-lg bg-base-200 rounded-box w-48">
-		<li><button data-action="set-act"><i class="bi bi-film"></i> New Act</button></li>
-		<li><button data-action="set-chapter"><i class="bi bi-card-text"></i> New Chapter</button></li>
+		<li><button data-action="set-act"><i class="bi bi-film"></i> <span data-i18n="import.newAct">New Act</span></button></li>
+		<li><button data-action="set-chapter"><i class="bi bi-card-text"></i> <span data-i18n="import.newChapter">New Chapter</span></button></li>
 		<div class="divider my-1"></div>
-		<li><button data-action="remove-break"><i class="bi bi-x-circle"></i> Remove Break</button></li>
+		<li><button data-action="remove-break"><i class="bi bi-x-circle"></i> <span data-i18n="import.removeBreak">Remove Break</span></button></li>
 	</ul>
 </div>
 
 <!-- MODIFIED SECTION START: Added a generic alert modal -->
 <dialog id="alert-modal" class="modal">
 	<div class="modal-box w-11/12 max-w-md">
-		<h3 id="alert-modal-title" class="font-bold text-lg text-error">Information</h3>
+		<h3 id="alert-modal-title" class="font-bold text-lg text-error" data-i18n="common.information">Information</h3>
 		<p id="alert-modal-content" class="py-4"></p>
 		<div class="modal-action">
 			<form method="dialog">
-				<button class="btn">Close</button>
+				<button class="btn" data-i18n="common.close">Close</button>
 			</form>
 		</div>
 	</div>
@@ -104,6 +104,6 @@
 <!-- MODIFIED SECTION END -->
 
 <script src="../src/js/theme.js"></script>
-<script src="../src/js/import-document.js"></script>
+<script type="module" src="../src/js/import-document.js"></script>
 </body>
 </html>

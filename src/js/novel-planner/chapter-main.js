@@ -1,8 +1,9 @@
 import { setupTopToolbar, setActiveContentWindow, updateToolbarState } from './toolbar.js';
 import { setupPromptEditor } from '../prompt-editor.js';
 import { getActiveEditor, setActiveEditor } from './content-editor.js';
-// MODIFIED: Import typography settings module
 import { setupTypographySettings, getTypographySettings, generateTypographyStyleProperties } from './typography-settings.js';
+// MODIFIED: Import the new i18n module
+import { initI18n, t } from '../i18n.js';
 
 const languageCodeToName = {
 	'af': 'Afrikaans',
@@ -78,7 +79,7 @@ const debouncedContentSave = debounce(async ({ chapterId, field, value }) => {
 		if (chapterItem) {
 			const wordCountEl = chapterItem.querySelector('.js-target-word-count');
 			if (wordCountEl) {
-				wordCountEl.textContent = `${wordCount.toLocaleString()} words`;
+				wordCountEl.textContent = `${wordCount.toLocaleString()} ${t('common.words')}`;
 			}
 		}
 	}
@@ -87,7 +88,7 @@ const debouncedContentSave = debounce(async ({ chapterId, field, value }) => {
 		await window.api.updateChapterField({ chapterId, field, value });
 	} catch (error) {
 		console.error(`[SAVE] Error saving ${field} for chapter ${chapterId}:`, error);
-		window.showAlert(`Could not save ${field} changes.`);
+		window.showAlert(`Could not save ${field} changes.`); // This is not translated as it's a developer-facing error.
 	}
 }, 2000); // 2 second delay
 
@@ -103,8 +104,8 @@ function processSourceContentForDisplay(sourceHtml) {
 		const stylingClasses = 'note-wrapper not-prose p-1 my-1 border-l-4 border-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-600 rounded-r-md flex justify-between items-center';
 		return `<div class="${stylingClasses}" data-block-number="${blockNumber}">
                     <p class="m-0 text-sm font-semibold">Translation Block #${blockNumber}</p>
-                    <button type="button" class="js-translate-block-btn btn btn-xs btn-ghost gap-1" title="Translate this block">
-                        <i class="bi bi-translate"></i> Translate
+                    <button type="button" class="js-translate-block-btn btn btn-xs btn-ghost gap-1" title="${t('editor.translate')}">
+                        <i class="bi bi-translate"></i> <span data-i18n="editor.translate">${t('editor.translate')}</span>
                     </button>
                 </div>`;
 	});
@@ -230,7 +231,7 @@ async function renderManuscript(container, novelData, allCodexEntries) {
 		if (!section.chapters || section.chapters.length === 0) {
 			const noChaptersMessage = document.createElement('p');
 			noChaptersMessage.className = 'px-8 py-6 text-base-content/60';
-			noChaptersMessage.textContent = 'This section has no chapters yet.';
+			noChaptersMessage.textContent = t('editor.noChaptersInSection'); // MODIFIED
 			fragment.appendChild(noChaptersMessage);
 			continue;
 		}
@@ -263,7 +264,8 @@ async function renderManuscript(container, novelData, allCodexEntries) {
 			const sourceCol = document.createElement('div');
 			// MODIFIED: Added 'js-source-column' class to target this element for style updates.
 			sourceCol.className = 'js-source-column col-span-1 prose prose-sm dark:prose-invert max-w-none bg-base-200 p-4 rounded-lg';
-			sourceCol.innerHTML = `<h3 class="!mt-0 text-sm font-semibold uppercase tracking-wider text-base-content/70 border-b pb-1 mb-2">Source (<span class="js-source-word-count">${chapter.source_word_count.toLocaleString()} words</span>)</h3>`;
+			// MODIFIED: Use translation for "Source"
+			sourceCol.innerHTML = `<h3 class="!mt-0 text-sm font-semibold uppercase tracking-wider text-base-content/70 border-b pb-1 mb-2">${t('common.source')} (<span class="js-source-word-count">${chapter.source_word_count.toLocaleString()} ${t('common.words')}</span>)</h3>`;
 			const sourceContentContainer = document.createElement('div');
 			sourceContentContainer.className = 'source-content-readonly';
 			
@@ -277,7 +279,8 @@ async function renderManuscript(container, novelData, allCodexEntries) {
 			// The target editor is now an iframe.
 			const targetCol = document.createElement('div');
 			targetCol.className = 'col-span-1'; // Removed prose styles from the container
-			targetCol.innerHTML = `<h3 class="!mt-0 text-sm font-semibold uppercase tracking-wider text-base-content/70 border-b pb-1 mb-2 p-4">Target (<span class="js-target-word-count">${chapter.target_word_count.toLocaleString()} words</span>)</h3>`;
+			// MODIFIED: Use translation for "Target"
+			targetCol.innerHTML = `<h3 class="!mt-0 text-sm font-semibold uppercase tracking-wider text-base-content/70 border-b pb-1 mb-2 p-4">${t('common.target')} (<span class="js-target-word-count">${chapter.target_word_count.toLocaleString()} ${t('common.words')}</span>)</h3>`;
 			
 			const iframe = document.createElement('iframe');
 			iframe.className = 'js-target-content-editable w-full border-0 min-h-[300px]';
@@ -343,6 +346,11 @@ async function renderManuscript(container, novelData, allCodexEntries) {
 						chapterId: chapter.id,
 						field: 'target_content',
 						theme: currentTheme,
+						// MODIFIED: Send translated strings for NoteNodeView tooltips
+						i18n: {
+							editNote: t('editor.note.editTitle'),
+							deleteNote: t('editor.note.deleteTitle')
+						}
 					}
 				}, window.location.origin);
 			});
@@ -458,7 +466,7 @@ function setupNoteEditorModal() {
 		const activeContentWindow = getActiveEditor();
 		if (!activeContentWindow) {
 			console.error('[NoteEditor] No active editor iframe to save note to.');
-			window.showAlert('Could not find an active editor to save the note. Please click inside an editor first.', 'Save Error');
+			window.showAlert(t('editor.noteModal.errorNoEditor'), t('common.error')); // MODIFIED
 			return;
 		}
 		
@@ -467,7 +475,7 @@ function setupNoteEditorModal() {
 		const noteText = contentInput.value.trim();
 		
 		if (!noteText) {
-			window.showAlert('Note cannot be empty.', 'Validation Error');
+			window.showAlert(t('editor.noteModal.errorEmpty'), t('common.error')); // MODIFIED
 			return;
 		}
 		
@@ -588,7 +596,7 @@ async function setupSpellcheckDropdown() {
 		
 	} catch (error) {
 		console.error('[setupSpellcheckDropdown] Failed to initialize:', error);
-		dropdown.innerHTML = '<option>Error</option>';
+		dropdown.innerHTML = `<option>${t('common.error')}</option>`; // MODIFIED
 		dropdown.disabled = true;
 	}
 }
@@ -596,8 +604,10 @@ async function setupSpellcheckDropdown() {
 
 // Main Initialization
 document.addEventListener('DOMContentLoaded', async () => {
+	// MODIFIED: Initialize i18n and wait for it to complete
+	await initI18n();
 	
-	window.showAlert = function(message, title = 'Error') {
+	window.showAlert = function(message, title = t('common.error')) { // MODIFIED
 		const modal = document.getElementById('alert-modal');
 		if (modal) {
 			const modalTitle = modal.querySelector('#alert-modal-title');
@@ -615,7 +625,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 	const initialChapterId = params.get('chapterId');
 	
 	if (!novelId) {
-		document.body.innerHTML = '<p class="text-error p-8">Error: Project ID is missing.</p>';
+		document.body.innerHTML = `<p class="text-error p-8">${t('editor.errorProjectMissing')}</p>`; // MODIFIED
 		return;
 	}
 	
@@ -630,15 +640,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 		// Fetch all codex entries for the novel.
 		const allCodexEntries = await window.api.getAllCodexEntriesForNovel(novelId);
 		
-		document.title = `Translating: ${novelData.title}`;
+		// MODIFIED: Use translation for the window title
+		document.title = t('editor.translating', { title: novelData.title });
 		document.getElementById('js-novel-title').textContent = novelData.title;
 		
 		const manuscriptContainer = document.getElementById('js-manuscript-container');
 		
 		if (!novelData.sections || novelData.sections.length === 0) {
+			// MODIFIED: Use translation for empty project message
 			manuscriptContainer.innerHTML = `<div class="p-8 text-center text-base-content/70">
-				<p>This project has no content yet.</p>
-				<p class="text-sm mt-2">You can import a document from the dashboard to get started.</p>
+				<p>${t('editor.noProjectContent')}</p>
+				<p class="text-sm mt-2">${t('editor.noProjectContentHelp')}</p>
 			</div>`;
 			document.getElementById('js-chapter-nav-dropdown').disabled = true;
 			return;
@@ -653,7 +665,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			getChapterViews: (chapterId) => chapterEditorViews.get(chapterId.toString()),
 		});
 		setupPromptEditor();
-		// MODIFIED: Initialize typography settings
 		setupTypographySettings({
 			buttonId: 'typography-settings-btn',
 			modalId: 'typography-settings-modal',
@@ -763,7 +774,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 					const contentInput = document.getElementById('note-content-input');
 					const posInput = document.getElementById('note-pos');
 					
-					title.textContent = payload.title;
+					// MODIFIED: Use translation for modal title
+					title.textContent = t(payload.title);
 					contentInput.value = payload.content;
 					posInput.value = payload.pos;
 					noteModal.showModal();
@@ -774,6 +786,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 		
 	} catch (error) {
 		console.error('Failed to load manuscript data:', error);
-		document.body.innerHTML = `<p class="text-error p-8">Error: Could not load manuscript. ${error.message}</p>`;
+		// MODIFIED: Use translation for error message
+		document.body.innerHTML = `<p class="text-error p-8">${t('editor.errorLoadManuscript', { message: error.message })}</p>`;
 	}
 });

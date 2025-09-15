@@ -3,6 +3,8 @@ const {contextBridge, ipcRenderer} = require('electron');
 contextBridge.exposeInMainWorld('api', {
 	// --- App Level ---
 	openImportWindow: () => ipcRenderer.send('app:open-import-window'),
+	// NEW: IPC handler for getting language files
+	getLangFile: (lang) => ipcRenderer.invoke('i18n:get-lang-file', lang),
 	
 	// --- Dashboard/Novel Creation ---
 	getNovelsWithCovers: () => ipcRenderer.invoke('novels:getAllWithCovers'),

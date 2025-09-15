@@ -1,3 +1,5 @@
+import { initI18n, t } from './i18n.js';
+
 /**
  * Truncates HTML content to a specific word limit.
  * @param {string} html - The HTML string to truncate.
@@ -34,7 +36,7 @@ async function renderOutline(container, sections) {
 	
 	for (const section of sections) {
 		const chapterCountText = section.chapter_count === 1 ? '1 chapter' : `${section.chapter_count} chapters`;
-		const chapterStats = `${chapterCountText} - ${section.total_word_count.toLocaleString()} words`;
+		const chapterStats = `${chapterCountText} - ${section.total_word_count.toLocaleString()} ${t('common.words')}`;
 		
 		let sectionHtml = sectionTemplate
 			.replace('{{SECTION_ID}}', section.id)
@@ -109,6 +111,9 @@ async function renderCodex(container, categories) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+	// MODIFIED: Initialize i18n
+	await initI18n();
+	
 	const params = new URLSearchParams(window.location.search);
 	const novelId = params.get('novelId');
 	
@@ -147,7 +152,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 						select.value = defaultModel;
 					}
 				} else {
-					select.innerHTML = '<option>Error loading models</option>';
+					select.innerHTML = `<option>${t('common.error')} loading models</option>`;
 				}
 				modal.showModal();
 			} catch (error) {
@@ -175,7 +180,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 			
 			if (actionButtons) actionButtons.classList.add('hidden');
 			if (progressSection) progressSection.classList.remove('hidden');
-			if (cancelBtn) cancelBtn.textContent = 'Close';
+			if (cancelBtn) cancelBtn.textContent = t('common.close');
 			
 			// Start the backend process and set the flag
 			window.api.startCodexAutogen({ novelId, model });
@@ -208,8 +213,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 	try {
 		const data = await window.api.getOutlineData(novelId);
 		
-		document.title = `Outline: ${data.novel_title}`;
-		novelTitleEl.textContent = `Outline: ${data.novel_title}`;
+		document.title = `${t('outline.loading')}: ${data.novel_title}`;
+		novelTitleEl.textContent = `${t('outline.loading')}: ${data.novel_title}`;
 		
 		await renderOutline(outlineContainer, data.sections);
 		await renderCodex(codexContainer, data.codex_categories);

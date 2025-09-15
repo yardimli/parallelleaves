@@ -1,6 +1,3 @@
-// This file now contains its own independent toolbar logic,
-// decoupling it from the chapter editor's toolbar.
-
 import { setupContentEditor } from './planner-codex-content-editor.js';
 import { openPromptEditor, setupPromptEditor } from '../prompt-editor.js';
 import { DOMSerializer, Fragment, DOMParser } from 'prosemirror-model'; // MODIFIED: Added DOMParser
@@ -10,6 +7,8 @@ import { wrapInList } from 'prosemirror-schema-list';
 import { TextSelection } from 'prosemirror-state';
 // MODIFIED: Import typography settings module
 import { setupTypographySettings } from './typography-settings.js';
+// MODIFIED: Import i18n module
+import { initI18n, t } from '../i18n.js';
 
 // --- State management for multiple editors ---
 let sourceEditorView = null;
@@ -195,8 +194,8 @@ function updateCodexToolbarState(view) {
 	});
 	
 	const headingBtn = toolbar.querySelector('.js-heading-btn');
-	if (headingBtn) headingBtn.textContent = 'Paragraph';
-	wordCountEl.textContent = 'No text selected';
+	if (headingBtn) headingBtn.textContent = t('editor.paragraph'); // MODIFIED
+	wordCountEl.textContent = t('editor.noTextSelected'); // MODIFIED
 	
 	if (currentEditorState) {
 		allBtns.forEach(btn => {
@@ -223,12 +222,14 @@ function updateCodexToolbarState(view) {
 		});
 		
 		if (headingBtn) {
-			headingBtn.textContent = currentEditorState.headingLevel > 0 ? `Heading ${currentEditorState.headingLevel}` : 'Paragraph';
+			// MODIFIED: Use translation keys for headings
+			headingBtn.textContent = currentEditorState.headingLevel > 0 ? t(`editor.heading${currentEditorState.headingLevel}`) : t('editor.paragraph');
 		}
 		
 		if (currentEditorState.isTextSelected) {
 			const words = currentEditorState.selectionText.trim().split(/\s+/).filter(Boolean);
-			wordCountEl.textContent = `${words.length} word${words.length !== 1 ? 's' : ''} selected`;
+			// MODIFIED: Use translation for word count
+			wordCountEl.textContent = t('editor.wordsSelected', { count: words.length });
 		}
 	}
 }
@@ -367,8 +368,8 @@ async function setupCreateMode(novelId, selectedText) {
 	document.body.dataset.novelId = novelId;
 	
 	// 1. Configure UI for creation
-	document.title = 'Create New Codex Entry';
-	document.getElementById('js-novel-info').textContent = 'Create New Codex Entry';
+	document.title = t('editor.codexEditor.createTitle'); // MODIFIED
+	document.getElementById('js-novel-info').textContent = t('editor.codexEditor.createTitle'); // MODIFIED
 	document.getElementById('js-create-meta-section').classList.remove('hidden');
 	document.getElementById('js-create-action-section').classList.remove('hidden');
 	
@@ -392,13 +393,13 @@ async function setupCreateMode(novelId, selectedText) {
 	
 	sourceEditorView = setupContentEditor(sourceMount, {
 		initialContent: sourceContainer.querySelector('[data-name="content"]'),
-		placeholder: sourceMount.dataset.placeholder,
+		placeholder: t(sourceMount.dataset.i18nPlaceholder), // MODIFIED
 		onStateChange: onEditorStateChange,
 		onFocus: onEditorFocus,
 	});
 	targetEditorView = setupContentEditor(targetMount, {
 		initialContent: sourceContainer.querySelector('[data-name="target_content"]'),
-		placeholder: targetMount.dataset.placeholder,
+		placeholder: t(targetMount.dataset.i18nPlaceholder), // MODIFIED
 		onStateChange: onEditorStateChange,
 		onFocus: onEditorFocus,
 	});
@@ -481,10 +482,11 @@ async function setupEditMode(entryId) {
 		const entryData = await window.api.getOneCodexForEditor(entryId);
 		document.body.dataset.novelId = entryData.novel_id;
 		
-		document.getElementById('js-novel-info').textContent = `${entryData.novel_title} > Codex`;
+		// MODIFIED: Use translation for titles
+		document.getElementById('js-novel-info').textContent = t('editor.codexEditor.novelInfo', { novelTitle: entryData.novel_title });
 		document.getElementById('js-codex-title-input').value = entryData.title;
 		document.getElementById('js-codex-phrases-input').value = entryData.document_phrases || '';
-		document.title = `Editing Codex: ${entryData.title}`;
+		document.title = t('editor.codexEditor.editTitle', { entryTitle: entryData.title });
 		
 		const sourceContainer = document.getElementById('js-pm-content-source');
 		sourceContainer.querySelector('[data-name="content"]').innerHTML = entryData.content || '';
@@ -509,13 +511,13 @@ async function setupEditMode(entryId) {
 		
 		sourceEditorView = setupContentEditor(sourceMount, {
 			initialContent: sourceContainer.querySelector('[data-name="content"]'),
-			placeholder: sourceMount.dataset.placeholder,
+			placeholder: t(sourceMount.dataset.i18nPlaceholder), // MODIFIED
 			onStateChange: onEditorStateChange,
 			onFocus: onEditorFocus,
 		});
 		targetEditorView = setupContentEditor(targetMount, {
 			initialContent: sourceContainer.querySelector('[data-name="target_content"]'),
-			placeholder: targetMount.dataset.placeholder,
+			placeholder: t(targetMount.dataset.i18nPlaceholder), // MODIFIED
 			onStateChange: onEditorStateChange,
 			onFocus: onEditorFocus,
 		});
@@ -566,13 +568,17 @@ async function setupEditMode(entryId) {
 		
 	} catch (error) {
 		console.error('Failed to load codex entry data:', error);
-		document.body.innerHTML = `<p class="text-error p-8">Error: Could not load codex entry data. ${error.message}</p>`;
+		// MODIFIED: Use translation for error message
+		document.body.innerHTML = `<p class="text-error p-8">${t('editor.codexEditor.errorLoad', { message: error.message })}</p>`;
 	}
 }
 
 // --- Main Initialization ---
 document.addEventListener('DOMContentLoaded', async () => {
-	window.showAlert = function(message, title = 'Error') {
+	// MODIFIED: Initialize i18n
+	await initI18n();
+	
+	window.showAlert = function(message, title = t('common.error')) { // MODIFIED
 		const modal = document.getElementById('alert-modal');
 		if (modal) {
 			const modalTitle = modal.querySelector('#alert-modal-title');
@@ -609,14 +615,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 		const novelId = params.get('novelId');
 		const selectedText = decodeURIComponent(params.get('selectedText') || '');
 		if (!novelId) {
-			document.body.innerHTML = '<p class="text-error p-8">Error: Novel ID is missing for new entry.</p>';
+			// MODIFIED: Use translation for error message
+			document.body.innerHTML = `<p class="text-error p-8">${t('editor.codexEditor.errorMissingNovelId')}</p>`;
 			return;
 		}
 		await setupCreateMode(novelId, selectedText);
 	} else {
 		const entryId = params.get('entryId');
 		if (!entryId) {
-			document.body.innerHTML = '<p class="text-error p-8">Error: Codex Entry ID is missing.</p>';
+			// MODIFIED: Use translation for error message
+			document.body.innerHTML = `<p class="text-error p-8">${t('editor.codexEditor.errorMissingId')}</p>`;
 			return;
 		}
 		await setupEditMode(entryId);

@@ -1,11 +1,16 @@
-document.addEventListener('DOMContentLoaded', () => {
+import { initI18n, t } from './i18n.js';
+
+document.addEventListener('DOMContentLoaded', async () => { // MODIFIED: Make async
+                                                            // MODIFIED: Initialize i18n
+	await initI18n();
+	
 	// ADDED SECTION START
 	/**
 	 * Displays a custom modal alert to prevent focus issues with native alerts.
 	 * @param {string} message - The message to display.
 	 * @param {string} [title='Error'] - The title for the alert modal.
 	 */
-	window.showAlert = function(message, title = 'Error') {
+	window.showAlert = function(message, title = t('common.information')) { // MODIFIED
 		const modal = document.getElementById('alert-modal');
 		if (modal) {
 			const modalTitle = modal.querySelector('#alert-modal-title');
@@ -149,7 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		const chapterCount = hasContent ? actBreaks + chapterBreaks + 1 : 0;
 		
 		if (chapterCount === 0) {
-			importStatus.textContent = 'No content to import.';
+			importStatus.textContent = t('import.status');
 		} else {
 			const actText = actCount === 1 ? '1 Act' : `${actCount} Acts`;
 			const chapterText = chapterCount === 1 ? '1 Chapter' : `${chapterCount} Chapters`;
@@ -228,7 +233,8 @@ document.addEventListener('DOMContentLoaded', () => {
 			const fileName = filePath.split(/[\\/]/).pop();
 			titleInput.value = fileName.substring(0, fileName.lastIndexOf('.')).replace(/[-_]/g, ' ');
 			
-			documentContent.innerHTML = '<div class="text-center"><span class="loading loading-spinner loading-lg"></span><p>Reading file...</p></div>';
+			// MODIFIED: Use translation
+			documentContent.innerHTML = `<div class="text-center"><span class="loading loading-spinner loading-lg"></span><p>${t('import.readingFile')}</p></div>`;
 			
 			try {
 				const text = await window.api.readDocumentContent(filePath);
@@ -242,7 +248,8 @@ document.addEventListener('DOMContentLoaded', () => {
 				});
 			} catch (error) {
 				console.error('Error reading file:', error);
-				documentContent.innerHTML = `<p class="text-error">Error: Could not read the file. ${error.message}</p>`;
+				// MODIFIED: Use translation
+				documentContent.innerHTML = `<p class="text-error">${t('import.errorReadFile', { message: error.message })}</p>`;
 				currentFilePath = null;
 			}
 			updateStatus();
@@ -324,7 +331,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	
 	startImportBtn.addEventListener('click', async () => {
 		if (!titleInput.value.trim()) {
-			window.showAlert('Please provide a project title.', 'Information');
+			window.showAlert(t('import.alertNoTitle')); // MODIFIED
 			return;
 		}
 		
@@ -377,7 +384,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		}
 		
 		if (acts.length === 0) {
-			window.showAlert('No content to import.', 'Information');
+			window.showAlert(t('import.alertNoContent')); // MODIFIED
 			setButtonLoading(startImportBtn, false);
 			return;
 		}
@@ -391,7 +398,8 @@ document.addEventListener('DOMContentLoaded', () => {
 			});
 		} catch (error) {
 			console.error('Import failed:', error);
-			window.showAlert(`Error during import: ${error.message}`);
+			// MODIFIED: Use translation
+			window.showAlert(t('import.errorImport', { message: error.message }), t('common.error'));
 			setButtonLoading(startImportBtn, false);
 		}
 	});

@@ -105,7 +105,8 @@ export function getActiveEditor() {
 
 // A NodeView for our custom 'note' node.
 export class NoteNodeView {
-	constructor(node, view, getPos, postMessageCallback) {
+	// MODIFIED: Added `titles` parameter to constructor for i18n
+	constructor(node, view, getPos, postMessageCallback, titles) {
 		this.node = node;
 		this.view = view;
 		this.getPos = getPos;
@@ -126,14 +127,16 @@ export class NoteNodeView {
 		editBtn.type = 'button';
 		editBtn.className = 'btn btn-xs btn-ghost';
 		editBtn.innerHTML = '<i class="bi bi-pencil"></i>';
-		editBtn.title = 'Edit note';
+		// MODIFIED: Use translated title
+		editBtn.title = titles.edit;
 		editBtn.addEventListener('mousedown', this.openEditModal.bind(this));
 		
 		const deleteBtn = document.createElement('button');
 		deleteBtn.type = 'button';
 		deleteBtn.className = 'btn btn-xs btn-ghost text-error';
 		deleteBtn.innerHTML = '<i class="bi bi-trash"></i>';
-		deleteBtn.title = 'Delete note';
+		// MODIFIED: Use translated title
+		deleteBtn.title = titles.delete;
 		deleteBtn.addEventListener('mousedown', this.deleteNode.bind(this));
 		
 		controls.appendChild(editBtn);
@@ -155,7 +158,8 @@ export class NoteNodeView {
 	openEditModal(e) {
 		e.preventDefault();
 		this.postMessage('openNoteModal', {
-			title: 'Edit Note',
+			// MODIFIED: Use translation keys for the modal title
+			title: 'editor.noteModal.editTitle',
 			content: this.node.attrs.text,
 			pos: this.getPos(),
 		});

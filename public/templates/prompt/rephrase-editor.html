@@ -2,18 +2,18 @@
 	<form id="rephrase-editor-form" class="space-y-3">
 		<!-- Instructions -->
 		<div>
-			<label for="rephrase-instructions" class="label"><span class="label-text text-lg font-semibold">Instructions</span></label>
-			<textarea id="rephrase-instructions" name="instructions" class="textarea textarea-bordered w-full h-24 font-mono text-sm" placeholder="e.g., Make the tone more formal."></textarea>
-			<p class="text-xs text-base-content/60 mt-1">Provide the main instructions for rephrasing the text.</p>
+			<label for="rephrase-instructions" class="label"><span class="label-text text-lg font-semibold" data-i18n="prompt.rephrase.instructions">Instructions</span></label>
+			<textarea id="rephrase-instructions" name="instructions" class="textarea textarea-bordered w-full h-24 font-mono text-sm" data-i18n-placeholder="prompt.rephrase.instructionsPlaceholder"></textarea>
+			<p class="text-xs text-base-content/60 mt-1" data-i18n="prompt.rephrase.instructionsHelp">Provide the main instructions for rephrasing the text.</p>
 		</div>
 		
 		<!-- Context Options -->
 		<div class="space-y-2">
-			<h3 class="text-lg font-semibold">Contextual Information</h3>
-			<p class="text-xs text-base-content/60 mb-2">Relevant contextual information is automatically sent to the AI for the best results.</p>
+			<h3 class="text-lg font-semibold" data-i18n="prompt.rephrase.contextInfo">Contextual Information</h3>
+			<p class="text-xs text-base-content/60 mb-2" data-i18n="prompt.rephrase.contextHelp">Relevant contextual information is automatically sent to the AI for the best results.</p>
 			
 			<div class="js-codex-selection-container rounded-md border border-base-300 p-3">
-				<p class="text-sm text-base-content/60">Loading codex entries...</p>
+				<p class="text-sm text-base-content/60" data-i18n="prompt.rephrase.loadingCodex">Loading codex entries...</p>
 			</div>
 		
 		</div>
@@ -22,25 +22,25 @@
 	<div class="divider my-2"></div>
 	
 	<div class="js-live-preview-section hidden">
-		<h2 class="text-xl font-bold">Live Prompt Preview</h2>
-		<p class="text-sm text-base-content/70 mb-4">This is the final prompt that will be sent to the AI, based on your settings above.</p>
+		<h2 class="text-xl font-bold" data-i18n="prompt.preview.title">Live Prompt Preview</h2>
+		<p class="text-sm text-base-content/70 mb-4" data-i18n="prompt.preview.description">This is the final prompt that will be sent to the AI, based on your settings above.</p>
 		
 		<!-- System Prompt Preview -->
 		<div>
-			<h3 class="text-lg font-semibold mt-4 font-mono text-success">System Prompt</h3>
+			<h3 class="text-lg font-semibold mt-4 font-mono text-success" data-i18n="prompt.preview.system">System Prompt</h3>
 			<pre class="bg-base-200 p-4 rounded-md text-xs whitespace-pre-wrap font-mono"><code class="js-preview-system"></code></pre>
 		</div>
 		
 		<!-- User Prompt Preview -->
 		<div>
-			<h3 class="text-lg font-semibold mt-4 font-mono text-info">User Prompt</h3>
+			<h3 class="text-lg font-semibold mt-4 font-mono text-info" data-i18n="prompt.preview.user">User Prompt</h3>
 			<pre class="bg-base-200 p-4 rounded-md text-xs whitespace-pre-wrap font-mono"><code class="js-preview-user"></code></pre>
 		</div>
 		
 		<!-- AI Prefix Preview -->
 		<div>
-			<h3 class="text-lg font-semibold mt-4 font-mono text-warning">AI Response Prefix</h3>
-			<pre class="bg-base-200 p-4 rounded-md text-xs whitespace-pre-wrap font-mono"><code class="js-preview-ai">(Empty)</code></pre>
+			<h3 class="text-lg font-semibold mt-4 font-mono text-warning" data-i18n="prompt.preview.aiPrefix">AI Response Prefix</h3>
+			<pre class="bg-base-200 p-4 rounded-md text-xs whitespace-pre-wrap font-mono"><code class="js-preview-ai" data-i18n="prompt.preview.empty">(Empty)</code></pre>
 		</div>
 	</div>
 </div>

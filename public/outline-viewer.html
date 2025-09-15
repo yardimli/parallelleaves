@@ -5,20 +5,28 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
 	<meta http-equiv="Content-Security-Policy"
 	      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' file: data: https:;">
-	<title>Outline Viewer</title>
+	<title data-i18n="outline.loading">Outline Viewer</title>
 	<link rel="stylesheet" href="../node_modules/bootstrap-icons/font/bootstrap-icons.css">
 	<link rel="stylesheet" href="../dist/styles.css">
 </head>
 <body class="h-full bg-base-100 text-base-content overflow-hidden flex flex-col">
 <!-- Header -->
 <div class="flex-shrink-0 h-12 bg-base-200 flex items-center px-4 z-10 border-b border-base-300">
-	<h1 id="js-novel-title" class="text-xl font-bold">Loading Outline...</h1>
-	<!-- NEW SECTION START: Added theme toggle button -->
+	<h1 id="js-novel-title" class="text-xl font-bold" data-i18n="outline.loading">Loading Outline...</h1>
+	<!-- MODIFIED SECTION START: Added theme toggle and language switcher -->
 	<div class="flex-grow"></div>
-	<button id="theme-toggle" class="btn btn-ghost btn-circle" title="Change Theme">
+	<div class="dropdown dropdown-end">
+		<button tabindex="0" role="button" class="btn btn-ghost btn-circle" data-i18n-title="common.changeLanguage">
+			<i class="bi bi-translate text-xl"></i>
+		</button>
+		<ul tabindex="0" id="js-lang-switcher-menu" class="dropdown-content z-[1] menu p-2 shadow bg-base-200 rounded-box w-32">
+			<!-- Populated by i18n.js -->
+		</ul>
+	</div>
+	<button id="theme-toggle" class="btn btn-ghost btn-circle" data-i18n-title="common.changeTheme">
 		<i class="bi text-xl"></i> <!-- Icon is set by src/js/theme.js -->
 	</button>
-	<!-- NEW SECTION END -->
+	<!-- MODIFIED SECTION END -->
 </div>
 
 <!-- Main Content -->
@@ -32,14 +40,14 @@
 	<!-- Right Column: Codex -->
 	<div class="w-1/2 flex flex-col">
 		<div class="flex-shrink-0 flex justify-between items-center pt-2 px-4 pb-2 border-b border-base-300 sticky top-0 bg-base-100/90 backdrop-blur-sm z-10">
-			<h2 class="text-xl font-bold">Codex</h2>
+			<h2 class="text-xl font-bold" data-i18n="outline.codex">Codex</h2>
 			<!-- MODIFIED: Added Auto-generate button and wrapper div -->
 			<div class="flex items-center gap-2">
 				<button id="js-autogen-codex" class="btn btn-sm btn-ghost">
-					<i class="bi bi-magic"></i> Auto-generate
+					<i class="bi bi-magic"></i> <span data-i18n="outline.autoGenerate">Auto-generate</span>
 				</button>
 				<button id="js-add-codex-entry" class="btn btn-sm btn-primary">
-					<i class="bi bi-plus-lg"></i> New Entry
+					<i class="bi bi-plus-lg"></i> <span data-i18n="outline.newEntry">New Entry</span>
 				</button>
 			</div>
 		</div>
@@ -53,13 +61,13 @@
 <!-- NEW DIALOG START -->
 <dialog id="autogen-codex-modal" class="modal">
 	<div class="modal-box">
-		<h3 class="font-bold text-lg">Auto-generate Codex Entries</h3>
+		<h3 class="font-bold text-lg" data-i18n="outline.autoGenModal.title">Auto-generate Codex Entries</h3>
 		<div id="js-autogen-codex-modal-content" class="py-4 space-y-4">
 			<!-- Content will be loaded from template -->
 		</div>
 		<div class="modal-action">
 			<form method="dialog">
-				<button class="js-autogen-cancel-btn btn">Cancel</button>
+				<button class="js-autogen-cancel-btn btn" data-i18n="common.cancel">Cancel</button>
 			</form>
 		</div>
 	</div>
@@ -67,6 +75,6 @@
 <!-- NEW DIALOG END -->
 
 <script src="../src/js/theme.js"></script>
-<script src="../src/js/outline-viewer.js"></script>
+<script type="module" src="../src/js/outline-viewer.js"></script>
 </body>
 </html>

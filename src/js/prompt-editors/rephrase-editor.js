@@ -1,4 +1,4 @@
-// This file contains the logic for the "Rephrase" prompt builder.
+import { t } from '../i18n.js';
 
 const defaultState = {
 	instructions: '',
@@ -12,7 +12,7 @@ const renderCodexList = (container, context, initialState = null) => {
 	const { allCodexEntries } = context;
 	
 	if (!allCodexEntries || allCodexEntries.length === 0) {
-		codexContainer.innerHTML = '<p class="text-sm text-base-content/60">No codex entries found for this project.</p>';
+		codexContainer.innerHTML = `<p class="text-sm text-base-content/60">${t('prompt.rephrase.loadingCodex')}</p>`;
 		return;
 	}
 	
@@ -42,7 +42,7 @@ const renderCodexList = (container, context, initialState = null) => {
 	}).join('');
 	
 	codexContainer.innerHTML = `
-        <h4 class="label-text font-semibold mb-2">Use Codex Entries</h4>
+        <h4 class="label-text font-semibold mb-2">${t('prompt.rephrase.useCodex')}</h4>
         <div class="max-h-72 overflow-y-auto pr-2 space-y-1">
             ${categoriesHtml}
         </div>
@@ -133,7 +133,7 @@ const updatePreview = (container, context) => {
 		const promptJson = buildPromptJson(formData, context);
 		systemPreview.textContent = promptJson.system;
 		userPreview.textContent = promptJson.user;
-		aiPreview.textContent = promptJson.ai || '(Empty)';
+		aiPreview.textContent = promptJson.ai || t('prompt.preview.empty');
 	} catch (error) {
 		systemPreview.textContent = `Error building preview: ${error.message}`;
 		userPreview.textContent = '';

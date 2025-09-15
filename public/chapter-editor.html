@@ -17,11 +17,11 @@
 	<!-- History Section -->
 	<div class="flex items-center gap-1">
 		<button type="button" class="js-toolbar-btn btn btn-ghost btn-sm btn-square" data-command="undo"
-		        title="Undo (Ctrl+Z)" disabled>
+		        data-i18n-title="editor.undo" disabled>
 			<i class="bi bi-arrow-counterclockwise text-lg"></i>
 		</button>
 		<button type="button" class="js-toolbar-btn btn btn-ghost btn-sm btn-square" data-command="redo"
-		        title="Redo (Ctrl+Y)" disabled>
+		        data-i18n-title="editor.redo" disabled>
 			<i class="bi bi-arrow-clockwise text-lg"></i>
 		</button>
 	</div>
@@ -29,25 +29,25 @@
 	<!-- Heading Dropdown -->
 	<div class="dropdown js-dropdown-container">
 		<button type="button" tabindex="0" role="button"
-		        class="js-toolbar-btn js-heading-btn btn btn-ghost btn-sm w-28 justify-start" disabled>Paragraph
+		        class="js-toolbar-btn js-heading-btn btn btn-ghost btn-sm w-28 justify-start" disabled data-i18n="editor.paragraph">Paragraph
 		</button>
 		<div tabindex="0" class="js-dropdown dropdown-content z-[1] menu p-1 shadow bg-base-100 rounded-box w-40">
-			<button class="js-heading-option p-2 rounded w-full text-left text-sm hover:bg-base-200" data-level="0">
+			<button class="js-heading-option p-2 rounded w-full text-left text-sm hover:bg-base-200" data-level="0" data-i18n="editor.paragraph">
 				Paragraph
 			</button>
 			<button class="js-heading-option p-2 rounded w-full text-left text-xl font-bold hover:bg-base-200"
-			        data-level="1">
+			        data-level="1" data-i18n="editor.heading1">
 				Heading 1
 			</button>
 			<button class="js-heading-option p-2 rounded w-full text-left text-lg font-bold hover:bg-base-200"
-			        data-level="2">
+			        data-level="2" data-i18n="editor.heading2">
 				Heading 2
 			</button>
 			<button class="js-heading-option p-2 rounded w-full text-left text-base font-bold hover:bg-base-200"
-			        data-level="3">Heading 3
+			        data-level="3" data-i18n="editor.heading3">Heading 3
 			</button>
 			<button class="js-heading-option p-2 rounded w-full text-left text-sm font-bold hover:bg-base-200"
-			        data-level="4">
+			        data-level="4" data-i18n="editor.heading4">
 				Heading 4
 			</button>
 		</div>
@@ -56,22 +56,22 @@
 	<!-- Formatting Section -->
 	<div class="flex items-center gap-1">
 		<button type="button" class="js-toolbar-btn btn btn-ghost btn-sm btn-square font-bold" data-command="bold"
-		        title="Bold" disabled>B
+		        data-i18n-title="editor.bold" disabled>B
 		</button>
 		<button type="button" class="js-toolbar-btn btn btn-ghost btn-sm btn-square italic" data-command="italic"
-		        title="Italic" disabled>I
+		        data-i18n-title="editor.italic" disabled>I
 		</button>
 		<button type="button" class="js-toolbar-btn btn btn-ghost btn-sm btn-square underline"
 		        data-command="underline"
-		        title="Underline" disabled>U
+		        data-i18n-title="editor.underline" disabled>U
 		</button>
 		<button type="button" class="js-toolbar-btn btn btn-ghost btn-sm btn-square line-through"
 		        data-command="strike"
-		        title="Strikethrough" disabled>S
+		        data-i18n-title="editor.strikethrough" disabled>S
 		</button>
 		<div class="dropdown js-dropdown-container">
 			<button type="button" tabindex="0" role="button" class="js-toolbar-btn btn btn-ghost btn-sm btn-square"
-			        title="Highlight" disabled>
+			        data-i18n-title="editor.highlight" disabled>
 				<i class="bi bi-highlighter text-lg"></i>
 			</button>
 			<div tabindex="0" class="js-dropdown dropdown-content z-[1] menu p-1 shadow bg-base-100 rounded-box w-32">
@@ -79,25 +79,25 @@
 					class="js-highlight-option p-1 rounded w-full text-left flex items-center gap-2 text-xs hover:bg-base-200"
 					data-bg="highlight-yellow"><span class="w-4 h-4 rounded-full"
 				                                   style="background-color: #fef08a;"></span>
-					Yellow
+					<span data-i18n="editor.yellow">Yellow</span>
 				</button>
 				<button
 					class="js-highlight-option p-1 rounded w-full text-left flex items-center gap-2 text-xs hover:bg-base-200"
 					data-bg="highlight-green"><span class="w-4 h-4 rounded-full"
-				                                  style="background-color: #a7f3d0;"></span> Green
+				                                  style="background-color: #a7f3d0;"></span> <span data-i18n="editor.green">Green</span>
 				</button>
 				<button
 					class="js-highlight-option p-1 rounded w-full text-left flex items-center gap-2 text-xs hover:bg-base-200"
 					data-bg="highlight-blue"><span class="w-4 h-4 rounded-full"
-				                                 style="background-color: #bfdbfe;"></span> Blue
+				                                 style="background-color: #bfdbfe;"></span> <span data-i18n="editor.blue">Blue</span>
 				</button>
 				<button
 					class="js-highlight-option p-1 rounded w-full text-left flex items-center gap-2 text-xs hover:bg-base-200"
 					data-bg="highlight-red"><span class="w-4 h-4 rounded-full"
-				                                style="background-color: #fecaca;"></span> Red
+				                                style="background-color: #fecaca;"></span> <span data-i18n="editor.red">Red</span>
 				</button>
 				<button class="js-highlight-option p-1 rounded w-full text-left text-xs hover:bg-base-200"
-				        data-bg="transparent">None
+				        data-bg="transparent" data-i18n="editor.none">None
 				</button>
 			</div>
 		</div>
@@ -106,59 +106,69 @@
 	<!-- Block Formatting Section -->
 	<div class="flex items-center gap-1">
 		<button type="button" class="js-toolbar-btn btn btn-ghost btn-sm btn-square" data-command="bullet_list"
-		        title="Bullet List" disabled><i class="bi bi-list-ul text-lg"></i></button>
+		        data-i18n-title="editor.bulletList" disabled><i class="bi bi-list-ul text-lg"></i></button>
 		<button type="button" class="js-toolbar-btn btn btn-ghost btn-sm btn-square" data-command="ordered_list"
-		        title="Ordered List" disabled><i class="bi bi-list-ol text-lg"></i></button>
+		        data-i18n-title="editor.orderedList" disabled><i class="bi bi-list-ol text-lg"></i></button>
 		<button type="button" class="js-toolbar-btn btn btn-ghost btn-sm btn-square" data-command="blockquote"
-		        title="Blockquote" disabled><i class="bi bi-quote text-lg"></i></button>
+		        data-i18n-title="editor.blockquote" disabled><i class="bi bi-quote text-lg"></i></button>
 		<button type="button" class="js-toolbar-btn btn btn-ghost btn-sm btn-square" data-command="horizontal_rule"
-		        title="Horizontal Rule" disabled><i class="bi bi-hr text-lg"></i></button>
+		        data-i18n-title="editor.horizontalRule" disabled><i class="bi bi-hr text-lg"></i></button>
 	</div>
 	<div class="divider divider-horizontal mx-0"></div>
 	<div class="flex items-center gap-1">
 		<button type="button" class="js-toolbar-btn btn btn-ghost btn-sm btn-square" data-command="add_note"
-		        title="Add Note" disabled>
+		        data-i18n-title="editor.addNote" disabled>
 			<i class="bi bi-journal-text text-lg"></i>
 		</button>
 		<button type="button" class="js-toolbar-btn btn btn-ghost btn-sm btn-square" data-command="create_codex"
-		        title="Create Codex Entry" disabled>
+		        data-i18n-title="editor.createCodex" disabled>
 			<i class="bi bi-journal-plus text-lg"></i>
 		</button>
 	</div>
 	<div class="divider divider-horizontal mx-0"></div>
 	<div class="flex items-center gap-1">
 		<button type="button" class="js-toolbar-btn js-ai-action-btn btn btn-ghost btn-sm" data-action="rephrase"
-		        title="Rephrase Selection" disabled>Rephrase
+		        data-i18n-title="editor.rephrase" disabled data-i18n="editor.rephrase">Rephrase
 		</button>
 		<button type="button" class="js-toolbar-btn js-ai-action-btn btn btn-ghost btn-sm" data-action="translate"
-		        title="Translate Source Selection" disabled>Translate
+		        data-i18n-title="editor.translate" disabled data-i18n="editor.translate">Translate
 		</button>
 	</div>
 	<div class="flex-grow"></div>
 	<div class="flex items-center text-sm text-base-content/70">
 		<span id="js-total-word-count" class="mr-4"></span>
-		<span id="js-word-count">No text selected</span>
+		<span id="js-word-count" data-i18n="editor.noTextSelected">No text selected</span>
 	</div>
-	<button id="typography-settings-btn" class="btn btn-ghost btn-circle" title="Typography Settings">
+	<button id="typography-settings-btn" class="btn btn-ghost btn-circle" data-i18n-title="common.typography">
 		<i class="bi bi-fonts text-xl"></i>
 	</button>
-	<button id="theme-toggle" class="btn btn-ghost btn-circle mr-2" title="Change Theme">
+	<!-- MODIFIED SECTION START: Added language switcher dropdown -->
+	<div class="dropdown dropdown-end">
+		<button tabindex="0" role="button" class="btn btn-ghost btn-circle" data-i18n-title="common.changeLanguage">
+			<i class="bi bi-translate text-xl"></i>
+		</button>
+		<ul tabindex="0" id="js-lang-switcher-menu" class="dropdown-content z-[1] menu p-2 shadow bg-base-200 rounded-box w-32">
+			<!-- Populated by i18n.js -->
+		</ul>
+	</div>
+	<button id="theme-toggle" class="btn btn-ghost btn-circle mr-2" data-i18n-title="common.changeTheme">
 		<i class="bi bi-sun-fill text-xl"></i>
 	</button>
+	<!-- MODIFIED SECTION END -->
 </div>
 
 <!-- Main Content Area -->
 <div class="flex-grow flex flex-col overflow-hidden">
 	<div class="flex-shrink-0 flex items-center gap-4 px-4 py-2 border-b border-base-300">
-		<h2 id="js-novel-title" class="text-xl font-bold">Loading...</h2>
+		<h2 id="js-novel-title" class="text-xl font-bold" data-i18n="common.loading">Loading...</h2>
 		<select id="js-chapter-nav-dropdown" class="select select-bordered select-sm w-full max-w-xs">
-			<option>Loading navigation...</option>
+			<option data-i18n="editor.loadingNav">Loading navigation...</option>
 		</select>
 		<div class="flex-grow"></div> <!-- Spacer -->
 		<div class="flex items-center gap-2">
-			<label for="js-spellcheck-lang-dropdown" class="text-sm font-medium">Spellcheck:</label>
+			<label for="js-spellcheck-lang-dropdown" class="text-sm font-medium" data-i18n="editor.spellcheck">Spellcheck:</label>
 			<select id="js-spellcheck-lang-dropdown" class="select select-bordered select-sm">
-				<option>Loading...</option>
+				<option data-i18n="common.loading">Loading...</option>
 			</select>
 		</div>
 	</div>
@@ -167,7 +177,7 @@
 		<div id="ai-action-spinner-overlay" class="hidden absolute inset-0 bg-base-100/80 backdrop-blur-sm flex items-center justify-center z-50">
 			<div class="text-center">
 				<span class="loading loading-spinner loading-lg"></span>
-				<p class="mt-2 text-sm">Waiting for AI response...</p>
+				<p class="mt-2 text-sm" data-i18n="editor.waitingAi">Waiting for AI response...</p>
 			</div>
 		</div>
 		<div id="js-manuscript-container" class="w-full flex flex-col overflow-y-auto">
@@ -182,7 +192,7 @@
 		<div class="flex flex-grow overflow-hidden">
 			<main class="w-full flex flex-col overflow-hidden">
 				<div class="js-prompt-placeholder flex-grow flex items-center justify-center">
-					<p class="text-base-content/60">Loading editor...</p>
+					<p class="text-base-content/60" data-i18n="editor.loadingEditor">Loading editor...</p>
 				</div>
 				<div class="js-custom-editor-pane hidden flex-grow flex flex-col min-h-0">
 					<div class="p-4 border-b border-base-300 flex-shrink-0">
@@ -198,14 +208,14 @@
 		</div>
 		<div class="modal-action px-6 py-4 border-t border-base-300 flex-shrink-0 flex justify-between items-center">
 			<div class="flex items-center gap-4">
-				<button type="button" class="js-toggle-preview-btn btn btn-ghost">Show Preview</button>
+				<button type="button" class="js-toggle-preview-btn btn btn-ghost" data-i18n="editor.showPreview">Show Preview</button>
 				<select class="js-llm-model-select select select-bordered select-sm w-full max-w-xs">
-					<option disabled selected>Loading models...</option>
+					<option disabled selected data-i18n="outline.autoGenModal.loadingModels">Loading models...</option>
 				</select>
-				<button type="button" class="js-prompt-apply-btn btn btn-accent">Apply Changes</button>
+				<button type="button" class="js-prompt-apply-btn btn btn-accent" data-i18n="editor.applyChanges">Apply Changes</button>
 			</div>
 			<form method="dialog">
-				<button class="btn">Close</button>
+				<button class="btn" data-i18n="common.close">Close</button>
 			</form>
 		</div>
 	</div>
@@ -214,18 +224,18 @@
 <!-- Note Editor Modal -->
 <dialog id="note-editor-modal" class="modal">
 	<div class="modal-box">
-		<h3 class="js-note-modal-title font-bold text-lg">Add Note</h3>
+		<h3 class="js-note-modal-title font-bold text-lg" data-i18n="editor.noteModal.addTitle">Add Note</h3>
 		<form id="note-editor-form" class="py-4 space-y-4" novalidate>
 			<input type="hidden" id="note-pos" value="">
 			<input type="hidden" id="note-chapter-id" value="">
 			<div class="form-control">
-				<label class="label"><span class="label-text">Note Content</span></label>
+				<label class="label"><span class="label-text" data-i18n="editor.noteModal.content">Note Content</span></label>
 				<textarea id="note-content-input" name="note_content" rows="5" class="textarea textarea-bordered" required
-				          placeholder="Enter your note..."></textarea>
+				          data-i18n-placeholder="editor.noteModal.placeholder"></textarea>
 			</div>
 			<div class="modal-action">
-				<button type="button" class="js-close-note-modal btn">Cancel</button>
-				<button type="submit" class="js-save-note-btn btn btn-primary">Save Note</button>
+				<button type="button" class="js-close-note-modal btn" data-i18n="common.cancel">Cancel</button>
+				<button type="submit" class="js-save-note-btn btn btn-primary" data-i18n="editor.noteModal.save">Save Note</button>
 			</div>
 		</form>
 	</div>
@@ -233,11 +243,11 @@
 
 <dialog id="alert-modal" class="modal">
 	<div class="modal-box w-11/12 max-w-md">
-		<h3 id="alert-modal-title" class="font-bold text-lg text-error">Error</h3>
+		<h3 id="alert-modal-title" class="font-bold text-lg text-error" data-i18n="common.error">Error</h3>
 		<p id="alert-modal-content" class="py-4"></p>
 		<div class="modal-action">
 			<form method="dialog">
-				<button class="btn">Close</button>
+				<button class="btn" data-i18n="common.close">Close</button>
 			</form>
 		</div>
 	</div>
@@ -249,24 +259,24 @@
 		<form method="dialog">
 			<button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
 		</form>
-		<h3 class="font-bold text-lg mb-4">TYPOGRAPHY</h3>
+		<h3 class="font-bold text-lg mb-4" data-i18n="common.typography">TYPOGRAPHY</h3>
 		<form id="typography-settings-form" class="grid grid-cols-2 gap-x-8 gap-y-6 text-sm w-full">
 			<!-- Font family -->
 			<div>
-				<label for="font-family" class="block font-medium mb-2">Font family</label>
+				<label for="font-family" class="block font-medium mb-2" data-i18n="common.fontFamily">Font family</label>
 				<select name="font_family" class="select select-bordered select-sm w-full">
-					<optgroup label="Serif">
+					<optgroup data-i18n="common.serif" label="Serif">
 						<option value="'Noto Serif', serif">Noto Serif</option>
 						<option value="'Zilla Slab', serif">Zilla Slab</option>
 						<option value="'Roboto Serif', serif">Roboto Serif</option>
 						<option value="'Literata', serif">Literata</option>
 					</optgroup>
-					<optgroup label="Sans Serif">
+					<optgroup data-i18n="common.sansSerif" label="Sans Serif">
 						<option value="'Barlow', sans-serif">Barlow</option>
 						<option value="'Exo 2', sans-serif">Exo 2</option>
 						<option value="'Atkinson Hyperlegible', sans-serif">Atkinson Hyperlegible</option>
 					</optgroup>
-					<optgroup label="Monospace">
+					<optgroup data-i18n="common.monospace" label="Monospace">
 						<option value="'iA Writer Duospace', monospace">iA Writer Duospace</option>
 						<option value="'Recursive', monospace">Recursive</option>
 						<option value="'Courier New', Courier, monospace">Courier</option>
@@ -276,7 +286,7 @@
 			</div>
 			<!-- Text size -->
 			<div>
-				<label class="block font-medium mb-2">Text size</label>
+				<label class="block font-medium mb-2" data-i18n="common.textSize">Text size</label>
 				<div class="btn-group w-full" data-setting="text_size">
 					<button type="button" class="btn btn-sm flex-1 min-w-0" data-value="sm"><span class="text-xs">Ab</span></button>
 					<button type="button" class="btn btn-sm flex-1 min-w-0" data-value="base"><span class="text-sm">Ab</span></button>
@@ -286,7 +296,7 @@
 			</div>
 			<!-- Line height -->
 			<div>
-				<label class="block font-medium mb-2">Line height</label>
+				<label class="block font-medium mb-2" data-i18n="common.lineHeight">Line height</label>
 				<div class="btn-group w-full" data-setting="line_height">
 					<button type="button" class="btn btn-sm flex-1 min-w-0" data-value="1">
 						<div class="flex flex-col items-center gap-0.5 py-1">
@@ -320,7 +330,7 @@
 			</div>
 			<!-- Text indent -->
 			<div>
-				<label class="block font-medium mb-2">Text indent</label>
+				<label class="block font-medium mb-2" data-i18n="common.textIndent">Text indent</label>
 				<div class="btn-group w-full" data-setting="text_indent">
 					<button type="button" class="btn btn-sm flex-1 min-w-0" data-value="1">
 						<div class="flex flex-col items-start gap-1 py-1">
@@ -354,7 +364,7 @@
 			</div>
 			<!-- Paragraph spacing -->
 			<div>
-				<label class="block font-medium mb-2">Paragraph spacing</label>
+				<label class="block font-medium mb-2" data-i18n="common.paragraphSpacing">Paragraph spacing</label>
 				<div class="btn-group w-full" data-setting="paragraph_spacing">
 					<button type="button" class="btn btn-sm flex-1 min-w-0" data-value="1">
 						<div class="flex flex-col items-center gap-1 py-1">
@@ -384,7 +394,7 @@
 			</div>
 			<!-- Page width -->
 			<div>
-				<label class="block font-medium mb-2">Page width</label>
+				<label class="block font-medium mb-2" data-i18n="common.pageWidth">Page width</label>
 				<div class="btn-group w-full" data-setting="page_width">
 					<button type="button" class="btn btn-sm flex-1 min-w-0" data-value="1">
 						<span class="block w-2 h-4 border-y-2 border-current"></span>
@@ -402,15 +412,15 @@
 			</div>
 			<!-- Text Align -->
 			<div class="col-span-1">
-				<label class="block font-medium mb-2">Text Align</label>
+				<label class="block font-medium mb-2" data-i18n="common.textAlign">Text Align</label>
 				<div class="btn-group w-full" data-setting="text_align">
 					<button type="button" class="btn btn-sm flex-1 min-w-0" data-value="left">
 						<i class="bi bi-text-left"></i>
-						<span class="ml-1">Left</span>
+						<span class="ml-1" data-i18n="common.alignLeft">Left</span>
 					</button>
 					<button type="button" class="btn btn-sm flex-1 min-w-0" data-value="justify">
 						<i class="bi bi-justify"></i>
-						<span class="ml-1">Justify</span>
+						<span class="ml-1" data-i18n="common.alignJustify">Justify</span>
 					</button>
 				</div>
 			</div>
@@ -420,6 +430,6 @@
 <!-- MODIFIED SECTION END -->
 
 <script src="../src/js/theme.js"></script>
-<script src="../dist/chapter-editor-bundle.js"></script>
+<script type="module" src="../dist/chapter-editor-bundle.js"></script>
 </body>
 </html>

@@ -1,29 +1,29 @@
 <form id="autogen-codex-form">
-	<p class="text-sm text-base-content/80">
+	<p class="text-sm text-base-content/80" data-i18n="outline.autoGenModal.description">
 		This tool will scan your entire novel's source text to automatically create and update codex entries. This process can take several minutes and may consume a significant amount of AI credits, depending on the length of your novel.
 	</p>
 	
 	<!-- Model Selection -->
 	<div class="form-control w-full">
 		<label class="label">
-			<span class="label-text">Select AI Model</span>
+			<span class="label-text" data-i18n="outline.autoGenModal.selectModel">Select AI Model</span>
 		</label>
 		<select class="js-llm-model-select select select-bordered">
-			<option disabled selected>Loading models...</option>
+			<option disabled selected data-i18n="outline.autoGenModal.loadingModels">Loading models...</option>
 		</select>
 	</div>
 	
 	<!-- Progress Section (hidden initially) -->
 	<div id="js-autogen-progress-section" class="hidden mt-4 space-y-2">
 		<label class="label">
-			<span class="label-text">Progress</span>
+			<span class="label-text" data-i18n="outline.autoGenModal.progress">Progress</span>
 		</label>
 		<progress id="js-autogen-progress-bar" class="progress progress-primary w-full" value="0" max="100"></progress>
-		<p id="js-autogen-status-text" class="text-xs text-base-content/70 text-center">Initializing...</p>
+		<p id="js-autogen-status-text" class="text-xs text-base-content/70 text-center" data-i18n="outline.autoGenModal.initializing">Initializing...</p>
 	</div>
 	
 	<!-- Action Buttons -->
 	<div id="js-autogen-action-buttons" class="mt-6 flex justify-end">
-		<button type="submit" class="btn btn-primary">Start Generation</button>
+		<button type="submit" class="btn btn-primary" data-i18n="outline.autoGenModal.start">Start Generation</button>
 	</div>
 </form>

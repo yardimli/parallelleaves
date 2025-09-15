@@ -1,4 +1,4 @@
-// This file contains the logic for the "Translate" prompt builder.
+import { t } from '../i18n.js';
 
 const defaultState = {
 	instructions: '',
@@ -71,7 +71,7 @@ const renderCodexList = (container, context, initialState = null, preselectedIds
 	const { allCodexEntries } = context;
 	
 	if (!allCodexEntries || allCodexEntries.length === 0) {
-		codexContainer.innerHTML = '<p class="text-sm text-base-content/60">No codex entries found for this project.</p>';
+		codexContainer.innerHTML = `<p class="text-sm text-base-content/60">${t('prompt.translate.loadingCodex')}</p>`;
 		return;
 	}
 	
@@ -101,7 +101,7 @@ const renderCodexList = (container, context, initialState = null, preselectedIds
 	}).join('');
 	
 	codexContainer.innerHTML = `
-        <h4 class="label-text font-semibold mb-2">Use Codex Entries as Glossary</h4>
+        <h4 class="label-text font-semibold mb-2">${t('prompt.translate.useCodex')}</h4>
         <div class="max-h-72 overflow-y-auto pr-2 space-y-1">
             ${categoriesHtml}
         </div>
@@ -226,13 +226,13 @@ const updatePreview = async (container, context) => {
 		const promptJson = buildPromptJson(formData, previewContext);
 		systemPreview.textContent = promptJson.system;
 		userPreview.textContent = promptJson.user;
-		aiPreview.textContent = promptJson.ai || '(Empty)';
+		aiPreview.textContent = promptJson.ai || t('prompt.preview.empty');
 		
 		contextPairsContainer.innerHTML = '';
 		if (promptJson.context_pairs && promptJson.context_pairs.length > 0) {
 			promptJson.context_pairs.forEach((message, index) => {
 				const pairNumber = Math.floor(index / 2) + 1;
-				const roleTitle = message.role === 'user' ? `Context Pair ${pairNumber} (User)` : `Context Pair ${pairNumber} (Assistant)`;
+				const roleTitle = message.role === 'user' ? t('prompt.preview.contextUser', { number: pairNumber }) : t('prompt.preview.contextAssistant', { number: pairNumber });
 				
 				const title = document.createElement('h3');
 				title.className = 'text-lg font-semibold mt-4 font-mono';

@@ -80,7 +80,8 @@ const getToolbarState = (state) => {
  * @param {HTMLElement} mount - The element to mount the editor in.
  * @param {object} config - The initialization configuration.
  */
-function createEditorView(mount, { initialHtml, isEditable, chapterId: id, field: fieldName }) {
+function createEditorView(mount, config) { // MODIFIED: Pass full config object
+	const { initialHtml, isEditable, chapterId: id, field: fieldName, i18n } = config; // MODIFIED: Destructure config
 	chapterId = id;
 	field = fieldName;
 	
@@ -113,14 +114,21 @@ function createEditorView(mount, { initialHtml, isEditable, chapterId: id, field
 	
 	const doc = DOMParser.fromSchema(schema).parse(document.createRange().createContextualFragment(initialHtml || ''));
 	
+	// MODIFIED: Prepare translated titles for NoteNodeView
+	const i18nTitles = i18n || { edit: 'Edit note', delete: 'Delete note' };
+	
 	editorView = new EditorView(mount, {
 		state: EditorState.create({
 			doc: doc,
 			plugins: [history(), keymap({ 'Mod-z': undo, 'Mod-y': redo }), keymap(baseKeymap), editorPlugin, noteProtectionPlugin],
 		}),
 		nodeViews: {
+			// MODIFIED: Pass translated titles to the NoteNodeView constructor
 			note(node, view, getPos) {
-				return new NoteNodeView(node, view, getPos, (type, payload) => postToParent(type, payload));
+				return new NoteNodeView(node, view, getPos, (type, payload) => postToParent(type, payload), {
+					edit: i18nTitles.editNote,
+					delete: i18nTitles.deleteNote
+				});
 			}
 		},
 		dispatchTransaction(transaction) {
