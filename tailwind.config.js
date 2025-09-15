@@ -35,11 +35,11 @@ module.exports = {
 					// Override the base-100 color (the main background)
 					"base-100": "#191919", // Your new, custom dark background color
 					"base-200": "#1e1e1e", // A slightly lighter background for cards, modals, etc.
-					
-					// You can also override other colors for full control
-					// "base-200": "#2d3748", // A slightly lighter background
-					// "primary": "#6366f1",   // A custom primary color for dark mode
-					// "base-content": "#f8f8f8", // Text color on base-100
+					"base-300": "#252525", // Even lighter for borders, etc.
+					"base-content": "#e0e0e0", // Light text for better readability
+					"primary": "#4f46e5", // Customize primary color if needed
+					"secondary": "#6b21a8", // Customize secondary color if needed
+					"accent": "#10b981", // Customize accent color if needed
 				},
 			},
 			// ADDED SECTION START: New paper theme definition

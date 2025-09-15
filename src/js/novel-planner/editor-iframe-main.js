@@ -232,6 +232,14 @@ function findTranslationBlockPositions(blockNumber) {
 	return { blockStartPos, blockEndPos };
 }
 
+// NEW FUNCTION: Applies typography styles received from the parent window.
+function applyTypography({ styleProps, settings }) {
+	const root = document.documentElement;
+	Object.entries(styleProps).forEach(([prop, value]) => {
+		root.style.setProperty(prop, value);
+	});
+}
+
 /**
  * Main message listener for communication from the parent window.
  */
@@ -255,6 +263,10 @@ window.addEventListener('message', (event) => {
 				sendResize();
 			});
 			resizeObserver.observe(document.body);
+			break;
+		// MODIFIED: Added a case to handle typography updates
+		case 'updateTypography':
+			applyTypography(payload);
 			break;
 		case 'command':
 			executeCommand(payload);
@@ -295,14 +307,14 @@ window.addEventListener('message', (event) => {
 			const currentState = editorView.state;
 			const $replaceStart = currentState.doc.resolve(from);
 			const nodeBefore = $replaceStart.parent;
-
+			
 			console.log('Node before replacement start:', nodeBefore, nodeBefore ? nodeBefore.type.name : 'N/A', nodeBefore ? nodeBefore.content.size : 'N/A');
-
+			
 			if (nodeBefore && nodeBefore.type.name === 'paragraph' && nodeBefore.content.size === 0) {
 				const paraFrom = from - nodeBefore.nodeSize;
 				const paraTo = from;
 				console.log('Deleting empty paragraph from', paraFrom, 'to', paraTo);
-
+				
 				// Create and dispatch a NEW transaction
 				const deleteTr = currentState.tr.delete(paraFrom, paraTo);
 				editorView.dispatch(deleteTr);

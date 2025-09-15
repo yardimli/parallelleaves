@@ -8,6 +8,8 @@ import { undo, redo } from 'prosemirror-history';
 import { toggleMark, setBlockType, wrapIn } from 'prosemirror-commands';
 import { wrapInList } from 'prosemirror-schema-list';
 import { TextSelection } from 'prosemirror-state';
+// MODIFIED: Import typography settings module
+import { setupTypographySettings } from './typography-settings.js';
 
 // --- State management for multiple editors ---
 let sourceEditorView = null;
@@ -584,6 +586,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 	};
 	
 	setupPromptEditor();
+	
+	// MODIFIED: Initialize typography settings
+	setupTypographySettings({
+		buttonId: 'typography-settings-btn',
+		modalId: 'typography-settings-modal',
+		formId: 'typography-settings-form',
+		applyCallback: (styleProps, settings) => {
+			const containers = document.querySelectorAll('.js-pm-container');
+			containers.forEach(container => {
+				Object.entries(styleProps).forEach(([prop, value]) => {
+					container.style.setProperty(prop, value);
+				});
+			});
+		}
+	});
 	
 	const params = new URLSearchParams(window.location.search);
 	const mode = params.get('mode') || 'edit';

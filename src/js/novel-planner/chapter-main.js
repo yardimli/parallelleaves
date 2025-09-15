@@ -1,6 +1,8 @@
 import { setupTopToolbar, setActiveContentWindow, updateToolbarState } from './toolbar.js';
 import { setupPromptEditor } from '../prompt-editor.js';
 import { getActiveEditor, setActiveEditor } from './content-editor.js';
+// MODIFIED: Import typography settings module
+import { setupTypographySettings, getTypographySettings, generateTypographyStyleProperties } from './typography-settings.js';
 
 const languageCodeToName = {
 	'af': 'Afrikaans',
@@ -259,7 +261,8 @@ async function renderManuscript(container, novelData, allCodexEntries) {
 			layoutGrid.className = 'grid grid-cols-2 gap-6';
 			
 			const sourceCol = document.createElement('div');
-			sourceCol.className = 'col-span-1 prose prose-sm dark:prose-invert max-w-none bg-base-200 p-4 rounded-lg';
+			// MODIFIED: Added 'js-source-column' class to target this element for style updates.
+			sourceCol.className = 'js-source-column col-span-1 prose prose-sm dark:prose-invert max-w-none bg-base-200 p-4 rounded-lg';
 			sourceCol.innerHTML = `<h3 class="!mt-0 text-sm font-semibold uppercase tracking-wider text-base-content/70 border-b pb-1 mb-2">Source (<span class="js-source-word-count">${chapter.source_word_count.toLocaleString()} words</span>)</h3>`;
 			const sourceContentContainer = document.createElement('div');
 			sourceContentContainer.className = 'source-content-readonly';
@@ -322,6 +325,14 @@ async function renderManuscript(container, novelData, allCodexEntries) {
 				
 				viewInfo.isReady = true;
 				const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+				
+				// Send typography settings on init
+				const settings = getTypographySettings();
+				const styleProps = generateTypographyStyleProperties(settings);
+				viewInfo.contentWindow.postMessage({
+					type: 'updateTypography',
+					payload: { styleProps, settings }
+				}, window.location.origin);
 				
 				// Send initialization data to the iframe
 				iframe.contentWindow.postMessage({
@@ -642,6 +653,32 @@ document.addEventListener('DOMContentLoaded', async () => {
 			getChapterViews: (chapterId) => chapterEditorViews.get(chapterId.toString()),
 		});
 		setupPromptEditor();
+		// MODIFIED: Initialize typography settings
+		setupTypographySettings({
+			buttonId: 'typography-settings-btn',
+			modalId: 'typography-settings-modal',
+			formId: 'typography-settings-form',
+			applyCallback: (styleProps, settings) => {
+				// Apply to iframes (target columns)
+				chapterEditorViews.forEach(viewInfo => {
+					if (viewInfo.isReady) {
+						viewInfo.contentWindow.postMessage({
+							type: 'updateTypography',
+							payload: { styleProps, settings }
+						}, window.location.origin);
+					}
+				});
+				
+				// NEW SECTION START: Apply styles to all source columns in the manuscript view
+				const sourceColumns = document.querySelectorAll('.js-source-column');
+				sourceColumns.forEach(col => {
+					Object.entries(styleProps).forEach(([prop, value]) => {
+						col.style.setProperty(prop, value);
+					});
+				});
+				// NEW SECTION END
+			}
+		});
 		setupIntersectionObserver();
 		setupNoteEditorModal();
 		setupTranslateBlockAction();
