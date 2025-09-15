@@ -100,6 +100,7 @@ const renderCodexList = (container, context, initialState = null, preselectedIds
         `;
 	}).join('');
 	
+	// MODIFIED: Use translation for "Use Codex Entries as Glossary"
 	codexContainer.innerHTML = `
         <h4 class="label-text font-semibold mb-2">${t('prompt.translate.useCodex')}</h4>
         <div class="max-h-72 overflow-y-auto pr-2 space-y-1">
@@ -322,7 +323,8 @@ export const init = async (container, context) => {
 		await updatePreview(container, fullContext);
 		
 	} catch (error) {
-		container.innerHTML = `<p class="p-4 text-error">Could not load editor form.</p>`;
+		// MODIFIED: Use translation for error message
+		container.innerHTML = `<p class="p-4 text-error">${t('prompt.errorLoadForm')}</p>`;
 		console.error(error);
 	}
 };

@@ -1,7 +1,7 @@
 import { initI18n, t } from './i18n.js';
 
 document.addEventListener('DOMContentLoaded', async () => { // MODIFIED: Make async
-                                                            // MODIFIED: Initialize i18n
+	// MODIFIED: Initialize i18n
 	await initI18n();
 	
 	// ADDED SECTION START
@@ -156,9 +156,10 @@ document.addEventListener('DOMContentLoaded', async () => { // MODIFIED: Make as
 		if (chapterCount === 0) {
 			importStatus.textContent = t('import.status');
 		} else {
-			const actText = actCount === 1 ? '1 Act' : `${actCount} Acts`;
-			const chapterText = chapterCount === 1 ? '1 Chapter' : `${chapterCount} Chapters`;
-			importStatus.textContent = `${actText} and ${chapterText} will be created.`;
+			// MODIFIED: Use translation keys for status summary
+			const actLabel = t(actCount === 1 ? 'import.actLabel_one' : 'import.actLabel_other');
+			const chapterLabel = t(chapterCount === 1 ? 'import.chapterLabel_one' : 'import.chapterLabel_other');
+			importStatus.textContent = t('import.statusSummary', { actCount, actLabel, chapterCount, chapterLabel });
 		}
 		
 		updateNavButtonState();

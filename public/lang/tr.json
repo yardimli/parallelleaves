@@ -40,7 +40,7 @@
       "sourceLanguage": "Kaynak Dil",
       "sourceLanguageHelp": "Belgenin orijinal dili.",
       "targetLanguage": "Hedef Dil",
-      "targetLanguageHelp": "Çeviri yapılacak dil. Yazım denetimi ve YZ üretimi için kullanılır.",
+      "targetLanguageHelp": "Çeviri yapılacak dil. Yazım denetimi ve Zekai üretimi için kullanılır.",
       "saveButton": "Ayarları Kaydet"
     },
     "metaSettings": {
@@ -48,7 +48,7 @@
       "projectTitle": "Başlık",
       "author": "Yazar",
       "noCover": "Yeni kapak seçilmedi",
-      "generateCover": "YZ Kapak Oluştur",
+      "generateCover": "Zekai Kapak Oluştur",
       "uploadCover": "Kapak Yükle",
       "dangerZone": "Tehlikeli Bölge",
       "dangerZoneDesc": "Bu projeyi ve tüm içeriğini kalıcı olarak silin.",
@@ -62,7 +62,7 @@
       "errorDelete": "Proje silinirken hata oluştu."
     },
     "generateCover": {
-      "title": "YZ Kapak Resmi Oluştur",
+      "title": "Zekai Kapak Resmi Oluştur",
       "prompt": "Görüntü Komutu",
       "generate": "Oluştur",
       "preview": "Görüntü önizlemesi burada görünecek",
@@ -94,7 +94,12 @@
     "errorReadFile": "Hata: Dosya okunamadı. {message}",
     "alertNoTitle": "Lütfen bir proje başlığı girin.",
     "alertNoContent": "İçe aktarılacak içerik yok.",
-    "errorImport": "İçe aktarma sırasında hata: {message}"
+    "errorImport": "İçe aktarma sırasında hata: {message}",
+    "statusSummary": "{actCount} {actLabel} ve {chapterCount} {chapterLabel} oluşturulacak.",
+    "actLabel_one": "Perde",
+    "actLabel_other": "Perde",
+    "chapterLabel_one": "Bölüm",
+    "chapterLabel_other": "Bölüm"
   },
   "outline": {
     "loading": "Taslak Yükleniyor...",
@@ -103,13 +108,25 @@
     "newEntry": "Yeni Girdi",
     "autoGenModal": {
       "title": "Kodeks Girdilerini Otomatik Oluştur",
-      "description": "Bu araç, romanınızın tüm kaynak metnini tarayarak kodeks girdilerini otomatik olarak oluşturur ve günceller. Bu işlem birkaç dakika sürebilir ve romanınızın uzunluğuna bağlı olarak önemli miktarda YZ kredisi tüketebilir.",
-      "selectModel": "YZ Modeli Seç",
+      "description": "Bu araç, romanınızın tüm kaynak metnini tarayarak kodeks girdilerini otomatik olarak oluşturur ve günceller. Bu işlem birkaç dakika sürebilir ve romanınızın uzunluğuna bağlı olarak önemli miktarda Zekai kredisi tüketebilir.",
+      "selectModel": "Zekai Modeli Seç",
       "loadingModels": "Modeller yükleniyor...",
       "progress": "İlerleme",
       "initializing": "Başlatılıyor...",
-      "start": "Oluşturmayı Başlat"
-    }
+      "start": "Oluşturmayı Başlat",
+      "errorLoadModels": "Modeller yüklenirken hata oluştu",
+      "errorLoadTool": "Araç yüklenemedi. {message}",
+      "alertSelectModel": "Lütfen bir Zekai modeli seçin."
+    },
+    "noSections": "Bu projede henüz kısım yok.",
+    "noChapters": "Bu kısımda henüz bölüm yok.",
+    "noSummary": "Özet yok.",
+    "noCodexEntries": "Bu projede henüz kodeks girdisi yok.",
+    "noEntriesInCategory": "Bu kategoride henüz girdi yok.",
+    "errorProjectMissing": "Hata: Proje ID'si eksik.",
+    "errorLoad": "Hata: Taslak verileri yüklenemedi. {message}",
+    "chapterLabel_one": "bölüm",
+    "chapterLabel_other": "bölüm"
   },
   "editor": {
     "translating": "Çevriliyor: {title}",
@@ -141,7 +158,7 @@
     "noTextSelected": "Metin seçilmedi",
     "loadingNav": "Navigasyon yükleniyor...",
     "spellcheck": "Yazım Denetimi:",
-    "waitingAi": "YZ yanıtı bekleniyor...",
+    "waitingAi": "Zekai yanıtı bekleniyor...",
     "loadingEditor": "Editör yükleniyor...",
     "showPreview": "Önizlemeyi Göster",
     "hidePreview": "Önizlemeyi Gizle",
@@ -153,6 +170,7 @@
     "errorLoadManuscript": "Hata: Taslak yüklenemedi. {message}",
     "errorProjectMissing": "Hata: Proje ID'si eksik.",
     "noChaptersInSection": "Bu kısımda henüz bölüm yok.",
+    "chapterTitlePlaceholder": "Bölüm Başlığı",
     "note": {
       "editTitle": "Notu Düzenle",
       "deleteTitle": "Notu Sil"
@@ -183,10 +201,11 @@
       "targetContent": "Hedef İçerik",
       "targetPlaceholder": "Hedef/çevrilmiş içeriği buraya girin...",
       "createButton": "Girdi Oluştur",
-      "aiAnalyzing": "YZ metni analiz ediyor...",
+      "aiAnalyzing": "Zekai metni analiz ediyor...",
       "errorLoad": "Hata: Kodeks girdisi verileri yüklenemedi. {message}",
       "errorMissingId": "Hata: Kodeks Girdisi ID'si eksik.",
       "errorMissingNovelId": "Hata: Yeni girdi için Roman ID'si eksik.",
+      "errorSave": "Kodeks girdisindeki değişiklikler kaydedilemedi.",
       "deleteConfirm": {
         "title": "Silmeyi Onayla",
         "message": "Bu kodeks girdisini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
@@ -201,6 +220,7 @@
   },
   "prompt": {
     "rephrase": {
+      "title": "Yeniden İfade Et",
       "instructions": "Talimatlar",
       "instructionsHelp": "Metni yeniden ifade etmek için ana talimatları sağlayın.",
       "instructionsPlaceholder": "Örn., Tonu daha resmi yap.",
@@ -210,6 +230,7 @@
       "useCodex": "Kodeks Girdilerini Kullan"
     },
     "translate": {
+      "title": "Çevir",
       "instructions": "Talimatlar",
       "instructionsHelp": "Metni çevirmek için özel talimatlar sağlayın.",
       "instructionsPlaceholder": "Örn., Resmi bir tona çevir. Karakter isimlerini orijinal formunda tut.",
@@ -218,18 +239,34 @@
       "loadingCodex": "Kodeks girdileri yükleniyor...",
       "useCodex": "Kodeks Girdilerini Sözlük Olarak Kullan",
       "prevPairs": "Önceki Çeviri Çiftleri",
-      "prevPairsHelp": "YZ için bağlam olarak N önceki çeviri bloğunu dahil et. (Devre dışı bırakmak için 0)"
+      "prevPairsHelp": "Zekai için bağlam olarak N önceki çeviri bloğunu dahil et. (Devre dışı bırakmak için 0)"
     },
     "preview": {
       "title": "Canlı Komut Önizlemesi",
       "description": "Bu, yukarıdaki ayarlara göre yapay zekaya gönderilecek son komuttur.",
       "system": "Sistem Komutu",
       "user": "Kullanıcı Komutu",
-      "aiPrefix": "YZ Yanıt Ön Eki",
+      "aiPrefix": "Zekai Yanıt Ön Eki",
       "contextPairs": "Bağlam Çifti",
       "contextUser": "Bağlam Çifti {number} (Kullanıcı)",
       "contextAssistant": "Bağlam Çifti {number} (Asistan)",
       "empty": "(Boş)"
-    }
+    },
+    "errorLoadForm": "Editör formu yüklenemedi.",
+    "errorNoEditorForPrompt": "Şu komut için editör bulunamadı: {promptId}",
+    "errorApplyAction": "Eylem uygulanamadı. Model, eylem veya form eksik.",
+    "errorNoBuilder": "Şu eylem için komut oluşturucu veya form çıkarıcı bulunamadı: {action}",
+    "errorNoActiveEditor": "Değişikliklerin uygulanacağı aktif bir editör yok.",
+    "errorNoSelection": "Editörden seçim alınamadı. Yeniden ifade etmek için lütfen bir metin seçin.",
+    "errorFetchContext": "Bağlam için önceki çeviri blokları alınamadı. {message}",
+    "errorNoInterface": "Zekai editörü açılamıyor: Editör arayüzü mevcut değil."
+  },
+  "electron": {
+    "addToDictionary": "Sözlüğe Ekle",
+    "noContent": "İçerik yok.",
+    "codexGenNoSource": "Analiz edilecek kaynak içerik bulunamadı. İşlem tamamlandı.",
+    "codexGenNoText": "Temizlendikten sonra metin bulunamadı. İşlem tamamlandı.",
+    "codexGenComplete": "Kodeks oluşturma tamamlandı! Sayfa şimdi yeniden yüklenecek.",
+    "codexGenError": "Bir hata oluştu: {message}"
   }
 }

@@ -246,7 +246,8 @@ async function renderManuscript(container, novelData, allCodexEntries) {
 			titleInput.type = 'text';
 			titleInput.value = chapter.title;
 			titleInput.className = 'text-2xl font-bold w-full bg-transparent border-0 p-0 focus:ring-0 focus:border-b-2 focus:border-indigo-500 mb-4';
-			titleInput.placeholder = 'Chapter Title';
+			// MODIFIED: Use translation for placeholder
+			titleInput.placeholder = t('editor.chapterTitlePlaceholder');
 			
 			const debouncedTitleSave = debounce(async (value) => {
 				try {
@@ -280,7 +281,7 @@ async function renderManuscript(container, novelData, allCodexEntries) {
 			const targetCol = document.createElement('div');
 			targetCol.className = 'col-span-1'; // Removed prose styles from the container
 			// MODIFIED: Use translation for "Target"
-			targetCol.innerHTML = `<h3 class="!mt-0 text-sm font-semibold uppercase tracking-wider text-base-content/70 border-b pb-1 mb-2 p-4">${t('common.target')} (<span class="js-target-word-count">${chapter.target_word_count.toLocaleString()} ${t('common.words')}</span>)</h3>`;
+			targetCol.innerHTML = `<h3 class="!mt-0 text-sm font-semibold uppercase tracking-wider text-base-content/70 border-b pb-1 mb-2 pt-4">${t('common.target')} (<span class="js-target-word-count">${chapter.target_word_count.toLocaleString()} ${t('common.words')}</span>)</h3>`;
 			
 			const iframe = document.createElement('iframe');
 			iframe.className = 'js-target-content-editable w-full border-0 min-h-[300px]';

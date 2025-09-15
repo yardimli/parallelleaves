@@ -135,7 +135,8 @@ async function saveWindowContent(entryId) {
 		if (!response.success) throw new Error(response.message || 'Failed to save codex entry.');
 	} catch (error) {
 		console.error('Error saving codex entry:', error);
-		window.showAlert('Could not save changes to codex entry.');
+		// MODIFIED: Use translation for alert
+		window.showAlert(t('editor.codexEditor.errorSave'));
 	}
 }
 

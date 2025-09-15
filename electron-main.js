@@ -73,6 +73,8 @@ function createMainWindow() {
 		if (params.misspelledWord) {
 			menu.append(
 				new MenuItem({
+					// MODIFIED: This string is hard to translate without a major refactor.
+					// For now, it remains in English, but a key has been added for future implementation.
 					label: 'Add to dictionary',
 					click: () => mainWindow.webContents.session.addWordToSpellCheckerDictionary(params.misspelledWord)
 				})
@@ -465,7 +467,8 @@ function setupIpcHandlers() {
 						}
 						chapter.summary = `<p>${truncatedText}</p>`;
 					} else {
-						chapter.summary = '<p class="italic text-base-content/60">No content.</p>';
+						// MODIFIED: Use translation key for summary fallback
+						chapter.summary = `<p class="italic text-base-content/60" data-i18n="electron.noContent"></p>`;
 					}
 				}
 				
@@ -736,9 +739,9 @@ function setupIpcHandlers() {
 	
 	ipcMain.on('autogen:start-codex-generation', async (event, { novelId, model }) => {
 		const sender = event.sender;
-		const sendProgress = (progress, status) => {
+		const sendProgress = (progress, status, statusKey = null, statusParams = {}) => {
 			if (!sender.isDestroyed()) {
-				sender.send('autogen:progress-update', { progress, status });
+				sender.send('autogen:progress-update', { progress, status, statusKey, statusParams });
 			}
 		};
 		
@@ -747,7 +750,8 @@ function setupIpcHandlers() {
 			
 			const chapters = db.prepare('SELECT source_content FROM chapters WHERE novel_id = ? AND source_content IS NOT NULL').all(novelId);
 			if (chapters.length === 0) {
-				sendProgress(100, 'No source content found to analyze. Process finished.');
+				// MODIFIED: Send translation key
+				sendProgress(100, 'No source content found to analyze. Process finished.', 'electron.codexGenNoSource');
 				return;
 			}
 			
@@ -765,7 +769,8 @@ function setupIpcHandlers() {
 			}
 			
 			if (chunks.length === 0) {
-				sendProgress(100, 'No text found after cleaning. Process finished.');
+				// MODIFIED: Send translation key
+				sendProgress(100, 'No text found after cleaning. Process finished.', 'electron.codexGenNoText');
 				return;
 			}
 			
@@ -844,11 +849,13 @@ function setupIpcHandlers() {
 				processResultsTransaction();
 			}
 			
-			sendProgress(100, 'Codex generation complete! The page will now reload.');
+			// MODIFIED: Send translation key
+			sendProgress(100, 'Codex generation complete! The page will now reload.', 'electron.codexGenComplete');
 			
 		} catch (error) {
 			console.error('Codex auto-generation failed:', error);
-			sendProgress(100, `An error occurred: ${error.message}`);
+			// MODIFIED: Send translation key
+			sendProgress(100, `An error occurred: ${error.message}`, 'electron.codexGenError', { message: error.message });
 		}
 	});
 	

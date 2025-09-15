@@ -16,7 +16,6 @@
 				<p class="text-sm text-base-content/60" data-i18n="prompt.translate.loadingCodex">Loading codex entries...</p>
 			</div>
 			
-			<!-- NEW SECTION START -->
 			<div>
 				<label for="translate-context-pairs" class="label pb-1">
 					<span class="label-text font-semibold" data-i18n="prompt.translate.prevPairs">Previous Translation Pairs</span>
@@ -24,7 +23,6 @@
 				<input type="number" id="translate-context-pairs" name="context_pairs" class="input input-bordered w-full" value="4" min="0" max="10">
 				<p class="text-xs text-base-content/60 mt-1" data-i18n="prompt.translate.prevPairsHelp">Include N previous translation blocks as context for the AI. (0 to disable)</p>
 			</div>
-			<!-- NEW SECTION END -->
 		
 		</div>
 	</form>
@@ -41,11 +39,9 @@
 			<pre class="bg-base-200 p-4 rounded-md text-xs whitespace-pre-wrap font-mono"><code class="js-preview-system"></code></pre>
 		</div>
 		
-		<!-- MODIFIED SECTION START: Added a container for context pair previews -->
 		<div class="js-preview-context-pairs">
 			<!-- This will be populated by JS to show previous user/assistant messages -->
 		</div>
-		<!-- MODIFIED SECTION END -->
 		
 		<!-- User Prompt Preview -->
 		<div>

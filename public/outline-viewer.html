@@ -13,20 +13,20 @@
 <!-- Header -->
 <div class="flex-shrink-0 h-12 bg-base-200 flex items-center px-4 z-10 border-b border-base-300">
 	<h1 id="js-novel-title" class="text-xl font-bold" data-i18n="outline.loading">Loading Outline...</h1>
-	<!-- MODIFIED SECTION START: Added theme toggle and language switcher -->
 	<div class="flex-grow"></div>
 	<div class="dropdown dropdown-end">
 		<button tabindex="0" role="button" class="btn btn-ghost btn-circle" data-i18n-title="common.changeLanguage">
 			<i class="bi bi-translate text-xl"></i>
 		</button>
-		<ul tabindex="0" id="js-lang-switcher-menu" class="dropdown-content z-[1] menu p-2 shadow bg-base-200 rounded-box w-32">
+		<!-- MODIFIED SECTION START: Increased z-index from z-[1] to z-[50] -->
+		<ul tabindex="0" id="js-lang-switcher-menu" class="dropdown-content z-[50] menu p-2 shadow bg-base-200 rounded-box w-32">
 			<!-- Populated by i18n.js -->
 		</ul>
+		<!-- MODIFIED SECTION END -->
 	</div>
 	<button id="theme-toggle" class="btn btn-ghost btn-circle" data-i18n-title="common.changeTheme">
 		<i class="bi text-xl"></i> <!-- Icon is set by src/js/theme.js -->
 	</button>
-	<!-- MODIFIED SECTION END -->
 </div>
 
 <!-- Main Content -->
@@ -36,12 +36,10 @@
 		<!-- Outline content will be rendered here by JS -->
 	</div>
 	
-	<!-- MODIFIED SECTION START: Right column now has a header for the "New Entry" button -->
 	<!-- Right Column: Codex -->
 	<div class="w-1/2 flex flex-col">
 		<div class="flex-shrink-0 flex justify-between items-center pt-2 px-4 pb-2 border-b border-base-300 sticky top-0 bg-base-100/90 backdrop-blur-sm z-10">
 			<h2 class="text-xl font-bold" data-i18n="outline.codex">Codex</h2>
-			<!-- MODIFIED: Added Auto-generate button and wrapper div -->
 			<div class="flex items-center gap-2">
 				<button id="js-autogen-codex" class="btn btn-sm btn-ghost">
 					<i class="bi bi-magic"></i> <span data-i18n="outline.autoGenerate">Auto-generate</span>
@@ -55,10 +53,8 @@
 			<!-- Codex content will be rendered here by JS -->
 		</div>
 	</div>
-	<!-- MODIFIED SECTION END -->
 </div>
 
-<!-- NEW DIALOG START -->
 <dialog id="autogen-codex-modal" class="modal">
 	<div class="modal-box">
 		<h3 class="font-bold text-lg" data-i18n="outline.autoGenModal.title">Auto-generate Codex Entries</h3>
@@ -72,7 +68,6 @@
 		</div>
 	</div>
 </dialog>
-<!-- NEW DIALOG END -->
 
 <script src="../src/js/theme.js"></script>
 <script type="module" src="../src/js/outline-viewer.js"></script>

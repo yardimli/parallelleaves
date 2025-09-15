@@ -94,7 +94,12 @@
     "errorReadFile": "Error: Could not read the file. {message}",
     "alertNoTitle": "Please provide a project title.",
     "alertNoContent": "No content to import.",
-    "errorImport": "Error during import: {message}"
+    "errorImport": "Error during import: {message}",
+    "statusSummary": "{actCount} {actLabel} and {chapterCount} {chapterLabel} will be created.",
+    "actLabel_one": "Act",
+    "actLabel_other": "Acts",
+    "chapterLabel_one": "Chapter",
+    "chapterLabel_other": "Chapters"
   },
   "outline": {
     "loading": "Loading Outline...",
@@ -108,8 +113,20 @@
       "loadingModels": "Loading models...",
       "progress": "Progress",
       "initializing": "Initializing...",
-      "start": "Start Generation"
-    }
+      "start": "Start Generation",
+      "errorLoadModels": "Error loading models",
+      "errorLoadTool": "Could not load the tool. {message}",
+      "alertSelectModel": "Please select an AI model."
+    },
+    "noSections": "No sections in this project yet.",
+    "noChapters": "No chapters in this section yet.",
+    "noSummary": "No summary.",
+    "noCodexEntries": "No codex entries in this project yet.",
+    "noEntriesInCategory": "No entries in this category yet.",
+    "errorProjectMissing": "Error: Project ID is missing.",
+    "errorLoad": "Error: Could not load outline data. {message}",
+    "chapterLabel_one": "chapter",
+    "chapterLabel_other": "chapters"
   },
   "editor": {
     "translating": "Translating: {title}",
@@ -153,6 +170,7 @@
     "errorLoadManuscript": "Error: Could not load manuscript. {message}",
     "errorProjectMissing": "Error: Project ID is missing.",
     "noChaptersInSection": "This section has no chapters yet.",
+    "chapterTitlePlaceholder": "Chapter Title",
     "note": {
       "editTitle": "Edit Note",
       "deleteTitle": "Delete Note"
@@ -187,6 +205,7 @@
       "errorLoad": "Error: Could not load codex entry data. {message}",
       "errorMissingId": "Error: Codex Entry ID is missing.",
       "errorMissingNovelId": "Error: Novel ID is missing for new entry.",
+      "errorSave": "Could not save changes to codex entry.",
       "deleteConfirm": {
         "title": "Confirm Deletion",
         "message": "Are you sure you want to delete this codex entry? This action cannot be undone."
@@ -201,6 +220,7 @@
   },
   "prompt": {
     "rephrase": {
+      "title": "Rephrase",
       "instructions": "Instructions",
       "instructionsHelp": "Provide the main instructions for rephrasing the text.",
       "instructionsPlaceholder": "e.g., Make the tone more formal.",
@@ -210,6 +230,7 @@
       "useCodex": "Use Codex Entries"
     },
     "translate": {
+      "title": "Translate",
       "instructions": "Instructions",
       "instructionsHelp": "Provide any specific instructions for translating the text.",
       "instructionsPlaceholder": "e.g., Translate to a formal tone. Keep character names in their original form.",
@@ -230,6 +251,22 @@
       "contextUser": "Context Pair {number} (User)",
       "contextAssistant": "Context Pair {number} (Assistant)",
       "empty": "(Empty)"
-    }
+    },
+    "errorLoadForm": "Could not load editor form.",
+    "errorNoEditorForPrompt": "No editor found for prompt: {promptId}",
+    "errorApplyAction": "Could not apply action. Missing model, action, or form.",
+    "errorNoBuilder": "No prompt builder or form extractor found for action: {action}",
+    "errorNoActiveEditor": "No active editor to apply changes to.",
+    "errorNoSelection": "Could not get selection from the editor. For rephrasing, please select some text.",
+    "errorFetchContext": "Could not fetch previous translation blocks for context. {message}",
+    "errorNoInterface": "Cannot open AI editor: Editor interface is not available."
+  },
+  "electron": {
+    "addToDictionary": "Add to dictionary",
+    "noContent": "No content.",
+    "codexGenNoSource": "No source content found to analyze. Process finished.",
+    "codexGenNoText": "No text found after cleaning. Process finished.",
+    "codexGenComplete": "Codex generation complete! The page will now reload.",
+    "codexGenError": "An error occurred: {message}"
   }
 }

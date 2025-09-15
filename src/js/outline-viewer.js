@@ -25,7 +25,8 @@ const truncateHtml = (html, wordLimit) => {
  */
 async function renderOutline(container, sections) {
 	if (!sections || sections.length === 0) {
-		container.innerHTML = '<p class="text-base-content/70">No sections in this project yet.</p>';
+		// MODIFIED: Use translation
+		container.innerHTML = `<p class="text-base-content/70">${t('outline.noSections')}</p>`;
 		return;
 	}
 	
@@ -35,8 +36,11 @@ async function renderOutline(container, sections) {
 	const fragment = document.createDocumentFragment();
 	
 	for (const section of sections) {
-		const chapterCountText = section.chapter_count === 1 ? '1 chapter' : `${section.chapter_count} chapters`;
+		// MODIFIED SECTION START: Use translation for chapter count pluralization
+		const chapterLabel = section.chapter_count === 1 ? t('outline.chapterLabel_one') : t('outline.chapterLabel_other');
+		const chapterCountText = `${section.chapter_count} ${chapterLabel}`;
 		const chapterStats = `${chapterCountText} - ${section.total_word_count.toLocaleString()} ${t('common.words')}`;
+		// MODIFIED SECTION END
 		
 		let sectionHtml = sectionTemplate
 			.replace('{{SECTION_ID}}', section.id)
@@ -51,17 +55,20 @@ async function renderOutline(container, sections) {
 		
 		if (section.chapters && section.chapters.length > 0) {
 			for (const chapter of section.chapters) {
+				// MODIFIED: Use translation for summary fallback
+				const summaryHtml = chapter.summary || `<p class="italic text-base-content/60">${t('outline.noSummary')}</p>`;
 				const chapterHtml = chapterTemplate
 					.replace(/{{CHAPTER_ID}}/g, chapter.id)
 					.replace('{{CHAPTER_ORDER}}', chapter.chapter_order)
 					.replace('{{CHAPTER_TITLE}}', chapter.title)
 					.replace('{{WORD_COUNT}}', chapter.word_count.toLocaleString())
-					.replace('{{CHAPTER_SUMMARY_HTML}}', chapter.summary || '<p class="italic text-base-content/60">No summary.</p>');
+					.replace('{{CHAPTER_SUMMARY_HTML}}', summaryHtml);
 				
 				chaptersContainer.innerHTML += chapterHtml;
 			}
 		} else {
-			chaptersContainer.innerHTML = '<p class="text-base-content/70 text-sm">No chapters in this section yet.</p>';
+			// MODIFIED: Use translation
+			chaptersContainer.innerHTML = `<p class="text-base-content/70 text-sm">${t('outline.noChapters')}</p>`;
 		}
 		fragment.appendChild(sectionEl.firstElementChild);
 	}
@@ -75,7 +82,8 @@ async function renderOutline(container, sections) {
  */
 async function renderCodex(container, categories) {
 	if (!categories || categories.length === 0) {
-		container.innerHTML = '<p class="text-base-content/70">No codex entries in this project yet.</p>';
+		// MODIFIED: Use translation
+		container.innerHTML = `<p class="text-base-content/70">${t('outline.noCodexEntries')}</p>`;
 		return;
 	}
 	
@@ -103,7 +111,8 @@ async function renderCodex(container, categories) {
 				entriesContainer.innerHTML += entryHtml;
 			}
 		} else {
-			entriesContainer.innerHTML = '<p class="text-base-content/70 text-sm col-span-full">No entries in this category yet.</p>';
+			// MODIFIED: Use translation
+			entriesContainer.innerHTML = `<p class="text-base-content/70 text-sm col-span-full">${t('outline.noEntriesInCategory')}</p>`;
 		}
 		fragment.appendChild(categoryEl.firstElementChild);
 	}
@@ -122,7 +131,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 	const codexContainer = document.getElementById('js-codex-container');
 	
 	if (!novelId) {
-		document.body.innerHTML = '<p class="text-error p-8">Error: Project ID is missing.</p>';
+		// MODIFIED: Use translation
+		document.body.innerHTML = `<p class="text-error p-8">${t('outline.errorProjectMissing')}</p>`;
 		return;
 	}
 	
@@ -152,12 +162,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 						select.value = defaultModel;
 					}
 				} else {
-					select.innerHTML = `<option>${t('common.error')} loading models</option>`;
+					// MODIFIED: Use translation
+					select.innerHTML = `<option>${t('outline.autoGenModal.errorLoadModels')}</option>`;
 				}
 				modal.showModal();
 			} catch (error) {
 				console.error('Failed to open autogen modal:', error);
-				modalContent.innerHTML = `<p class="text-error">Could not load the tool. ${error.message}</p>`;
+				// MODIFIED: Use translation
+				modalContent.innerHTML = `<p class="text-error">${t('outline.autoGenModal.errorLoadTool', { message: error.message })}</p>`;
 				modal.showModal();
 			}
 		});
@@ -169,7 +181,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 			
 			const model = form.querySelector('.js-llm-model-select').value;
 			if (!model) {
-				alert('Please select an AI model.');
+				// MODIFIED: Use translation
+				alert(t('outline.autoGenModal.alertSelectModel'));
 				return;
 			}
 			
@@ -188,12 +201,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 		});
 		
 		// Listen for progress updates from the main process
-		window.api.onCodexAutogenUpdate((event, { progress, status }) => {
+		window.api.onCodexAutogenUpdate((event, { progress, status, statusKey, statusParams }) => {
 			const progressBar = document.getElementById('js-autogen-progress-bar');
 			const statusText = document.getElementById('js-autogen-status-text');
 			
 			if (progressBar) progressBar.value = progress;
-			if (statusText) statusText.textContent = status;
+			// MODIFIED: Check for a translation key first
+			if (statusText) {
+				statusText.textContent = statusKey ? t(statusKey, statusParams || {}) : status;
+			}
 			
 			if (progress >= 100) {
 				isAutogenRunning = false; // Reset the flag when the process is complete
@@ -213,8 +229,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 	try {
 		const data = await window.api.getOutlineData(novelId);
 		
-		document.title = `${t('outline.loading')}: ${data.novel_title}`;
-		novelTitleEl.textContent = `${t('outline.loading')}: ${data.novel_title}`;
+		// MODIFIED SECTION START: Update title correctly after loading
+		document.title = data.novel_title;
+		novelTitleEl.textContent = data.novel_title;
+		// MODIFIED SECTION END
 		
 		await renderOutline(outlineContainer, data.sections);
 		await renderCodex(codexContainer, data.codex_categories);
@@ -276,6 +294,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 		
 	} catch (error) {
 		console.error('Failed to load outline data:', error);
-		document.body.innerHTML = `<p class="text-error p-8">Error: Could not load outline data. ${error.message}</p>`;
+		// MODIFIED: Use translation
+		document.body.innerHTML = `<p class="text-error p-8">${t('outline.errorLoad', { message: error.message })}</p>`;
 	}
 });
