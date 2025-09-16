@@ -237,6 +237,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 					p.textContent = pText.trim();
 					documentContent.appendChild(p);
 				});
+				
+				// MODIFICATION: Automatically show the auto-detect modal after content is loaded.
+				autoDetectModal.showModal();
+				
 			} catch (error) {
 				console.error('Error reading file:', error);
 				documentContent.innerHTML = `<p class="text-error">${t('import.errorReadFile', { message: error.message })}</p>`;
@@ -287,7 +291,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 		const useKeyword = document.getElementById('detect-keyword').checked;
 		const useAllCaps = document.getElementById('detect-all-caps').checked;
 		
-		// MODIFICATION START: Implement logic to prevent empty chapters.
 		const paragraphs = Array.from(documentContent.querySelectorAll('p'));
 		
 		// Clear existing breaks before applying new ones.
@@ -313,6 +316,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 			
 			// Rule 2: Keywords like "Chapter" or "Act"
 			if (!isBreak && useKeyword) {
+				// Using \b for word boundary to avoid matching words like "Actual"
 				if (/^\b(act|perde)\b/i.test(text)) {
 					isBreak = true;
 					breakType = 'act-break';
@@ -323,6 +327,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 			
 			// Rule 3: Short, all-caps lines
 			if (!isBreak && useAllCaps) {
+				// Check if the line is short, not empty, all uppercase, and contains at least one letter.
 				if (text.length > 0 && text.length < 50 && text === text.toUpperCase() && /[A-Z]/i.test(text)) {
 					isBreak = true;
 				}
@@ -353,7 +358,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 				}
 			}
 		});
-		// MODIFICATION END
 		
 		currentMarkIndex = -1;
 		updateStatus();

@@ -59,6 +59,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 	
 	let novelsData = [];
 	let stagedCover = null;
+	let isRefreshingData = false; // MODIFICATION: Add a flag to prevent concurrent refreshes.
 	
 	const languages = [
 		"English", "Spanish", "French", "German", "Mandarin Chinese", "Hindi", "Arabic", "Bengali", "Russian", "Portuguese", "Indonesian", "Urdu", "Japanese", "Swahili", "Marathi", "Telugu", "Turkish", "Korean", "Tamil", "Vietnamese", "Italian", "Javanese", "Thai", "Gujarati", "Polish", "Ukrainian", "Malayalam", "Kannada", "Oriya", "Burmese", "Norwegian", "Finnish", "Danish", "Swedish", "Dutch", "Greek", "Czech", "Hungarian", "Romanian", "Bulgarian", "Serbian", "Croatian", "Slovak", "Slovenian", "Lithuanian", "Latvian", "Estonian", "Hebrew", "Persian", "Afrikaans", "Zulu", "Xhosa", "Amharic", "Yoruba", "Igbo", "Hausa", "Nepali", "Sinhala", "Khmer", "Lao", "Mongolian", "Pashto", "Tajik", "Uzbek", "Kurdish", "Albanian", "Macedonian", "Bosnian", "Icelandic", "Irish", "Welsh", "Catalan", "Basque", "Galician", "Luxembourgish", "Maltese"
@@ -207,12 +208,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 	}
 	
 	async function loadInitialData() {
+		// MODIFICATION: Add a guard to prevent multiple refreshes from running at the same time.
+		if (isRefreshingData) {
+			return;
+		}
+		isRefreshingData = true;
+		
 		try {
 			novelsData = await window.api.getNovelsWithCovers();
 			renderNovels();
 		} catch (error) {
 			console.error('Failed to load initial data:', error);
 			loadingMessage.textContent = t('dashboard.errorLoading');
+		} finally {
+			// MODIFICATION: Reset the flag when the operation is complete.
+			isRefreshingData = false;
 		}
 	}
 	
@@ -227,17 +237,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 		novelList.innerHTML = '';
 		novelsData.forEach(novel => {
 			const novelCard = document.createElement('div');
-			// MODIFICATION START: Added 'h-full' and 'flex flex-col' to ensure cards in a row have the same height.
 			novelCard.className = 'card card-compact bg-base-200 shadow-xl transition-shadow h-full flex flex-col';
 			novelCard.dataset.novelId = novel.id;
 			
-			// Add a cache-busting timestamp to the cover image using the novel's last update time.
 			const coverHtml = novel.cover_path
 				? `<img src="file://${novel.cover_path}?t=${new Date(novel.updated_at).getTime()}" alt="${t('dashboard.metaSettings.altCoverFor', { title: novel.title })}" class="w-full">`
 				: `<img src="./assets/bookcover-placeholder.jpg" alt="${t('dashboard.metaSettings.altNoCover')}" class="w-full h-auto">`;
 			
 			
-			// MODIFICATION: Updated card structure to include a detailed stats section.
 			novelCard.innerHTML = `
                 <figure class="cursor-pointer js-open-outline">${coverHtml}</figure>
                 <div class="card-body flex flex-col flex-grow">
@@ -303,7 +310,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
             `;
 			
-			// MODIFICATION START: Populate the new stats elements.
 			const progressBar = novelCard.querySelector('.js-progress-bar');
 			const progressPercent = novelCard.querySelector('.js-progress-percent');
 			const sourceWords = novelCard.querySelector('.js-source-words');
@@ -313,16 +319,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 			const createdDateEl = novelCard.querySelector('.js-created-date');
 			const updatedDateEl = novelCard.querySelector('.js-updated-date');
 			
-			// Calculate progress based on word count.
 			let progress = 0;
 			if (novel.source_word_count > 0) {
 				progress = Math.round((novel.target_word_count / novel.source_word_count) * 100);
 			} else if (novel.target_word_count > 0) {
-				progress = 100; // If source is empty but target has content, consider it 100%
+				progress = 100;
 			}
-			progress = Math.min(100, Math.max(0, progress)); // Clamp between 0 and 100
+			progress = Math.min(100, Math.max(0, progress));
 			
-			// Populate elements with data.
 			if (progressBar) progressBar.value = progress;
 			if (progressPercent) progressPercent.textContent = `${progress}%`;
 			
@@ -334,7 +338,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			if (chapterCountEl) chapterCountEl.textContent = novel.chapter_count;
 			if (blockCount) blockCount.textContent = `${novel.completed_blocks}/${novel.total_blocks}`;
 			
-			// Format and display dates.
 			const dateFormatOptions = { year: 'numeric', month: 'short', day: 'numeric' };
 			if (createdDateEl && novel.created_at) {
 				createdDateEl.textContent = new Date(novel.created_at).toLocaleDateString(undefined, dateFormatOptions);
@@ -342,7 +345,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			if (updatedDateEl && novel.updated_at) {
 				updatedDateEl.textContent = new Date(novel.updated_at).toLocaleDateString(undefined, dateFormatOptions);
 			}
-			// MODIFICATION END
 			
 			novelCard.querySelectorAll('.js-open-editor').forEach(el => el.addEventListener('click', () => window.api.openEditor(novel.id)));
 			novelCard.querySelector('.js-prose-settings').addEventListener('click', () => openProseSettingsModal(novel));
@@ -411,7 +413,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 		}
 	});
 	
-	// event listeners for integrated AI cover generation
 	generateCoverBtn.addEventListener('click', async () => {
 		metaCoverActions.classList.add('hidden');
 		metaAiGenControls.classList.remove('hidden');
@@ -524,4 +525,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 	// --- Initializations ---
 	populateLanguages();
 	initAuth();
+	
+	// MODIFICATION: Add a 'focus' event listener to the window to refresh data.
+	window.addEventListener('focus', () => {
+		// Only refresh if the user is logged in (auth container has a logout button).
+		if (document.getElementById('logout-btn')) {
+			loadInitialData();
+		}
+	});
 });
