@@ -101,7 +101,49 @@
 	</div>
 </dialog>
 
-<!-- MODIFICATION: Added import process overlay -->
+<!-- MODIFICATION START: Added Auto-detect Options Modal -->
+<dialog id="auto-detect-modal" class="modal">
+	<div class="modal-box">
+		<h3 class="font-bold text-lg" data-i18n="import.autoDetectModal.title">Auto-detection Options</h3>
+		<div id="auto-detect-form" class="py-4 space-y-4">
+			<div class="form-control">
+				<label class="label cursor-pointer">
+					<div>
+						<span class="label-text font-semibold" data-i18n="import.autoDetectModal.numericLabel">Numeric or Roman Numerals</span>
+						<p class="text-xs text-base-content/60" data-i18n="import.autoDetectModal.numericDesc">Detects lines containing only a number (e.g., "2", "IV").</p>
+					</div>
+					<input type="checkbox" id="detect-numeric" class="toggle toggle-primary" checked />
+				</label>
+			</div>
+			<div class="form-control">
+				<label class="label cursor-pointer">
+					<div>
+						<span class="label-text font-semibold" data-i18n="import.autoDetectModal.keywordLabel">Keywords (Chapter, Act)</span>
+						<p class="text-xs text-base-content/60" data-i18n="import.autoDetectModal.keywordDesc">Detects lines starting with "Chapter" or "Act".</p>
+					</div>
+					<input type="checkbox" id="detect-keyword" class="toggle toggle-primary" checked />
+				</label>
+			</div>
+			<div class="form-control">
+				<label class="label cursor-pointer">
+					<div>
+						<span class="label-text font-semibold" data-i18n="import.autoDetectModal.allCapsLabel">All-Caps Lines</span>
+						<p class="text-xs text-base-content/60" data-i18n="import.autoDetectModal.allCapsDesc">Detects short lines (under 50 chars) written entirely in uppercase.</p>
+					</div>
+					<input type="checkbox" id="detect-all-caps" class="toggle toggle-primary" />
+				</label>
+			</div>
+		</div>
+		<div class="modal-action">
+			<form method="dialog" class="flex gap-2">
+				<button class="btn" data-i18n="common.cancel">Cancel</button>
+				<button id="run-detection-btn" type="button" class="btn btn-primary" data-i18n="import.autoDetectModal.runDetection">Run Detection</button>
+			</form>
+		</div>
+	</div>
+</dialog>
+<!-- MODIFICATION END -->
+
 <div id="import-overlay" class="hidden fixed inset-0 bg-base-100/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center gap-4">
 	<span class="loading loading-spinner loading-lg"></span>
 	<p id="import-overlay-status" class="text-lg font-semibold"></p>

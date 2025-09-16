@@ -123,7 +123,17 @@
     "chapterLabel_one": "Chapter",
     "chapterLabel_other": "Chapters",
     "importingContent": "Importing content...",
-    "generatingCover": "Generating AI cover..."
+    "generatingCover": "Generating AI cover...",
+    "autoDetectModal": {
+      "title": "Auto-detection Options",
+      "numericLabel": "Numeric or Roman Numerals",
+      "numericDesc": "Detects lines containing only a number (e.g., \"2\", \"IV\").",
+      "keywordLabel": "Keywords (Chapter, Act)",
+      "keywordDesc": "Detects lines starting with \"Chapter\" or \"Act\".",
+      "allCapsLabel": "All-Caps Lines",
+      "allCapsDesc": "Detects short lines (under 50 chars) written entirely in uppercase.",
+      "runDetection": "Run Detection"
+    }
   },
   "outline": {
     "loading": "Loading Outline...",

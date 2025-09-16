@@ -34,9 +34,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 	const importStatus = document.getElementById('js-import-status');
 	const popover = document.getElementById('break-type-popover');
 	const blockSizeInput = document.getElementById('block_size');
-	// MODIFICATION: Get overlay elements
 	const importOverlay = document.getElementById('import-overlay');
 	const importOverlayStatus = document.getElementById('import-overlay-status');
+	
+	const autoDetectModal = document.getElementById('auto-detect-modal');
+	const runDetectionBtn = document.getElementById('run-detection-btn');
 	
 	let currentFilePath = null;
 	let currentMarkIndex = -1;
@@ -126,8 +128,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 			sourceLangSelect.add(new Option(lang, lang));
 			targetLangSelect.add(new Option(lang, lang));
 		});
-		sourceLangSelect.value = 'English';
-		targetLangSelect.value = 'Spanish';
+		sourceLangSelect.value = 'Norwegian';
+		targetLangSelect.value = 'Turkish';
 	}
 	
 	function updateNavButtonState() {
@@ -179,23 +181,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 	 * Processes an array of paragraph texts for a chapter, injecting translation block placeholders.
 	 * @param {string[]} paragraphsArray - An array of paragraph strings.
 	 * @param {number} blockSize - The number of words before inserting a placeholder.
-	 * @returns {string} The final HTML content for the chapter with placeholders like {{TranslationBlock-1}}.
+	 * @param {number} startBlockNumber - The starting number for the translation blocks.
+	 * @returns {{html: string, nextBlockNumber: number}} An object containing the final HTML and the next block number to use.
 	 */
-	function insertTranslationBlockPlaceholders(paragraphsArray, blockSize) {
+	function insertTranslationBlockPlaceholders(paragraphsArray, blockSize, startBlockNumber) {
 		if (!paragraphsArray || paragraphsArray.length === 0) {
-			return '';
+			return { html: '', nextBlockNumber: startBlockNumber };
 		}
 		
-		// If no block size is specified, just return the joined paragraphs.
 		if (!blockSize || blockSize <= 0) {
-			return `<p>${paragraphsArray.join('</p><p>')}</p>`;
+			return { html: `<p>${paragraphsArray.join('</p><p>')}</p>`, nextBlockNumber: startBlockNumber };
 		}
 		
 		let finalHtml = '';
 		let wordCountSinceLastMarker = 0;
-		let blockNumber = 1;
+		let blockNumber = startBlockNumber;
 		
-		// Always start with the first block marker.
 		finalHtml += `{{TranslationBlock-${blockNumber}}}`;
 		blockNumber++;
 		
@@ -207,14 +208,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 				wordCountSinceLastMarker += wordsInP;
 			}
 			
-			// If the word count exceeds the block size, insert a new placeholder.
 			if (wordCountSinceLastMarker >= blockSize && wordsInP > 0) {
 				finalHtml += `{{TranslationBlock-${blockNumber}}}`;
-				wordCountSinceLastMarker = 0; // Reset counter
+				wordCountSinceLastMarker = 0;
 				blockNumber++;
 			}
 		}
-		return finalHtml;
+		return { html: finalHtml, nextBlockNumber: blockNumber };
 	}
 	
 	selectFileBtn.addEventListener('click', async () => {
@@ -277,20 +277,87 @@ document.addEventListener('DOMContentLoaded', async () => {
 	});
 	
 	autoDetectBtn.addEventListener('click', () => {
-		const paragraphs = documentContent.querySelectorAll('p');
-		const isNumeric = /^\d+$/;
-		const isRoman = /^M{0,4}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$/i;
+		if (autoDetectModal) {
+			autoDetectModal.showModal();
+		}
+	});
+	
+	runDetectionBtn.addEventListener('click', () => {
+		const useNumeric = document.getElementById('detect-numeric').checked;
+		const useKeyword = document.getElementById('detect-keyword').checked;
+		const useAllCaps = document.getElementById('detect-all-caps').checked;
 		
-		paragraphs.forEach(p => {
+		// MODIFICATION START: Implement logic to prevent empty chapters.
+		const paragraphs = Array.from(documentContent.querySelectorAll('p'));
+		
+		// Clear existing breaks before applying new ones.
+		paragraphs.forEach(p => p.classList.remove('act-break', 'chapter-break'));
+		
+		let lastBreakIndex = -1;
+		
+		paragraphs.forEach((p, i) => {
 			const text = p.textContent.trim();
-			if (isNumeric.test(text) || isRoman.test(text)) {
-				p.classList.remove('act-break');
-				p.classList.add('chapter-break');
+			if (!text) return; // Skip paragraphs that are only whitespace
+			
+			let isBreak = false;
+			let breakType = 'chapter-break'; // Default to chapter
+			
+			// Rule 1: Numeric or Roman numerals
+			if (useNumeric) {
+				const isNumeric = /^\d+$/.test(text);
+				const isRoman = /^M{0,4}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$/i.test(text);
+				if (isNumeric || isRoman) {
+					isBreak = true;
+				}
+			}
+			
+			// Rule 2: Keywords like "Chapter" or "Act"
+			if (!isBreak && useKeyword) {
+				if (/^\b(act|perde)\b/i.test(text)) {
+					isBreak = true;
+					breakType = 'act-break';
+				} else if (/^\b(chapter|bölüm)\b/i.test(text)) {
+					isBreak = true;
+				}
+			}
+			
+			// Rule 3: Short, all-caps lines
+			if (!isBreak && useAllCaps) {
+				if (text.length > 0 && text.length < 50 && text === text.toUpperCase() && /[A-Z]/i.test(text)) {
+					isBreak = true;
+				}
+			}
+			
+			// If a potential break is found, validate it.
+			if (isBreak) {
+				// The first detected break is always valid.
+				if (lastBreakIndex === -1) {
+					p.classList.add(breakType);
+					lastBreakIndex = i;
+				} else {
+					// For subsequent breaks, check if there's any non-empty paragraph
+					// between the last break and this potential one.
+					let hasContentSinceLastBreak = false;
+					for (let j = lastBreakIndex + 1; j < i; j++) {
+						if (paragraphs[j].textContent.trim() !== '') {
+							hasContentSinceLastBreak = true;
+							break;
+						}
+					}
+					
+					// If content exists, this is a valid break.
+					if (hasContentSinceLastBreak) {
+						p.classList.add(breakType);
+						lastBreakIndex = i;
+					}
+				}
 			}
 		});
+		// MODIFICATION END
 		
 		currentMarkIndex = -1;
 		updateStatus();
+		autoDetectModal.close(); // Manually close the modal
 	});
 	
 	nextMarkBtn.addEventListener('click', () => {
@@ -325,7 +392,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			return;
 		}
 		
-		// MODIFICATION: Show overlay and set initial status
 		importOverlayStatus.textContent = t('import.importingContent');
 		importOverlay.classList.remove('hidden');
 		
@@ -333,6 +399,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 		const acts = [];
 		let currentAct = { title: 'Act 1', chapters: [] };
 		let currentChapter = { title: 'Chapter 1', content: [] };
+		let globalBlockNumber = 1;
 		
 		const paragraphs = documentContent.querySelectorAll('p');
 		
@@ -342,7 +409,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 			
 			if (isActBreak || isChapterBreak) {
 				if (currentChapter.content.length > 0) {
-					currentChapter.content = insertTranslationBlockPlaceholders(currentChapter.content, blockSize);
+					const result = insertTranslationBlockPlaceholders(currentChapter.content, blockSize, globalBlockNumber);
+					currentChapter.content = result.html;
+					globalBlockNumber = result.nextBlockNumber;
 					currentAct.chapters.push(currentChapter);
 				}
 				
@@ -361,7 +430,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 		}
 		
 		if (currentChapter.content.length > 0) {
-			currentChapter.content = insertTranslationBlockPlaceholders(currentChapter.content, blockSize);
+			const result = insertTranslationBlockPlaceholders(currentChapter.content, blockSize, globalBlockNumber);
+			currentChapter.content = result.html;
+			globalBlockNumber = result.nextBlockNumber;
 			currentAct.chapters.push(currentChapter);
 		}
 		if (currentAct.chapters.length > 0) {
@@ -370,21 +441,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 		
 		if (acts.length === 0 && paragraphs.length > 0) {
 			const allContent = Array.from(paragraphs).map(p => p.textContent.trim());
-			currentChapter.content = insertTranslationBlockPlaceholders(allContent, blockSize);
+			const result = insertTranslationBlockPlaceholders(allContent, blockSize, globalBlockNumber);
+			currentChapter.content = result.html;
 			currentAct.chapters.push(currentChapter);
 			acts.push(currentAct);
 		}
 		
 		if (acts.length === 0) {
 			window.showAlert(t('import.alertNoContent'));
-			// MODIFICATION: Hide overlay on validation failure
 			importOverlay.classList.add('hidden');
 			return;
 		}
 		
 		try {
-			// MODIFICATION: The main process now handles the entire flow.
-			// The window will be closed automatically on success.
 			await window.api.importDocumentAsNovel({
 				title: titleInput.value.trim(),
 				source_language: sourceLangSelect.value,
@@ -394,12 +463,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 		} catch (error) {
 			console.error('Import failed:', error);
 			window.showAlert(t('import.errorImport', { message: error.message }), t('common.error'));
-			// MODIFICATION: Hide overlay on error
 			importOverlay.classList.add('hidden');
 		}
 	});
 	
-	// MODIFICATION: Add IPC listener for status updates from the main process
 	window.api.onImportStatusUpdate((event, { statusKey }) => {
 		if (statusKey) {
 			importOverlayStatus.textContent = t(statusKey);

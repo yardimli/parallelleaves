@@ -123,7 +123,17 @@
     "chapterLabel_one": "Bölüm",
     "chapterLabel_other": "Bölüm",
     "importingContent": "İçerik aktarılıyor...",
-    "generatingCover": "Yapay zeka ile kapak oluşturuluyor..."
+    "generatingCover": "Yapay zeka ile kapak oluşturuluyor...",
+    "autoDetectModal": {
+      "title": "Otomatik Algılama Seçenekleri",
+      "numericLabel": "Sayısal veya Romen Rakamları",
+      "numericDesc": "Sadece bir sayı içeren satırları algılar (ör: \"2\", \"IV\").",
+      "keywordLabel": "Anahtar Kelimeler (Bölüm, Perde)",
+      "keywordDesc": "\"Bölüm\" veya \"Perde\" ile başlayan satırları algılar.",
+      "allCapsLabel": "Tamamı Büyük Harf Satırlar",
+      "allCapsDesc": "Tamamı büyük harflerle yazılmış kısa satırları (50 karakterden az) algılar.",
+      "runDetection": "Algılamayı Çalıştır"
+    }
   },
   "outline": {
     "loading": "Özet Yükleniyor...",
