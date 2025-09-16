@@ -76,44 +76,64 @@
 	</div>
 </dialog>
 
-<!-- Meta Settings Modal -->
+<!-- MODIFIED SECTION START: Meta Settings Modal made more compact -->
 <dialog id="meta-settings-modal" class="modal">
-	<div class="modal-box w-11/12 max-w-4xl">
+	<!-- MODIFICATION: Changed max-w-4xl to max-w-3xl for a more compact feel -->
+	<div class="modal-box w-11/12 max-w-3xl">
 		<h3 class="font-bold text-lg" data-i18n="dashboard.metaSettings.title">Edit Project Details</h3>
 		
-		<div class="grid grid-cols-1 md:grid-cols-2 gap-8 py-4">
-			<!-- Left Column: Details -->
-			<form id="meta-settings-form" class="space-y-4">
-				<input type="hidden" id="meta-novel-id" name="novelId">
+		<!-- MODIFICATION: Changed to a 12-column grid for 3/5 (col-span-7) and 2/5 (col-span-5) split. Reduced gap. -->
+		<div class="grid grid-cols-1 md:grid-cols-12 gap-6 py-4">
+			<!-- Left Column: Details (3/5 width) -->
+			<div class="space-y-4 md:col-span-7">
+				<form id="meta-settings-form">
+					<input type="hidden" id="meta-novel-id" name="novelId">
+					
+					<!-- Title -->
+					<div class="form-control">
+						<label for="meta-title" class="label"><span class="label-text" data-i18n="dashboard.metaSettings.projectTitle">Title</span></label>
+						<input type="text" id="meta-title" name="title" class="input input-bordered" required>
+					</div>
+					
+					<!-- Author -->
+					<div class="form-control">
+						<label for="meta-author" class="label"><span class="label-text" data-i18n="dashboard.metaSettings.author">Author</span></label>
+						<input type="text" id="meta-author" name="author" class="input input-bordered" required>
+					</div>
+				</form>
 				
-				<!-- Title -->
-				<div class="form-control">
-					<label for="meta-title" class="label"><span class="label-text" data-i18n="dashboard.metaSettings.projectTitle">Title</span></label>
-					<input type="text" id="meta-title" name="title" class="input input-bordered" required>
+				<!-- AI Generation controls (hidden by default) -->
+				<div id="meta-ai-gen-controls" class="hidden space-y-2">
+					<div class="form-control">
+						<label for="meta-ai-prompt" class="label"><span class="label-text" data-i18n="dashboard.generateCover.prompt">Image Prompt</span></label>
+						<textarea id="meta-ai-prompt" class="textarea textarea-bordered h-24" placeholder="A lone astronaut on a red planet..."></textarea>
+					</div>
+					<div class="flex gap-2 justify-start">
+						<button id="cancel-generate-cover-btn" type="button" class="btn btn-ghost" data-i18n="common.cancel">Cancel</button>
+						<button id="run-generate-cover-btn" type="button" class="btn btn-accent w-40">
+							<span class="js-btn-content flex items-center gap-2"><i class="bi bi-stars"></i> <span data-i18n="dashboard.generateCover.generate">Generate</span></span>
+							<span class="js-btn-spinner animate-spin hidden"><i class="bi bi-arrow-repeat"></i></span>
+						</button>
+					</div>
 				</div>
-				
-				<!-- Author -->
-				<div class="form-control">
-					<label for="meta-author" class="label"><span class="label-text" data-i18n="dashboard.metaSettings.author">Author</span></label>
-					<input type="text" id="meta-author" name="author" class="input input-bordered" required>
-				</div>
-			</form>
+			</div>
 			
-			<!-- Right Column: Cover Art -->
-			<div class="space-y-4">
+			<!-- Right Column: Cover Art (2/5 width) -->
+			<!-- MODIFICATION: Added 'relative' class to position the action buttons -->
+			<div class="space-y-4 md:col-span-5 relative">
+				<!-- MODIFICATION: Action buttons moved here, made into floating icons with tooltips -->
+				<div id="meta-cover-actions" class="absolute top-2 left-2 z-10 flex gap-2">
+					<button id="generate-cover-btn" class="btn btn-neutral btn-square tooltip" data-tip="Generate AI Cover" data-i18n-title="dashboard.metaSettings.generateCover">
+						<i class="bi bi-magic text-xl"></i>
+					</button>
+					<button id="upload-cover-btn" class="btn btn-neutral btn-square tooltip" data-tip="Upload Cover" data-i18n-title="dashboard.metaSettings.uploadCover">
+						<i class="bi bi-upload text-xl"></i>
+					</button>
+				</div>
+				
 				<div id="meta-cover-preview" class="rounded-lg overflow-hidden w-full mx-auto bg-base-300 flex items-center justify-center min-h-48 text-base-content/50">
 					<!-- Preview image will be inserted here by JS -->
 					<span data-i18n="dashboard.metaSettings.noCover">No new cover selected</span>
-				</div>
-				<div class="flex gap-2 justify-center">
-					<button id="generate-cover-btn" class="btn btn-neutral w-40">
-						<span class="js-btn-content flex items-center gap-2"><i class="bi bi-magic"></i> <span data-i18n="dashboard.metaSettings.generateCover">Generate AI Cover</span></span>
-						<span class="js-btn-spinner animate-spin hidden"><i class="bi bi-arrow-repeat"></i></span>
-					</button>
-					<button id="upload-cover-btn" class="btn btn-neutral w-40">
-						<span class="js-btn-content flex items-center gap-2"><i class="bi bi-upload"></i> <span data-i18n="dashboard.metaSettings.uploadCover">Upload Cover</span></span>
-						<span class="js-btn-spinner animate-spin hidden"><i class="bi bi-arrow-repeat"></i></span>
-					</button>
 				</div>
 			</div>
 		</div>
@@ -133,43 +153,9 @@
 		</div>
 	</div>
 </dialog>
+<!-- MODIFIED SECTION END -->
 
-<dialog id="generate-cover-modal" class="modal">
-	<div class="modal-box w-11/12 max-w-4xl">
-		<h3 class="font-bold text-lg" data-i18n="dashboard.generateCover.title">Generate AI Cover Art</h3>
-		
-		<div class="grid grid-cols-1 md:grid-cols-2 gap-8 py-4">
-			<!-- Left Column: Controls -->
-			<form id="generate-cover-form" class="space-y-4">
-				<div class="form-control">
-					<label for="generate-cover-prompt" class="label"><span class="label-text" data-i18n="dashboard.generateCover.prompt">Image Prompt</span></label>
-					<textarea id="generate-cover-prompt" class="textarea textarea-bordered h-48" placeholder="A lone astronaut on a red planet..."></textarea>
-				</div>
-				
-				<div class="text-center">
-					<button type="button" id="run-generate-cover-btn" class="btn btn-accent w-40">
-						<span class="js-btn-content flex items-center gap-2"><i class="bi bi-stars"></i> <span data-i18n="dashboard.generateCover.generate">Generate</span></span>
-						<span class="js-btn-spinner animate-spin hidden"><i class="bi bi-arrow-repeat"></i></span>
-					</button>
-				</div>
-			</form>
-			
-			<!-- Right Column: Preview -->
-			<div class="space-y-4">
-				<div id="generate-cover-preview" class="min-h-64 bg-base-200 rounded-lg flex items-center justify-center">
-					<p class="text-base-content/50" data-i18n="dashboard.generateCover.preview">Image preview will appear here</p>
-				</div>
-			</div>
-		</div>
-		
-		<div class="modal-action">
-			<form method="dialog" class="flex gap-3">
-				<button id="cancel-generate-cover-btn" class="btn" data-i18n="common.cancel">Cancel</button>
-				<button type="button" id="accept-generated-cover-btn" class="btn btn-primary" disabled data-i18n="dashboard.generateCover.accept">Accept Cover</button>
-			</form>
-		</div>
-	</div>
-</dialog>
+<!-- REMOVED: The separate generate-cover-modal is no longer needed as its functionality is integrated above. -->
 
 <dialog id="alert-modal" class="modal">
 	<div class="modal-box w-11/12 max-w-md">
@@ -183,7 +169,6 @@
 	</div>
 </dialog>
 
-<!-- MODIFIED SECTION START: Login Modal internationalized -->
 <dialog id="login-modal" class="modal">
 	<div class="modal-box w-11/12 max-w-sm">
 		<h3 class="font-bold text-lg" data-i18n="dashboard.login.title">Sign In</h3>
@@ -216,7 +201,6 @@
 		</div>
 	</div>
 </dialog>
-<!-- MODIFIED SECTION END -->
 
 <dialog id="language-selection-modal" class="modal modal-bottom sm:modal-middle">
 	<div class="modal-box">

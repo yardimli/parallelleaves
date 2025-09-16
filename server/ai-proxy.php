@@ -1,13 +1,13 @@
 <?php
 
 	/**
-	 * AI Proxy for OpenRouter API
+	 * AI Proxy for OpenRouter and Fal.ai APIs // MODIFIED: Added Fal.ai
 	 *
-	 * This script securely forwards requests from the Electron application to the OpenRouter API.
+	 * This script securely forwards requests from the Electron application to various AI APIs. // MODIFIED
 	 * It validates a user session token for protected actions, logs all interactions to a MySQL database,
 	 * and processes the model list before returning it.
 	 *
-	 * @version 1.5.0
+	 * @version 1.6.0 // MODIFIED
 	 * @author locutus de borg
 	 */
 
@@ -30,6 +30,7 @@
 
 // Get config from environment variables
 	$apiKey = $_ENV['OPEN_ROUTER_API_KEY'] ?? '';
+	$falApiKey = $_ENV['FAL_API_KEY'] ?? ''; // NEW: Add Fal.ai API key
 	$dbHost = $_ENV['DB_HOST'] ?? 'localhost';
 	$dbName = $_ENV['DB_NAME'] ?? '';
 	$dbUser = $_ENV['DB_USER'] ?? '';
@@ -286,7 +287,45 @@
 		http_response_code($httpCode);
 		echo $response;
 		exit;
-	} else {
-		sendJsonError(400, 'Invalid action specified. Supported actions are "chat" and "get_models".');
+	} elseif ($action === 'generate_cover') { // NEW SECTION START
+		if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+			sendJsonError(405, 'Method Not Allowed. Please use POST for cover generation.');
+		}
+		if (empty($falApiKey)) {
+			sendJsonError(500, 'Fal.ai API key is not configured on the server.');
+		}
+
+		$prompt = $payload['prompt'] ?? '';
+		if (empty($prompt)) {
+			sendJsonError(400, 'Image prompt is required.');
+		}
+
+		$falPayload = [
+			'prompt' => $prompt,
+			'image_size' => 'portrait_4_3',
+		];
+
+		$ch = curl_init('https://fal.run/fal-ai/qwen-image');
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($ch, CURLOPT_POST, true);
+		curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($falPayload));
+		curl_setopt($ch, CURLOPT_HTTPHEADER, [
+			'Authorization: Key ' . $falApiKey,
+			'Content-Type: application/json',
+			'Accept: application/json',
+		]);
+
+		$response = curl_exec($ch);
+		$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+		curl_close($ch);
+
+		logInteraction($db, $userId, 'fal_generate_cover', $falPayload, (string)$response, $httpCode);
+
+		http_response_code($httpCode);
+		echo $response;
+		exit;
+	} // NEW SECTION END
+	else {
+		sendJsonError(400, 'Invalid action specified. Supported actions are "chat", "get_models", and "generate_cover".');
 	}
 	// MODIFIED SECTION END

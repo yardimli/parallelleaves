@@ -4,12 +4,10 @@ contextBridge.exposeInMainWorld('api', {
 	// --- App Level ---
 	openImportWindow: () => ipcRenderer.send('app:open-import-window'),
 	getLangFile: (lang) => ipcRenderer.invoke('i18n:get-lang-file', lang),
-	// NEW SECTION START: Auth APIs
 	login: (credentials) => ipcRenderer.invoke('auth:login', credentials),
 	logout: () => ipcRenderer.invoke('auth:logout'),
 	getSession: () => ipcRenderer.invoke('auth:get-session'),
 	openExternalRegister: () => ipcRenderer.send('auth:open-register-url'),
-	// NEW SECTION END
 	
 	// --- Dashboard/Novel Creation ---
 	getNovelsWithCovers: () => ipcRenderer.invoke('novels:getAllWithCovers'),
@@ -59,6 +57,10 @@ contextBridge.exposeInMainWorld('api', {
 	//LLM
 	processLLMText: (data) => ipcRenderer.invoke('llm:process-text', data),
 	getModels: () => ipcRenderer.invoke('ai:getModels'),
+	// NEW SECTION START
+	generateCoverPrompt: (data) => ipcRenderer.invoke('ai:generate-cover-prompt', data),
+	generateCover: (data) => ipcRenderer.invoke('ai:generate-cover', data),
+	// NEW SECTION END
 	
 	// Spellchecker APIs
 	getAvailableSpellCheckerLanguages: () => ipcRenderer.invoke('session:getAvailableSpellCheckerLanguages'),

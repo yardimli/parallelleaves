@@ -142,7 +142,7 @@
     "chapterLabel_other": "bölüm"
   },
   "editor": {
-    "translating": "Çevriliyor: {title}",
+    "translating": "Çeviri: {title}",
     "undo": "Geri Al (Ctrl+Z)",
     "redo": "İleri Al (Ctrl+Y)",
     "paragraph": "Paragraf",

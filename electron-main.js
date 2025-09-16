@@ -5,7 +5,6 @@ const fetch = require('node-fetch');
 const fs = require('fs');
 const mammoth = require('mammoth');
 
-// MODIFIED: Removed dotenv and added a direct require for the new config file.
 const config = require('./config.js');
 
 const {initializeDatabase} = require('./src/database/database.js');
@@ -20,7 +19,6 @@ let codexEditorWindows = new Map();
 let importWindow = null;
 let currentUserSession = null;
 
-// NEW SECTION START: Session Persistence
 const SESSION_FILE_PATH = path.join(app.getPath('userData'), 'session.json');
 
 /**
@@ -43,7 +41,6 @@ function loadSession() {
 		if (fs.existsSync(SESSION_FILE_PATH)) {
 			const sessionData = fs.readFileSync(SESSION_FILE_PATH, 'utf8');
 			const session = JSON.parse(sessionData);
-			// Basic validation to ensure it's a plausible session object
 			if (session && session.token && session.user) {
 				currentUserSession = session;
 				console.log('Session loaded successfully for user:', session.user.username);
@@ -51,7 +48,6 @@ function loadSession() {
 		}
 	} catch (error) {
 		console.error('Failed to load session, clearing corrupted file:', error);
-		// If file is corrupt, clear it to prevent future errors
 		clearSession();
 	}
 }
@@ -68,7 +64,6 @@ function clearSession() {
 		console.error('Failed to clear session file:', error);
 	}
 }
-// NEW SECTION END
 
 // --- Template and HTML Helper Functions ---
 function getTemplate(templateName) {
@@ -93,7 +88,7 @@ function createMainWindow() {
 	mainWindow = new BrowserWindow({
 		width: 1400,
 		height: 1000,
-		icon: path.join(__dirname, 'assets/icon.png'),
+		icon: path.join(__dirname, 'public/assets/icon.png'),
 		title: 'Parallel Leaves - Translation Editor',
 		autoHideMenuBar: true,
 		webPreferences: {
@@ -168,7 +163,7 @@ function createChapterEditorWindow({ novelId, chapterId }) {
 	const chapterEditorWindow = new BrowserWindow({
 		width: 1600,
 		height: 1000,
-		icon: path.join(__dirname, 'assets/icon.png'),
+		icon: path.join(__dirname, 'public/assets/icon.png'),
 		title: 'Parallel Leaves - Translation Editor',
 		autoHideMenuBar: true,
 		webPreferences: {
@@ -232,7 +227,7 @@ function createOutlineWindow(novelId) {
 	const outlineWindow = new BrowserWindow({
 		width: 1800,
 		height: 1000,
-		icon: path.join(__dirname, 'assets/icon.png'),
+		icon: path.join(__dirname, 'public/assets/icon.png'),
 		title: 'Parallel Leaves - Outline Viewer',
 		autoHideMenuBar: true,
 		webPreferences: {
@@ -271,7 +266,7 @@ function createCodexEditorWindow(options) {
 	const codexEditorWindow = new BrowserWindow({
 		width: 1200,
 		height: 800,
-		icon: path.join(__dirname, 'assets/icon.png'),
+		icon: path.join(__dirname, 'public/assets/icon.png'),
 		title: 'Parallel Leaves - Codex Editor',
 		autoHideMenuBar: true,
 		webPreferences: {
@@ -340,7 +335,7 @@ function createImportWindow() {
 	importWindow = new BrowserWindow({
 		width: 1200,
 		height: 800,
-		icon: path.join(__dirname, 'assets/icon.png'),
+		icon: path.join(__dirname, 'public/assets/icon.png'),
 		title: 'Parallel Leaves - Import Document',
 		autoHideMenuBar: true,
 		webPreferences: {
@@ -370,7 +365,6 @@ function setupIpcHandlers() {
 	});
 	
 	// --- Authentication Handlers ---
-	// MODIFIED: URLs are now sourced from the config.js file.
 	const LOGIN_API_URL = config.LOGIN_API_URL;
 	const REGISTER_URL = config.REGISTER_URL;
 	
@@ -391,7 +385,6 @@ function setupIpcHandlers() {
 					token: data.token,
 					user: data.user
 				};
-				// MODIFIED: Save the session to a file for persistence.
 				saveSession(currentUserSession);
 				return { success: true, session: currentUserSession };
 			} else {
@@ -404,7 +397,6 @@ function setupIpcHandlers() {
 	});
 	
 	ipcMain.handle('auth:logout', () => {
-		// MODIFIED: Clear the persisted session file on logout.
 		clearSession();
 		currentUserSession = null;
 		return { success: true };
@@ -662,7 +654,7 @@ function setupIpcHandlers() {
 		}
 	});
 	
-	ipcMain.handle('novels:updateNovelCover ', async (event, {novelId, coverInfo}) => {
+	ipcMain.handle('novels:updateNovelCover', async (event, {novelId, coverInfo}) => {
 		let localPath;
 		let imageType = 'unknown';
 		
@@ -989,7 +981,6 @@ function setupIpcHandlers() {
 				categoryNames.push('Characters', 'Locations', 'Items', 'Lore');
 			}
 			
-			// MODIFIED: Default model is now sourced from config.js
 			const model = config.OPEN_ROUTER_MODEL || 'openai/gpt-4o-mini';
 			
 			const novel = db.prepare('SELECT target_language FROM novels WHERE id = ?').get(novelId);
@@ -1098,13 +1089,49 @@ function setupIpcHandlers() {
 	ipcMain.handle('ai:getModels', async () => {
 		try {
 			const token = currentUserSession ? currentUserSession.token : null;
-			// MODIFIED: The data from getOpenRouterModels is now already processed by the server.
 			const processedModels = await aiService.getOpenRouterModels(false, token);
-			console.log('Fetched and processed AI models:', processedModels);
 			return {success: true, models: processedModels};
 		} catch (error) {
 			console.error('Failed to get or process AI models:', error);
 			return {success: false, message: error.message};
+		}
+	});
+	
+	ipcMain.handle('ai:generate-cover-prompt', async (event, { novelTitle }) => {
+		try {
+			const token = currentUserSession ? currentUserSession.token : null;
+			const prompt = await aiService.generateCoverPrompt({ title: novelTitle, token });
+			return { success: true, prompt };
+		} catch (error) {
+			console.error('Failed to generate cover prompt in main process:', error);
+			return { success: false, message: error.message };
+		}
+	});
+	
+	ipcMain.handle('ai:generate-cover', async (event, { novelId, prompt }) => {
+		try {
+			const token = currentUserSession ? currentUserSession.token : null;
+			const falResponse = await aiService.generateCoverImageViaProxy({ prompt, token });
+			
+			if (!falResponse || !falResponse.images || !falResponse.images[0]?.url) {
+				throw new Error('Image generation failed or did not return a valid URL.');
+			}
+			
+			const imageUrl = falResponse.images[0].url;
+			
+			// MODIFIED: Corrected the call to storeImageFromUrl. The prompt is not used as part of the filename.
+			const localPaths = await imageHandler.storeImageFromUrl(imageUrl, novelId, 'generated-fal');
+			
+			if (!localPaths || !localPaths.original_path) {
+				throw new Error('Failed to download and save the generated cover.');
+			}
+			
+			const fullPath = path.join(imageHandler.IMAGES_DIR, localPaths.original_path);
+			
+			return { success: true, filePath: fullPath, localPath: localPaths.original_path };
+		} catch (error) {
+			console.error('Failed to generate cover image in main process:', error);
+			return { success: false, message: error.message };
 		}
 	});
 	
@@ -1218,7 +1245,6 @@ function setupIpcHandlers() {
 // --- App Lifecycle Events ---
 app.on('ready', () => {
 	db = initializeDatabase();
-	// MODIFIED: Load any persisted session before setting up the app.
 	loadSession();
 	setupIpcHandlers();
 	

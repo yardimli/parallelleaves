@@ -50,6 +50,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 	const uploadCoverBtn = document.getElementById('upload-cover-btn');
 	const deleteNovelBtn = document.getElementById('delete-novel-btn');
 	
+	// NEW: AI Cover Generation elements
+	const metaCoverActions = document.getElementById('meta-cover-actions');
+	const metaAiGenControls = document.getElementById('meta-ai-gen-controls');
+	const metaAiPrompt = document.getElementById('meta-ai-prompt');
+	const runGenerateCoverBtn = document.getElementById('run-generate-cover-btn');
+	const cancelGenerateCoverBtn = document.getElementById('cancel-generate-cover-btn');
+	
 	let novelsData = [];
 	let stagedCover = null;
 	
@@ -86,11 +93,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
 			document.getElementById('logout-btn').addEventListener('click', handleLogout);
 			loadInitialData(); // Load projects only when logged in
-			// MODIFIED SECTION START: Pre-fetch AI models to warm up the cache for other windows.
 			window.api.getModels().catch(err => {
 				console.error('Failed to pre-fetch AI models on startup:', err);
 			});
-			// MODIFIED SECTION END
 		} else {
 			authContainer.innerHTML = `
                 <button id="login-btn" class="btn btn-primary">${t('dashboard.signIn')}</button>
@@ -181,8 +186,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 		if (currentNovel && currentNovel.cover_path) {
 			metaCoverPreview.innerHTML = `<img src="file://${currentNovel.cover_path}?t=${Date.now()}" alt="${t('dashboard.metaSettings.altCurrentCover')}" class="w-full h-auto">`;
 		} else {
-			metaCoverPreview.innerHTML = `<img src="./assets/book-placeholder.png" alt="${t('dashboard.metaSettings.altNoCover')}" class="w-full h-auto">`;
+			metaCoverPreview.innerHTML = `<img src="./assets/bookcover-placeholder.jpg" alt="${t('dashboard.metaSettings.altNoCover')}" class="w-full h-auto">`;
 		}
+		
+		// MODIFIED: Reset AI generation UI state
+		metaAiGenControls.classList.add('hidden');
+		metaCoverActions.classList.remove('hidden');
 		
 		metaModal.showModal();
 	}
@@ -224,7 +233,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 			
 			const coverHtml = novel.cover_path
 				? `<img src="file://${novel.cover_path}" alt="${t('dashboard.metaSettings.altCoverFor', { title: novel.title })}" class="w-full">`
-				: `<img src="./assets/book-placeholder.png" alt="${t('dashboard.metaSettings.altNoCover')}" class="w-full h-auto">`;
+				: `<img src="./assets/bookcover-placeholder.jpg" alt="${t('dashboard.metaSettings.altNoCover')}" class="w-full h-auto">`;
 			
 			
 			novelCard.innerHTML = `
@@ -310,15 +319,70 @@ document.addEventListener('DOMContentLoaded', async () => {
 		}
 	});
 	
+	// MODIFIED SECTION START: New event listeners for integrated AI cover generation
 	generateCoverBtn.addEventListener('click', async () => {
-		const novelId = parseInt(metaNovelIdInput.value, 10);
-		genCoverPrompt.value = '';
-		genCoverPreview.innerHTML = `<p class="text-base-content/50" data-i18n="dashboard.generateCover.preview">${t('dashboard.generateCover.preview')}</p>`;
-		acceptGenCoverBtn.disabled = true;
-		genCoverModal.showModal();
+		metaCoverActions.classList.add('hidden');
+		metaAiGenControls.classList.remove('hidden');
+		metaAiPrompt.value = '';
+		metaAiPrompt.disabled = true;
 		
-		setButtonLoading(generateCoverBtn, false);
+		const novelTitle = metaForm.querySelector('#meta-title').value;
+		try {
+			const result = await window.api.generateCoverPrompt({ novelTitle });
+			if (result.success && result.prompt) {
+				metaAiPrompt.value = result.prompt;
+			} else {
+				metaAiPrompt.value = `A book cover for a story titled "${novelTitle}"`;
+			}
+		} catch (error) {
+			console.error('Failed to generate cover prompt:', error);
+			metaAiPrompt.value = `A book cover for a story titled "${novelTitle}"`;
+		} finally {
+			metaAiPrompt.disabled = false;
+		}
 	});
+	
+	cancelGenerateCoverBtn.addEventListener('click', () => {
+		metaAiGenControls.classList.add('hidden');
+		metaCoverActions.classList.remove('hidden');
+	});
+	
+	runGenerateCoverBtn.addEventListener('click', async () => {
+		const novelId = parseInt(metaNovelIdInput.value, 10);
+		const prompt = metaAiPrompt.value.trim();
+		if (!prompt) {
+			showAlert('Please enter an image prompt.');
+			return;
+		}
+		
+		setButtonLoading(runGenerateCoverBtn, true);
+		metaCoverPreview.innerHTML = `<div class="flex flex-col items-center justify-center h-full gap-2">
+			<span class="loading loading-spinner loading-lg"></span>
+			<p class="text-sm text-base-content/60">Generating image...</p>
+		</div>`;
+		
+		try {
+			const result = await window.api.generateCover({ novelId, prompt });
+			if (result.success && result.filePath) {
+				stagedCover = { type: 'local', data: result.filePath };
+				metaCoverPreview.innerHTML = `<img src="file://${result.filePath}?t=${Date.now()}" alt="${t('dashboard.metaSettings.altStagedCover')}" class="w-full h-auto">`;
+			} else {
+				throw new Error(result.message || 'Failed to generate cover.');
+			}
+		} catch (error) {
+			console.error('Failed to generate cover:', error);
+			window.showAlert('Error generating cover: ' + error.message);
+			const currentNovel = novelsData.find(n => n.id === novelId);
+			if (currentNovel && currentNovel.cover_path) {
+				metaCoverPreview.innerHTML = `<img src="file://${currentNovel.cover_path}?t=${Date.now()}" alt="${t('dashboard.metaSettings.altCurrentCover')}" class="w-full h-auto">`;
+			} else {
+				metaCoverPreview.innerHTML = `<img src="./assets/bookcover-placeholder.jpg" alt="${t('dashboard.metaSettings.altNoCover')}" class="w-full h-auto">`;
+			}
+		} finally {
+			setButtonLoading(runGenerateCoverBtn, false);
+		}
+	});
+	// MODIFIED SECTION END
 	
 	uploadCoverBtn.addEventListener('click', async () => {
 		const filePath = await window.api.showOpenImageDialog();

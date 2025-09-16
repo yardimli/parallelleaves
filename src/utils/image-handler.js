@@ -12,7 +12,7 @@ const IMAGES_DIR = path.join(app.getPath('userData'), 'images');
  * @param {string} url - The URL of the image to download.
  * @param {string} novelId - The ID of the novel to associate the image with.
  * @param {string} filenameBase - The base name for the file (e.g., 'cover').
- * @returns {Promise<string|null>} The local path to the saved image or null on failure.
+ * @returns {Promise<object|null>} An object containing the local paths to the saved image or null on failure.
  */
 async function storeImageFromUrl(url, novelId, filenameBase) {
 	try {
@@ -27,16 +27,32 @@ async function storeImageFromUrl(url, novelId, filenameBase) {
 		// Ensure the directory exists.
 		fs.mkdirSync(novelDir, { recursive: true });
 		
-		// Determine file extension from URL or content type.
-		const extension = path.extname(new URL(url).pathname) || '.jpg';
+		// MODIFIED: Improved file extension detection from the URL, with a fallback.
+		let extension = '.png'; // Default to png for AI generated images
+		try {
+			const urlPath = new URL(url).pathname;
+			const urlExt = path.extname(urlPath);
+			if (['.png', '.jpg', '.jpeg', '.webp'].includes(urlExt)) {
+				extension = urlExt;
+			}
+		} catch (e) {
+			console.warn("Could not parse URL to determine extension, defaulting to .png");
+		}
+		
 		const filename = `${filenameBase}-${Date.now()}${extension}`;
 		const localPath = path.join(novelDir, filename);
 		
 		fs.writeFileSync(localPath, buffer);
 		console.log(`Image saved to: ${localPath}`);
 		
-		// Return a path relative to the images directory for storage in the DB.
-		return path.join('novels', String(novelId), filename);
+		const relativePath = path.join('novels', String(novelId), filename);
+		
+		// MODIFIED: Return an object consistent with storeImageFromPath to fix the bug.
+		// The calling function expects an object with an `original_path` property.
+		return {
+			original_path: relativePath,
+			thumbnail_path: relativePath,
+		};
 		
 	} catch (error) {
 		console.error(`Failed to store image from URL '${url}':`, error);

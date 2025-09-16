@@ -204,7 +204,7 @@ async function startAiAction (params) {
 			);
 			
 			if (replacementData) {
-				console.log( replacementData );
+				//console.log( replacementData );
 				aiActionRange.to = replacementData.finalRange.to;
 				createFloatingToolbar(aiActionRange.from, aiActionRange.to, model);
 				

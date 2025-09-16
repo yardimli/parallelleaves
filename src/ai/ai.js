@@ -2,9 +2,9 @@ const fetch = require('node-fetch');
 const fs = require('fs');
 const path = require('path');
 const { app } = require('electron');
-const config = require('../../config.js'); // MODIFIED: Load from config.js instead of .env
+const config = require('../../config.js');
 
-const AI_PROXY_URL = config.AI_PROXY_URL; // MODIFIED: Use config object
+const AI_PROXY_URL = config.AI_PROXY_URL;
 
 /**
  * A generic function to call the AI proxy.
@@ -15,7 +15,6 @@ const AI_PROXY_URL = config.AI_PROXY_URL; // MODIFIED: Use config object
  */
 async function callOpenRouter(payload, token) {
 	if (!AI_PROXY_URL) {
-		// MODIFIED: Updated error message
 		throw new Error('AI Proxy URL is not configured in config.js.');
 	}
 	
@@ -28,7 +27,6 @@ async function callOpenRouter(payload, token) {
 		'Content-Type': 'application/json'
 	};
 	
-	// MODIFIED: Add auth token to the payload instead of headers
 	if (token) {
 		payload.auth_token = token;
 	}
@@ -64,6 +62,71 @@ async function callOpenRouter(payload, token) {
 	
 	return data;
 }
+
+// NEW SECTION START
+/**
+ * Generates a creative prompt for a book cover based on its title.
+ * @param {object} params - The parameters for prompt generation.
+ * @param {string} params.title - The title of the novel.
+ * @param {string|null} params.token - The user's session token.
+ * @returns {Promise<string|null>} The generated prompt string, or null on failure.
+ */
+async function generateCoverPrompt({ title, token }) {
+	const modelId = config.OPEN_ROUTER_MODEL || 'openai/gpt-4o-mini';
+	const prompt = `Using the book title "${title}", write a clear and simple description of a scene for an AI image generator to create a book cover. Include the setting, mood, and main objects. Include the "${title}" in the prompt Return the result as a JSON with one key "prompt". Example: with title "Blue Scape" {"prompt": "An astronaut on a red planet looking at a big cosmic cloud, realistic, add the title "Blue Scape" to the image."}`;
+	
+	try {
+		const content = await callOpenRouter({
+			model: modelId,
+			messages: [{ role: 'user', content: prompt }],
+			response_format: { type: 'json_object' },
+			temperature: 0.7,
+		}, token);
+		return content.prompt || null;
+	} catch (error) {
+		console.error('Failed to generate cover prompt:', error);
+		return null;
+	}
+}
+
+/**
+ * Calls the server-side proxy to generate an image using Fal.ai.
+ * @param {object} params - The parameters for image generation.
+ * @param {string} params.prompt - The text prompt for the image.
+ * @param {string|null} params.token - The user's session token.
+ * @returns {Promise<any>} The JSON response from the proxy (which is the Fal.ai response).
+ */
+async function generateCoverImageViaProxy({ prompt, token }) {
+	if (!AI_PROXY_URL) {
+		throw new Error('AI Proxy URL is not configured in config.js.');
+	}
+	
+	const payload = {
+		prompt: prompt,
+		auth_token: token,
+	};
+	
+	const response = await fetch(`${AI_PROXY_URL}?action=generate_cover`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify(payload),
+	});
+	
+	if (!response.ok) {
+		const errorText = await response.text();
+		console.error('AI Proxy Cover Generation Error:', errorText);
+		try {
+			const errorJson = JSON.parse(errorText);
+			const message = errorJson.error?.message || errorText;
+			throw new Error(`AI Proxy Error: ${response.status} ${message}`);
+		} catch (e) {
+			throw new Error(`AI Proxy Error: ${response.status} ${errorText}`);
+		}
+	}
+	
+	return response.json();
+}
+// NEW SECTION END
 
 /**
  * Generates codex entries based on a novel outline.
@@ -199,18 +262,18 @@ async function getOpenRouterModels(forceRefresh = false, token) {
 	if (!forceRefresh && fs.existsSync(cacheFile) && (Date.now() - fs.statSync(cacheFile).mtimeMs) / 1000 < cacheDurationInSeconds) {
 		try {
 			const cachedContent = fs.readFileSync(cacheFile, 'utf8');
-			return JSON.parse(cachedContent);
+			const JSONcachedContent = JSON.parse(cachedContent);
+			console.log('Loaded models from cache.');
+			return JSONcachedContent;
 		} catch (error) {
 			console.error('Failed to read or parse model cache:', error);
 		}
 	}
 	
 	if (!AI_PROXY_URL) {
-		// MODIFIED: Updated error message
 		throw new Error('AI Proxy URL is not configured in config.js.');
 	}
 	
-	// MODIFIED: Switched to POST to send token in payload.
 	const headers = {
 		'Accept': 'application/json',
 		'Content-Type': 'application/json',
@@ -242,10 +305,10 @@ async function getOpenRouterModels(forceRefresh = false, token) {
 		console.error('Failed to write model cache:', error);
 	}
 	
+	console.log('Fetched models from AI Proxy API.');
 	return processedModelsData;
 }
 
-// REMOVED: processModelsForView function is no longer needed here.
 
 /**
  * Suggests a title and category for a new codex entry based on selected text.
@@ -294,4 +357,6 @@ module.exports = {
 	processLLMText,
 	getOpenRouterModels,
 	suggestCodexDetails,
+	generateCoverPrompt, // NEW: Export new function
+	generateCoverImageViaProxy, // NEW: Export new function
 };
