@@ -143,14 +143,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 				applyTranslationsTo(modalContent); // MODIFIED: Apply translations to the modal content
 				const select = modalContent.querySelector('.js-llm-model-select');
 				const result = await window.api.getModels();
-				if (result.success && result.models.length > 0) {
+				if (result.success && result.models.data.length > 0) {
 					select.innerHTML = '';
-					result.models.forEach(model => {
+					result.models.data.forEach(model => {
 						const option = new Option(model.name, model.id);
 						select.appendChild(option);
 					});
 					const defaultModel = 'openai/gpt-4o-mini';
-					if (result.models.some(m => m.id === defaultModel)) {
+					if (result.models.data.some(m => m.id === defaultModel)) {
 						select.value = defaultModel;
 					}
 				} else {

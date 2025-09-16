@@ -1100,6 +1100,7 @@ function setupIpcHandlers() {
 			const token = currentUserSession ? currentUserSession.token : null;
 			// MODIFIED: The data from getOpenRouterModels is now already processed by the server.
 			const processedModels = await aiService.getOpenRouterModels(false, token);
+			console.log('Fetched and processed AI models:', processedModels);
 			return {success: true, models: processedModels};
 		} catch (error) {
 			console.error('Failed to get or process AI models:', error);

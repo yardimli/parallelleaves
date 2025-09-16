@@ -175,23 +175,25 @@
 // Handle different actions based on a query parameter
 	$action = $_GET['action'] ?? 'chat';
 
-// MODIFIED SECTION START: Handle public and private actions separately
+// MODIFIED SECTION START: Handle public and private actions separately, using payload for auth token
 	if ($action === 'get_models') {
 		// This action is public. We'll try to get a user ID for logging but won't fail if it's not present.
 		$userId = 0; // Default for anonymous users
-		if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
-			$authHeader = $_SERVER['HTTP_AUTHORIZATION'];
-			if (preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
-				$token = $matches[1];
-				$stmt = $db->prepare('SELECT id FROM users WHERE session_token = ? AND token_expires_at > NOW()');
-				$stmt->bind_param('s', $token);
-				$stmt->execute();
-				$result = $stmt->get_result();
-				$user = $result->fetch_assoc();
-				$stmt->close();
-				if ($user) {
-					$userId = (int)$user['id'];
-				}
+
+		// MODIFIED: Get token from payload for logging.
+		$requestBody = file_get_contents('php://input');
+		$payload = json_decode($requestBody, true) ?? [];
+		$token = $payload['auth_token'] ?? null;
+
+		if ($token) {
+			$stmt = $db->prepare('SELECT id FROM users WHERE session_token = ? AND token_expires_at > NOW()');
+			$stmt->bind_param('s', $token);
+			$stmt->execute();
+			$result = $stmt->get_result();
+			$user = $result->fetch_assoc();
+			$stmt->close();
+			if ($user) {
+				$userId = (int)$user['id'];
 			}
 		}
 
@@ -207,6 +209,7 @@
 		$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 		curl_close($ch);
 
+		// Pass null for requestPayload as we don't want to log the token.
 		logInteraction($db, $userId, $action, null, (string)$response, $httpCode);
 
 		if ($httpCode >= 400) {
@@ -225,41 +228,40 @@
 	}
 
 // All other actions require authentication.
+	$requestBody = file_get_contents('php://input');
+	$payload = json_decode($requestBody, true);
+
+	if (json_last_error() !== JSON_ERROR_NONE) {
+		sendJsonError(400, 'Invalid JSON payload received.');
+	}
+
+	$token = $payload['auth_token'] ?? null;
+	if (!$token) {
+		sendJsonError(401, 'Authentication token missing from payload.');
+	}
+
+// Authenticate user
 	$userId = null;
-	if (!isset($_SERVER['HTTP_AUTHORIZATION'])) {
-		sendJsonError(401, 'Authorization header missing.');
-	}
+	$stmt = $db->prepare('SELECT id FROM users WHERE session_token = ? AND token_expires_at > NOW()');
+	$stmt->bind_param('s', $token);
+	$stmt->execute();
+	$result = $stmt->get_result();
+	$user = $result->fetch_assoc();
+	$stmt->close();
 
-	$authHeader = $_SERVER['HTTP_AUTHORIZATION'];
-	if (preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
-		$token = $matches[1];
-		$stmt = $db->prepare('SELECT id FROM users WHERE session_token = ? AND token_expires_at > NOW()');
-		$stmt->bind_param('s', $token);
-		$stmt->execute();
-		$result = $stmt->get_result();
-		$user = $result->fetch_assoc();
-		$stmt->close();
-
-		if ($user) {
-			$userId = (int)$user['id'];
-		} else {
-			sendJsonError(401, 'Invalid or expired session token.');
-		}
+	if ($user) {
+		$userId = (int)$user['id'];
 	} else {
-		sendJsonError(401, 'Malformed Authorization header.');
+		sendJsonError(401, 'Invalid or expired session token.');
 	}
+
+// Remove token from payload before logging and forwarding
+	unset($payload['auth_token']);
 
 // Handle authenticated actions
 	if ($action === 'chat') {
 		if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 			sendJsonError(405, 'Method Not Allowed. Please use POST for chat completions.');
-		}
-
-		$requestBody = file_get_contents('php://input');
-		$payload = json_decode($requestBody, true);
-
-		if (json_last_error() !== JSON_ERROR_NONE) {
-			sendJsonError(400, 'Invalid JSON payload received.');
 		}
 
 		if (isset($payload['stream'])) {

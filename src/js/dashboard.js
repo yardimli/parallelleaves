@@ -78,7 +78,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 		}
 	}
 	
-	// MODIFIED SECTION START: Updated to use i18n function for dynamic text
 	function updateAuthUI(session) {
 		if (session && session.user) {
 			authContainer.innerHTML = `
@@ -87,6 +86,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
 			document.getElementById('logout-btn').addEventListener('click', handleLogout);
 			loadInitialData(); // Load projects only when logged in
+			// MODIFIED SECTION START: Pre-fetch AI models to warm up the cache for other windows.
+			window.api.getModels().catch(err => {
+				console.error('Failed to pre-fetch AI models on startup:', err);
+			});
+			// MODIFIED SECTION END
 		} else {
 			authContainer.innerHTML = `
                 <button id="login-btn" class="btn btn-primary">${t('dashboard.signIn')}</button>
@@ -99,7 +103,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			loginModal.showModal();
 		}
 	}
-	// MODIFIED SECTION END
 	
 	async function handleLogin(event) {
 		event.preventDefault();
@@ -120,7 +123,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 					updateAuthUI(result.session);
 				}
 			} else {
-				// MODIFIED: Translate error message key from server
 				loginErrorMsg.textContent = t(result.message) || t('dashboard.login.failed');
 				loginErrorMsg.classList.remove('hidden');
 			}

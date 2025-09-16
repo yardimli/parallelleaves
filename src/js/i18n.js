@@ -5,7 +5,7 @@ let translations = {};
 export const supportedLanguages = {
 	en: 'English',
 	tr: 'Türkçe',
-	tlh: 'tlhIngan Hol'
+	tlh: 'Klingon'
 };
 // MODIFIED SECTION END
 

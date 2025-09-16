@@ -34,6 +34,19 @@
     "loadingProjects": "jup choq...",
     "noProjects": "mugh jup naQ DIch pagh.",
     "errorLoading": "jup choq Qob.",
+    "welcome": "yap, {username}",
+    "signOut": "mej",
+    "signIn": "yap",
+    "signInPrompt": "jup nugh Danaw'meH yap.",
+    "login": {
+      "title": "yap",
+      "username": "lo'wI' pagh",
+      "password": "pegh mu'",
+      "noAccount": "jup lughbe''a'?",
+      "signUp": "nugh chenmoH",
+      "signIn": "yap",
+      "failed": "yap lugh pagh. DIch chup yaj."
+    },
     "proseSettings": {
       "title": "Hol DIch mI'",
       "description": "Hol chanvo' 'e' nugh je DIch mI' naDev.",
@@ -229,15 +242,15 @@
       "loadingCodex": "naQ mugh nugh choq...",
       "useCodex": "naQ mugh nugh lo'",
       "system": {
-        "base": "DIch ghItlhmegh choqwI' SoH.\n\nghItlhmegh DIchlu'DI', naDev lo'taHvIS choq: <instructions>{instructions}</instructions>\n\nghItlhmegh mI' DIch choq 'ej DIch DIch. {language} DIch mI' je DIch lo'.\n\nchoqlu'meH ghItlhmegh neH DIch, Hoch pagh.",
-        "defaultInstruction": "DIchlu'meH ghItlhmegh choq."
+        "base": "You are an expert prose editor.\n\nWhenever you're given text, rephrase it using the following instructions: <instructions>{instructions}</instructions>\n\nImitiate and keep the current writing style, and leave mannerisms, word choice and sentence structure intact.\nYou are free to remove redundant lines of speech. Keep the same tense and stylistic choices. Use {language} spelling and grammar.\n\nOnly return the rephrased text, nothing else.",
+        "defaultInstruction": "Rephrase the given text."
       },
       "user": {
-        "codexBlock": "jup DIch/Daq/DIch/DIch... DIch lo'taHvIS:\n<codex>\n{codexContent}\n</codex>",
-        "surroundingTextBlock": "Daq De'meH, DIch Hap mu'tlhegh DIch tu', DIch DIchlu'be':\n<textBefore>\n{wordsBefore}\n</textBefore>\n<textAfter>\n{wordsAfter}\n</textAfter>",
-        "surroundingTextBlockBeforeOnly": "Daq De'meH, DIch Hap mu'tlhegh DIch tu', DIch DIchlu'be':\n<textBefore>\n{wordsBefore}\n</textBefore>",
-        "surroundingTextBlockAfterOnly": "Daq De'meH, DIch Hap mu'tlhegh DIch tu', DIch DIchlu'be':\n<textAfter>\n{wordsAfter}\n</textAfter>",
-        "textToRewrite": "choqmeH ghItlhmegh:\n<text words=\"{wordCount}\">\n{text}\n</text>"
+        "codexBlock": "Take into account the following glossary of characters/locations/items/lore... when writing your response:\n<codex>\n{codexContent}\n</codex>",
+        "surroundingTextBlock": "For contextual information, refer to surrounding words in the scene, DO NOT REPEAT THEM:\n<textBefore>\n{wordsBefore}\n</textBefore>\n<textAfter>\n{wordsAfter}\n</textAfter>",
+        "surroundingTextBlockBeforeOnly": "For contextual information, refer to surrounding words in the scene, DO NOT REPEAT THEM:\n<textBefore>\n{wordsBefore}\n</textBefore>",
+        "surroundingTextBlockAfterOnly": "For contextual information, refer to surrounding words in the scene, DO NOT REPEAT THEM:\n<textAfter>\n{wordsAfter}\n</textAfter>",
+        "textToRewrite": "Text to rewrite:\n<text words=\"{wordCount}\">\n{text}\n</text>"
       }
     },
     "translate": {
@@ -252,14 +265,14 @@
       "prevPairs": "Hoch mugh jup",
       "prevPairsHelp": "val DIch Daq N Hoch mugh raS DIch. (0 DIch).",
       "system": {
-        "base": "DIch ghItlhmegh mughwI' SoH. DIch {sourceLanguage} vo' {targetLanguage} DIch mugh.\nDIch nugh, mI', je DIch naDev choq. DIch mI' DIch DIch.\n\n{instructionsBlock}\n\nmughlu'meH ghItlhmegh neH DIch, Hoch pagh.",
-        "instructionsBlock": "DIch naDev DIch: <instructions>{instructions}</instructions>"
+        "base": "You are an expert literary translator. Your task is to translate a text from {sourceLanguage} to {targetLanguage}.\nPreserve the original tone, style, and literary devices as much as possible. Maintain the original paragraph breaks.\n\n{instructionsBlock}\n\nOnly return the translated text, nothing else.",
+        "instructionsBlock": "Follow these specific instructions: <instructions>{instructions}</instructions>"
       },
       "user": {
-        "codexBlock": "DIch mu' nugh mughmeH mu'meH naQ lo'. mu' DIch mughbe' naQ DIch mugh DIch nugh DIch.\n<glossary>\n{codexContent}\n</glossary>",
-        "codexEntry": "mu' ({sourceLanguage}): {title}\nDIch/mughmeH naDev: {content}\n\n{targetLanguage} DIch mugh: {translation}",
-        "codexEntryNoTranslation": "(DIch mugh DIch pagh)",
-        "textToTranslate": "{sourceLanguage} vo' {targetLanguage} DIch ghItlhmegh mugh:\n\n<text>\n{text}\n</text>"
+        "codexBlock": "Use the following glossary for consistent translation of key terms. Do not translate the terms literally if the glossary provides a specific translation or context.\n<glossary>\n{codexContent}\n</glossary>",
+        "codexEntry": "Term ({sourceLanguage}): {title}\nDescription/Translation Hint: {content}\n\nTranslation in {targetLanguage}: {translation}",
+        "codexEntryNoTranslation": "(No specific translation provided)",
+        "textToTranslate": "Translate the following text from {sourceLanguage} to {targetLanguage}:\n\n<text>\n{text}\n</text>"
       }
     },
     "preview": {

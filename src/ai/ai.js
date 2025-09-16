@@ -27,8 +27,10 @@ async function callOpenRouter(payload, token) {
 	const headers = {
 		'Content-Type': 'application/json'
 	};
+	
+	// MODIFIED: Add auth token to the payload instead of headers
 	if (token) {
-		headers['Authorization'] = `Bearer ${token}`;
+		payload.auth_token = token;
 	}
 	
 	const response = await fetch(`${AI_PROXY_URL}?action=chat`, {
@@ -208,16 +210,21 @@ async function getOpenRouterModels(forceRefresh = false, token) {
 		throw new Error('AI Proxy URL is not configured in config.js.');
 	}
 	
+	// MODIFIED: Switched to POST to send token in payload.
 	const headers = {
 		'Accept': 'application/json',
+		'Content-Type': 'application/json',
 	};
+	
+	const payload = {};
 	if (token) {
-		headers['Authorization'] = `Bearer ${token}`;
+		payload.auth_token = token;
 	}
 	
 	const response = await fetch(`${AI_PROXY_URL}?action=get_models`, {
-		method: 'GET',
+		method: 'POST',
 		headers: headers,
+		body: JSON.stringify(payload),
 	});
 	
 	if (!response.ok) {
