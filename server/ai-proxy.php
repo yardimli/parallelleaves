@@ -1,13 +1,13 @@
 <?php
 
 	/**
-	 * AI Proxy for OpenRouter and Fal.ai APIs // MODIFIED: Added Fal.ai
+	 * AI Proxy for OpenRouter and Fal.ai APIs
 	 *
-	 * This script securely forwards requests from the Electron application to various AI APIs. // MODIFIED
+	 * This script securely forwards requests from the Electron application to various AI APIs.
 	 * It validates a user session token for protected actions, logs all interactions to a MySQL database,
 	 * and processes the model list before returning it.
 	 *
-	 * @version 1.6.0 // MODIFIED
+	 * @version 1.6.0
 	 * @author locutus de borg
 	 */
 
@@ -30,7 +30,7 @@
 
 // Get config from environment variables
 	$apiKey = $_ENV['OPEN_ROUTER_API_KEY'] ?? '';
-	$falApiKey = $_ENV['FAL_API_KEY'] ?? ''; // NEW: Add Fal.ai API key
+	$falApiKey = $_ENV['FAL_API_KEY'] ?? '';
 	$dbHost = $_ENV['DB_HOST'] ?? 'localhost';
 	$dbName = $_ENV['DB_NAME'] ?? '';
 	$dbUser = $_ENV['DB_USER'] ?? '';
@@ -176,12 +176,12 @@
 // Handle different actions based on a query parameter
 	$action = $_GET['action'] ?? 'chat';
 
-// MODIFIED SECTION START: Handle public and private actions separately, using payload for auth token
+// Handle public and private actions separately, using payload for auth token
 	if ($action === 'get_models') {
 		// This action is public. We'll try to get a user ID for logging but won't fail if it's not present.
 		$userId = 0; // Default for anonymous users
 
-		// MODIFIED: Get token from payload for logging.
+		// Get token from payload for logging.
 		$requestBody = file_get_contents('php://input');
 		$payload = json_decode($requestBody, true) ?? [];
 		$token = $payload['auth_token'] ?? null;
@@ -328,4 +328,3 @@
 	else {
 		sendJsonError(400, 'Invalid action specified. Supported actions are "chat", "get_models", and "generate_cover".');
 	}
-	// MODIFIED SECTION END

@@ -1,13 +1,11 @@
 import { setupContentEditor } from './planner-codex-content-editor.js';
 import { openPromptEditor, setupPromptEditor } from '../prompt-editor.js';
-import { DOMSerializer, Fragment, DOMParser } from 'prosemirror-model'; // MODIFIED: Added DOMParser
+import { DOMSerializer, Fragment, DOMParser } from 'prosemirror-model';
 import { undo, redo } from 'prosemirror-history';
 import { toggleMark, setBlockType, wrapIn } from 'prosemirror-commands';
 import { wrapInList } from 'prosemirror-schema-list';
 import { TextSelection } from 'prosemirror-state';
-// MODIFIED: Import typography settings module
 import { setupTypographySettings } from './typography-settings.js';
-// MODIFIED: Import i18n module
 import { initI18n, t } from '../i18n.js';
 
 // --- State management for multiple editors ---
@@ -42,7 +40,7 @@ const serializeDocToHtml = (view) => {
 };
 
 
-// --- MODIFIED: Editor Interface for Direct ProseMirror View ---
+// --- Editor Interface for Direct ProseMirror View ---
 const createDirectEditorInterface = (view) => {
 	const { schema } = view.state;
 	
@@ -135,13 +133,9 @@ async function saveWindowContent(entryId) {
 		if (!response.success) throw new Error(response.message || 'Failed to save codex entry.');
 	} catch (error) {
 		console.error('Error saving codex entry:', error);
-		// MODIFIED: Use translation for alert
 		window.showAlert(t('editor.codexEditor.errorSave'));
 	}
 }
-
-
-// --- MODIFIED: Toolbar Logic for Codex Editor ---
 
 let currentEditorState = null;
 
@@ -195,8 +189,8 @@ function updateCodexToolbarState(view) {
 	});
 	
 	const headingBtn = toolbar.querySelector('.js-heading-btn');
-	if (headingBtn) headingBtn.textContent = t('editor.paragraph'); // MODIFIED
-	wordCountEl.textContent = t('editor.noTextSelected'); // MODIFIED
+	if (headingBtn) headingBtn.textContent = t('editor.paragraph');
+	wordCountEl.textContent = t('editor.noTextSelected');
 	
 	if (currentEditorState) {
 		allBtns.forEach(btn => {
@@ -223,13 +217,11 @@ function updateCodexToolbarState(view) {
 		});
 		
 		if (headingBtn) {
-			// MODIFIED: Use translation keys for headings
 			headingBtn.textContent = currentEditorState.headingLevel > 0 ? t(`editor.heading${currentEditorState.headingLevel}`) : t('editor.paragraph');
 		}
 		
 		if (currentEditorState.isTextSelected) {
 			const words = currentEditorState.selectionText.trim().split(/\s+/).filter(Boolean);
-			// MODIFIED: Use translation for word count
 			wordCountEl.textContent = t('editor.wordsSelected', { count: words.length });
 		}
 	}
@@ -369,8 +361,8 @@ async function setupCreateMode(novelId, selectedText) {
 	document.body.dataset.novelId = novelId;
 	
 	// 1. Configure UI for creation
-	document.title = t('editor.codexEditor.createTitle'); // MODIFIED
-	document.getElementById('js-novel-info').textContent = t('editor.codexEditor.createTitle'); // MODIFIED
+	document.title = t('editor.codexEditor.createTitle');
+	document.getElementById('js-novel-info').textContent = t('editor.codexEditor.createTitle');
 	document.getElementById('js-create-meta-section').classList.remove('hidden');
 	document.getElementById('js-create-action-section').classList.remove('hidden');
 	
@@ -394,13 +386,13 @@ async function setupCreateMode(novelId, selectedText) {
 	
 	sourceEditorView = setupContentEditor(sourceMount, {
 		initialContent: sourceContainer.querySelector('[data-name="content"]'),
-		placeholder: t(sourceMount.dataset.i18nPlaceholder), // MODIFIED
+		placeholder: t(sourceMount.dataset.i18nPlaceholder),
 		onStateChange: onEditorStateChange,
 		onFocus: onEditorFocus,
 	});
 	targetEditorView = setupContentEditor(targetMount, {
 		initialContent: sourceContainer.querySelector('[data-name="target_content"]'),
-		placeholder: t(targetMount.dataset.i18nPlaceholder), // MODIFIED
+		placeholder: t(targetMount.dataset.i18nPlaceholder),
 		onStateChange: onEditorStateChange,
 		onFocus: onEditorFocus,
 	});
@@ -483,7 +475,6 @@ async function setupEditMode(entryId) {
 		const entryData = await window.api.getOneCodexForEditor(entryId);
 		document.body.dataset.novelId = entryData.novel_id;
 		
-		// MODIFIED: Use translation for titles
 		document.getElementById('js-novel-info').textContent = t('editor.codexEditor.novelInfo', { novelTitle: entryData.novel_title });
 		document.getElementById('js-codex-title-input').value = entryData.title;
 		document.getElementById('js-codex-phrases-input').value = entryData.document_phrases || '';
@@ -512,13 +503,13 @@ async function setupEditMode(entryId) {
 		
 		sourceEditorView = setupContentEditor(sourceMount, {
 			initialContent: sourceContainer.querySelector('[data-name="content"]'),
-			placeholder: t(sourceMount.dataset.i18nPlaceholder), // MODIFIED
+			placeholder: t(sourceMount.dataset.i18nPlaceholder),
 			onStateChange: onEditorStateChange,
 			onFocus: onEditorFocus,
 		});
 		targetEditorView = setupContentEditor(targetMount, {
 			initialContent: sourceContainer.querySelector('[data-name="target_content"]'),
-			placeholder: t(targetMount.dataset.i18nPlaceholder), // MODIFIED
+			placeholder: t(targetMount.dataset.i18nPlaceholder),
 			onStateChange: onEditorStateChange,
 			onFocus: onEditorFocus,
 		});
@@ -569,17 +560,15 @@ async function setupEditMode(entryId) {
 		
 	} catch (error) {
 		console.error('Failed to load codex entry data:', error);
-		// MODIFIED: Use translation for error message
 		document.body.innerHTML = `<p class="text-error p-8">${t('editor.codexEditor.errorLoad', { message: error.message })}</p>`;
 	}
 }
 
 // --- Main Initialization ---
 document.addEventListener('DOMContentLoaded', async () => {
-	// MODIFIED: Initialize i18n
 	await initI18n();
 	
-	window.showAlert = function(message, title = t('common.error')) { // MODIFIED
+	window.showAlert = function(message, title = t('common.error')) {
 		const modal = document.getElementById('alert-modal');
 		if (modal) {
 			const modalTitle = modal.querySelector('#alert-modal-title');
@@ -594,7 +583,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 	
 	setupPromptEditor();
 	
-	// MODIFIED: Initialize typography settings
 	setupTypographySettings({
 		buttonId: 'typography-settings-btn',
 		modalId: 'typography-settings-modal',
@@ -616,7 +604,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 		const novelId = params.get('novelId');
 		const selectedText = decodeURIComponent(params.get('selectedText') || '');
 		if (!novelId) {
-			// MODIFIED: Use translation for error message
 			document.body.innerHTML = `<p class="text-error p-8">${t('editor.codexEditor.errorMissingNovelId')}</p>`;
 			return;
 		}
@@ -624,7 +611,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 	} else {
 		const entryId = params.get('entryId');
 		if (!entryId) {
-			// MODIFIED: Use translation for error message
 			document.body.innerHTML = `<p class="text-error p-8">${t('editor.codexEditor.errorMissingId')}</p>`;
 			return;
 		}

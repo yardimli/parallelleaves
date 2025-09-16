@@ -1,4 +1,4 @@
-import { initI18n, t, applyTranslationsTo } from './i18n.js'; // MODIFIED: Import applyTranslationsTo
+import { initI18n, t, applyTranslationsTo } from './i18n.js';
 
 /**
  * Truncates HTML content to a specific word limit.
@@ -140,7 +140,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 			try {
 				// Load template and populate models
 				modalContent.innerHTML = await window.api.getTemplate('outline/autogen-codex-modal');
-				applyTranslationsTo(modalContent); // MODIFIED: Apply translations to the modal content
+				applyTranslationsTo(modalContent);
 				const select = modalContent.querySelector('.js-llm-model-select');
 				const result = await window.api.getModels();
 				if (result.success && result.models.data.length > 0) {
@@ -223,10 +223,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 		await renderOutline(outlineContainer, data.sections);
 		await renderCodex(codexContainer, data.codex_categories);
 		
-		// MODIFIED SECTION START: Apply translations to the newly rendered content
 		applyTranslationsTo(outlineContainer);
 		applyTranslationsTo(codexContainer);
-		// MODIFIED SECTION END
 		
 		const addCodexBtn = document.getElementById('js-add-codex-entry');
 		if (addCodexBtn) {

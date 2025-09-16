@@ -1119,7 +1119,6 @@ function setupIpcHandlers() {
 			
 			const imageUrl = falResponse.images[0].url;
 			
-			// MODIFIED: Corrected the call to storeImageFromUrl. The prompt is not used as part of the filename.
 			const localPaths = await imageHandler.storeImageFromUrl(imageUrl, novelId, 'generated-fal');
 			
 			if (!localPaths || !localPaths.original_path) {

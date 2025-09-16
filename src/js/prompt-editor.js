@@ -1,13 +1,9 @@
-// MODIFIED: This file is heavily refactored to use an "editor interface" pattern
-// and non-streaming AI calls.
 
 import { init as initRephraseEditor, buildPromptJson as buildRephraseJson } from './prompt-editors/rephrase-editor.js';
 import { init as initTranslateEditor, buildPromptJson as buildTranslateJson } from './prompt-editors/translate-editor.js';
 import { updateToolbarState as updateChapterToolbarState } from './novel-planner/toolbar.js';
-// MODIFIED: Import translation function
 import { t } from './i18n.js';
 
-// MODIFIED: Removed hardcoded names
 const editors = {
 	'rephrase': { init: initRephraseEditor },
 	'translate': { init: initTranslateEditor },
@@ -68,15 +64,12 @@ const loadPrompt = async (promptId) => {
 		console.error(`No editor configured for promptId: ${promptId}`);
 		placeholder.classList.remove('hidden');
 		customEditorPane.classList.add('hidden');
-		// MODIFIED: Use translation for error message
 		placeholder.innerHTML = `<p class="text-error">${t('prompt.errorNoEditorForPrompt', { promptId })}</p>`;
 		return;
 	}
 	
 	placeholder.classList.add('hidden');
 	customEditorPane.classList.remove('hidden');
-	
-	// MODIFIED: Use translation for prompt title
 	customPromptTitle.textContent = t(`prompt.${promptId}.title`);
 	customFormContainer.innerHTML = `<div class="p-4 text-center"><span class="loading loading-spinner"></span></div>`;
 	
@@ -295,7 +288,6 @@ async function handleModalApply () {
 	const form = modalEl.querySelector('.js-custom-editor-pane form');
 	
 	if (!model || !action || !form) {
-		// MODIFIED: Use translation
 		window.showAlert(t('prompt.errorApplyAction'));
 		return;
 	}
@@ -303,7 +295,6 @@ async function handleModalApply () {
 	const builder = promptBuilders[action];
 	const extractor = formDataExtractors[action];
 	if (!builder || !extractor) {
-		// MODIFIED: Use translation
 		window.showAlert(t('prompt.errorNoBuilder', { action }));
 		return;
 	}
@@ -312,7 +303,6 @@ async function handleModalApply () {
 	
 	currentEditorInterface = currentContext.editorInterface;
 	if (!currentEditorInterface) {
-		// MODIFIED: Use translation
 		window.showAlert(t('prompt.errorNoActiveEditor'));
 		return;
 	}
@@ -329,7 +319,6 @@ async function handleModalApply () {
 	const selectionInfo = await currentEditorInterface.getSelectionInfo(action, currentContext.translationInfo);
 	
 	if (!selectionInfo) {
-		// MODIFIED: Use translation
 		window.showAlert(t('prompt.errorNoSelection'));
 		return;
 	}
@@ -355,7 +344,6 @@ async function handleModalApply () {
 			promptContext.translationPairs = pairs;
 		} catch (error) {
 			console.error('Failed to fetch translation context:', error);
-			// MODIFIED: Use translation
 			window.showAlert(t('prompt.errorFetchContext', { message: error.message }));
 		}
 	}
@@ -364,7 +352,6 @@ async function handleModalApply () {
 	
 	currentAiParams = { prompt, model, action, context: currentContext, formData: formDataObj };
 	
-	// MODIFIED: Call the new non-streaming function
 	startAiAction({ prompt: currentAiParams.prompt, model: currentAiParams.model });
 }
 
@@ -391,7 +378,6 @@ export function setupPromptEditor () {
 			if (!previewSection) return;
 			
 			const isHidden = previewSection.classList.toggle('hidden');
-			// MODIFIED: Use translation
 			toggleBtn.textContent = isHidden ? t('editor.showPreview') : t('editor.hidePreview');
 		});
 	}
@@ -410,7 +396,6 @@ export async function openPromptEditor (context, promptId, initialState = null) 
 	}
 	if (!context.editorInterface) {
 		console.error('`editorInterface` is missing from the context for openPromptEditor.');
-		// MODIFIED: Use translation
 		window.showAlert(t('prompt.errorNoInterface'));
 		return;
 	}

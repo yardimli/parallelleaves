@@ -42,7 +42,6 @@
 		sendJsonError(400, 'error.credentialsRequired');
 	}
 
-// MODIFIED SECTION START: Switched from PDO to MySQLi
 	mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 	try {
 		$db = new mysqli($dbHost, $dbUser, $dbPass, $dbName);
@@ -61,7 +60,6 @@
 
 		// Generate a secure token
 		$token = bin2hex(random_bytes(32));
-		// MODIFIED: Changed token expiration from 30 days to 6 months.
 		$expiresAt = (new DateTime())->modify('+6 months')->format('Y-m-d H:i:s');
 
 		$stmt = $db->prepare('UPDATE users SET session_token = ?, token_expires_at = ? WHERE id = ?');
@@ -85,4 +83,3 @@
 	} catch (Exception $e) {
 		sendJsonError(500, 'error.unexpected');
 	}
-	// MODIFIED SECTION END

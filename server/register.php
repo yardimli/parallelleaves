@@ -59,7 +59,6 @@
 					$stmt = $db->prepare('INSERT INTO users (username, password_hash) VALUES (?, ?)');
 					$stmt->bind_param('ss', $username, $passwordHash);
 					$stmt->execute();
-					// MODIFIED: Updated success message with clear instructions.
 					$message = 'Registration successful! You can now close this page and log in through the desktop application.';
 					$messageType = 'success';
 				}
@@ -82,11 +81,9 @@
 	<link href="https://cdn.jsdelivr.net/npm/daisyui@4.10.2/dist/full.min.css" rel="stylesheet" type="text/css" />
 	<script src="https://cdn.tailwindcss.com"></script>
 </head>
-<!-- MODIFIED: Switched to a medium-toned background and ensured text is readable. -->
 <body class="bg-slate-800 min-h-screen flex flex-col items-center justify-center p-4 text-slate-200">
 
 <div class="text-center">
-	<!-- NEW: Added application title header. -->
 	<h1 class="text-4xl font-bold text-slate-100 mb-6">Parallel Leaves</h1>
 </div>
 
@@ -102,7 +99,6 @@
 		<?php endif; ?>
 		
 		<?php if ($registrationEnabled && $messageType !== 'success'): ?>
-			<!-- NEW: Added instruction text for users. -->
 			<p class="text-sm text-slate-400 text-center mb-4">
 				After registering, please return to the desktop application to sign in.
 			</p>

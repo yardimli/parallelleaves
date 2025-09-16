@@ -2,7 +2,6 @@
 // It's designed to be reusable between the chapter editor and the codex editor.
 
 const DEFAULTS = {
-	// MODIFIED: Updated default font to Noto Serif for consistency.
 	font_family: "'Noto Serif', serif",
 	text_size: 'lg',
 	line_height: '2',

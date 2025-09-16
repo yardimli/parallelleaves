@@ -1,5 +1,4 @@
 import { openPromptEditor } from '../prompt-editor.js';
-// MODIFIED: Import the translation function
 import { t } from '../i18n.js';
 
 let activeContentWindow = null;
@@ -36,7 +35,6 @@ export function updateToolbarState(newState) {
 				if (text.length > 0) {
 					translateBtn.disabled = false;
 					const words = text.split(/\s+/).filter(Boolean);
-					// MODIFIED: Use translation key for word count
 					wordCountEl.textContent = t('editor.wordsSelectedSource', { count: words.length });
 				}
 			}
@@ -104,7 +102,6 @@ export function updateToolbarState(newState) {
 		
 		if (newState.isTextSelected) {
 			const words = newState.selectionText.trim().split(/\s+/).filter(Boolean);
-			// MODIFIED: Use translation key for word count
 			wordCountEl.textContent = t('editor.wordsSelected', { count: words.length });
 		} else if (!translateBtn || translateBtn.disabled) {
 			wordCountEl.textContent = t('editor.noTextSelected');
@@ -171,7 +168,7 @@ async function handleToolbarAction(button) {
 		const action = button.dataset.action;
 		const novelId = document.body.dataset.novelId;
 		if (!novelId) {
-			window.showAlert(t('editor.toolbar.errorNoProject')); // MODIFIED
+			window.showAlert(t('editor.toolbar.errorNoProject'));
 			return;
 		}
 		
@@ -222,7 +219,6 @@ async function handleToolbarAction(button) {
 			const endMarker = findBlockMarkerForNode(range.endContainer, sourceContainer, range.endOffset);
 			
 			if (startMarker !== endMarker) {
-				// MODIFIED: Use translation for alert
 				window.showAlert(t('editor.toolbar.errorSelectionAcrossBlocks'), t('common.error'));
 				return;
 			}
@@ -235,7 +231,7 @@ async function handleToolbarAction(button) {
 			// Pass the iframe editor interface to openPromptEditor.
 			const targetContentWindow = toolbarConfig.getChapterViews(chapterId)?.iframe.contentWindow;
 			if (!targetContentWindow) {
-				window.showAlert(t('editor.toolbar.errorNoTargetEditor')); // MODIFIED
+				window.showAlert(t('editor.toolbar.errorNoTargetEditor'));
 				return;
 			}
 			
@@ -289,13 +285,12 @@ async function handleToolbarAction(button) {
 		} else if (command === 'add_note') {
 			const activeChapterId = toolbarConfig.getActiveChapterId ? toolbarConfig.getActiveChapterId() : null;
 			if (!activeChapterId) {
-				window.showAlert(t('editor.toolbar.errorNoActiveChapter')); // MODIFIED
+				window.showAlert(t('editor.toolbar.errorNoActiveChapter'));
 				return;
 			}
 			const noteModal = document.getElementById('note-editor-modal');
 			const form = document.getElementById('note-editor-form');
 			form.reset();
-			// MODIFIED: Use translation for modal title
 			noteModal.querySelector('.js-note-modal-title').textContent = t('editor.noteModal.addTitle');
 			document.getElementById('note-pos').value = '';
 			noteModal.showModal();

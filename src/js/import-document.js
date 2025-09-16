@@ -1,7 +1,6 @@
 import { initI18n, t } from './i18n.js';
 
-document.addEventListener('DOMContentLoaded', async () => { // MODIFIED: Make async
-	// MODIFIED: Initialize i18n
+document.addEventListener('DOMContentLoaded', async () => {
 	await initI18n();
 	
 	// ADDED SECTION START
@@ -10,7 +9,7 @@ document.addEventListener('DOMContentLoaded', async () => { // MODIFIED: Make as
 	 * @param {string} message - The message to display.
 	 * @param {string} [title='Error'] - The title for the alert modal.
 	 */
-	window.showAlert = function(message, title = t('common.information')) { // MODIFIED
+	window.showAlert = function(message, title = t('common.information')) {
 		const modal = document.getElementById('alert-modal');
 		if (modal) {
 			const modalTitle = modal.querySelector('#alert-modal-title');
@@ -156,7 +155,6 @@ document.addEventListener('DOMContentLoaded', async () => { // MODIFIED: Make as
 		if (chapterCount === 0) {
 			importStatus.textContent = t('import.status');
 		} else {
-			// MODIFIED: Use translation keys for status summary
 			const actLabel = t(actCount === 1 ? 'import.actLabel_one' : 'import.actLabel_other');
 			const chapterLabel = t(chapterCount === 1 ? 'import.chapterLabel_one' : 'import.chapterLabel_other');
 			importStatus.textContent = t('import.statusSummary', { actCount, actLabel, chapterCount, chapterLabel });
@@ -234,7 +232,6 @@ document.addEventListener('DOMContentLoaded', async () => { // MODIFIED: Make as
 			const fileName = filePath.split(/[\\/]/).pop();
 			titleInput.value = fileName.substring(0, fileName.lastIndexOf('.')).replace(/[-_]/g, ' ');
 			
-			// MODIFIED: Use translation
 			documentContent.innerHTML = `<div class="text-center"><span class="loading loading-spinner loading-lg"></span><p>${t('import.readingFile')}</p></div>`;
 			
 			try {
@@ -249,7 +246,6 @@ document.addEventListener('DOMContentLoaded', async () => { // MODIFIED: Make as
 				});
 			} catch (error) {
 				console.error('Error reading file:', error);
-				// MODIFIED: Use translation
 				documentContent.innerHTML = `<p class="text-error">${t('import.errorReadFile', { message: error.message })}</p>`;
 				currentFilePath = null;
 			}
@@ -332,7 +328,7 @@ document.addEventListener('DOMContentLoaded', async () => { // MODIFIED: Make as
 	
 	startImportBtn.addEventListener('click', async () => {
 		if (!titleInput.value.trim()) {
-			window.showAlert(t('import.alertNoTitle')); // MODIFIED
+			window.showAlert(t('import.alertNoTitle'));
 			return;
 		}
 		
@@ -385,7 +381,7 @@ document.addEventListener('DOMContentLoaded', async () => { // MODIFIED: Make as
 		}
 		
 		if (acts.length === 0) {
-			window.showAlert(t('import.alertNoContent')); // MODIFIED
+			window.showAlert(t('import.alertNoContent'));
 			setButtonLoading(startImportBtn, false);
 			return;
 		}
@@ -399,7 +395,6 @@ document.addEventListener('DOMContentLoaded', async () => { // MODIFIED: Make as
 			});
 		} catch (error) {
 			console.error('Import failed:', error);
-			// MODIFIED: Use translation
 			window.showAlert(t('import.errorImport', { message: error.message }), t('common.error'));
 			setButtonLoading(startImportBtn, false);
 		}

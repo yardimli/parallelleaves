@@ -27,7 +27,6 @@ async function storeImageFromUrl(url, novelId, filenameBase) {
 		// Ensure the directory exists.
 		fs.mkdirSync(novelDir, { recursive: true });
 		
-		// MODIFIED: Improved file extension detection from the URL, with a fallback.
 		let extension = '.png'; // Default to png for AI generated images
 		try {
 			const urlPath = new URL(url).pathname;
@@ -47,7 +46,6 @@ async function storeImageFromUrl(url, novelId, filenameBase) {
 		
 		const relativePath = path.join('novels', String(novelId), filename);
 		
-		// MODIFIED: Return an object consistent with storeImageFromPath to fix the bug.
 		// The calling function expects an object with an `original_path` property.
 		return {
 			original_path: relativePath,

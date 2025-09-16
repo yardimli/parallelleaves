@@ -1,4 +1,4 @@
-import { t, applyTranslationsTo } from '../i18n.js'; // MODIFIED: Import applyTranslationsTo
+import { t, applyTranslationsTo } from '../i18n.js';
 
 const defaultState = {
 	instructions: '',
@@ -283,7 +283,7 @@ export const init = async (container, context) => {
 	try {
 		const templateHtml = await window.api.getTemplate('prompt/translate-editor');
 		container.innerHTML = templateHtml;
-		applyTranslationsTo(container); // MODIFIED: Apply translations to the newly added content
+		applyTranslationsTo(container);
 		
 		const { selectedText, allCodexEntries, translationInfo, activeEditorView } = context;
 		

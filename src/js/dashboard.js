@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 	const uploadCoverBtn = document.getElementById('upload-cover-btn');
 	const deleteNovelBtn = document.getElementById('delete-novel-btn');
 	
-	// NEW: AI Cover Generation elements
+	// AI Cover Generation elements
 	const metaCoverActions = document.getElementById('meta-cover-actions');
 	const metaAiGenControls = document.getElementById('meta-ai-gen-controls');
 	const metaAiPrompt = document.getElementById('meta-ai-prompt');
@@ -189,7 +189,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			metaCoverPreview.innerHTML = `<img src="./assets/bookcover-placeholder.jpg" alt="${t('dashboard.metaSettings.altNoCover')}" class="w-full h-auto">`;
 		}
 		
-		// MODIFIED: Reset AI generation UI state
 		metaAiGenControls.classList.add('hidden');
 		metaCoverActions.classList.remove('hidden');
 		
@@ -319,7 +318,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 		}
 	});
 	
-	// MODIFIED SECTION START: New event listeners for integrated AI cover generation
+	// event listeners for integrated AI cover generation
 	generateCoverBtn.addEventListener('click', async () => {
 		metaCoverActions.classList.add('hidden');
 		metaAiGenControls.classList.remove('hidden');
@@ -382,7 +381,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			setButtonLoading(runGenerateCoverBtn, false);
 		}
 	});
-	// MODIFIED SECTION END
 	
 	uploadCoverBtn.addEventListener('click', async () => {
 		const filePath = await window.api.showOpenImageDialog();

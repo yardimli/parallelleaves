@@ -1,13 +1,11 @@
 const LANG_KEY = 'app_lang';
 let translations = {};
 
-// MODIFIED SECTION START: Exported supportedLanguages
 export const supportedLanguages = {
 	en: 'English',
 	tr: 'Türkçe',
 	tlh: 'Klingon'
 };
-// MODIFIED SECTION END
 
 /**
  * Fetches and loads a language file.

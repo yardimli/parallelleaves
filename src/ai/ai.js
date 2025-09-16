@@ -357,6 +357,6 @@ module.exports = {
 	processLLMText,
 	getOpenRouterModels,
 	suggestCodexDetails,
-	generateCoverPrompt, // NEW: Export new function
-	generateCoverImageViaProxy, // NEW: Export new function
+	generateCoverPrompt,
+	generateCoverImageViaProxy,
 };
