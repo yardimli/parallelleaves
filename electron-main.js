@@ -83,6 +83,57 @@ function countWordsInHtml(html) {
 	return words.length;
 }
 
+/**
+ * Generates a cover prompt, creates an image via AI, and saves it for a given novel.
+ * This function logs errors but does not throw them, allowing the parent process to continue.
+ * @param {number} novelId - The ID of the novel.
+ * @param {string} title - The title of the novel.
+ * @param {string|null} token - The user's session token.
+ * @returns {Promise<void>}
+ */
+async function generateAndSaveCover(novelId, title, token) {
+	try {
+		// 1. Generate prompt
+		const prompt = await aiService.generateCoverPrompt({ title, token });
+		if (!prompt) {
+			throw new Error('Failed to generate cover prompt.');
+		}
+		
+		// 2. Generate image
+		const falResponse = await aiService.generateCoverImageViaProxy({ prompt, token });
+		if (!falResponse || !falResponse.images || !falResponse.images[0]?.url) {
+			throw new Error('Image generation failed or did not return a valid URL.');
+		}
+		const imageUrl = falResponse.images[0].url;
+		
+		// 3. Store image
+		const localPaths = await imageHandler.storeImageFromUrl(imageUrl, novelId, 'cover-autogen');
+		if (!localPaths || !localPaths.original_path) {
+			throw new Error('Failed to download and save the generated cover.');
+		}
+		
+		// 4. Update DB
+		const userId = currentUserSession ? currentUserSession.user.id : 1;
+		const transaction = db.transaction(() => {
+			// Using image_type to be specific, though a novel should only have one cover.
+			db.prepare("DELETE FROM images WHERE novel_id = ? AND image_type LIKE '%cover%'").run(novelId);
+			
+			db.prepare(`
+                INSERT INTO images (user_id, novel_id, image_local_path, thumbnail_local_path, image_type, prompt)
+                VALUES (?, ?, ?, ?, ?, ?)
+            `).run(userId, novelId, localPaths.original_path, localPaths.original_path, 'generated', prompt);
+		});
+		transaction();
+		
+		console.log(`Successfully generated and saved cover for novel ${novelId}`);
+		
+	} catch (error) {
+		console.error(`Failed to auto-generate cover for novel ${novelId}:`, error);
+		// We log the error but don't re-throw, so the import process can complete.
+	}
+}
+
+
 // --- Window Creation Functions ---
 function createMainWindow() {
 	mainWindow = new BrowserWindow({
@@ -458,6 +509,7 @@ function setupIpcHandlers() {
 	// --- Novel Handlers ---
 	
 	ipcMain.handle('novels:getAllWithCovers', () => {
+		// MODIFICATION START: Expanded query and logic to include detailed stats for each novel.
 		const stmt = db.prepare(`
             SELECT
                 n.*,
@@ -468,16 +520,47 @@ function setupIpcHandlers() {
                 SELECT novel_id, image_local_path, ROW_NUMBER() OVER(PARTITION BY novel_id ORDER BY created_at DESC) as rn
                 FROM images
             ) i ON n.id = i.novel_id AND i.rn = 1
-            ORDER BY n.created_at DESC
+            ORDER BY n.updated_at DESC
         `);
 		const novels = stmt.all();
 		
-		novels.forEach(novel => {
+		// Loop through each novel to calculate detailed statistics.
+		for (const novel of novels) {
+			const chapters = db.prepare('SELECT source_content, target_content FROM chapters WHERE novel_id = ?').all(novel.id);
+			
+			let sourceWordCount = 0;
+			let targetWordCount = 0;
+			let totalBlocks = 0;
+			let completedBlocks = 0;
+			
+			for (const chapter of chapters) {
+				if (chapter.source_content) {
+					sourceWordCount += countWordsInHtml(chapter.source_content);
+					const blockMatches = chapter.source_content.match(/{{TranslationBlock-\d+}}/g);
+					totalBlocks += blockMatches ? blockMatches.length : 0;
+				}
+				if (chapter.target_content) {
+					targetWordCount += countWordsInHtml(chapter.target_content);
+					
+					// Use the existing helper function to find pairs of source/target blocks that both have content.
+					// This serves as a good proxy for "completed" or "translated" blocks.
+					const pairs = extractAllPairs(chapter.source_content, chapter.target_content);
+					completedBlocks += pairs.length;
+				}
+			}
+			
+			novel.source_word_count = sourceWordCount;
+			novel.target_word_count = targetWordCount;
+			novel.total_blocks = totalBlocks;
+			novel.completed_blocks = completedBlocks;
+			
 			if (novel.cover_path) {
 				novel.cover_path = path.join(imageHandler.IMAGES_DIR, novel.cover_path);
 			}
-		});
+		}
+		
 		return novels;
+		// MODIFICATION END
 	});
 	
 	ipcMain.handle('novels:getOne', (event, novelId) => {
@@ -1172,12 +1255,13 @@ function setupIpcHandlers() {
 		}
 		
 		const userId = currentUserSession ? currentUserSession.user.id : 1;
+		let novelId;
 		
 		const importTransaction = db.transaction(() => {
 			const novelResult = db.prepare(
 				'INSERT INTO novels (user_id, title, source_language, target_language, status) VALUES (?, ?, ?, ?, ?)'
 			).run(userId, title, source_language, target_language, 'draft');
-			const novelId = novelResult.lastInsertRowid;
+			novelId = novelResult.lastInsertRowid;
 			
 			let sectionOrder = 1;
 			for (const act of acts) {
@@ -1193,20 +1277,31 @@ function setupIpcHandlers() {
 					).run(novelId, sectionId, chapter.title, chapter.content, 'in_progress', chapterOrder++);
 				}
 			}
-			
-			return { novelId };
 		});
 		
 		try {
-			const { novelId } = importTransaction();
+			// Step 1: Run the database transaction to import the text content.
+			importTransaction();
+			
+			// Step 2: Send a status update to the import window that cover generation is starting.
+			if (importWindow && !importWindow.isDestroyed()) {
+				importWindow.webContents.send('import:status-update', { statusKey: 'import.generatingCover' });
+			}
+			
+			// Step 3: Asynchronously generate and save the cover.
+			const token = currentUserSession ? currentUserSession.token : null;
+			await generateAndSaveCover(novelId, title, token);
+			
+			// Step 4: Close the import window and open the editor for the new novel.
 			if (importWindow) {
 				importWindow.close();
 			}
 			createChapterEditorWindow({ novelId, chapterId: null });
+			
 			return { success: true, novelId };
 		} catch (error) {
 			console.error('Failed to import document:', error);
-			throw error;
+			throw error; // Rethrow to be caught by the renderer process.
 		}
 	});
 	

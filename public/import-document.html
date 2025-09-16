@@ -101,6 +101,12 @@
 	</div>
 </dialog>
 
+<!-- MODIFICATION: Added import process overlay -->
+<div id="import-overlay" class="hidden fixed inset-0 bg-base-100/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center gap-4">
+	<span class="loading loading-spinner loading-lg"></span>
+	<p id="import-overlay-status" class="text-lg font-semibold"></p>
+</div>
+
 <script src="../src/js/theme.js"></script>
 <script type="module" src="../src/js/import-document.js"></script>
 </body>

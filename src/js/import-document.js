@@ -3,7 +3,6 @@ import { initI18n, t } from './i18n.js';
 document.addEventListener('DOMContentLoaded', async () => {
 	await initI18n();
 	
-	// ADDED SECTION START
 	/**
 	 * Displays a custom modal alert to prevent focus issues with native alerts.
 	 * @param {string} message - The message to display.
@@ -22,7 +21,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			alert(message);
 		}
 	};
-	// ADDED SECTION END
 	
 	const selectFileBtn = document.getElementById('select-file-btn');
 	const startImportBtn = document.getElementById('start-import-btn');
@@ -36,6 +34,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 	const importStatus = document.getElementById('js-import-status');
 	const popover = document.getElementById('break-type-popover');
 	const blockSizeInput = document.getElementById('block_size');
+	// MODIFICATION: Get overlay elements
+	const importOverlay = document.getElementById('import-overlay');
+	const importOverlayStatus = document.getElementById('import-overlay-status');
 	
 	let currentFilePath = null;
 	let currentMarkIndex = -1;
@@ -127,14 +128,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 		});
 		sourceLangSelect.value = 'English';
 		targetLangSelect.value = 'Spanish';
-	}
-	
-	function setButtonLoading(button, isLoading) {
-		const content = button.querySelector('.js-btn-content');
-		const spinner = button.querySelector('.js-btn-spinner');
-		button.disabled = isLoading;
-		if (content) content.classList.toggle('hidden', isLoading);
-		if (spinner) spinner.classList.toggle('hidden', !isLoading);
 	}
 	
 	function updateNavButtonState() {
@@ -332,7 +325,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 			return;
 		}
 		
-		setButtonLoading(startImportBtn, true);
+		// MODIFICATION: Show overlay and set initial status
+		importOverlayStatus.textContent = t('import.importingContent');
+		importOverlay.classList.remove('hidden');
 		
 		const blockSize = parseInt(blockSizeInput.value, 10);
 		const acts = [];
@@ -382,11 +377,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 		
 		if (acts.length === 0) {
 			window.showAlert(t('import.alertNoContent'));
-			setButtonLoading(startImportBtn, false);
+			// MODIFICATION: Hide overlay on validation failure
+			importOverlay.classList.add('hidden');
 			return;
 		}
 		
 		try {
+			// MODIFICATION: The main process now handles the entire flow.
+			// The window will be closed automatically on success.
 			await window.api.importDocumentAsNovel({
 				title: titleInput.value.trim(),
 				source_language: sourceLangSelect.value,
@@ -396,7 +394,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 		} catch (error) {
 			console.error('Import failed:', error);
 			window.showAlert(t('import.errorImport', { message: error.message }), t('common.error'));
-			setButtonLoading(startImportBtn, false);
+			// MODIFICATION: Hide overlay on error
+			importOverlay.classList.add('hidden');
+		}
+	});
+	
+	// MODIFICATION: Add IPC listener for status updates from the main process
+	window.api.onImportStatusUpdate((event, { statusKey }) => {
+		if (statusKey) {
+			importOverlayStatus.textContent = t(statusKey);
 		}
 	});
 	

@@ -84,6 +84,15 @@
     "langSelect": {
       "title": "Dil Seçin",
       "description": "Lütfen uygulama dili için bir seçim yapın."
+    },
+    "card": {
+      "progress": "İlerleme",
+      "sourceWords": "Kaynak",
+      "targetWords": "Hedef",
+      "chapters": "Bölümler",
+      "blocks": "Bloklar",
+      "created": "Oluşturuldu:",
+      "updated": "Güncellendi:"
     }
   },
   "import": {
@@ -112,7 +121,9 @@
     "actLabel_one": "Perde",
     "actLabel_other": "Perde",
     "chapterLabel_one": "Bölüm",
-    "chapterLabel_other": "Bölüm"
+    "chapterLabel_other": "Bölüm",
+    "importingContent": "İçerik aktarılıyor...",
+    "generatingCover": "Yapay zeka ile kapak oluşturuluyor..."
   },
   "outline": {
     "loading": "Özet Yükleniyor...",

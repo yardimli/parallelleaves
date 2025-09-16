@@ -113,3 +113,101 @@ CREATE TABLE IF NOT EXISTS images (
 INSERT INTO users (id, name, email)
 SELECT 1, 'Default User', 'user@example.com'
 WHERE NOT EXISTS (SELECT 1 FROM users WHERE id = 1);
+
+-- MODIFICATION START: Added triggers to automatically update the 'updated_at' timestamp on the 'novels' table.
+-- This ensures the "Last Edit" date on the dashboard is always accurate when related content changes.
+
+-- When a novel's own details are updated
+CREATE TRIGGER IF NOT EXISTS update_novel_timestamp_on_update
+    AFTER UPDATE ON novels
+    FOR EACH ROW
+BEGIN
+    UPDATE novels
+    SET updated_at = CURRENT_TIMESTAMP
+    WHERE id = OLD.id;
+END;
+
+-- When a chapter is changed
+CREATE TRIGGER IF NOT EXISTS update_novel_on_chapter_update
+    AFTER UPDATE ON chapters
+    FOR EACH ROW
+BEGIN
+    UPDATE novels
+    SET updated_at = CURRENT_TIMESTAMP
+    WHERE id = NEW.novel_id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS update_novel_on_chapter_insert
+    AFTER INSERT ON chapters
+    FOR EACH ROW
+BEGIN
+    UPDATE novels
+    SET updated_at = CURRENT_TIMESTAMP
+    WHERE id = NEW.novel_id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS update_novel_on_chapter_delete
+    AFTER DELETE ON chapters
+    FOR EACH ROW
+BEGIN
+    UPDATE novels
+    SET updated_at = CURRENT_TIMESTAMP
+    WHERE id = OLD.novel_id;
+END;
+
+-- When a section is changed
+CREATE TRIGGER IF NOT EXISTS update_novel_on_section_update
+    AFTER UPDATE ON sections
+    FOR EACH ROW
+BEGIN
+    UPDATE novels
+    SET updated_at = CURRENT_TIMESTAMP
+    WHERE id = NEW.novel_id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS update_novel_on_section_insert
+    AFTER INSERT ON sections
+    FOR EACH ROW
+BEGIN
+    UPDATE novels
+    SET updated_at = CURRENT_TIMESTAMP
+    WHERE id = NEW.novel_id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS update_novel_on_section_delete
+    AFTER DELETE ON sections
+    FOR EACH ROW
+BEGIN
+    UPDATE novels
+    SET updated_at = CURRENT_TIMESTAMP
+    WHERE id = OLD.novel_id;
+END;
+
+-- When a codex entry is changed
+CREATE TRIGGER IF NOT EXISTS update_novel_on_codex_entry_update
+    AFTER UPDATE ON codex_entries
+    FOR EACH ROW
+BEGIN
+    UPDATE novels
+    SET updated_at = CURRENT_TIMESTAMP
+    WHERE id = NEW.novel_id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS update_novel_on_codex_entry_insert
+    AFTER INSERT ON codex_entries
+    FOR EACH ROW
+BEGIN
+    UPDATE novels
+    SET updated_at = CURRENT_TIMESTAMP
+    WHERE id = NEW.novel_id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS update_novel_on_codex_entry_delete
+    AFTER DELETE ON codex_entries
+    FOR EACH ROW
+BEGIN
+    UPDATE novels
+    SET updated_at = CURRENT_TIMESTAMP
+    WHERE id = OLD.novel_id;
+END;
+-- MODIFICATION END

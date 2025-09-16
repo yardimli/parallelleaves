@@ -227,20 +227,72 @@ document.addEventListener('DOMContentLoaded', async () => {
 		novelList.innerHTML = '';
 		novelsData.forEach(novel => {
 			const novelCard = document.createElement('div');
-			novelCard.className = 'card card-compact bg-base-200 shadow-xl transition-shadow';
+			// MODIFICATION START: Added 'h-full' and 'flex flex-col' to ensure cards in a row have the same height.
+			novelCard.className = 'card card-compact bg-base-200 shadow-xl transition-shadow h-full flex flex-col';
 			novelCard.dataset.novelId = novel.id;
 			
+			// Add a cache-busting timestamp to the cover image using the novel's last update time.
 			const coverHtml = novel.cover_path
-				? `<img src="file://${novel.cover_path}" alt="${t('dashboard.metaSettings.altCoverFor', { title: novel.title })}" class="w-full">`
+				? `<img src="file://${novel.cover_path}?t=${new Date(novel.updated_at).getTime()}" alt="${t('dashboard.metaSettings.altCoverFor', { title: novel.title })}" class="w-full">`
 				: `<img src="./assets/bookcover-placeholder.jpg" alt="${t('dashboard.metaSettings.altNoCover')}" class="w-full h-auto">`;
 			
 			
+			// MODIFICATION: Updated card structure to include a detailed stats section.
 			novelCard.innerHTML = `
                 <figure class="cursor-pointer js-open-outline">${coverHtml}</figure>
-                <div class="card-body">
+                <div class="card-body flex flex-col flex-grow">
                     <h2 class="card-title js-open-editor cursor-pointer">${novel.title}</h2>
-                    <p class="text-base-content/80">${novel.author || t('common.unknownAuthor')}</p>
-                    <div class="card-actions justify-end items-center mt-2">
+                    <p class="text-base-content/80 -mt-2 mb-2">${novel.author || t('common.unknownAuthor')}</p>
+                    
+                    <!-- Stats Section -->
+                    <div class="text-xs space-y-2 text-base-content/70 mt-auto">
+                        <!-- Progress Bar -->
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span class="font-semibold" data-i18n="dashboard.card.progress">Progress</span>
+                                <span class="js-progress-percent">0%</span>
+                            </div>
+                            <progress class="progress progress-primary w-full js-progress-bar" value="0" max="100"></progress>
+                        </div>
+                        
+                        <!-- Word Counts -->
+                        <div class="grid grid-cols-2 gap-x-4">
+                            <div>
+                                <div class="font-semibold" data-i18n="dashboard.card.sourceWords">Source</div>
+                                <div class="js-source-words">0 words</div>
+                            </div>
+                            <div>
+                                <div class="font-semibold" data-i18n="dashboard.card.targetWords">Target</div>
+                                <div class="js-target-words">0 words</div>
+                            </div>
+                        </div>
+
+                        <!-- Chapter/Block Counts -->
+                        <div class="grid grid-cols-2 gap-x-4">
+                            <div>
+                                <div class="font-semibold" data-i18n="dashboard.card.chapters">Chapters</div>
+                                <div class="js-chapter-count">0</div>
+                            </div>
+                            <div>
+                                <div class="font-semibold" data-i18n="dashboard.card.blocks">Blocks</div>
+                                <div class="js-block-count">0/0</div>
+                            </div>
+                        </div>
+
+                        <!-- Dates -->
+                        <div class="border-t border-base-content/10 pt-2 mt-2 text-base-content/50">
+                             <div class="flex justify-between">
+                                <span data-i18n="dashboard.card.created">Created:</span>
+                                <span class="js-created-date"></span>
+                             </div>
+                             <div class="flex justify-between">
+                                <span data-i18n="dashboard.card.updated">Updated:</span>
+                                <span class="js-updated-date"></span>
+                             </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card-actions justify-end items-center mt-4">
                         <button class="btn btn-ghost btn-sm js-meta-settings" data-i18n-title="common.edit">
                             <i class="bi bi-pencil-square text-lg"></i>
                         </button>
@@ -250,6 +302,47 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                 </div>
             `;
+			
+			// MODIFICATION START: Populate the new stats elements.
+			const progressBar = novelCard.querySelector('.js-progress-bar');
+			const progressPercent = novelCard.querySelector('.js-progress-percent');
+			const sourceWords = novelCard.querySelector('.js-source-words');
+			const targetWords = novelCard.querySelector('.js-target-words');
+			const chapterCountEl = novelCard.querySelector('.js-chapter-count');
+			const blockCount = novelCard.querySelector('.js-block-count');
+			const createdDateEl = novelCard.querySelector('.js-created-date');
+			const updatedDateEl = novelCard.querySelector('.js-updated-date');
+			
+			// Calculate progress based on word count.
+			let progress = 0;
+			if (novel.source_word_count > 0) {
+				progress = Math.round((novel.target_word_count / novel.source_word_count) * 100);
+			} else if (novel.target_word_count > 0) {
+				progress = 100; // If source is empty but target has content, consider it 100%
+			}
+			progress = Math.min(100, Math.max(0, progress)); // Clamp between 0 and 100
+			
+			// Populate elements with data.
+			if (progressBar) progressBar.value = progress;
+			if (progressPercent) progressPercent.textContent = `${progress}%`;
+			
+			const numberFormat = new Intl.NumberFormat();
+			const wordLabel = t('common.words');
+			
+			if (sourceWords) sourceWords.textContent = `${numberFormat.format(novel.source_word_count)} ${wordLabel}`;
+			if (targetWords) targetWords.textContent = `${numberFormat.format(novel.target_word_count)} ${wordLabel}`;
+			if (chapterCountEl) chapterCountEl.textContent = novel.chapter_count;
+			if (blockCount) blockCount.textContent = `${novel.completed_blocks}/${novel.total_blocks}`;
+			
+			// Format and display dates.
+			const dateFormatOptions = { year: 'numeric', month: 'short', day: 'numeric' };
+			if (createdDateEl && novel.created_at) {
+				createdDateEl.textContent = new Date(novel.created_at).toLocaleDateString(undefined, dateFormatOptions);
+			}
+			if (updatedDateEl && novel.updated_at) {
+				updatedDateEl.textContent = new Date(novel.updated_at).toLocaleDateString(undefined, dateFormatOptions);
+			}
+			// MODIFICATION END
 			
 			novelCard.querySelectorAll('.js-open-editor').forEach(el => el.addEventListener('click', () => window.api.openEditor(novel.id)));
 			novelCard.querySelector('.js-prose-settings').addEventListener('click', () => openProseSettingsModal(novel));

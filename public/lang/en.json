@@ -84,6 +84,15 @@
     "langSelect": {
       "title": "Select a Language",
       "description": "Please choose your preferred language for the application interface."
+    },
+    "card": {
+      "progress": "Progress",
+      "sourceWords": "Source",
+      "targetWords": "Target",
+      "chapters": "Chapters",
+      "blocks": "Blocks",
+      "created": "Created:",
+      "updated": "Updated:"
     }
   },
   "import": {
@@ -112,7 +121,9 @@
     "actLabel_one": "Act",
     "actLabel_other": "Acts",
     "chapterLabel_one": "Chapter",
-    "chapterLabel_other": "Chapters"
+    "chapterLabel_other": "Chapters",
+    "importingContent": "Importing content...",
+    "generatingCover": "Generating AI cover..."
   },
   "outline": {
     "loading": "Loading Outline...",
@@ -311,4 +322,3 @@
     "methodNotAllowed": "Method Not Allowed."
   }
 }
-

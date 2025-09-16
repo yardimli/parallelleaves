@@ -18,7 +18,7 @@ contextBridge.exposeInMainWorld('api', {
 	openOutline: (novelId) => ipcRenderer.send('novels:openOutline', novelId),
 	getOutlineData: (novelId) => ipcRenderer.invoke('novels:getOutlineData', novelId),
 	getOutlineState: (novelId) => ipcRenderer.invoke('novels:getOutlineState', novelId),
-	startCodexAutogen: (data) => ipcRenderer.send('autogen:start-codex-generation', data),
+	startCodexAutogen: (data) => ipcRenderer.send('autogen:start-cod-generation', data),
 	onCodexAutogenUpdate: (callback) => ipcRenderer.on('autogen:progress-update', callback),
 	updateProseSettings: (data) => ipcRenderer.invoke('novels:updateProseSettings', data),
 	updatePromptSettings: (data) => ipcRenderer.invoke('novels:updatePromptSettings', data),
@@ -33,6 +33,7 @@ contextBridge.exposeInMainWorld('api', {
 	showOpenDocumentDialog: () => ipcRenderer.invoke('dialog:showOpenDocument'),
 	readDocumentContent: (filePath) => ipcRenderer.invoke('document:read', filePath),
 	importDocumentAsNovel: (data) => ipcRenderer.invoke('document:import', data),
+	onImportStatusUpdate: (callback) => ipcRenderer.on('import:status-update', callback), // MODIFICATION: Added listener
 	
 	// --- Editor Specific APIs ---
 	getTemplate: (templateName) => ipcRenderer.invoke('templates:get', templateName),
@@ -57,10 +58,8 @@ contextBridge.exposeInMainWorld('api', {
 	//LLM
 	processLLMText: (data) => ipcRenderer.invoke('llm:process-text', data),
 	getModels: () => ipcRenderer.invoke('ai:getModels'),
-	// NEW SECTION START
 	generateCoverPrompt: (data) => ipcRenderer.invoke('ai:generate-cover-prompt', data),
 	generateCover: (data) => ipcRenderer.invoke('ai:generate-cover', data),
-	// NEW SECTION END
 	
 	// Spellchecker APIs
 	getAvailableSpellCheckerLanguages: () => ipcRenderer.invoke('session:getAvailableSpellCheckerLanguages'),
