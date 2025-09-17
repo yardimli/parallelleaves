@@ -210,12 +210,28 @@ async function startAiAction (params) {
 			let newContentText = result.data.choices[0].message.content ?? 'No content generated.';
 			newContentText = newContentText.trim();
 			
-			// Prepend the marker only to the first paragraph.
-			// First, prepend the marker to the entire raw text block.
+			// MODIFICATION START: Smartly format the replacement HTML.
+			// This prevents inline selections (e.g., a sentence in a paragraph) from being replaced by a new block-level paragraph.
+			let newContentHtml;
 			const textWithMarker = marker ? marker + ' ' + newContentText : newContentText;
-			// Then, convert the entire block to HTML paragraphs. This ensures the marker
-			// is only at the very beginning of the first paragraph.
-			const newContentHtml = '<p>' + textWithMarker.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>') + '</p>';
+			
+			// Determine if the original selection was inline content.
+			// A simple heuristic: if the first node in the fragment is not a block node,
+			// it's likely an inline selection from within a paragraph.
+			const isInlineSelection = originalFragmentJson &&
+				originalFragmentJson.length > 0 &&
+				!['paragraph', 'heading', 'blockquote', 'list_item', 'ordered_list', 'bullet_list', 'horizontal_rule', 'code_block'].includes(originalFragmentJson[0].type);
+			
+			if (isInlineSelection) {
+				// For inline replacement, we don't wrap in <p>.
+				// We convert newlines from the AI into <br> tags to preserve them.
+				// The marker (if any) is prepended directly.
+				newContentHtml = textWithMarker.replace(/\n/g, '<br>');
+			} else {
+				// For block-level replacement, wrap in <p> tags and handle paragraph breaks.
+				newContentHtml = '<p>' + textWithMarker.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>') + '</p>';
+			}
+			// MODIFICATION END
 			
 			console.log('AI Action Result:', newContentText, newContentHtml);
 			
