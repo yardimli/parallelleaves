@@ -56,6 +56,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 	const metaAiPrompt = document.getElementById('meta-ai-prompt');
 	const runGenerateCoverBtn = document.getElementById('run-generate-cover-btn');
 	const cancelGenerateCoverBtn = document.getElementById('cancel-generate-cover-btn');
+	const refreshBtn = document.getElementById('js-refresh-page-btn'); // Added refresh button
 	
 	let novelsData = [];
 	let stagedCover = null;
@@ -350,6 +351,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 	}
 	
 	// --- Event Listeners ---
+	
+	// Added: Refresh button listener
+	if (refreshBtn) {
+		refreshBtn.addEventListener('click', () => {
+			window.location.reload();
+		});
+	}
 	
 	if (importDocBtn) {
 		importDocBtn.addEventListener('click', () => {

@@ -115,6 +115,14 @@ async function renderCodex(container, categories) {
 document.addEventListener('DOMContentLoaded', async () => {
 	await initI18n();
 	
+	// Added: Refresh button listener
+	const refreshBtn = document.getElementById('js-refresh-page-btn');
+	if (refreshBtn) {
+		refreshBtn.addEventListener('click', () => {
+			window.location.reload();
+		});
+	}
+	
 	const params = new URLSearchParams(window.location.search);
 	const novelId = params.get('novelId');
 	
@@ -145,12 +153,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 				const result = await window.api.getModels();
 				if (result.success && result.models.length > 0) {
 					select.innerHTML = '';
-					result.models.forEach(model => {
-						const option = new Option(model.name, model.id);
-						select.appendChild(option);
+					
+					// MODIFICATION: New logic to handle grouped models
+					const modelGroups = result.models;
+					modelGroups.forEach(group => {
+						const optgroup = document.createElement('optgroup');
+						optgroup.label = group.group;
+						group.models.forEach(model => {
+							const option = new Option(model.name, model.id);
+							optgroup.appendChild(option);
+						});
+						select.appendChild(optgroup);
 					});
-					const defaultModel = 'openai/gpt-4o-mini';
-					if (result.models.some(m => m.id === defaultModel)) {
+					
+					const defaultModel = 'openai/gpt-4o'; // MODIFICATION: Updated default model
+					const allModels = modelGroups.flatMap(g => g.models);
+					if (allModels.some(m => m.id === defaultModel)) {
 						select.value = defaultModel;
 					}
 				} else {

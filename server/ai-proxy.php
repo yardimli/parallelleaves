@@ -5,9 +5,9 @@
 	 *
 	 * This script securely forwards requests from the Electron application to various AI APIs.
 	 * It validates a user session token for protected actions, logs all interactions to a MySQL database,
-	 * and processes the model list before returning it.
+	 * and provides a verified, grouped list of available models.
 	 *
-	 * @version 1.6.0
+	 * @version 1.8.0
 	 * @author locutus de borg
 	 */
 
@@ -89,71 +89,58 @@
 	}
 
 	/**
-	 * Processes the raw models list from OpenRouter to create a view-friendly array.
+	 * Returns a statically defined, grouped list of AI models for the UI.
+	 * This list represents the desired order and grouping for the application.
 	 *
-	 * @param array $modelsData The raw decoded JSON response from OpenRouter.
-	 * @return array A sorted array of models ready for a dropdown.
+	 * @return array A structured array of model groups.
 	 */
-	function processModelsForView(array $modelsData): array
+	function getStaticGroupedModels(): array
 	{
-		$processedModels = [];
-		$positiveList = ['openai', 'anthropic', 'mistral', 'google', 'deepseek', 'moonshot', 'glm'];
-		$negativeList = [
-			'free', '8b', '9b', '3b', '7b', '12b', '22b', '24b', '32b', 'gpt-4 turbo', 'oss', 'tng', 'lite',
-			'1.5', '2.0', 'tiny', 'gemma', 'small', 'nemo', 'chat', 'distill', '3.5', 'dolphin', 'codestral',
-			'devstral', 'magistral', 'pixtral', 'codex', 'o1-pro', 'o3-pro', 'experimental', 'preview'
+		// This structure is based on the user-provided image for the desired model list.
+		return [
+			[
+				'group' => 'Popular',
+				'models' => [
+					['id' => 'openrouter/sonoma-dusk-alpha', 'name' => 'Sonoma Dusk Alpha'],
+					['id' => 'openrouter/sonoma-sky-alpha', 'name' => 'Sonoma Sky Alpha'],
+					['id' => 'openai/gpt-4o', 'name' => 'OpenAI GPT-4o'],
+					['id' => 'anthropic/claude-3.7-sonnet', 'name' => 'Claude 3.7 Sonnet'],
+					['id' => 'anthropic/claude-3.7-sonnet:thinking', 'name' => 'Claude 3.7 Sonnet (Thinking)'],
+					['id' => 'google/gemini-2.5-pro', 'name' => 'Google: Gemini 2.5 Pro'],
+					['id' => 'deepseek/deepseek-chat-v3.1', 'name' => 'DeepSeek Chat V3.1'],
+				],
+			],
+			[
+				'group' => 'New',
+				'models' => [
+					['id' => 'anthropic/claude-sonnet-4', 'name' => 'Claude Sonnet 4'],
+					['id' => 'openai/gpt-5', 'name' => 'OpenAI GPT-5'],
+					['id' => 'openai/gpt-5-chat', 'name' => 'OpenAI GPT-5 Chat'],
+					['id' => 'openai/gpt-5-mini', 'name' => 'OpenAI GPT-5 mini'],
+					['id' => 'moonshotai/kimi-k2-0905', 'name' => 'MoonshotAI: Kimi K2 0905'],
+					['id' => 'z-ai/glm-4.5', 'name' => 'Z.AI: GLM 4.5'],
+				],
+			],
+			[
+				'group' => 'Other',
+				'models' => [
+					['id' => 'google/gemini-2.5-flash', 'name' => 'Gemini 2.5 Flash'],
+					['id' => 'openai/gpt-4-turbo', 'name' => 'OpenAI GPT-4 Turbo'],
+					['id' => 'openai/gpt-4o-mini', 'name' => 'OpenAI GPT-4o mini'],
+				],
+			[
+				'group' => 'NSFW',
+				'models' => [
+					['id' => 'qwen/qwen-3-235b', 'name' => 'Qwen 3 235b'],
+					['id' => 'google/gemma-3-27b', 'name' => 'Gemma 3 27b'],
+					['id' => 'mistralai/mistral-medium-3.1', 'name' => 'Mistral Medium 3.1'],
+					['id' => 'mistralai/mistral-large-2411', 'name' => 'Mistral Large'],
+					['id' => 'microsoft/wizardlm-2-8x22b', 'name' => 'WizardLM 2 8x22b'],
+					['id' => 'x-ai/grok-4', 'name' => 'Grok 4'],
+				],
+			],
+			],
 		];
-
-		$models = $modelsData['data'] ?? [];
-
-		usort($models, function ($a, $b) {
-			return strcmp($a['name'], $b['name']);
-		});
-
-		foreach ($models as $model) {
-			$id = $model['id'];
-			$name = $model['name'];
-			$idLower = strtolower($id);
-			$nameLower = strtolower($name);
-
-			$isNegativeMatch = false;
-			foreach ($negativeList as $word) {
-				if (strpos($idLower, $word) !== false || strpos($nameLower, $word) !== false) {
-					$isNegativeMatch = true;
-					break;
-				}
-			}
-			if ($isNegativeMatch) {
-				continue;
-			}
-
-			$isPositiveMatch = false;
-			foreach ($positiveList as $word) {
-				if (strpos($idLower, $word) !== false || strpos($nameLower, $word) !== false) {
-					$isPositiveMatch = true;
-					break;
-				}
-			}
-			if (!$isPositiveMatch) {
-				continue;
-			}
-
-			$hasImageSupport = in_array('image', $model['architecture']['input_modalities'] ?? []);
-			$hasReasoningSupport = in_array('reasoning', $model['supported_parameters'] ?? []);
-
-			if ($hasReasoningSupport && strpos(strtolower($name), 'think') === false) {
-				$processedModels[] = ['id' => $id, 'name' => $name];
-				$processedModels[] = ['id' => "{$id}--thinking", 'name' => "{$name} (thinking)"];
-			} else {
-				$processedModels[] = ['id' => $id, 'name' => $name];
-			}
-		}
-
-		usort($processedModels, function ($a, $b) {
-			return strcmp($a['name'], $b['name']);
-		});
-
-		return $processedModels;
 	}
 
 // Establish database connection using mysqli
@@ -177,7 +164,6 @@
 		// This action is public. We'll try to get a user ID for logging but won't fail if it's not present.
 		$userId = 0; // Default for anonymous users
 
-		// Get token from payload for logging.
 		$requestBody = file_get_contents('php://input');
 		$payload = json_decode($requestBody, true) ?? [];
 		$token = $payload['auth_token'] ?? null;
@@ -194,33 +180,61 @@
 			}
 		}
 
+		// MODIFICATION: Fetch live models from OpenRouter to verify our static list.
 		$ch = curl_init('https://openrouter.ai/api/v1/models');
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($ch, CURLOPT_HTTPHEADER, [
 			'Accept: application/json',
-			'HTTP-Referer: https://github.com/locutusdeborg/novel-skriver',
-			'X-Title: Parallel Leaves',
+			'HTTP-Referer: https://github.com/locutusdeborg/novel-skriver', // Recommended by OpenRouter
+			'X-Title: Parallel Leaves', // Recommended by OpenRouter
 		]);
 
-		$response = curl_exec($ch);
+		$liveResponse = curl_exec($ch);
 		$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 		curl_close($ch);
 
-		// Pass null for requestPayload as we don't want to log the token.
-		logInteraction($db, $userId, $action, null, (string)$response, $httpCode);
-
-		if ($httpCode >= 400) {
-			sendJsonError($httpCode, 'Failed to fetch models from OpenRouter. ' . $response);
+		if ($httpCode !== 200) {
+			logInteraction($db, $userId, $action, null, (string)$liveResponse, $httpCode);
+			sendJsonError($httpCode, 'Failed to fetch models from OpenRouter to verify availability.');
 		}
 
-		$modelsData = json_decode($response, true);
+		$liveModelsData = json_decode($liveResponse, true);
 		if (json_last_error() !== JSON_ERROR_NONE) {
+			logInteraction($db, $userId, $action, null, (string)$liveResponse, 500);
 			sendJsonError(500, 'Failed to parse models data from OpenRouter.');
 		}
 
-		$processedModels = processModelsForView($modelsData);
+		// Create a lookup map of available model IDs for efficient checking.
+		$availableModelIds = array_flip(array_column($liveModelsData['data'] ?? [], 'id'));
 
-		echo json_encode($processedModels);
+		// Get our desired static, grouped list.
+		$staticGroupedModels = getStaticGroupedModels();
+
+		// Filter the static list against the live data.
+		$verifiedGroupedModels = [];
+		foreach ($staticGroupedModels as $group) {
+			$verifiedModelsInGroup = [];
+			foreach ($group['models'] as $model) {
+				// Check if the model from our static list exists in the live data.
+				if (isset($availableModelIds[$model['id']])) {
+					$verifiedModelsInGroup[] = $model;
+				}
+			}
+
+			// Only include the group in the final list if it contains at least one available model.
+			if (!empty($verifiedModelsInGroup)) {
+				$verifiedGroupedModels[] = [
+					'group' => $group['group'],
+					'models' => $verifiedModelsInGroup,
+				];
+			}
+		}
+
+		$responseBody = json_encode($verifiedGroupedModels);
+		logInteraction($db, $userId, $action, null, $responseBody, 200);
+
+		http_response_code(200);
+		echo $responseBody;
 		exit;
 	}
 
@@ -320,7 +334,6 @@
 		http_response_code($httpCode);
 		echo $response;
 		exit;
-	}
-	else {
+	} else {
 		sendJsonError(400, 'Invalid action specified. Supported actions are "chat", "get_models", and "generate_cover".');
 	}

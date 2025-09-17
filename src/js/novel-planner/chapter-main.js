@@ -502,6 +502,14 @@ async function setupSpellcheckDropdown() {
 document.addEventListener('DOMContentLoaded', async () => {
 	await initI18n();
 	
+	// Added: Refresh button functionality
+	const refreshBtn = document.getElementById('js-refresh-page-btn');
+	if (refreshBtn) {
+		refreshBtn.addEventListener('click', () => {
+			window.location.reload();
+		});
+	}
+	
 	window.showAlert = function(message, title = t('common.error')) {
 		const modal = document.getElementById('alert-modal');
 		if (modal) {

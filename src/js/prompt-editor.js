@@ -296,28 +296,35 @@ async function populateModelDropdown (initialState = null) {
 	
 	try {
 		const result = await window.api.getModels();
-		// console.log('Models fetched from API:');
-		// console.log(result.models);
 		if (!result.success || !result.models || result.models.length === 0) {
 			throw new Error(result.message || 'No models returned from API.');
 		}
 		
-		const models = result.models;
-		const defaultModel = 'openai/gpt-4o-mini';
+		const modelGroups = result.models; // The data is now an array of groups
+		const popularDefaultModel = 'openai/gpt-4o'; // A sensible default from the new list
 		
 		select.innerHTML = '';
-		models.forEach(model => {
-			const option = new Option(model.name, model.id);
-			select.appendChild(option);
+		
+		// MODIFICATION: New logic to handle grouped models using <optgroup>
+		modelGroups.forEach(group => {
+			const optgroup = document.createElement('optgroup');
+			optgroup.label = group.group;
+			group.models.forEach(model => {
+				const option = new Option(model.name, model.id);
+				optgroup.appendChild(option);
+			});
+			select.appendChild(optgroup);
 		});
 		
 		const savedModel = initialState?.model;
-		if (savedModel && models.some(m => m.id === savedModel)) {
+		const allModels = modelGroups.flatMap(g => g.models);
+		
+		if (savedModel && allModels.some(m => m.id === savedModel)) {
 			select.value = savedModel;
-		} else if (models.some(m => m.id === defaultModel)) {
-			select.value = defaultModel;
-		} else if (models.length > 0) {
-			select.value = models[0].id;
+		} else if (allModels.some(m => m.id === popularDefaultModel)) {
+			select.value = popularDefaultModel;
+		} else if (allModels.length > 0) {
+			select.value = allModels[0].id; // Fallback to the very first model
 		}
 	} catch (error) {
 		console.error('Failed to populate AI model dropdowns:', error);

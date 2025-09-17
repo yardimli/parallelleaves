@@ -71,7 +71,7 @@ async function callOpenRouter(payload, token) {
  * @returns {Promise<string|null>} The generated prompt string, or null on failure.
  */
 async function generateCoverPrompt({ title, token }) {
-	const modelId = config.OPEN_ROUTER_MODEL || 'openai/gpt-4o-mini';
+	const modelId = config.OPEN_ROUTER_MODEL || 'openai/gpt-4o'; // MODIFIED: Default model updated
 	const prompt = `Using the book title "${title}", write a clear and simple description of a scene for an AI image generator to create a book cover. Include the setting, mood, and main objects. Include the "${title}" in the prompt Return the result as a JSON with one key "prompt". Example: with title "Blue Scape" {"prompt": "An astronaut on a red planet looking at a big cosmic cloud, realistic, add the title "Blue Scape" to the image."}`;
 	
 	try {
@@ -276,11 +276,11 @@ async function processLLMText({ prompt, model, token }) {
 
 /**
  * Fetches the list of available models from the AI Proxy.
- * The proxy now handles the filtering and processing.
+ * The proxy now handles the filtering and processing, and returns a grouped structure.
  * Caches the result for 24 hours to a file in the user's app data directory.
  * @param {boolean} [forceRefresh=false] - If true, bypasses the cache and fetches from the API.
  * @param {string|null} token - The user's session token.
- * @returns {Promise<Array<object>>} The processed and sorted array of models from the proxy.
+ * @returns {Promise<Array<object>>} The processed and grouped array of models from the proxy.
  * @throws {Error} If the API call fails.
  */
 async function getOpenRouterModels(forceRefresh = false, token) {
@@ -325,7 +325,7 @@ async function getOpenRouterModels(forceRefresh = false, token) {
 		throw new Error(`AI Proxy Models API Error: ${response.status} ${errorText}`);
 	}
 	
-	const processedModelsData = await response.json(); // This is now the processed array
+	const processedModelsData = await response.json(); // This is now the grouped array
 	
 	try {
 		fs.mkdirSync(cachePath, { recursive: true });

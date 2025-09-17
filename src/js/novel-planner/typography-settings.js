@@ -14,11 +14,11 @@ const STORAGE_KEY = 'typographySettings';
 
 // Mappings from setting values to actual CSS values.
 const MAPPINGS = {
-	text_size: { sm: '0.9rem', base: '1rem', lg: '1.1rem', xl: '1.2rem' },
+	text_size: { sm: '0.9rem', base: '1rem', lg: '1.2rem', xl: '1.6rem' },
 	line_height: { '1': '1.5', '2': '1.65', '3': '1.8', '4': '2.0' },
 	text_indent: { '1': '0', '2': '1.5em', '3': '2em', '4': '2.5em' },
-	paragraph_spacing: { '1': '0', '2': '0.75em', '3': '1em', '4': '1.5em' },
-	page_width: { '1': '38rem', '2': '42rem', '3': '48rem', '4': '56rem', '5': 'none' },
+	paragraph_spacing: { '1': '0', '2': '0.25em', '3': '0.50em', '4': '1em' },
+	page_width: { '1': '24rem', '2': '36rem', '3': '48rem', '4': '56rem', '5': 'none' },
 };
 
 /**
