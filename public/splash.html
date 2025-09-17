@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Parallel Leaves</title>
+	<link rel="stylesheet" href="../dist/styles.css">
+	<style>
+		body {
+			-webkit-app-region: drag; /* Allows dragging the frameless window */
+			cursor: pointer;
+		}
+		.splash-container {
+			display: flex;
+			flex-direction: column;
+			height: 100vh;
+			width: 100vw;
+			background-color: #191919; /* Match dark theme */
+		}
+		.splash-image {
+			/* MODIFICATION: Adjusted flex to create a 4:3 ratio for the image part */
+			flex: 3;
+			background-image: url('./assets/splash-v1.png');
+			background-size: cover;
+			background-position: center;
+		}
+		.splash-info {
+			/* MODIFICATION: Adjusted flex for a 4:1 ratio and made it non-draggable */
+			flex: 1;
+			-webkit-app-region: no-drag;
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
+			align-items: center;
+			padding: 1rem;
+			color: #e0e0e0;
+			text-align: center;
+		}
+		a {
+			-webkit-app-region: no-drag; /* Make links clickable */
+			cursor: pointer;
+		}
+	</style>
+</head>
+<body class="overflow-hidden">
+<div class="splash-container">
+	<div class="splash-image"></div>
+	<div class="splash-info space-y-2">
+		<p id="user-greeting" class="text-lg font-semibold"></p>
+		<p id="version-info" class="text-sm text-base-content/70"></p>
+		<p id="update-status" class="text-sm text-base-content/70">Checking for updates...</p>
+		<p class="text-xs text-base-content/50 pt-2">
+			<a id="website-link" href="#" class="link">Visit Project Website</a>
+		</p>
+	</div>
+</div>
+<script type="module" src="../src/js/splash.js"></script>
+</body>
+</html>

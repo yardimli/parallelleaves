@@ -13,6 +13,7 @@ const imageHandler = require('./src/utils/image-handler.js');
 
 let db;
 let mainWindow;
+let splashWindow;
 let chapterEditorWindows = new Map();
 let outlineWindows = new Map();
 let codexEditorWindows = new Map();
@@ -165,8 +166,34 @@ async function generateAndSaveCover(novelId, title, token) {
 
 
 // --- Window Creation Functions ---
+
+function createSplashWindow() {
+	splashWindow = new BrowserWindow({
+		// MODIFICATION: Set width and height to be equal for a square window.
+		width: 500,
+		height: 500,
+		transparent: true,
+		frame: false,
+		alwaysOnTop: true,
+		center: true,
+		icon: path.join(__dirname, 'public/assets/icon.png'),
+		webPreferences: {
+			preload: path.join(__dirname, 'preload.js'),
+			contextIsolation: true,
+			nodeIntegration: false,
+		},
+	});
+	
+	splashWindow.loadFile('public/splash.html');
+	
+	splashWindow.on('closed', () => {
+		splashWindow = null;
+	});
+}
+
 function createMainWindow() {
 	mainWindow = new BrowserWindow({
+		show: false,
 		width: 1400,
 		height: 1000,
 		icon: path.join(__dirname, 'public/assets/icon.png'),
@@ -224,6 +251,11 @@ function createMainWindow() {
 	
 	
 	mainWindow.loadFile('public/index.html');
+	
+	mainWindow.once('ready-to-show', () => {
+		// The main window is ready in the background.
+		// The splash screen's logic will trigger the 'splash:close' IPC event to show it.
+	});
 	
 	mainWindow.on('closed', () => {
 		mainWindow = null;
@@ -503,6 +535,48 @@ const extractMarkerPairsFromHtml = (sourceHtml, targetHtml, selectedText = null)
 };
 
 function setupIpcHandlers() {
+	ipcMain.handle('splash:get-init-data', () => {
+		return {
+			version: config.APP_VERSION,
+			user: currentUserSession ? currentUserSession.user : null,
+			websiteUrl: 'https://github.com/locutusdeborg/novel-skriver'
+		};
+	});
+	
+	ipcMain.handle('splash:check-for-updates', async () => {
+		try {
+			if (!config.VERSION_CHECK_URL) {
+				console.log('VERSION_CHECK_URL not configured. Skipping update check.');
+				return null;
+			}
+			const response = await fetch(config.VERSION_CHECK_URL);
+			if (!response.ok) {
+				throw new Error(`Update server returned status ${response.status}`);
+			}
+			const data = await response.json();
+			return data.latest_version;
+		} catch (error) {
+			console.error('Failed to check for updates:', error);
+			return null;
+		}
+	});
+	
+	ipcMain.on('splash:close', () => {
+		if (splashWindow && !splashWindow.isDestroyed()) {
+			splashWindow.close();
+		}
+		if (mainWindow && !mainWindow.isDestroyed()) {
+			mainWindow.show();
+			mainWindow.focus();
+		}
+	});
+	
+	ipcMain.on('app:open-external-url', (event, url) => {
+		if (url) {
+			shell.openExternal(url);
+		}
+	});
+	
 	// --- I18n Handler ---
 	ipcMain.handle('i18n:get-lang-file', (event, lang) => {
 		const langPath = path.join(__dirname, 'public', 'lang', `${lang}.json`);
@@ -891,7 +965,6 @@ function setupIpcHandlers() {
 		}
 	});
 	
-	// MODIFICATION START: Added a new handler to get raw, unprocessed content.
 	ipcMain.handle('chapters:getRawContent', (event, { chapterId, field }) => {
 		const allowedFields = ['source_content', 'target_content'];
 		if (!allowedFields.includes(field)) {
@@ -905,7 +978,6 @@ function setupIpcHandlers() {
 			throw new Error('Database error while fetching chapter content.');
 		}
 	});
-	// MODIFICATION END
 	
 	ipcMain.handle('chapters:getTranslationContext', (event, { chapterId, pairCount, selectedText }) => {
 		if (pairCount <= 0) {
@@ -1419,6 +1491,7 @@ app.on('ready', () => {
 	loadSession();
 	setupIpcHandlers();
 	
+	createSplashWindow();
 	createMainWindow();
 });
 

@@ -9,6 +9,13 @@ contextBridge.exposeInMainWorld('api', {
 	getSession: () => ipcRenderer.invoke('auth:get-session'),
 	openExternalRegister: () => ipcRenderer.send('auth:open-register-url'),
 	
+	// MODIFICATION START: Add splash screen and utility APIs.
+	splashGetInitData: () => ipcRenderer.invoke('splash:get-init-data'),
+	splashCheckForUpdates: () => ipcRenderer.invoke('splash:check-for-updates'),
+	splashClose: () => ipcRenderer.send('splash:close'),
+	openExternalUrl: (url) => ipcRenderer.send('app:open-external-url', url),
+	// MODIFICATION END
+	
 	// --- Dashboard/Novel Creation ---
 	getNovelsWithCovers: () => ipcRenderer.invoke('novels:getAllWithCovers'),
 	getOneNovel: (novelId) => ipcRenderer.invoke('novels:getOne', novelId),
