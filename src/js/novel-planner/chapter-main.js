@@ -49,7 +49,7 @@ const debouncedContentSave = debounce(async ({ chapterId, field, value }) => {
  * @param {string} targetHtml - The initial HTML content of the target.
  */
 async function synchronizeMarkers(chapterId, sourceContainer, targetHtml) {
-	const markerRegex = /\[#(\d+)\]/g;
+	const markerRegex = /\[\[#(\d+)\]\]/g;
 	let sourceHtml = sourceContainer.innerHTML;
 	
 	const sourceMarkers = sourceHtml.match(markerRegex) || [];

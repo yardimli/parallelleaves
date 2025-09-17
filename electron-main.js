@@ -404,7 +404,7 @@ function createImportWindow() {
 }
 
 /**
- * Extracts marker-based translation pairs from HTML content.
+ * Extracts marker-based translation pairs from HTML content, respecting document order.
  * @param {string} sourceHtml - The source HTML content.
  * @param {string} targetHtml - The target HTML content.
  * @param {string|null} [selectedText=null] - The text currently selected by the user for translation, used to truncate the last source segment.
@@ -415,51 +415,60 @@ const extractMarkerPairsFromHtml = (sourceHtml, targetHtml, selectedText = null)
 		return [];
 	}
 	
-	const getSegments = (html, isSource = false) => {
-		const segments = new Map();
-		const parts = html.split(/(\[#\d+\])/g);
+	// Helper to split HTML by markers and return an ordered array of segments.
+	const getSegments = (html) => {
+		const segments = []; // Use an array to preserve document order.
+		const parts = html.split(/(\[\[#\d+\]\])/g);
 		for (let i = 1; i < parts.length; i += 2) {
 			const marker = parts[i];
 			const content = parts[i + 1] || '';
-			const match = marker.match(/\[#(\d+)\]/);
+			const match = marker.match(/\[\[#(\d+)\]\]/);
 			if (match) {
 				const number = parseInt(match[1], 10);
-				let plainText = content.replace(/<[^>]+>/g, ' ').trim();
-				//replace all multiple spaces with a single space
+				let plainText = content.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, ' ').trim();
 				plainText = plainText.replace(/\s\s+/g, ' ');
 				
-				// MODIFICATION START: If this is the last source segment, truncate it before the user's selection.
-				// It's the last segment if it's the second to last part in the split array.
-				if (isSource && selectedText && i === parts.length - 2) {
-					console.log('Truncating last source segment before user selection:', selectedText);
-					console.log('Original last segment text:', plainText);
-					const selectionIndex = plainText.indexOf(selectedText.trim());
-					console.log('Index of selection in last segment:', selectionIndex);
-					if (selectionIndex !== -1) {
-						plainText = plainText.substring(0, selectionIndex).trim();
-					}
-				}
-				// MODIFICATION END
-				
 				if (plainText) {
-					segments.set(number, plainText);
+					// Note if this is the last marker-delimited segment in the content.
+					segments.push({ number, text: plainText, isLastSegment: i === parts.length - 2 });
 				}
 			}
 		}
 		return segments;
 	};
 	
-	const sourceSegments = getSegments(sourceHtml, true);
-	const targetSegments = getSegments(targetHtml, false);
+	const sourceSegmentsArray = getSegments(sourceHtml);
+	const targetSegmentsArray = getSegments(targetHtml);
+	
+	// If this is the current chapter (indicated by selectedText),
+	// truncate the last source segment to not include the selection itself.
+	if (selectedText && sourceSegmentsArray.length > 0) {
+		const lastSourceSegment = sourceSegmentsArray[sourceSegmentsArray.length - 1];
+		// Only truncate if it's the very last segment in the source file.
+		if (lastSourceSegment.isLastSegment) {
+			const selectionIndex = lastSourceSegment.text.indexOf(selectedText.trim());
+			if (selectionIndex !== -1) {
+				lastSourceSegment.text = lastSourceSegment.text.substring(0, selectionIndex).trim();
+				// If truncation makes the text empty, remove the segment entirely from context.
+				if (!lastSourceSegment.text) {
+					sourceSegmentsArray.pop();
+				}
+			}
+		}
+	}
+	
+	// Convert source segments to a Map for efficient lookup.
+	const sourceSegmentsMap = new Map(sourceSegmentsArray.map(s => [s.number, s.text]));
 	
 	const pairs = [];
-	const sortedKeys = Array.from(targetSegments.keys()).sort((a, b) => a - b);
-	
-	for (const key of sortedKeys) {
-		if (sourceSegments.has(key)) {
+	// Iterate through the target segments IN THEIR ORIGINAL DOCUMENT ORDER.
+	// This avoids reordering context based on marker numbers.
+	for (const targetSegment of targetSegmentsArray) {
+		// Find the matching source segment by its marker number.
+		if (sourceSegmentsMap.has(targetSegment.number)) {
 			pairs.push({
-				source: sourceSegments.get(key),
-				target: targetSegments.get(key),
+				source: sourceSegmentsMap.get(targetSegment.number),
+				target: targetSegment.text,
 			});
 		}
 	}
@@ -844,7 +853,6 @@ function setupIpcHandlers() {
 		}
 	});
 	
-	// MODIFICATION START: Updated handler to accept selectedText for context truncation.
 	ipcMain.handle('chapters:getTranslationContext', (event, { chapterId, pairCount, selectedText }) => {
 		if (pairCount <= 0) {
 			return [];
@@ -896,7 +904,6 @@ function setupIpcHandlers() {
 			throw new Error('Failed to retrieve translation context from the database.');
 		}
 	});
-	// MODIFICATION END
 	
 	
 	// --- Editor & Template Handlers ---
