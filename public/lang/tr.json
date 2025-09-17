@@ -196,7 +196,7 @@
     "loadingEditor": "Editör yükleniyor...",
     "showPreview": "Önizlemeyi Göster",
     "hidePreview": "Önizlemeyi Gizle",
-    "applyChanges": "Değişiklikleri Uygula",
+    "applyChanges": "Yapay Zekayı Çalıştır",
     "wordsSelected": "{count} sözcük seçildi",
     "wordsSelectedSource": "{count} sözcük seçildi (kaynak)",
     "noProjectContent": "Bu projede henüz hiç içerik yok.",

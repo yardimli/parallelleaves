@@ -196,7 +196,7 @@
     "loadingEditor": "Loading editor...",
     "showPreview": "Show Preview",
     "hidePreview": "Hide Preview",
-    "applyChanges": "Apply Changes",
+    "applyChanges": "Run AI",
     "wordsSelected": "{count} words selected",
     "wordsSelectedSource": "{count} words selected (source)",
     "noProjectContent": "This project has no content yet.",

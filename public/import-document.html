@@ -85,7 +85,8 @@
 		<li><button data-action="set-act"><i class="bi bi-film"></i> <span data-i18n="import.newAct">New Act</span></button></li>
 		<li><button data-action="set-chapter"><i class="bi bi-card-text"></i> <span data-i18n="import.newChapter">New Chapter</span></button></li>
 		<div class="divider my-1"></div>
-		<li><button data-action="remove-break"><i class="bi bi-x-circle"></i> <span data-i18n="import.removeBreak">Remove Break</span></button></li>
+		<!-- MODIFICATION: Moved data-action to the li element for easier event delegation -->
+		<li data-action="remove-break"><button><i class="bi bi-x-circle"></i> <span data-i18n="import.removeBreak">Remove Break</span></button></li>
 	</ul>
 </div>
 
@@ -101,7 +102,6 @@
 	</div>
 </dialog>
 
-<!-- MODIFICATION START: Added Auto-detect Options Modal -->
 <dialog id="auto-detect-modal" class="modal">
 	<div class="modal-box">
 		<h3 class="font-bold text-lg" data-i18n="import.autoDetectModal.title">Auto-detection Options</h3>
@@ -142,7 +142,6 @@
 		</div>
 	</div>
 </dialog>
-<!-- MODIFICATION END -->
 
 <div id="import-overlay" class="hidden fixed inset-0 bg-base-100/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center gap-4">
 	<span class="loading loading-spinner loading-lg"></span>

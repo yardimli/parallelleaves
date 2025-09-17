@@ -80,13 +80,13 @@ const getToolbarState = (state) => {
  * @param {HTMLElement} mount - The element to mount the editor in.
  * @param {object} config - The initialization configuration.
  */
-function createEditorView(mount, config) {
+function createEditorView (mount, config) {
 	const { initialHtml, isEditable, chapterId: id, field: fieldName, i18n } = config;
 	chapterId = id;
 	field = fieldName;
 	
 	const noteProtectionPlugin = new Plugin({
-		filterTransaction(tr, state) {
+		filterTransaction (tr, state) {
 			if (!tr.docChanged) return true;
 			let noteDeleted = false;
 			state.doc.descendants((node, pos) => {
@@ -102,10 +102,10 @@ function createEditorView(mount, config) {
 		props: {
 			editable: () => isEditable,
 			handleDOMEvents: {
-				focus(view) {
+				focus (view) {
 					postToParent('editorFocused', { chapterId, state: getToolbarState(view.state) });
 				},
-				blur() {
+				blur () {
 					postToParent('editorBlurred', { chapterId });
 				},
 			},
@@ -122,14 +122,14 @@ function createEditorView(mount, config) {
 			plugins: [history(), keymap({ 'Mod-z': undo, 'Mod-y': redo }), keymap(baseKeymap), editorPlugin, noteProtectionPlugin],
 		}),
 		nodeViews: {
-			note(node, view, getPos) {
+			note (node, view, getPos) {
 				return new NoteNodeView(node, view, getPos, (type, payload) => postToParent(type, payload), {
 					edit: i18nTitles.editNote,
 					delete: i18nTitles.deleteNote
 				});
 			}
 		},
-		dispatchTransaction(transaction) {
+		dispatchTransaction (transaction) {
 			const newState = this.state.apply(transaction);
 			this.updateState(newState);
 			
@@ -158,7 +158,7 @@ function createEditorView(mount, config) {
  * Executes a formatting or editor command received from the parent window.
  * @param {object} payload - The command details.
  */
-function executeCommand({ command, attrs }) {
+function executeCommand ({ command, attrs }) {
 	if (!editorView) return;
 	const { state, dispatch } = editorView;
 	const { schema } = state;
@@ -216,30 +216,46 @@ function executeCommand({ command, attrs }) {
 	editorView.focus();
 }
 
-function findTranslationBlockPositions(blockNumber) {
+// MODIFICATION START: Updated function to parse block number from note content.
+// This accommodates non-sequential block numbers that are consistent across chapters.
+function findTranslationBlockPositions (blockNumber) {
 	const { doc } = editorView.state;
-	let noteNodeCount = 0;
 	let blockStartPos = -1;
 	let blockEndPos = doc.content.size;
 	let blockFound = false;
 	
 	doc.forEach((node, pos) => {
 		if (node.type.name === 'note') {
-			noteNodeCount++;
-			if (noteNodeCount === blockNumber) {
+			// If we have already found the starting block, the current note node
+			// marks the end of the content section we are interested in.
+			if (blockFound) {
+				blockEndPos = pos;
+				blockFound = false; // Stop searching for another end marker.
+				return; // Continue forEach but skip logic below for this iteration.
+			}
+			
+			// Check the note's text attribute for a block number.
+			// e.g., "Translation Block #123"
+			const text = node.attrs.text || '';
+			const match = text.match(/Translation Block #(\d+)/);
+			
+			if (match && parseInt(match[1], 10) === blockNumber) {
+				// This is the starting block. The content begins right after this node.
 				blockStartPos = pos + node.nodeSize;
 				blockFound = true;
-			} else if (blockFound) {
-				blockEndPos = pos;
-				blockFound = false; // Stop searching
 			}
 		}
 	});
+	
+	// If blockFound is still true, it means the target block was the last one in the document.
+	// In this case, blockEndPos correctly remains as the total document size.
+	
 	return { blockStartPos, blockEndPos };
 }
+// MODIFICATION END
 
 // NEW FUNCTION: Applies typography styles received from the parent window.
-function applyTypography({ styleProps, settings }) {
+function applyTypography ({ styleProps, settings }) {
 	const root = document.documentElement;
 	Object.entries(styleProps).forEach(([prop, value]) => {
 		root.style.setProperty(prop, value);

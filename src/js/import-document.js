@@ -133,15 +133,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 	}
 	
 	function updateNavButtonState() {
-		const marks = documentContent.querySelectorAll('.chapter-break, .act-break');
+		const marks = documentContent.querySelectorAll('.chapter-break-marker, .act-break-marker');
 		const hasMarks = marks.length > 0;
 		prevMarkBtn.disabled = !hasMarks;
 		nextMarkBtn.disabled = !hasMarks;
 	}
 	
 	function updateStatus() {
-		const actBreaks = documentContent.querySelectorAll('.act-break').length;
-		const chapterBreaks = documentContent.querySelectorAll('.chapter-break').length;
+		const actBreaks = documentContent.querySelectorAll('.act-break-marker').length;
+		const chapterBreaks = documentContent.querySelectorAll('.chapter-break-marker').length;
 		const hasContent = documentContent.querySelector('p');
 		
 		const actCount = hasContent ? actBreaks + 1 : 0;
@@ -238,7 +238,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 					documentContent.appendChild(p);
 				});
 				
-				// MODIFICATION: Automatically show the auto-detect modal after content is loaded.
 				autoDetectModal.showModal();
 				
 			} catch (error) {
@@ -258,15 +257,31 @@ document.addEventListener('DOMContentLoaded', async () => {
 	});
 	
 	popover.addEventListener('click', (event) => {
-		const action = event.target.closest('button')?.dataset.action;
-		if (!action || !targetedParagraph) return;
+		const actionTarget = event.target.closest('[data-action]');
+		if (!actionTarget || !targetedParagraph) return;
 		
-		targetedParagraph.classList.remove('act-break', 'chapter-break');
+		const action = actionTarget.dataset.action;
+		const prevSibling = targetedParagraph.previousElementSibling;
 		
-		if (action === 'set-act') {
-			targetedParagraph.classList.add('act-break');
-		} else if (action === 'set-chapter') {
-			targetedParagraph.classList.add('chapter-break');
+		if (prevSibling && (prevSibling.classList.contains('act-break-marker') || prevSibling.classList.contains('chapter-break-marker'))) {
+			prevSibling.remove();
+		}
+		
+		if (action === 'set-act' || action === 'set-chapter') {
+			const marker = document.createElement('div');
+			const title = targetedParagraph.textContent.trim();
+			marker.dataset.title = title;
+			
+			// MODIFICATION: Add 'not-prose' class directly here.
+			const breakClass = action === 'set-act' ? 'act-break-marker' : 'chapter-break-marker';
+			marker.className = `${breakClass} not-prose`;
+			
+			const titleSpan = document.createElement('span');
+			titleSpan.className = 'break-title';
+			titleSpan.textContent = title;
+			marker.appendChild(titleSpan);
+			
+			documentContent.insertBefore(marker, targetedParagraph);
 		}
 		
 		currentMarkIndex = -1;
@@ -293,55 +308,42 @@ document.addEventListener('DOMContentLoaded', async () => {
 		
 		const paragraphs = Array.from(documentContent.querySelectorAll('p'));
 		
-		// Clear existing breaks before applying new ones.
-		paragraphs.forEach(p => p.classList.remove('act-break', 'chapter-break'));
+		documentContent.querySelectorAll('.act-break-marker, .chapter-break-marker').forEach(marker => marker.remove());
 		
 		let lastBreakIndex = -1;
 		
 		paragraphs.forEach((p, i) => {
 			const text = p.textContent.trim();
-			if (!text) return; // Skip paragraphs that are only whitespace
+			if (!text) return;
 			
 			let isBreak = false;
-			let breakType = 'chapter-break'; // Default to chapter
+			let breakType = 'chapter-break-marker';
 			
-			// Rule 1: Numeric or Roman numerals
 			if (useNumeric) {
 				const isNumeric = /^\d+$/.test(text);
 				const isRoman = /^M{0,4}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$/i.test(text);
-				if (isNumeric || isRoman) {
-					isBreak = true;
-				}
+				if (isNumeric || isRoman) isBreak = true;
 			}
 			
-			// Rule 2: Keywords like "Chapter" or "Act"
 			if (!isBreak && useKeyword) {
-				// Using \b for word boundary to avoid matching words like "Actual"
 				if (/^\b(act|perde)\b/i.test(text)) {
 					isBreak = true;
-					breakType = 'act-break';
+					breakType = 'act-break-marker';
 				} else if (/^\b(chapter|bölüm)\b/i.test(text)) {
 					isBreak = true;
 				}
 			}
 			
-			// Rule 3: Short, all-caps lines
 			if (!isBreak && useAllCaps) {
-				// Check if the line is short, not empty, all uppercase, and contains at least one letter.
 				if (text.length > 0 && text.length < 50 && text === text.toUpperCase() && /[A-Z]/i.test(text)) {
 					isBreak = true;
 				}
 			}
 			
-			// If a potential break is found, validate it.
 			if (isBreak) {
-				// The first detected break is always valid.
 				if (lastBreakIndex === -1) {
-					p.classList.add(breakType);
 					lastBreakIndex = i;
 				} else {
-					// For subsequent breaks, check if there's any non-empty paragraph
-					// between the last break and this potential one.
 					let hasContentSinceLastBreak = false;
 					for (let j = lastBreakIndex + 1; j < i; j++) {
 						if (paragraphs[j].textContent.trim() !== '') {
@@ -349,23 +351,36 @@ document.addEventListener('DOMContentLoaded', async () => {
 							break;
 						}
 					}
-					
-					// If content exists, this is a valid break.
 					if (hasContentSinceLastBreak) {
-						p.classList.add(breakType);
 						lastBreakIndex = i;
+					} else {
+						isBreak = false;
 					}
 				}
+			}
+			
+			if (isBreak) {
+				const marker = document.createElement('div');
+				// MODIFICATION: Add 'not-prose' class directly here.
+				marker.className = `${breakType} not-prose`;
+				marker.dataset.title = text;
+				
+				const titleSpan = document.createElement('span');
+				titleSpan.className = 'break-title';
+				titleSpan.textContent = text;
+				marker.appendChild(titleSpan);
+				
+				documentContent.insertBefore(marker, p);
 			}
 		});
 		
 		currentMarkIndex = -1;
 		updateStatus();
-		autoDetectModal.close(); // Manually close the modal
+		autoDetectModal.close();
 	});
 	
 	nextMarkBtn.addEventListener('click', () => {
-		const marks = documentContent.querySelectorAll('.chapter-break, .act-break');
+		const marks = documentContent.querySelectorAll('.chapter-break-marker, .act-break-marker');
 		if (marks.length === 0) return;
 		
 		currentMarkIndex++;
@@ -377,7 +392,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 	});
 	
 	prevMarkBtn.addEventListener('click', () => {
-		const marks = documentContent.querySelectorAll('.chapter-break, .act-break');
+		const marks = documentContent.querySelectorAll('.chapter-break-marker, .act-break-marker');
 		if (marks.length === 0) return;
 		
 		currentMarkIndex--;
@@ -405,11 +420,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 		let currentChapter = { title: 'Chapter 1', content: [] };
 		let globalBlockNumber = 1;
 		
-		const paragraphs = documentContent.querySelectorAll('p');
+		const allNodes = documentContent.childNodes;
 		
-		for (const p of paragraphs) {
-			const isActBreak = p.classList.contains('act-break');
-			const isChapterBreak = p.classList.contains('chapter-break');
+		for (const node of allNodes) {
+			if (node.nodeType !== Node.ELEMENT_NODE) continue;
+			
+			const isActBreak = node.classList.contains('act-break-marker');
+			const isChapterBreak = node.classList.contains('chapter-break-marker');
 			
 			if (isActBreak || isChapterBreak) {
 				if (currentChapter.content.length > 0) {
@@ -423,32 +440,36 @@ document.addEventListener('DOMContentLoaded', async () => {
 					if (currentAct.chapters.length > 0) {
 						acts.push(currentAct);
 					}
-					currentAct = { title: p.textContent.trim() || `Act ${acts.length + 1}`, chapters: [] };
+					currentAct = { title: node.dataset.title || `Act ${acts.length + 1}`, chapters: [] };
 				}
 				
-				currentChapter = { title: p.textContent.trim() || `Chapter ${currentAct.chapters.length + 1}`, content: [] };
+				currentChapter = { title: node.dataset.title || `Chapter ${currentAct.chapters.length + 1}`, content: [] };
 				
-			} else {
-				currentChapter.content.push(p.textContent.trim());
+			} else if (node.tagName === 'P') {
+				currentChapter.content.push(node.textContent.trim());
 			}
 		}
 		
 		if (currentChapter.content.length > 0) {
 			const result = insertTranslationBlockPlaceholders(currentChapter.content, blockSize, globalBlockNumber);
 			currentChapter.content = result.html;
-			globalBlockNumber = result.nextBlockNumber;
 			currentAct.chapters.push(currentChapter);
 		}
 		if (currentAct.chapters.length > 0) {
 			acts.push(currentAct);
 		}
 		
-		if (acts.length === 0 && paragraphs.length > 0) {
-			const allContent = Array.from(paragraphs).map(p => p.textContent.trim());
-			const result = insertTranslationBlockPlaceholders(allContent, blockSize, globalBlockNumber);
-			currentChapter.content = result.html;
-			currentAct.chapters.push(currentChapter);
-			acts.push(currentAct);
+		if (acts.length === 0 && allNodes.length > 0) {
+			const allContent = Array.from(allNodes)
+				.filter(node => node.tagName === 'P')
+				.map(p => p.textContent.trim());
+			
+			if (allContent.length > 0) {
+				const result = insertTranslationBlockPlaceholders(allContent, blockSize, globalBlockNumber);
+				currentChapter.content = result.html;
+				currentAct.chapters.push(currentChapter);
+				acts.push(currentAct);
+			}
 		}
 		
 		if (acts.length === 0) {

@@ -252,8 +252,8 @@ async function populateModelDropdown (initialState = null) {
 	try {
 		const result = await window.api.getModels();
 		// console.log('Models fetched from API:');
-		// console.log(result.models.data);
-		if (!result.success || !result.models.data || result.models.data.length === 0) {
+		// console.log(result.models);
+		if (!result.success || !result.models || result.models.length === 0) {
 			throw new Error(result.message || 'No models returned from API.');
 		}
 		
@@ -261,17 +261,17 @@ async function populateModelDropdown (initialState = null) {
 		const defaultModel = 'openai/gpt-4o-mini';
 		
 		select.innerHTML = '';
-		models.data.forEach(model => {
+		models.forEach(model => {
 			const option = new Option(model.name, model.id);
 			select.appendChild(option);
 		});
 		
 		const savedModel = initialState?.model;
-		if (savedModel && models.data.some(m => m.id === savedModel)) {
+		if (savedModel && models.some(m => m.id === savedModel)) {
 			select.value = savedModel;
-		} else if (models.data.some(m => m.id === defaultModel)) {
+		} else if (models.some(m => m.id === defaultModel)) {
 			select.value = defaultModel;
-		} else if (models.data.length > 0) {
+		} else if (models.length > 0) {
 			select.value = models[0].id;
 		}
 	} catch (error) {
@@ -316,6 +316,7 @@ async function handleModalApply () {
 			.catch(err => console.error('Failed to save prompt settings:', err));
 	}
 	
+	console.log('AI Action Params:', { model, action, formData: formDataObj, currentContext:currentContext.translationInfo });
 	const selectionInfo = await currentEditorInterface.getSelectionInfo(action, currentContext.translationInfo);
 	
 	if (!selectionInfo) {
