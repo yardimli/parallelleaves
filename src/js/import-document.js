@@ -371,7 +371,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 		importOverlayStatus.textContent = t('import.importingContent');
 		importOverlay.classList.remove('hidden');
 		
-		// MODIFICATION START: Simplified the entire import process.
 		const acts = [];
 		let currentAct = { title: 'Act 1', chapters: [] };
 		let currentChapter = { title: 'Chapter 1', content: [] }; // Now collects an array of paragraph strings
@@ -431,7 +430,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 				acts.push(currentAct);
 			}
 		}
-		// MODIFICATION END
 		
 		if (acts.length === 0) {
 			window.showAlert(t('import.alertNoContent'));

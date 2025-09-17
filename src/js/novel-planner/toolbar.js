@@ -23,8 +23,6 @@ export function updateToolbarState(newState) {
 	if (headingBtn) headingBtn.textContent = t('editor.paragraph');
 	wordCountEl.textContent = t('editor.noTextSelected');
 	
-	// MODIFICATION: Removed logic for the now-deleted translate button
-	
 	if (newState) {
 		allBtns.forEach(btn => {
 			const cmd = btn.dataset.command;
@@ -84,7 +82,7 @@ export function updateToolbarState(newState) {
 		if (newState.isTextSelected) {
 			const words = newState.selectionText.trim().split(/\s+/).filter(Boolean);
 			wordCountEl.textContent = t('editor.wordsSelected', { count: words.length });
-		} else { // MODIFICATION: Simplified this condition
+		} else {
 			wordCountEl.textContent = t('editor.noTextSelected');
 		}
 	}
@@ -106,7 +104,7 @@ function applyHighlight(color) {
 	}, window.location.origin);
 }
 
-export const createIframeEditorInterface = (contentWindow) => { // MODIFICATION: Exported for use in chapter-main.js
+export const createIframeEditorInterface = (contentWindow) => {
 	const post = (type, payload) => contentWindow.postMessage({ type, payload }, window.location.origin);
 	
 	return {
@@ -124,7 +122,6 @@ export const createIframeEditorInterface = (contentWindow) => { // MODIFICATION:
 			// Both actions now just need the current selection state from the editor.
 			post('prepareForRephrase', { isRephrase: action === 'rephrase' });
 		}),
-		// MODIFICATION START: New method to get the full HTML content from the iframe editor.
 		getFullHtml: () => new Promise((resolve) => {
 			const listener = (event) => {
 				if (event.source === contentWindow && event.data.type === 'fullHtmlResponse') {
@@ -135,7 +132,6 @@ export const createIframeEditorInterface = (contentWindow) => { // MODIFICATION:
 			window.addEventListener('message', listener);
 			post('prepareForGetFullHtml');
 		}),
-		// MODIFICATION END
 		setEditable: (isEditable) => post('setEditable', { isEditable }),
 		cleanupSuggestion: () => post('cleanupAiSuggestion'),
 		discardAiSuggestion: (from, to, originalFragmentJson) => post('discardAiSuggestion', { from, to, originalFragmentJson }),
@@ -179,8 +175,6 @@ async function handleToolbarAction(button) {
 				console.error('Error parsing translate_settings JSON', e);
 			}
 		}
-		
-		// MODIFICATION: Removed the 'translate' action handler from the toolbar logic
 		
 		// This is for the 'rephrase' action in the chapter editor.
 		if (!activeContentWindow) return;

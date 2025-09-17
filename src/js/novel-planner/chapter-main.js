@@ -1,5 +1,5 @@
-import { setupTopToolbar, setActiveContentWindow, updateToolbarState, createIframeEditorInterface } from './toolbar.js'; // MODIFICATION: Added createIframeEditorInterface
-import { setupPromptEditor, openPromptEditor } from '../prompt-editor.js'; // MODIFICATION: Added openPromptEditor
+import { setupTopToolbar, setActiveContentWindow, updateToolbarState, createIframeEditorInterface } from './toolbar.js';
+import { setupPromptEditor, openPromptEditor } from '../prompt-editor.js';
 import { getActiveEditor, setActiveEditor } from './content-editor.js';
 import { setupTypographySettings, getTypographySettings, generateTypographyStyleProperties } from './typography-settings.js';
 import { initI18n, t } from '../i18n.js';
@@ -17,7 +17,7 @@ const debounce = (func, delay) => {
 let activeChapterId = null;
 let isScrollingProgrammatically = false;
 const chapterEditorViews = new Map();
-let currentSourceSelection = { text: '', hasSelection: false, range: null }; // MODIFICATION: Added range to state object
+let currentSourceSelection = { text: '', hasSelection: false, range: null };
 
 const debouncedContentSave = debounce(async ({ chapterId, field, value }) => {
 	if (field === 'target_content') {
@@ -88,7 +88,6 @@ async function synchronizeMarkers(chapterId, sourceContainer, targetHtml) {
 		}
 	}
 }
-// MODIFICATION END
 
 /**
  * Finds codex entry titles and phrases in an HTML string and wraps them in links.
@@ -257,9 +256,8 @@ async function renderManuscript(container, novelData, allCodexEntries) {
 			
 			fragment.appendChild(chapterWrapper);
 			
-			const initialTargetContent = chapter.target_content || ''; // MODIFICATION: Ensure it's a string
+			const initialTargetContent = chapter.target_content || '';
 			
-			// MODIFICATION: Run marker synchronization after rendering the source content.
 			synchronizeMarkers(chapter.id, sourceContentContainer, initialTargetContent);
 			
 			// Store iframe info and initialize it on load.
@@ -534,9 +532,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 			updateToolbarState(null); // Pass null to indicate it's not a PM editor state
 		}, 100);
 		
-		// MODIFICATION: Replaced simple listener with one that detects source selection and stores the Range object
 		document.addEventListener('selectionchange', () => {
-			throttledUpdateToolbar(); // Still needed for rephrase button, etc.
+			throttledUpdateToolbar();
 			
 			const selection = window.getSelection();
 			let hasSourceSelection = false;
@@ -637,7 +634,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 						viewInfo.iframe.style.height = `${payload.height}px`;
 					}
 					break;
-				// MODIFICATION: Added handler for translation requests from iframes
 				case 'requestTranslation': {
 					const { from, to } = payload;
 					const viewInfo = Array.from(chapterEditorViews.values()).find(v => v.contentWindow === sourceWindow);
@@ -661,7 +657,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 						// Construct the context needed for the prompt editor
 						const context = {
 							selectedText: currentSourceSelection.text,
-							sourceSelectionRange: currentSourceSelection.range, // MODIFICATION: Pass the stored Range object
+							sourceSelectionRange: currentSourceSelection.range,
 							allCodexEntries,
 							languageForPrompt: novelData.source_language || 'English',
 							targetLanguage: novelData.target_language || 'English',

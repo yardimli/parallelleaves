@@ -38,7 +38,7 @@ let currentAiParams = null;
 let currentPromptId = null;
 
 /**
- * MODIFICATION START: New helper function to highlight a DOM Range.
+ * New helper function to highlight a DOM Range.
  * Wraps the text content within a given Range object with a highlight span.
  * This function is designed to handle selections that may span multiple nodes and paragraphs.
  * @param {Range} range - The DOM Range object to highlight.
@@ -118,10 +118,9 @@ function highlightSourceRange(range) {
 		nodeRange.surroundContents(span);
 	}
 }
-// MODIFICATION END
 
 /**
- * MODIFICATION START: New helper function to find the highest marker number.
+ * helper function to find the highest marker number.
  * Scans two HTML strings to find all instances of `[#<number>]` and returns the highest number found.
  * @param {string} sourceHtml - The HTML of the source content.
  * @param {string} targetHtml - The HTML of the target content.
@@ -143,7 +142,6 @@ function findHighestMarkerNumber(sourceHtml, targetHtml) {
 	
 	return highest;
 }
-// MODIFICATION END
 
 function showAiSpinner () {
 	const overlay = document.getElementById('ai-action-spinner-overlay');
@@ -276,7 +274,7 @@ function createFloatingToolbar (from, to, model) {
 }
 
 async function startAiAction (params) {
-	const { prompt, model, marker } = params; // MODIFICATION: Destructure new marker property
+	const { prompt, model, marker } = params;
 	
 	isAiActionActive = true;
 	if (currentEditorInterface.type === 'iframe') {
@@ -293,13 +291,12 @@ async function startAiAction (params) {
 			let newContentText = result.data.choices[0].message.content ?? 'No content generated.';
 			newContentText = newContentText.trim();
 			
-			// MODIFICATION START: Prepend the marker only to the first paragraph.
+			// Prepend the marker only to the first paragraph.
 			// First, prepend the marker to the entire raw text block.
 			const textWithMarker = marker ? marker + ' ' + newContentText : newContentText;
 			// Then, convert the entire block to HTML paragraphs. This ensures the marker
 			// is only at the very beginning of the first paragraph.
 			const newContentHtml = '<p>' + textWithMarker.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>') + '</p>';
-			// MODIFICATION END
 			
 			console.log('AI Action Result:', newContentText, newContentHtml);
 			
@@ -311,7 +308,6 @@ async function startAiAction (params) {
 			);
 			
 			if (replacementData) {
-				// MODIFICATION START: Replaced simple surroundContents with robust highlightSourceRange function.
 				if (currentPromptId === 'translate' && currentContext.sourceSelectionRange) {
 					try {
 						// This new function handles complex selections across multiple paragraphs.
@@ -339,7 +335,6 @@ async function startAiAction (params) {
 						// The translation is already inserted, so we just log the error.
 					}
 				}
-				// MODIFICATION END
 				
 				aiActionRange.to = replacementData.finalRange.to;
 				createFloatingToolbar(aiActionRange.from, aiActionRange.to, model);
@@ -461,7 +456,6 @@ async function handleModalApply () {
 	
 	console.log('AI Action Params:', { model, action, formData: formDataObj });
 	
-	// MODIFICATION: Differentiate how selection/insertion info is gathered
 	let selectionInfo;
 	if (action === 'translate') {
 		if (!currentContext.insertionPoint) {
@@ -506,7 +500,7 @@ async function handleModalApply () {
 	
 	const prompt = builder(formDataObj, promptContext);
 	
-	// MODIFICATION START: Calculate and insert the translation marker.
+	// Calculate and insert the translation marker.
 	let marker = '';
 	if (action === 'translate') {
 		const chapterId = currentContext.chapterId;
@@ -534,11 +528,10 @@ async function handleModalApply () {
 			marker = '';
 		}
 	}
-	// MODIFICATION END
 	
 	currentAiParams = { prompt, model, action, context: currentContext, formData: formDataObj };
 	
-	startAiAction({ prompt: currentAiParams.prompt, model: currentAiParams.model, marker }); // MODIFICATION: Pass marker to startAiAction
+	startAiAction({ prompt: currentAiParams.prompt, model: currentAiParams.model, marker });
 }
 
 

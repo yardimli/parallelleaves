@@ -11,8 +11,8 @@ let editorView;
 let parentOrigin; // Store the parent window's origin for security
 let chapterId;
 let field;
-let hasSourceSelection = false; // MODIFICATION: Tracks if there's a selection in the parent's source pane
-let floatingTranslateBtn = null; // MODIFICATION: Holds the floating button element
+let hasSourceSelection = false;
+let floatingTranslateBtn = null;
 
 /**
  * Posts a message to the parent window.
@@ -152,7 +152,6 @@ function createEditorView (mount, config) {
 					postToParent('editorBlurred', { chapterId });
 				},
 			},
-			// MODIFICATION: Handle clicks within the editor to show/hide the button
 			handleClick(view, pos, event) {
 				manageFloatingButton(view);
 				return false; // Let ProseMirror handle the click as well
@@ -188,7 +187,6 @@ function createEditorView (mount, config) {
 				sendResize();
 			}
 			
-			// MODIFICATION: Update button visibility on any transaction
 			manageFloatingButton(this);
 		},
 	});
@@ -296,7 +294,6 @@ window.addEventListener('message', (event) => {
 		case 'command':
 			executeCommand(payload);
 			break;
-		// MODIFICATION: Added handler to receive source selection state from parent
 		case 'sourceSelectionChanged':
 			hasSourceSelection = payload.hasSelection;
 			// If the source selection is removed, hide the button immediately
@@ -393,7 +390,6 @@ window.addEventListener('message', (event) => {
 			});
 			break;
 		}
-		// MODIFICATION START: Added handler to get the full HTML content of the editor.
 		case 'prepareForGetFullHtml': {
 			if (!editorView) {
 				postToParent('fullHtmlResponse', { html: '' });
@@ -406,6 +402,5 @@ window.addEventListener('message', (event) => {
 			postToParent('fullHtmlResponse', { html: tempDiv.innerHTML });
 			break;
 		}
-		// MODIFICATION END
 	}
 });

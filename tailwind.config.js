@@ -42,7 +42,6 @@ module.exports = {
 					"accent": "#10b981", // Customize accent color if needed
 				},
 			},
-			// ADDED SECTION START: New paper theme definition
 			{
 				paper: {
 					...require("daisyui/src/theming/themes")["[data-theme=light]"],
@@ -55,7 +54,6 @@ module.exports = {
 					"accent": "#8c6f58",
 				},
 			},
-			// ADDED SECTION END
 		],
 		darkTheme: "dark",
 		base: true,
