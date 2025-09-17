@@ -241,22 +241,6 @@ async function renderManuscript(container, novelData, allCodexEntries) {
 			chapterWrapper.className = 'manuscript-chapter-item px-8 py-6';
 			chapterWrapper.dataset.chapterId = chapter.id;
 			
-			const titleInput = document.createElement('input');
-			titleInput.type = 'text';
-			titleInput.value = chapter.title;
-			titleInput.className = 'text-2xl font-bold w-full bg-transparent border-0 p-0 focus:ring-0 focus:border-b-2 focus:border-indigo-500 mb-4';
-			titleInput.placeholder = t('editor.chapterTitlePlaceholder');
-			
-			const debouncedTitleSave = debounce(async (value) => {
-				try {
-					await window.api.updateChapterField({ chapterId: chapter.id, field: 'title', value });
-				} catch (error) {
-					console.error(`[SAVE] Error saving title for chapter ${chapter.id}:`, error);
-					window.showAlert('Could not save title changes.');
-				}
-			}, 1500); // 1.5 second delay for title
-			titleInput.addEventListener('input', () => debouncedTitleSave(titleInput.value));
-			
 			const layoutGrid = document.createElement('div');
 			layoutGrid.className = 'grid grid-cols-2 gap-6';
 			
@@ -287,7 +271,6 @@ async function renderManuscript(container, novelData, allCodexEntries) {
 			layoutGrid.appendChild(sourceCol);
 			layoutGrid.appendChild(targetCol);
 			
-			chapterWrapper.appendChild(titleInput);
 			chapterWrapper.appendChild(layoutGrid);
 			
 			const hr = document.createElement('hr');
