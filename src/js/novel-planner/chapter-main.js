@@ -1,5 +1,5 @@
-import { setupTopToolbar, setActiveContentWindow, updateToolbarState } from './toolbar.js';
-import { setupPromptEditor } from '../prompt-editor.js';
+import { setupTopToolbar, setActiveContentWindow, updateToolbarState, createIframeEditorInterface } from './toolbar.js'; // MODIFICATION: Added createIframeEditorInterface
+import { setupPromptEditor, openPromptEditor } from '../prompt-editor.js'; // MODIFICATION: Added openPromptEditor
 import { getActiveEditor, setActiveEditor } from './content-editor.js';
 import { setupTypographySettings, getTypographySettings, generateTypographyStyleProperties } from './typography-settings.js';
 import { initI18n, t } from '../i18n.js';
@@ -17,6 +17,7 @@ const debounce = (func, delay) => {
 let activeChapterId = null;
 let isScrollingProgrammatically = false;
 const chapterEditorViews = new Map();
+let currentSourceSelection = { text: '', hasSelection: false }; // MODIFICATION: Store source selection state
 
 const debouncedContentSave = debounce(async ({ chapterId, field, value }) => {
 	if (field === 'target_content') {
@@ -481,7 +482,40 @@ document.addEventListener('DOMContentLoaded', async () => {
 			updateToolbarState(null); // Pass null to indicate it's not a PM editor state
 		}, 100);
 		
-		document.addEventListener('selectionchange', throttledUpdateToolbar);
+		// MODIFICATION: Replaced simple listener with one that detects source selection
+		document.addEventListener('selectionchange', () => {
+			throttledUpdateToolbar(); // Still needed for rephrase button, etc.
+			
+			const selection = window.getSelection();
+			let hasSourceSelection = false;
+			let selectedText = '';
+			
+			// Check if the selection is valid and within a source content area
+			if (selection && !selection.isCollapsed && selection.rangeCount > 0) {
+				const range = selection.getRangeAt(0);
+				let checkNode = range.startContainer.nodeType === Node.TEXT_NODE ? range.startContainer.parentElement : range.startContainer;
+				const sourceContainer = checkNode.closest('.source-content-readonly');
+				if (sourceContainer) {
+					selectedText = selection.toString().trim();
+					if (selectedText.length > 0) {
+						hasSourceSelection = true;
+					}
+				}
+			}
+			
+			// Store the current state
+			currentSourceSelection = { text: selectedText, hasSelection: hasSourceSelection };
+			
+			// Broadcast the selection state to all editor iframes
+			chapterEditorViews.forEach(viewInfo => {
+				if (viewInfo.isReady) {
+					viewInfo.contentWindow.postMessage({
+						type: 'sourceSelectionChanged',
+						payload: { hasSelection: hasSourceSelection }
+					}, window.location.origin);
+				}
+			});
+		});
 		
 		manuscriptContainer.addEventListener('click', (event) => {
 			const codexLink = event.target.closest('a.codex-link');
@@ -549,6 +583,42 @@ document.addEventListener('DOMContentLoaded', async () => {
 						viewInfo.iframe.style.height = `${payload.height}px`;
 					}
 					break;
+				// MODIFICATION: Added handler for translation requests from iframes
+				case 'requestTranslation': {
+					const { from, to } = payload;
+					const viewInfo = Array.from(chapterEditorViews.values()).find(v => v.contentWindow === sourceWindow);
+					if (!viewInfo || !currentSourceSelection.hasSelection) return;
+					
+					const chapterId = viewInfo.iframe.dataset.chapterId;
+					
+					// Use an async IIFE to handle async operations
+					(async () => {
+						const novelData = await window.api.getOneNovel(novelId);
+						const allCodexEntries = await window.api.getAllCodexEntriesForNovel(novelId);
+						let settings = {};
+						if (novelData.translate_settings) {
+							try {
+								settings = JSON.parse(novelData.translate_settings);
+							} catch (e) {
+								console.error('Error parsing translate_settings JSON', e);
+							}
+						}
+						
+						// Construct the context needed for the prompt editor
+						const context = {
+							selectedText: currentSourceSelection.text,
+							allCodexEntries,
+							languageForPrompt: novelData.source_language || 'English',
+							targetLanguage: novelData.target_language || 'English',
+							activeEditorView: sourceWindow,
+							editorInterface: createIframeEditorInterface(sourceWindow),
+							chapterId: chapterId,
+							insertionPoint: { from, to } // Pass the insertion point
+						};
+						openPromptEditor(context, 'translate', settings);
+					})();
+					break;
+				}
 			}
 		});
 		

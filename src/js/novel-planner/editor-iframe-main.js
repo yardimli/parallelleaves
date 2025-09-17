@@ -11,6 +11,8 @@ let editorView;
 let parentOrigin; // Store the parent window's origin for security
 let chapterId;
 let field;
+let hasSourceSelection = false; // MODIFICATION: Tracks if there's a selection in the parent's source pane
+let floatingTranslateBtn = null; // MODIFICATION: Holds the floating button element
 
 /**
  * Posts a message to the parent window.
@@ -73,6 +75,56 @@ const getToolbarState = (state) => {
 };
 
 /**
+ * MODIFICATION: Creates and manages the floating translate button.
+ * It appears next to an empty paragraph when there is a source selection.
+ * @param {EditorView} view - The ProseMirror editor view.
+ */
+function manageFloatingButton(view) {
+	// Always remove the existing button before deciding to show a new one
+	if (floatingTranslateBtn) {
+		floatingTranslateBtn.remove();
+		floatingTranslateBtn = null;
+	}
+	
+	const { state } = view;
+	const { selection } = state;
+	
+	// Conditions to show the button: cursor must be in one spot (not a selection),
+	// and there must be a text selection in the source pane.
+	if (!selection.empty || !hasSourceSelection) return;
+	
+	const { $from } = selection;
+	const parentNode = $from.parent;
+	
+	// Only show for empty paragraphs
+	if (parentNode.type.name === 'paragraph' && parentNode.content.size === 0) {
+		const pos = $from.pos;
+		const coords = view.coordsAtPos(pos);
+		
+		floatingTranslateBtn = document.createElement('button');
+		floatingTranslateBtn.className = 'floating-translate-btn';
+		floatingTranslateBtn.innerHTML = '<i class="bi bi-translate"></i>';
+		floatingTranslateBtn.title = 'Translate selected source text here'; // TODO: i18n
+		document.body.appendChild(floatingTranslateBtn);
+		
+		// Position the button to the left of the cursor, vertically centered
+		floatingTranslateBtn.style.position = 'absolute';
+		floatingTranslateBtn.style.left = `${coords.left - 16}px`;
+		floatingTranslateBtn.style.top = `${coords.top}px`;
+		
+		// Use mousedown to prevent the editor from losing focus, which would hide the button
+		floatingTranslateBtn.addEventListener('mousedown', (e) => {
+			e.preventDefault();
+			postToParent('requestTranslation', { from: pos, to: pos });
+			if (floatingTranslateBtn) {
+				floatingTranslateBtn.remove();
+				floatingTranslateBtn = null;
+			}
+		});
+	}
+}
+
+/**
  * Creates and initializes the ProseMirror editor view.
  * @param {HTMLElement} mount - The element to mount the editor in.
  * @param {object} config - The initialization configuration.
@@ -89,10 +141,22 @@ function createEditorView (mount, config) {
 				focus (view) {
 					postToParent('editorFocused', { chapterId, state: getToolbarState(view.state) });
 				},
-				blur () {
+				blur (view) {
+					// Use a timeout to allow a click on the floating button to register before it's removed
+					setTimeout(() => {
+						if (document.activeElement !== floatingTranslateBtn && floatingTranslateBtn) {
+							floatingTranslateBtn.remove();
+							floatingTranslateBtn = null;
+						}
+					}, 100);
 					postToParent('editorBlurred', { chapterId });
 				},
 			},
+			// MODIFICATION: Handle clicks within the editor to show/hide the button
+			handleClick(view, pos, event) {
+				manageFloatingButton(view);
+				return false; // Let ProseMirror handle the click as well
+			}
 		},
 	});
 	
@@ -103,7 +167,7 @@ function createEditorView (mount, config) {
 			doc: doc,
 			plugins: [history(), keymap({ 'Mod-z': undo, 'Mod-y': redo }), keymap(baseKeymap), editorPlugin],
 		}),
-
+		
 		dispatchTransaction (transaction) {
 			const newState = this.state.apply(transaction);
 			this.updateState(newState);
@@ -123,6 +187,9 @@ function createEditorView (mount, config) {
 			if (transaction.docChanged) {
 				sendResize();
 			}
+			
+			// MODIFICATION: Update button visibility on any transaction
+			manageFloatingButton(this);
 		},
 	});
 	
@@ -228,6 +295,15 @@ window.addEventListener('message', (event) => {
 			break;
 		case 'command':
 			executeCommand(payload);
+			break;
+		// MODIFICATION: Added handler to receive source selection state from parent
+		case 'sourceSelectionChanged':
+			hasSourceSelection = payload.hasSelection;
+			// If the source selection is removed, hide the button immediately
+			if (!hasSourceSelection && floatingTranslateBtn) {
+				floatingTranslateBtn.remove();
+				floatingTranslateBtn = null;
+			}
 			break;
 		
 		case 'replaceRange': {

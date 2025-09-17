@@ -145,6 +145,11 @@ i[class^="bi-"], i[class*=" bi-"] {
     cursor: pointer;
 }
 
+/* MODIFICATION: Updated styles for the floating translate button */
+.floating-translate-btn {
+    @apply btn btn-circle btn-sm btn-outline btn-accent z-50 bg-base-100/80 backdrop-blur-sm;
+}
+
 @layer base {
     .prose {
         font-family: var(--editor-font-family, 'Noto Serif', serif);

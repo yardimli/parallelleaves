@@ -23,23 +23,7 @@ export function updateToolbarState(newState) {
 	if (headingBtn) headingBtn.textContent = t('editor.paragraph');
 	wordCountEl.textContent = t('editor.noTextSelected');
 	
-	const translateBtn = toolbar.querySelector('.js-ai-action-btn[data-action="translate"]');
-	if (translateBtn) {
-		const selection = window.getSelection();
-		if (selection && !selection.isCollapsed && selection.rangeCount > 0) {
-			const range = selection.getRangeAt(0);
-			let checkNode = range.startContainer.nodeType === Node.TEXT_NODE ? range.startContainer.parentElement : range.startContainer;
-			const sourceContainer = checkNode.closest('.source-content-readonly');
-			if (sourceContainer) {
-				const text = selection.toString().trim();
-				if (text.length > 0) {
-					translateBtn.disabled = false;
-					const words = text.split(/\s+/).filter(Boolean);
-					wordCountEl.textContent = t('editor.wordsSelectedSource', { count: words.length });
-				}
-			}
-		}
-	}
+	// MODIFICATION: Removed logic for the now-deleted translate button
 	
 	if (newState) {
 		allBtns.forEach(btn => {
@@ -100,7 +84,7 @@ export function updateToolbarState(newState) {
 		if (newState.isTextSelected) {
 			const words = newState.selectionText.trim().split(/\s+/).filter(Boolean);
 			wordCountEl.textContent = t('editor.wordsSelected', { count: words.length });
-		} else if (!translateBtn || translateBtn.disabled) {
+		} else { // MODIFICATION: Simplified this condition
 			wordCountEl.textContent = t('editor.noTextSelected');
 		}
 	}
@@ -122,7 +106,7 @@ function applyHighlight(color) {
 	}, window.location.origin);
 }
 
-const createIframeEditorInterface = (contentWindow) => {
+export const createIframeEditorInterface = (contentWindow) => { // MODIFICATION: Exported for use in chapter-main.js
 	const post = (type, payload) => contentWindow.postMessage({ type, payload }, window.location.origin);
 	
 	return {
@@ -184,46 +168,7 @@ async function handleToolbarAction(button) {
 			}
 		}
 		
-		if (action === 'translate') {
-			const selection = window.getSelection();
-			if (!selection || selection.isCollapsed || selection.rangeCount === 0) return;
-			
-			const range = selection.getRangeAt(0);
-			
-			let checkNode = range.commonAncestorContainer;
-			if (checkNode.nodeType === Node.TEXT_NODE) {
-				checkNode = checkNode.parentElement;
-			}
-			const sourceContainer = checkNode.closest('.source-content-readonly');
-			
-			if (!sourceContainer) return;
-			
-			const selectedText = selection.toString();
-			const chapterItem = sourceContainer.closest('.manuscript-chapter-item');
-			const chapterId = chapterItem.dataset.chapterId;
-			
-			// Pass the iframe editor interface to openPromptEditor.
-			const targetContentWindow = toolbarConfig.getChapterViews(chapterId)?.iframe.contentWindow;
-			if (!targetContentWindow) {
-				window.showAlert(t('editor.toolbar.errorNoTargetEditor'));
-				return;
-			}
-			
-			const allCodexEntries = await window.api.getAllCodexEntriesForNovel(novelId);
-			
-			// The context no longer needs block-specific info.
-			const context = {
-				selectedText,
-				allCodexEntries,
-				languageForPrompt: novelData.source_language || 'English',
-				targetLanguage: novelData.target_language || 'English',
-				activeEditorView: targetContentWindow,
-				editorInterface: createIframeEditorInterface(targetContentWindow),
-				chapterId: chapterId, // Pass chapterId for context fetching
-			};
-			openPromptEditor(context, 'translate', settings);
-			return;
-		}
+		// MODIFICATION: Removed the 'translate' action handler from the toolbar logic
 		
 		// This is for the 'rephrase' action in the chapter editor.
 		if (!activeContentWindow) return;

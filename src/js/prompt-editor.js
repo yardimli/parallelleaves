@@ -316,20 +316,35 @@ async function handleModalApply () {
 	}
 	
 	console.log('AI Action Params:', { model, action, formData: formDataObj });
-	const selectionInfo = await currentEditorInterface.getSelectionInfo(action);
 	
-	if (!selectionInfo) {
-		window.showAlert(t('prompt.errorNoSelection'));
-		return;
+	// MODIFICATION: Differentiate how selection/insertion info is gathered
+	let selectionInfo;
+	if (action === 'translate') {
+		if (!currentContext.insertionPoint) {
+			window.showAlert(t('prompt.errorNoInsertionPoint'));
+			return;
+		}
+		// For translation, we construct a "selection" object based on the insertion point
+		selectionInfo = {
+			from: currentContext.insertionPoint.from,
+			to: currentContext.insertionPoint.to,
+			originalFragmentJson: [], // It's an insertion, so the original fragment is empty
+			selectedText: currentContext.selectedText
+		};
+	} else {
+		// For other actions like rephrase, get the selection from the editor
+		selectionInfo = await currentEditorInterface.getSelectionInfo(action);
+		if (!selectionInfo) {
+			window.showAlert(t('prompt.errorNoSelection'));
+			return;
+		}
 	}
 	
 	aiActionRange = { from: selectionInfo.from, to: selectionInfo.to };
-	originalFragmentJson = selectionInfo.originalFragmentJson || [];
+	originalFragmentJson = selectionInfo.originalFragmentJson;
 	
-	const text = action === 'translate' ? currentContext.selectedText : selectionInfo.selectedText;
-	
-	const wordCount = text ? text.trim().split(/\s+/).filter(Boolean).length : 0;
-	const promptContext = { ...currentContext, selectedText: text, wordCount };
+	const wordCount = selectionInfo.selectedText ? selectionInfo.selectedText.trim().split(/\s+/).filter(Boolean).length : 0;
+	const promptContext = { ...currentContext, selectedText: selectionInfo.selectedText, wordCount };
 	
 	if (action === 'translate' && formDataObj.contextPairs > 0) {
 		try {
