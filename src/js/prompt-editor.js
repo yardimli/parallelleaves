@@ -58,10 +58,15 @@ function highlightSourceRange(range) {
 	// Simple case: Selection is within a single text node.
 	// This is the most common and efficient case, handled well by surroundContents.
 	if (startContainer === endContainer && startContainer.nodeType === Node.TEXT_NODE) {
-		const span = document.createElement('span');
-		span.className = 'ai-translated-source';
-		range.surroundContents(span);
-		return;
+		try {
+			const span = document.createElement('span');
+			span.className = 'ai-translated-source';
+			range.surroundContents(span);
+			return;
+		} catch (e) {
+			// Fallback for rare cases where even this fails.
+			console.warn("Simple surroundContents failed, falling back to complex method.", e);
+		}
 	}
 	
 	// Complex case: Selection spans multiple nodes.
@@ -81,6 +86,11 @@ function highlightSourceRange(range) {
 	}
 	
 	for (const textNode of nodesToWrap) {
+		// Do not wrap text inside existing highlight spans
+		if (textNode.parentElement.closest('.ai-translated-source')) {
+			continue;
+		}
+		
 		const span = document.createElement('span');
 		span.className = 'ai-translated-source';
 		
@@ -107,6 +117,31 @@ function highlightSourceRange(range) {
 		// This handles splitting the text node if necessary.
 		nodeRange.surroundContents(span);
 	}
+}
+// MODIFICATION END
+
+/**
+ * MODIFICATION START: New helper function to find the highest marker number.
+ * Scans two HTML strings to find all instances of `[#<number>]` and returns the highest number found.
+ * @param {string} sourceHtml - The HTML of the source content.
+ * @param {string} targetHtml - The HTML of the target content.
+ * @returns {number} The highest marker number found, or 0 if none are found.
+ */
+function findHighestMarkerNumber(sourceHtml, targetHtml) {
+	const markerRegex = /\[#(\d+)\]/g;
+	let highest = 0;
+	
+	const combinedHtml = sourceHtml + targetHtml;
+	const matches = combinedHtml.matchAll(markerRegex);
+	
+	for (const match of matches) {
+		const num = parseInt(match[1], 10);
+		if (num > highest) {
+			highest = num;
+		}
+	}
+	
+	return highest;
 }
 // MODIFICATION END
 
@@ -241,7 +276,7 @@ function createFloatingToolbar (from, to, model) {
 }
 
 async function startAiAction (params) {
-	const { prompt, model } = params;
+	const { prompt, model, marker } = params; // MODIFICATION: Destructure new marker property
 	
 	isAiActionActive = true;
 	if (currentEditorInterface.type === 'iframe') {
@@ -258,7 +293,14 @@ async function startAiAction (params) {
 			let newContentText = result.data.choices[0].message.content ?? 'No content generated.';
 			newContentText = newContentText.trim();
 			
-			const newContentHtml = '<p>' + newContentText.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>') + '</p>';
+			// MODIFICATION START: Prepend the marker only to the first paragraph.
+			// First, prepend the marker to the entire raw text block.
+			const textWithMarker = marker ? marker + ' ' + newContentText : newContentText;
+			// Then, convert the entire block to HTML paragraphs. This ensures the marker
+			// is only at the very beginning of the first paragraph.
+			const newContentHtml = '<p>' + textWithMarker.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>') + '</p>';
+			// MODIFICATION END
+			
 			console.log('AI Action Result:', newContentText, newContentHtml);
 			
 			// Use the editor interface to replace the content
@@ -464,9 +506,39 @@ async function handleModalApply () {
 	
 	const prompt = builder(formDataObj, promptContext);
 	
+	// MODIFICATION START: Calculate and insert the translation marker.
+	let marker = '';
+	if (action === 'translate') {
+		const chapterId = currentContext.chapterId;
+		const sourceContainer = document.querySelector(`#chapter-scroll-target-${chapterId} .source-content-readonly`);
+		const sourceHtml = sourceContainer ? sourceContainer.innerHTML : '';
+		const targetHtml = await currentEditorInterface.getFullHtml();
+		
+		const highestNum = findHighestMarkerNumber(sourceHtml, targetHtml);
+		marker = `[#${highestNum + 1}]`;
+		
+		// Insert the marker into the source text DOM and save it.
+		try {
+			const markerNode = document.createTextNode(marker + ' ');
+			currentContext.sourceSelectionRange.insertNode(markerNode);
+			
+			// Persist the change to the database.
+			await window.api.updateChapterField({
+				chapterId: chapterId,
+				field: 'source_content',
+				value: sourceContainer.innerHTML
+			});
+		} catch (e) {
+			console.error("Could not insert marker into source text:", e);
+			// If this fails, we'll proceed without the marker to not break translation.
+			marker = '';
+		}
+	}
+	// MODIFICATION END
+	
 	currentAiParams = { prompt, model, action, context: currentContext, formData: formDataObj };
 	
-	startAiAction({ prompt: currentAiParams.prompt, model: currentAiParams.model });
+	startAiAction({ prompt: currentAiParams.prompt, model: currentAiParams.model, marker }); // MODIFICATION: Pass marker to startAiAction
 }
 
 
@@ -485,7 +557,7 @@ export function setupPromptEditor () {
 	const toggleBtn = modalEl.querySelector('.js-toggle-preview-btn');
 	if (toggleBtn) {
 		toggleBtn.addEventListener('click', () => {
-			const formContainer = modalEl.querySelector('.js-custom-form-container');
+			const formContainer = modalEl.querySelector('.js-custom-editor-pane');
 			if (!formContainer) return;
 			
 			const previewSection = formContainer.querySelector('.js-live-preview-section');

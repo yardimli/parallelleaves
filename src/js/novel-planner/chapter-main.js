@@ -42,6 +42,55 @@ const debouncedContentSave = debounce(async ({ chapterId, field, value }) => {
 }, 2000); // 2 second delay
 
 /**
+ * MODIFICATION START: New function to synchronize translation markers on load.
+ * Removes markers from the source text if they don't exist in the target text.
+ * @param {string} chapterId - The ID of the chapter being processed.
+ * @param {HTMLElement} sourceContainer - The DOM element containing the source HTML.
+ * @param {string} targetHtml - The initial HTML content of the target.
+ */
+async function synchronizeMarkers(chapterId, sourceContainer, targetHtml) {
+	const markerRegex = /\[#(\d+)\]/g;
+	let sourceHtml = sourceContainer.innerHTML;
+	
+	const sourceMarkers = sourceHtml.match(markerRegex) || [];
+	if (sourceMarkers.length === 0) {
+		return; // No markers in source, nothing to do.
+	}
+	
+	const targetMarkers = new Set(targetHtml.match(markerRegex) || []);
+	
+	let wasModified = false;
+	const uniqueSourceMarkers = [...new Set(sourceMarkers)]; // Process each unique marker only once
+	
+	uniqueSourceMarkers.forEach(marker => {
+		if (!targetMarkers.has(marker)) {
+			// This marker exists in the source but not the target, so remove it.
+			// Use a regex with the specific marker to replace all instances of it.
+			const escapedMarker = marker.replace(/\[/g, '\\[').replace(/\]/g, '\\]');
+			const removalRegex = new RegExp(escapedMarker + '\\s*', 'g');
+			sourceHtml = sourceHtml.replace(removalRegex, '');
+			wasModified = true;
+			console.log(`[Sync] Removing orphaned marker ${marker} from chapter ${chapterId}`);
+		}
+	});
+	
+	if (wasModified) {
+		sourceContainer.innerHTML = sourceHtml;
+		// Persist the cleaned-up source content to the database.
+		try {
+			await window.api.updateChapterField({
+				chapterId: chapterId,
+				field: 'source_content',
+				value: sourceHtml
+			});
+		} catch (error) {
+			console.error(`[Sync] Failed to save updated source content for chapter ${chapterId}:`, error);
+		}
+	}
+}
+// MODIFICATION END
+
+/**
  * Finds codex entry titles and phrases in an HTML string and wraps them in links.
  * @param {string} htmlString - The HTML content to process.
  * @param {Array<object>} codexCategories - The array of codex categories containing entries.
@@ -208,7 +257,10 @@ async function renderManuscript(container, novelData, allCodexEntries) {
 			
 			fragment.appendChild(chapterWrapper);
 			
-			const initialTargetContent = chapter.target_content;
+			const initialTargetContent = chapter.target_content || ''; // MODIFICATION: Ensure it's a string
+			
+			// MODIFICATION: Run marker synchronization after rendering the source content.
+			synchronizeMarkers(chapter.id, sourceContentContainer, initialTargetContent);
 			
 			// Store iframe info and initialize it on load.
 			const viewInfo = {

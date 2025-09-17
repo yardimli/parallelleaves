@@ -124,6 +124,18 @@ export const createIframeEditorInterface = (contentWindow) => { // MODIFICATION:
 			// Both actions now just need the current selection state from the editor.
 			post('prepareForRephrase', { isRephrase: action === 'rephrase' });
 		}),
+		// MODIFICATION START: New method to get the full HTML content from the iframe editor.
+		getFullHtml: () => new Promise((resolve) => {
+			const listener = (event) => {
+				if (event.source === contentWindow && event.data.type === 'fullHtmlResponse') {
+					window.removeEventListener('message', listener);
+					resolve(event.data.payload.html);
+				}
+			};
+			window.addEventListener('message', listener);
+			post('prepareForGetFullHtml');
+		}),
+		// MODIFICATION END
 		setEditable: (isEditable) => post('setEditable', { isEditable }),
 		cleanupSuggestion: () => post('cleanupAiSuggestion'),
 		discardAiSuggestion: (from, to, originalFragmentJson) => post('discardAiSuggestion', { from, to, originalFragmentJson }),

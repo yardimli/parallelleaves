@@ -393,5 +393,19 @@ window.addEventListener('message', (event) => {
 			});
 			break;
 		}
+		// MODIFICATION START: Added handler to get the full HTML content of the editor.
+		case 'prepareForGetFullHtml': {
+			if (!editorView) {
+				postToParent('fullHtmlResponse', { html: '' });
+				return;
+			}
+			const serializer = DOMSerializer.fromSchema(editorView.state.schema);
+			const fragment = serializer.serializeFragment(editorView.state.doc.content);
+			const tempDiv = document.createElement('div');
+			tempDiv.appendChild(fragment);
+			postToParent('fullHtmlResponse', { html: tempDiv.innerHTML });
+			break;
+		}
+		// MODIFICATION END
 	}
 });
