@@ -1,6 +1,5 @@
 import { setupTopToolbar, setActiveContentWindow, updateToolbarState, createIframeEditorInterface } from './toolbar.js';
 import { setupPromptEditor, openPromptEditor } from '../prompt-editor.js';
-import { getActiveEditor, setActiveEditor } from './content-editor.js';
 import { setupTypographySettings, getTypographySettings, generateTypographyStyleProperties } from './typography-settings.js';
 import { initI18n, t } from '../i18n.js';
 import { supportedLanguages as languageCodeToName } from '../languages.js';
@@ -18,6 +17,12 @@ let activeChapterId = null;
 let isScrollingProgrammatically = false;
 const chapterEditorViews = new Map();
 let currentSourceSelection = { text: '', hasSelection: false, range: null };
+
+let activeEditor = null;
+const getActiveEditor = () => activeEditor;
+const setActiveEditor = (editorWindow) => {
+	activeEditor = editorWindow;
+};
 
 const debouncedContentSave = debounce(async ({ chapterId, field, value }) => {
 	if (field === 'target_content') {

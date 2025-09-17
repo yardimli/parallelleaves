@@ -1,12 +1,75 @@
-import { setupContentEditor } from './planner-codex-content-editor.js';
 import { openPromptEditor, setupPromptEditor } from '../prompt-editor.js';
-import { DOMSerializer, Fragment, DOMParser } from 'prosemirror-model';
+import { DOMSerializer, Fragment, DOMParser, Schema } from 'prosemirror-model';
 import { undo, redo } from 'prosemirror-history';
-import { toggleMark, setBlockType, wrapIn } from 'prosemirror-commands';
+import { toggleMark, setBlockType, wrapIn, baseKeymap } from 'prosemirror-commands';
 import { wrapInList } from 'prosemirror-schema-list';
-import { TextSelection } from 'prosemirror-state';
-import { setupTypographySettings } from './typography-settings.js';
+import { TextSelection, EditorState, Plugin } from 'prosemirror-state';
+import { EditorView, Decoration, DecorationSet } from 'prosemirror-view';
 import { initI18n, t } from '../i18n.js';
+import { schema as basicSchema } from 'prosemirror-schema-basic';
+import { addListNodes } from 'prosemirror-schema-list';
+import { keymap } from 'prosemirror-keymap';
+
+const highlightMarkSpec = (colorClass) => {
+	return {
+		attrs: {},
+		parseDOM: [{ tag: `span.${colorClass}` }],
+		toDOM: () => ['span', { class: colorClass }, 0]
+	};
+};
+
+const nodes = basicSchema.spec.nodes.update('blockquote', {
+	content: 'paragraph+',
+	group: 'block',
+	defining: true,
+	parseDOM: [{ tag: 'blockquote' }],
+	toDOM () { return ['blockquote', 0]; }
+});
+
+// The schema is defined locally for use by the editors on this page.
+export const schema = new Schema({
+	nodes: addListNodes(nodes, 'paragraph+', 'block'),
+	marks: {
+		link: {
+			attrs: { href: {}, title: { default: null } },
+			inclusive: false,
+			parseDOM: [{ tag: 'a[href]', getAttrs: dom => ({ href: dom.getAttribute('href'), title: dom.getAttribute('title') }) }],
+			toDOM: node => ['a', node.attrs, 0]
+		},
+		em: {
+			parseDOM: [{ tag: 'i' }, { tag: 'em' }, { style: 'font-style=italic' }],
+			toDOM: () => ['em', 0]
+		},
+		strong: {
+			parseDOM: [
+				{ tag: 'strong' },
+				{ tag: 'b', getAttrs: node => node.style.fontWeight !== 'normal' && null },
+				{ style: 'font-weight', getAttrs: value => /^(bold(er)?|[5-9]\d{2,})$/.test(value) && null }
+			],
+			toDOM: () => ['strong', 0]
+		},
+		code: {
+			parseDOM: [{ tag: 'code' }],
+			toDOM: () => ['code', 0]
+		},
+		underline: {
+			parseDOM: [{ tag: 'u' }, { style: 'text-decoration=underline' }],
+			toDOM: () => ['u', 0]
+		},
+		strike: {
+			parseDOM: [{ tag: 's' }, { tag: 'del' }, { style: 'text-decoration=line-through' }],
+			toDOM: () => ['s', 0]
+		},
+		highlight_yellow: highlightMarkSpec('highlight-yellow'),
+		highlight_green: highlightMarkSpec('highlight-green'),
+		highlight_blue: highlightMarkSpec('highlight-blue'),
+		highlight_red: highlightMarkSpec('highlight-red'),
+		ai_suggestion: {
+			parseDOM: [{ tag: 'span.ai-suggestion' }],
+			toDOM: () => ['span', { class: 'ai-suggestion' }, 0]
+		}
+	}
+});
 
 // --- State management for multiple editors ---
 let sourceEditorView = null;
@@ -16,7 +79,7 @@ const debounceTimers = new Map();
 
 // --- Helper Functions ---
 
-function setButtonLoadingState(button, isLoading) {
+function setButtonLoadingState (button, isLoading) {
 	const text = button.querySelector('.js-btn-text');
 	const spinner = button.querySelector('.js-spinner');
 	if (isLoading) {
@@ -28,7 +91,7 @@ function setButtonLoadingState(button, isLoading) {
 		if (text) text.classList.remove('hidden');
 		if (spinner) spinner.classList.add('hidden');
 	}
-}
+};
 
 const serializeDocToHtml = (view) => {
 	if (!view) return '';
@@ -38,7 +101,6 @@ const serializeDocToHtml = (view) => {
 	tempDiv.appendChild(fragment);
 	return tempDiv.innerHTML;
 };
-
 
 // --- Editor Interface for Direct ProseMirror View ---
 const createDirectEditorInterface = (view) => {
@@ -53,7 +115,7 @@ const createDirectEditorInterface = (view) => {
 				from: state.selection.from,
 				to: state.selection.to,
 				originalFragmentJson: state.doc.slice(state.selection.from, state.selection.to).content.toJSON(),
-				selectedText: state.doc.textBetween(state.selection.from, state.selection.to, ' '),
+				selectedText: state.doc.textBetween(state.selection.from, state.selection.to, ' ')
 			};
 		},
 		setEditable: (isEditable) => {
@@ -101,11 +163,11 @@ const createDirectEditorInterface = (view) => {
 				// 6. The final range is the same as the inserted range.
 				resolve(insertedRange);
 			});
-		},
+		}
 	};
 };
 
-function triggerDebouncedSave(entryId) {
+function triggerDebouncedSave (entryId) {
 	const key = `codex-${entryId}`;
 	if (debounceTimers.has(key)) {
 		clearTimeout(debounceTimers.get(key));
@@ -117,7 +179,7 @@ function triggerDebouncedSave(entryId) {
 	debounceTimers.set(key, timer);
 }
 
-async function saveWindowContent(entryId) {
+async function saveWindowContent (entryId) {
 	const titleInput = document.getElementById('js-codex-title-input');
 	const phrasesInput = document.getElementById('js-codex-phrases-input');
 	
@@ -125,7 +187,7 @@ async function saveWindowContent(entryId) {
 		title: titleInput.value,
 		content: serializeDocToHtml(sourceEditorView),
 		target_content: serializeDocToHtml(targetEditorView),
-		document_phrases: phrasesInput.value,
+		document_phrases: phrasesInput.value
 	};
 	
 	try {
@@ -139,11 +201,78 @@ async function saveWindowContent(entryId) {
 
 let currentEditorState = null;
 
+// Plugin to handle showing a placeholder text on an empty editor.
+const placeholderPlugin = (placeholderText) => new Plugin({
+	props: {
+		decorations (state) {
+			const { doc } = state;
+			// Check if the document contains a single empty paragraph
+			if (doc.childCount === 1 && doc.firstChild.isTextblock && doc.firstChild.content.size === 0) {
+				// Create a decoration for that node
+				return DecorationSet.create(doc, [
+					Decoration.node(0, doc.firstChild.nodeSize, {
+						class: 'is-editor-empty',
+						'data-placeholder': placeholderText
+					})
+				]);
+			}
+			return null;
+		}
+	}
+});
+
+/**
+ * Sets up a ProseMirror editor instance.
+ * @param {HTMLElement} mount - The DOM element to mount the editor in.
+ * @param {object} options - Configuration options for the editor.
+ * @returns {EditorView|null} The created ProseMirror EditorView instance.
+ */
+function setupContentEditor (mount, options = {}) {
+	const { initialContent, placeholder, onStateChange, onFocus } = options;
+	
+	if (!mount) return null;
+	
+	// Use the main schema defined at the top of this file.
+	const doc = DOMParser.fromSchema(schema).parse(initialContent);
+	
+	const view = new EditorView(mount, {
+		state: EditorState.create({
+			doc,
+			plugins: [
+				history(),
+				keymap({ 'Mod-z': undo, 'Mod-y': redo, 'Shift-Mod-z': redo }),
+				keymap(baseKeymap),
+				placeholderPlugin(placeholder || ''),
+				//  Plugin to handle focus events for tracking the active editor.
+				new Plugin({
+					props: {
+						handleDOMEvents: {
+							focus (view) {
+								if (onFocus) onFocus(view);
+								return false; // Don't stop propagation
+							}
+						}
+					}
+				})
+			]
+		}),
+		dispatchTransaction (transaction) {
+			const newState = this.state.apply(transaction);
+			this.updateState(newState);
+			if (onStateChange) {
+				onStateChange(this, transaction);
+			}
+		}
+	});
+	
+	return view;
+}
+
 /**
  * Updates the toolbar buttons' enabled/active state based on the editor's state.
  * @param {EditorView} view - The ProseMirror editor view.
  */
-function updateCodexToolbarState(view) {
+function updateCodexToolbarState (view) {
 	if (!view) {
 		currentEditorState = null;
 	} else {
@@ -175,7 +304,7 @@ function updateCodexToolbarState(view) {
 			activeMarks: Object.keys(schema.marks).filter(markName => isMarkActive(schema.marks[markName])),
 			activeNodes: Object.keys(schema.nodes).filter(nodeName => isNodeActive(schema.nodes[nodeName])),
 			headingLevel: headingLevel,
-			selectionText: state.doc.textBetween(from, to, ' '),
+			selectionText: state.doc.textBetween(from, to, ' ')
 		};
 	}
 	
@@ -231,7 +360,7 @@ function updateCodexToolbarState(view) {
  * Applies a ProseMirror command to the editor.
  * @param {Function} command - The ProseMirror command to execute.
  */
-function applyCommand(command) {
+function applyCommand (command) {
 	const view = activeEditorView;
 	if (view && command) {
 		command(view.state, view.dispatch);
@@ -243,7 +372,7 @@ function applyCommand(command) {
  * Handles clicks on toolbar buttons.
  * @param {HTMLElement} button - The clicked button element.
  */
-async function handleToolbarAction(button) {
+async function handleToolbarAction (button) {
 	const view = activeEditorView;
 	if (!view) return;
 	
@@ -262,7 +391,7 @@ async function handleToolbarAction(button) {
 			allCodexEntries,
 			languageForPrompt: novelData.target_language || 'English',
 			activeEditorView: view,
-			editorInterface: createDirectEditorInterface(view),
+			editorInterface: createDirectEditorInterface(view)
 		};
 		openPromptEditor(context, action, settings);
 		return;
@@ -322,7 +451,7 @@ async function handleToolbarAction(button) {
 /**
  * Sets up event listeners for the top toolbar.
  */
-function setupCodexToolbar() {
+function setupCodexToolbar () {
 	const toolbar = document.getElementById('top-toolbar');
 	if (!toolbar) return;
 	
@@ -349,7 +478,6 @@ function setupCodexToolbar() {
 	updateCodexToolbarState(null);
 }
 
-
 // --- Mode-Specific Setup Functions ---
 
 /**
@@ -357,7 +485,7 @@ function setupCodexToolbar() {
  * @param {string} novelId - The ID of the novel this entry belongs to.
  * @param {string} selectedText - The text selected in the chapter editor.
  */
-async function setupCreateMode(novelId, selectedText) {
+async function setupCreateMode (novelId, selectedText) {
 	document.body.dataset.novelId = novelId;
 	
 	// 1. Configure UI for creation
@@ -388,13 +516,13 @@ async function setupCreateMode(novelId, selectedText) {
 		initialContent: sourceContainer.querySelector('[data-name="content"]'),
 		placeholder: t(sourceMount.dataset.i18nPlaceholder),
 		onStateChange: onEditorStateChange,
-		onFocus: onEditorFocus,
+		onFocus: onEditorFocus
 	});
 	targetEditorView = setupContentEditor(targetMount, {
 		initialContent: sourceContainer.querySelector('[data-name="target_content"]'),
 		placeholder: t(targetMount.dataset.i18nPlaceholder),
 		onStateChange: onEditorStateChange,
-		onFocus: onEditorFocus,
+		onFocus: onEditorFocus
 	});
 	
 	activeEditorView = sourceEditorView; // Default to source
@@ -446,7 +574,7 @@ async function setupCreateMode(novelId, selectedText) {
 			target_content: serializeDocToHtml(targetEditorView),
 			document_phrases: phrasesInput.value,
 			codex_category_id: categorySelect.value === 'new' ? null : categorySelect.value,
-			new_category_name: categorySelect.value === 'new' ? newCategoryInput.value : null,
+			new_category_name: categorySelect.value === 'new' ? newCategoryInput.value : null
 		};
 		
 		try {
@@ -469,7 +597,7 @@ async function setupCreateMode(novelId, selectedText) {
  * Configures the editor window for editing an existing codex entry.
  * @param {string} entryId - The ID of the entry to edit.
  */
-async function setupEditMode(entryId) {
+async function setupEditMode (entryId) {
 	document.body.dataset.entryId = entryId;
 	try {
 		const entryData = await window.api.getOneCodexForEditor(entryId);
@@ -505,13 +633,13 @@ async function setupEditMode(entryId) {
 			initialContent: sourceContainer.querySelector('[data-name="content"]'),
 			placeholder: t(sourceMount.dataset.i18nPlaceholder),
 			onStateChange: onEditorStateChange,
-			onFocus: onEditorFocus,
+			onFocus: onEditorFocus
 		});
 		targetEditorView = setupContentEditor(targetMount, {
 			initialContent: sourceContainer.querySelector('[data-name="target_content"]'),
 			placeholder: t(targetMount.dataset.i18nPlaceholder),
 			onStateChange: onEditorStateChange,
-			onFocus: onEditorFocus,
+			onFocus: onEditorFocus
 		});
 		
 		activeEditorView = sourceEditorView; // Default to source
@@ -557,7 +685,6 @@ async function setupEditMode(entryId) {
 				}
 			});
 		}
-		
 	} catch (error) {
 		console.error('Failed to load codex entry data:', error);
 		document.body.innerHTML = `<p class="text-error p-8">${t('editor.codexEditor.errorLoad', { message: error.message })}</p>`;
@@ -568,7 +695,7 @@ async function setupEditMode(entryId) {
 document.addEventListener('DOMContentLoaded', async () => {
 	await initI18n();
 	
-	window.showAlert = function(message, title = t('common.error')) {
+	window.showAlert = function (message, title = t('common.error')) {
 		const modal = document.getElementById('alert-modal');
 		if (modal) {
 			const modalTitle = modal.querySelector('#alert-modal-title');
@@ -582,20 +709,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 	};
 	
 	setupPromptEditor();
-	
-	setupTypographySettings({
-		buttonId: 'typography-settings-btn',
-		modalId: 'typography-settings-modal',
-		formId: 'typography-settings-form',
-		applyCallback: (styleProps, settings) => {
-			const containers = document.querySelectorAll('.js-pm-container');
-			containers.forEach(container => {
-				Object.entries(styleProps).forEach(([prop, value]) => {
-					container.style.setProperty(prop, value);
-				});
-			});
-		}
-	});
 	
 	const params = new URLSearchParams(window.location.search);
 	const mode = params.get('mode') || 'edit';
