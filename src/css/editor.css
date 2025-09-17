@@ -145,13 +145,11 @@ i[class^="bi-"], i[class*=" bi-"] {
     cursor: pointer;
 }
 
-/* MODIFICATION START: Added styles for clickable translation markers */
 .translation-marker-link {
     @apply text-purple-600 dark:text-purple-400 font-mono border-b border-dotted border-purple-600/50 dark:border-purple-400/50 hover:bg-purple-500/10;
     text-decoration: none !important; /* Override prose styles */
     cursor: pointer;
 }
-/* MODIFICATION END */
 
 .floating-translate-btn {
     @apply btn btn-circle btn-sm btn-outline btn-accent z-50 bg-base-100/80 backdrop-blur-sm;

@@ -75,7 +75,7 @@ const getToolbarState = (state) => {
 };
 
 /**
- * MODIFICATION: Creates and manages the floating translate button.
+ * Creates and manages the floating translate button.
  * It appears next to an empty paragraph when there is a source selection.
  * @param {EditorView} view - The ProseMirror editor view.
  */
@@ -377,11 +377,7 @@ window.addEventListener('message', (event) => {
 				const { from } = editorView.state.selection;
 				const coords = editorView.coordsAtPos(from);
 				
-				// MODIFICATION START: Instead of scrolling inside the iframe, which doesn't have its own scrollbar,
-				// we post the coordinates of the found marker back to the parent window.
-				// The parent window will then scroll its container to bring the marker into view.
 				postToParent('markerFound', { top: coords.top });
-				// MODIFICATION END
 			}
 			break;
 		}

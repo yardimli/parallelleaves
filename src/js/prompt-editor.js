@@ -395,7 +395,6 @@ async function handleModalApply () {
 	// Calculate and insert the translation marker.
 	let marker = '';
 	if (action === 'translate') {
-		// MODIFICATION START: Get content from the entire novel to find the highest marker number.
 		const allContentResult = await window.api.getAllNovelContent(novelId);
 		
 		let highestNum = 0;
@@ -408,7 +407,6 @@ async function handleModalApply () {
 		}
 		
 		marker = `[[#${highestNum + 1}]]`;
-		// MODIFICATION END
 		
 		// Insert the marker into the source text DOM and save it.
 		try {

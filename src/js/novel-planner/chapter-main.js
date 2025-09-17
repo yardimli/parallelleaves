@@ -42,7 +42,7 @@ const debouncedContentSave = debounce(async ({ chapterId, field, value }) => {
 }, 2000); // 2 second delay
 
 /**
- * MODIFICATION START: New function to synchronize translation markers on load.
+ * function to synchronize translation markers on load.
  * Removes markers from the source text if they don't exist in the target text.
  * @param {string} chapterId - The ID of the chapter being processed.
  * @param {HTMLElement} sourceContainer - The DOM element containing the source HTML.
@@ -191,7 +191,6 @@ function processSourceContentForCodexLinks(htmlString, codexCategories) {
 	return tempDiv.innerHTML;
 }
 
-// MODIFICATION START: New function to wrap translation markers in clickable links.
 /**
  * Finds translation markers ([[#123]]) in an HTML string and wraps them in links.
  * @param {string} htmlString - The HTML content to process.
@@ -208,10 +207,9 @@ function processSourceContentForMarkers(htmlString) {
 		return `<a href="#" class="translation-marker-link" data-marker-id="${number}">${match}</a>`;
 	});
 }
-// MODIFICATION END
 
 /**
- * MODIFICATION: Renders the manuscript into two separate, independently scrolling columns.
+ * Renders the manuscript into two separate, independently scrolling columns.
  * @param {object} novelData - The full novel data.
  * @param {Array<object>} allCodexEntries - All codex entries for the novel.
  */
@@ -252,7 +250,6 @@ async function renderManuscript(novelData, allCodexEntries) {
 			const sourceContentContainer = document.createElement('div');
 			sourceContentContainer.className = 'source-content-readonly';
 			
-			// MODIFICATION: Chain processing for codex links and then for markers.
 			let processedSourceHtml = processSourceContentForCodexLinks(chapter.source_content || '', allCodexEntries);
 			processedSourceHtml = processSourceContentForMarkers(processedSourceHtml);
 			sourceContentContainer.innerHTML = processedSourceHtml;
@@ -328,7 +325,7 @@ async function renderManuscript(novelData, allCodexEntries) {
 
 
 /**
- * MODIFICATION: Sets up the intersection observer to track the active chapter in the source column.
+ * Sets up the intersection observer to track the active chapter in the source column.
  */
 function setupIntersectionObserver() {
 	const container = document.getElementById('js-source-column-container');
@@ -381,7 +378,7 @@ function populateNavDropdown(novelData) {
 }
 
 /**
- * MODIFICATION: Scrolls both manuscript columns to a specific chapter.
+ * Scrolls both manuscript columns to a specific chapter.
  * @param {string} chapterId - The ID of the chapter to scroll to.
  */
 function scrollToChapter(chapterId) {
@@ -426,8 +423,6 @@ function scrollToChapter(chapterId) {
 	}, 1000); // Increased timeout to ensure smooth scroll completes
 }
 
-// MODIFICATION START: This function now only initiates the process. The actual scrolling
-// is handled in the 'markerFound' message listener for better accuracy.
 /**
  * Finds and scrolls to a specific translation marker in the target editor.
  * @param {string} chapterId - The ID of the chapter containing the marker.
@@ -451,7 +446,6 @@ function scrollToTargetMarker (chapterId, markerId) {
 		payload: { text: markerText }
 	}, window.location.origin);
 }
-// MODIFICATION END
 
 /**
  * Populates and configures the spellcheck language dropdown.
@@ -646,7 +640,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			});
 		});
 		
-		// MODIFICATION: Consolidated click handler for the source container.
 		sourceContainer.addEventListener('click', (event) => {
 			const codexLink = event.target.closest('a.codex-link');
 			const markerLink = event.target.closest('a.translation-marker-link');
@@ -722,7 +715,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 						viewInfo.iframe.style.height = `${payload.height}px`;
 					}
 					break;
-				// MODIFICATION START: New case to handle scrolling to a marker within an iframe.
 				case 'markerFound': {
 					const { top: markerTopInIframe } = payload;
 					const sourceIframeWindow = event.source;
@@ -752,7 +744,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 					}
 					break;
 				}
-				// MODIFICATION END
 				case 'requestTranslation': {
 					const { from, to } = payload;
 					const viewInfo = Array.from(chapterEditorViews.values()).find(v => v.contentWindow === sourceWindow);

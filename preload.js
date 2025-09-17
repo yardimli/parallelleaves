@@ -13,9 +13,7 @@ contextBridge.exposeInMainWorld('api', {
 	getNovelsWithCovers: () => ipcRenderer.invoke('novels:getAllWithCovers'),
 	getOneNovel: (novelId) => ipcRenderer.invoke('novels:getOne', novelId),
 	getFullManuscript: (novelId) => ipcRenderer.invoke('novels:getFullManuscript', novelId),
-	// MODIFICATION START: Expose new handler for getting all novel content.
 	getAllNovelContent: (novelId) => ipcRenderer.invoke('novels:getAllContent', novelId),
-	// MODIFICATION END
 	
 	openEditor: (novelId) => ipcRenderer.send('novels:openEditor', novelId),
 	openOutline: (novelId) => ipcRenderer.send('novels:openOutline', novelId),

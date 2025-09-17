@@ -76,9 +76,39 @@ function getTemplate(templateName) {
 	}
 }
 
+/**
+ * Converts an HTML string to a formatted plain text string.
+ * @param {string} html - The HTML string to convert.
+ * @returns {string} The resulting plain text.
+ */
+function htmlToPlainText(html) {
+	if (!html) return '';
+	// 1) Normalize BRs to newlines
+	let s = html.replace(/<br\s*\/?>/gi, '\n');
+	// 2) Insert newlines around block-level elements to preserve separation
+	const block = '(?:p|div|section|article|header|footer|nav|aside|h[1-6]|ul|ol|li|table|thead|tbody|tfoot|tr|th|td|blockquote|pre|hr)';
+	s = s
+		.replace(new RegExp(`<\\s*${block}[^>]*>`, 'gi'), '\n')
+		.replace(new RegExp(`<\\/\\s*${block}\\s*>`, 'gi'), '\n');
+	// 3) Drop all remaining tags without adding spaces
+	s = s.replace(/<[^>]+>/g, '');
+	// 4) Trim accidental spaces before punctuation caused by earlier steps
+	s = s
+		.replace(/\s+([.,!?;:])/g, '$1')
+		.replace(/(\() +/g, '$1')
+		.replace(/ +(\))/g, '$1');
+	// 5) Collapse whitespace and normalize newlines
+	s = s
+		.replace(/[ \t]+\n/g, '\n')
+		.replace(/\n[ \t]+/g, '\n')
+		.replace(/\n{3,}/g, '\n\n')
+		.replace(/[ \t]{2,}/g, ' ');
+	return s.trim();
+}
+
 function countWordsInHtml(html) {
 	if (!html) return 0;
-	const text = html.replace(/<[^>]*>/g, ' ');
+	const text = htmlToPlainText(html);
 	const words = text.trim().split(/\s+/).filter(Boolean);
 	return words.length;
 }
@@ -404,8 +434,6 @@ function createImportWindow() {
 }
 
 /**
- * MODIFICATION: This helper function is updated for clarity and robustness.
- * Extracts marker-based translation pairs from HTML content, respecting document order.
  * @param {string} sourceHtml - The source HTML content.
  * @param {string} targetHtml - The target HTML content.
  * @param {string|null} [selectedText=null] - The text currently selected by the user for translation, used to truncate the last source segment.
@@ -426,11 +454,9 @@ const extractMarkerPairsFromHtml = (sourceHtml, targetHtml, selectedText = null)
 			const match = marker.match(/\[\[#(\d+)\]\]/);
 			if (match) {
 				const number = parseInt(match[1], 10);
-				let plainText = content.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, ' ').trim();
-				plainText = plainText.replace(/\s\s+/g, ' ');
+				const plainText = htmlToPlainText(content);
 				
 				if (plainText) {
-					// Note if this is the last marker-delimited segment in the content.
 					segments.push({ number, text: plainText, isLastSegment: i === parts.length - 2 });
 				}
 			}
@@ -446,10 +472,8 @@ const extractMarkerPairsFromHtml = (sourceHtml, targetHtml, selectedText = null)
 	if (selectedText && sourceSegmentsArray.length > 0) {
 		const lastSourceSegment = sourceSegmentsArray[sourceSegmentsArray.length - 1];
 		// Only truncate if it's the very last segment in the source file.
-		console.log('Last source segment before truncation:', lastSourceSegment);
 		if (lastSourceSegment.isLastSegment) {
 			const selectionIndex = lastSourceSegment.text.indexOf(selectedText.trim());
-			console.log('Selection index in last source segment:', selectionIndex, 'Selected text:', selectedText);
 			if (selectionIndex !== -1) {
 				lastSourceSegment.text = lastSourceSegment.text.substring(0, selectionIndex).trim();
 				// If truncation makes the text empty, remove the segment entirely from context.
@@ -731,7 +755,6 @@ function setupIpcHandlers() {
 		}
 	});
 	
-	// MODIFICATION START: New handler to get all content for marker generation.
 	ipcMain.handle('novels:getAllContent', (event, novelId) => {
 		try {
 			const chapters = db.prepare('SELECT source_content, target_content FROM chapters WHERE novel_id = ?').all(novelId);
@@ -742,7 +765,6 @@ function setupIpcHandlers() {
 			return { success: false, message: 'Failed to retrieve novel content.' };
 		}
 	});
-	// MODIFICATION END
 	
 	ipcMain.handle('novels:updateProseSettings', (event, {novelId, source_language, target_language}) => {
 		try {
@@ -973,9 +995,7 @@ function setupIpcHandlers() {
 			}
 			
 			const fullText = chapters.map(c => c.source_content).join('\n');
-			const cleanedText = fullText
-				.replace(/<[^>]+>/g, ' ')
-				.replace(/\s\s+/g, ' ');
+			const cleanedText = htmlToPlainText(fullText);
 			
 			const words = cleanedText.split(/\s+/);
 			const chunkSize = 10000;

@@ -1,5 +1,35 @@
 import { t, applyTranslationsTo } from '../i18n.js';
 
+/**
+ * Converts an HTML string to a formatted plain text string.
+ * @param {string} html - The HTML string to convert.
+ * @returns {string} The resulting plain text.
+ */
+function htmlToPlainText(html) {
+	if (!html) return '';
+	// 1) Normalize BRs to newlines
+	let s = html.replace(/<br\s*\/?>/gi, '\n');
+	// 2) Insert newlines around block-level elements to preserve separation
+	const block = '(?:p|div|section|article|header|footer|nav|aside|h[1-6]|ul|ol|li|table|thead|tbody|tfoot|tr|th|td|blockquote|pre|hr)';
+	s = s
+		.replace(new RegExp(`<\\s*${block}[^>]*>`, 'gi'), '\n')
+		.replace(new RegExp(`<\\/\\s*${block}\\s*>`, 'gi'), '\n');
+	// 3) Drop all remaining tags without adding spaces
+	s = s.replace(/<[^>]+>/g, '');
+	// 4) Trim accidental spaces before punctuation caused by earlier steps
+	s = s
+		.replace(/\s+([.,!?;:])/g, '$1')
+		.replace(/(\() +/g, '$1')
+		.replace(/ +(\))/g, '$1');
+	// 5) Collapse whitespace and normalize newlines
+	s = s
+		.replace(/[ \t]+\n/g, '\n')
+		.replace(/\n[ \t]+/g, '\n')
+		.replace(/\n{3,}/g, '\n\n')
+		.replace(/[ \t]{2,}/g, ' ');
+	return s.trim();
+}
+
 const defaultState = {
 	instructions: '',
 	selectedCodexIds: [],
@@ -115,8 +145,8 @@ const buildTranslationContextBlock = (translationPairs, languageForPrompt, targe
 	
 	const contextMessages = [];
 	translationPairs.forEach(pair => {
-		const sourceText = (pair.source || '').replace(/<[^>]+>/g, ' ').replace(/\s\s+/g, ' ').trim();
-		const targetText = (pair.target || '').replace(/<[^>]+>/g, ' ').replace(/\s\s+/g, ' ').trim();
+		const sourceText = htmlToPlainText(pair.source || '');
+		const targetText = htmlToPlainText(pair.target || '');
 		
 		if (sourceText && targetText) {
 			contextMessages.push({
@@ -159,13 +189,8 @@ export const buildPromptJson = (formData, context) => {
 		const selectedEntries = allEntriesFlat.filter(entry => formData.selectedCodexIds.includes(String(entry.id)));
 		if (selectedEntries.length > 0) {
 			const codexContent = selectedEntries.map(entry => {
-				const tempDiv = document.createElement('div');
-				tempDiv.innerHTML = entry.content || '';
-				const plainContent = tempDiv.textContent || tempDiv.innerText || '';
-				
-				const tempTranslationHintDiv = document.createElement('div');
-				tempTranslationHintDiv.innerHTML = entry.target_content || '';
-				const plainTranslationHint = tempTranslationHintDiv.textContent || tempTranslationHintDiv.innerText || '';
+				const plainContent = htmlToPlainText(entry.content || '');
+				const plainTranslationHint = htmlToPlainText(entry.target_content || '');
 				
 				return t('prompt.translate.user.codexEntry', {
 					sourceLanguage: languageForPrompt,
@@ -299,14 +324,9 @@ export const init = async (container, context) => {
 					selectedText: selectedText,
 				});
 				
-				const tempDiv = document.createElement('div');
 				const historyText = pairs.map(p => {
-					// Extract plain text from source history
-					tempDiv.innerHTML = p.source || '';
-					const sourceText = tempDiv.textContent || tempDiv.innerText || '';
-					// Extract plain text from target (translated) history
-					tempDiv.innerHTML = p.target || '';
-					const targetText = tempDiv.textContent || tempDiv.innerText || '';
+					const sourceText = htmlToPlainText(p.source || '');
+					const targetText = htmlToPlainText(p.target || '');
 					return sourceText + ' ' + targetText;
 				}).join(' ');
 				textToScan += ' ' + historyText;
