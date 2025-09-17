@@ -403,6 +403,53 @@ function createImportWindow() {
 	});
 }
 
+/**
+ * Extracts marker-based translation pairs from HTML content.
+ * @param {string} sourceHtml - The source HTML content.
+ * @param {string} targetHtml - The target HTML content.
+ * @returns {Array<object>} An array of {source, target} text pairs.
+ */
+const extractMarkerPairsFromHtml = (sourceHtml, targetHtml) => {
+	if (!sourceHtml || !targetHtml) {
+		return [];
+	}
+	
+	const getSegments = (html) => {
+		const segments = new Map();
+		const parts = html.split(/(\[#\d+\])/g);
+		for (let i = 1; i < parts.length; i += 2) {
+			const marker = parts[i];
+			const content = parts[i + 1] || '';
+			const match = marker.match(/\[#(\d+)\]/);
+			if (match) {
+				const number = parseInt(match[1], 10);
+				const plaintext = content.replace(/<br\s*\/?>/gi, '\n').replace(/<\/p>/gi, '\n').replace(/<[^>]+>/g, ' ').replace(/\s\s+/g, ' ').trim();
+				
+				if (plainText) {
+					segments.set(number, plainText);
+				}
+			}
+		}
+		return segments;
+	};
+	
+	const sourceSegments = getSegments(sourceHtml);
+	const targetSegments = getSegments(targetHtml);
+	
+	const pairs = [];
+	const sortedKeys = Array.from(targetSegments.keys()).sort((a, b) => a - b);
+	
+	for (const key of sortedKeys) {
+		if (sourceSegments.has(key)) {
+			pairs.push({
+				source: sourceSegments.get(key),
+				target: targetSegments.get(key),
+			});
+		}
+	}
+	return pairs;
+};
+
 function setupIpcHandlers() {
 	// --- I18n Handler ---
 	ipcMain.handle('i18n:get-lang-file', (event, lang) => {
@@ -781,56 +828,51 @@ function setupIpcHandlers() {
 		}
 	});
 	
+	// MODIFICATION: Updated to check previous chapter if current chapter lacks context.
 	ipcMain.handle('chapters:getTranslationContext', (event, { chapterId, pairCount }) => {
 		if (pairCount <= 0) {
 			return [];
 		}
 		
 		try {
-			const currentChapter = db.prepare('SELECT novel_id, chapter_order FROM chapters WHERE id = ?').get(chapterId);
+			// 1. Get context from the current chapter.
+			const currentChapter = db.prepare('SELECT novel_id, chapter_order, source_content, target_content FROM chapters WHERE id = ?').get(chapterId);
 			if (!currentChapter) {
 				throw new Error('Current chapter not found.');
 			}
 			
-			// Find the chapter immediately preceding the current one.
+			const currentChapterPairs = extractMarkerPairsFromHtml(currentChapter.source_content, currentChapter.target_content);
+			
+			// 2. If we have enough context, return it.
+			if (currentChapterPairs.length >= pairCount) {
+				return currentChapterPairs.slice(-pairCount);
+			}
+			
+			// 3. If not, calculate how many more pairs we need.
+			const neededPairs = pairCount - currentChapterPairs.length;
+			
+			// 4. Find the previous chapter.
 			const previousChapter = db.prepare(`
-                SELECT source_content, target_content
-                FROM chapters
-                WHERE novel_id = ? AND chapter_order < ?
-                ORDER BY chapter_order DESC
-                LIMIT 1
-            `).get(currentChapter.novel_id, currentChapter.chapter_order);
+	            SELECT source_content, target_content
+	            FROM chapters
+	            WHERE novel_id = ? AND chapter_order < ?
+	            ORDER BY chapter_order DESC
+	            LIMIT 1
+	        `).get(currentChapter.novel_id, currentChapter.chapter_order);
 			
-			if (!previousChapter || !previousChapter.source_content || !previousChapter.target_content) {
-				return []; // No previous chapter or it's empty, so no context.
+			// 5. If there's no previous chapter, just return what we have.
+			if (!previousChapter) {
+				return currentChapterPairs;
 			}
 			
-			// Helper to split HTML content into an array of paragraphs.
-			const splitToParagraphs = (html) => {
-				if (!html) return [];
-				// A simple regex to capture content within <p> tags.
-				const matches = html.match(/<p>.*?<\/p>/gs) || [];
-				return matches.map(p => p.slice(3, -4)); // Remove <p> and </p>
-			};
+			// 6. Get pairs from the previous chapter.
+			const previousChapterPairs = extractMarkerPairsFromHtml(previousChapter.source_content, previousChapter.target_content);
 			
-			const sourceParagraphs = splitToParagraphs(previousChapter.source_content);
-			const targetParagraphs = splitToParagraphs(previousChapter.target_content);
+			// 7. Take the last `neededPairs` from the previous chapter.
+			const lastPairsFromPrevious = previousChapterPairs.slice(-neededPairs);
 			
-			// Take the last `pairCount` paragraphs from each.
-			const sourceContext = sourceParagraphs.slice(-pairCount);
-			const targetContext = targetParagraphs.slice(-pairCount);
-			
-			// Create pairs, assuming a 1-to-1 paragraph correspondence at the end of the chapter.
-			const pairs = [];
-			const numPairs = Math.min(sourceContext.length, targetContext.length);
-			for (let i = 0; i < numPairs; i++) {
-				pairs.push({
-					source: sourceContext[i],
-					target: targetContext[i],
-				});
-			}
-			
-			return pairs;
+			// 8. Combine and return.
+			return [...lastPairsFromPrevious, ...currentChapterPairs];
 			
 		} catch (error) {
 			console.error(`Failed to get translation context for chapter ${chapterId}:`, error);
