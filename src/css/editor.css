@@ -145,6 +145,12 @@ i[class^="bi-"], i[class*=" bi-"] {
     cursor: pointer;
 }
 
+/* MODIFICATION START: Added style for highlighting translated source text */
+.ai-translated-source {
+    @apply bg-accent/20 rounded-sm;
+}
+/* MODIFICATION END */
+
 /* MODIFICATION: Updated styles for the floating translate button */
 .floating-translate-btn {
     @apply btn btn-circle btn-sm btn-outline btn-accent z-50 bg-base-100/80 backdrop-blur-sm;

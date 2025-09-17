@@ -17,7 +17,7 @@ const debounce = (func, delay) => {
 let activeChapterId = null;
 let isScrollingProgrammatically = false;
 const chapterEditorViews = new Map();
-let currentSourceSelection = { text: '', hasSelection: false }; // MODIFICATION: Store source selection state
+let currentSourceSelection = { text: '', hasSelection: false, range: null }; // MODIFICATION: Added range to state object
 
 const debouncedContentSave = debounce(async ({ chapterId, field, value }) => {
 	if (field === 'target_content') {
@@ -482,13 +482,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 			updateToolbarState(null); // Pass null to indicate it's not a PM editor state
 		}, 100);
 		
-		// MODIFICATION: Replaced simple listener with one that detects source selection
+		// MODIFICATION: Replaced simple listener with one that detects source selection and stores the Range object
 		document.addEventListener('selectionchange', () => {
 			throttledUpdateToolbar(); // Still needed for rephrase button, etc.
 			
 			const selection = window.getSelection();
 			let hasSourceSelection = false;
 			let selectedText = '';
+			let selectionRange = null; // Variable to hold the Range object
 			
 			// Check if the selection is valid and within a source content area
 			if (selection && !selection.isCollapsed && selection.rangeCount > 0) {
@@ -499,12 +500,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 					selectedText = selection.toString().trim();
 					if (selectedText.length > 0) {
 						hasSourceSelection = true;
+						selectionRange = range.cloneRange(); // Store a copy of the range
 					}
 				}
 			}
 			
-			// Store the current state
-			currentSourceSelection = { text: selectedText, hasSelection: hasSourceSelection };
+			// Store the current state, including the range
+			currentSourceSelection = { text: selectedText, hasSelection: hasSourceSelection, range: selectionRange };
 			
 			// Broadcast the selection state to all editor iframes
 			chapterEditorViews.forEach(viewInfo => {
@@ -607,6 +609,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 						// Construct the context needed for the prompt editor
 						const context = {
 							selectedText: currentSourceSelection.text,
+							sourceSelectionRange: currentSourceSelection.range, // MODIFICATION: Pass the stored Range object
 							allCodexEntries,
 							languageForPrompt: novelData.source_language || 'English',
 							targetLanguage: novelData.target_language || 'English',

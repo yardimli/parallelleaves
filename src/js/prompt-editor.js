@@ -37,6 +37,79 @@ let floatingToolbar = null;
 let currentAiParams = null;
 let currentPromptId = null;
 
+/**
+ * MODIFICATION START: New helper function to highlight a DOM Range.
+ * Wraps the text content within a given Range object with a highlight span.
+ * This function is designed to handle selections that may span multiple nodes and paragraphs.
+ * @param {Range} range - The DOM Range object to highlight.
+ */
+function highlightSourceRange(range) {
+	// If the range is collapsed, there's nothing to do.
+	if (range.collapsed) return;
+	
+	const {
+		commonAncestorContainer,
+		startContainer,
+		endContainer,
+		startOffset,
+		endOffset
+	} = range;
+	
+	// Simple case: Selection is within a single text node.
+	// This is the most common and efficient case, handled well by surroundContents.
+	if (startContainer === endContainer && startContainer.nodeType === Node.TEXT_NODE) {
+		const span = document.createElement('span');
+		span.className = 'ai-translated-source';
+		range.surroundContents(span);
+		return;
+	}
+	
+	// Complex case: Selection spans multiple nodes.
+	// We iterate through all text nodes within the range and wrap the relevant parts.
+	const walker = document.createTreeWalker(
+		commonAncestorContainer,
+		NodeFilter.SHOW_TEXT,
+		(node) => {
+			// The TreeWalker filter accepts nodes that intersect with our range.
+			return range.intersectsNode(node) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+		}
+	);
+	
+	const nodesToWrap = [];
+	while (walker.nextNode()) {
+		nodesToWrap.push(walker.currentNode);
+	}
+	
+	for (const textNode of nodesToWrap) {
+		const span = document.createElement('span');
+		span.className = 'ai-translated-source';
+		
+		// Create a new range for just the portion of this node that's selected.
+		const nodeRange = document.createRange();
+		
+		// If this is the start node of the whole selection, start the highlight at the offset.
+		if (textNode === startContainer) {
+			nodeRange.setStart(textNode, startOffset);
+		} else {
+			// Otherwise, this node is fully selected from its beginning.
+			nodeRange.setStart(textNode, 0);
+		}
+		
+		// If this is the end node of the whole selection, end the highlight at the offset.
+		if (textNode === endContainer) {
+			nodeRange.setEnd(textNode, endOffset);
+		} else {
+			// Otherwise, this node is fully selected to its end.
+			nodeRange.setEnd(textNode, textNode.length);
+		}
+		
+		// Wrap the calculated part of the text node.
+		// This handles splitting the text node if necessary.
+		nodeRange.surroundContents(span);
+	}
+}
+// MODIFICATION END
+
 function showAiSpinner () {
 	const overlay = document.getElementById('ai-action-spinner-overlay');
 	if (overlay) overlay.classList.remove('hidden');
@@ -196,7 +269,36 @@ async function startAiAction (params) {
 			);
 			
 			if (replacementData) {
-				//console.log( replacementData );
+				// MODIFICATION START: Replaced simple surroundContents with robust highlightSourceRange function.
+				if (currentPromptId === 'translate' && currentContext.sourceSelectionRange) {
+					try {
+						// This new function handles complex selections across multiple paragraphs.
+						highlightSourceRange(currentContext.sourceSelectionRange);
+						
+						// After modifying the DOM, get the updated HTML from the parent container.
+						// The range's common ancestor is a reliable starting point to find the container.
+						const commonAncestor = currentContext.sourceSelectionRange.commonAncestorContainer;
+						const sourceContainer = (commonAncestor.nodeType === Node.ELEMENT_NODE ? commonAncestor : commonAncestor.parentElement).closest('.source-content-readonly');
+						
+						if (sourceContainer) {
+							const chapterId = sourceContainer.closest('.manuscript-chapter-item').dataset.chapterId;
+							const updatedSourceHtml = sourceContainer.innerHTML;
+							
+							// Persist the change to the database.
+							await window.api.updateChapterField({
+								chapterId: chapterId,
+								field: 'source_content',
+								value: updatedSourceHtml
+							});
+						}
+					} catch (e) {
+						console.error("Could not highlight source text:", e);
+						// If highlighting fails, we don't want to break the whole flow.
+						// The translation is already inserted, so we just log the error.
+					}
+				}
+				// MODIFICATION END
+				
 				aiActionRange.to = replacementData.finalRange.to;
 				createFloatingToolbar(aiActionRange.from, aiActionRange.to, model);
 				
