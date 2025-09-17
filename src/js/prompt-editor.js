@@ -395,16 +395,25 @@ async function handleModalApply () {
 	// Calculate and insert the translation marker.
 	let marker = '';
 	if (action === 'translate') {
-		const chapterId = currentContext.chapterId;
-		const sourceContainer = document.querySelector(`#source-chapter-scroll-target-${chapterId} .source-content-readonly`);
-		const sourceHtml = sourceContainer ? sourceContainer.innerHTML : '';
-		const targetHtml = await currentEditorInterface.getFullHtml();
+		// MODIFICATION START: Get content from the entire novel to find the highest marker number.
+		const allContentResult = await window.api.getAllNovelContent(novelId);
 		
-		const highestNum = findHighestMarkerNumber(sourceHtml, targetHtml);
+		let highestNum = 0;
+		if (allContentResult.success) {
+			// The find function can take one argument since it concatenates them anyway.
+			highestNum = findHighestMarkerNumber(allContentResult.combinedHtml, '');
+		} else {
+			console.error('Could not fetch all novel content for marker generation:', allContentResult.message);
+			window.showAlert('Could not generate a translation marker. The translation will proceed without it.');
+		}
+		
 		marker = `[[#${highestNum + 1}]]`;
+		// MODIFICATION END
 		
 		// Insert the marker into the source text DOM and save it.
 		try {
+			const chapterId = currentContext.chapterId;
+			const sourceContainer = document.querySelector(`#source-chapter-scroll-target-${chapterId} .source-content-readonly`);
 			const markerNode = document.createTextNode(marker + ' ');
 			currentContext.sourceSelectionRange.insertNode(markerNode);
 			

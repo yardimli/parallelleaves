@@ -347,7 +347,6 @@ window.addEventListener('message', (event) => {
 			break;
 		}
 		
-		// MODIFICATION START: New handler to find and scroll to text within the editor.
 		case 'findAndScrollToText': {
 			const { text } = payload;
 			if (!editorView || !text) break;
@@ -373,20 +372,19 @@ window.addEventListener('message', (event) => {
 				const tr = state.tr.setSelection(TextSelection.create(doc, foundPos, foundPos + text.length));
 				editorView.dispatch(tr);
 				
-				// Focus the editor and scroll the selection into view within the iframe.
+				// Focus the editor to make the selection visible.
 				editorView.focus();
 				const { from } = editorView.state.selection;
 				const coords = editorView.coordsAtPos(from);
 				
-				// Manually scroll the iframe's window to the coordinates of the selection.
-				window.scrollTo({
-					top: coords.top - 50, // Add a 50px offset from the top for better visibility.
-					behavior: 'smooth'
-				});
+				// MODIFICATION START: Instead of scrolling inside the iframe, which doesn't have its own scrollbar,
+				// we post the coordinates of the found marker back to the parent window.
+				// The parent window will then scroll its container to bring the marker into view.
+				postToParent('markerFound', { top: coords.top });
+				// MODIFICATION END
 			}
 			break;
 		}
-		// MODIFICATION END
 		
 		case 'setEditable':
 			//editorView.setProps({ editable: () => payload.isEditable });

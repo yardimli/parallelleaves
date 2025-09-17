@@ -446,10 +446,10 @@ const extractMarkerPairsFromHtml = (sourceHtml, targetHtml, selectedText = null)
 	if (selectedText && sourceSegmentsArray.length > 0) {
 		const lastSourceSegment = sourceSegmentsArray[sourceSegmentsArray.length - 1];
 		// Only truncate if it's the very last segment in the source file.
+		console.log('Last source segment before truncation:', lastSourceSegment);
 		if (lastSourceSegment.isLastSegment) {
-			// Clean up selected text to match how segment text is cleaned.
-			const cleanedSelectedText = selectedText.replace(/\s\s+/g, ' ').trim();
-			const selectionIndex = lastSourceSegment.text.indexOf(cleanedSelectedText);
+			const selectionIndex = lastSourceSegment.text.indexOf(selectedText.trim());
+			console.log('Selection index in last source segment:', selectionIndex, 'Selected text:', selectedText);
 			if (selectionIndex !== -1) {
 				lastSourceSegment.text = lastSourceSegment.text.substring(0, selectionIndex).trim();
 				// If truncation makes the text empty, remove the segment entirely from context.
@@ -730,6 +730,19 @@ function setupIpcHandlers() {
 			return { id: novelId, title: 'Error Loading', sections: [] };
 		}
 	});
+	
+	// MODIFICATION START: New handler to get all content for marker generation.
+	ipcMain.handle('novels:getAllContent', (event, novelId) => {
+		try {
+			const chapters = db.prepare('SELECT source_content, target_content FROM chapters WHERE novel_id = ?').all(novelId);
+			const combinedContent = chapters.map(c => (c.source_content || '') + (c.target_content || '')).join('');
+			return { success: true, combinedHtml: combinedContent };
+		} catch (error) {
+			console.error(`Failed to get all content for novel ${novelId}:`, error);
+			return { success: false, message: 'Failed to retrieve novel content.' };
+		}
+	});
+	// MODIFICATION END
 	
 	ipcMain.handle('novels:updateProseSettings', (event, {novelId, source_language, target_language}) => {
 		try {

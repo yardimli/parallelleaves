@@ -426,13 +426,14 @@ function scrollToChapter(chapterId) {
 	}, 1000); // Increased timeout to ensure smooth scroll completes
 }
 
-// MODIFICATION START: New function to handle scrolling to a specific marker in the target column.
+// MODIFICATION START: This function now only initiates the process. The actual scrolling
+// is handled in the 'markerFound' message listener for better accuracy.
 /**
  * Finds and scrolls to a specific translation marker in the target editor.
  * @param {string} chapterId - The ID of the chapter containing the marker.
  * @param {string} markerId - The numerical ID of the marker to find.
  */
-function scrollToTargetMarker(chapterId, markerId) {
+function scrollToTargetMarker (chapterId, markerId) {
 	// 1. Find the target chapter's iframe view info.
 	const viewInfo = chapterEditorViews.get(chapterId.toString());
 	if (!viewInfo || !viewInfo.isReady) {
@@ -440,32 +441,15 @@ function scrollToTargetMarker(chapterId, markerId) {
 		return;
 	}
 	
-	const targetContainer = document.getElementById('js-target-column-container');
 	const markerText = `[[#${markerId}]]`;
 	
-	// 2. Send a message to the iframe, asking it to find the marker and scroll to it.
+	// 2. Send a message to the iframe, asking it to find the marker.
+	// The iframe will find it, get its coordinates, and post a 'markerFound'
+	// message back, which is handled by the main window's message listener to perform the scroll.
 	viewInfo.contentWindow.postMessage({
 		type: 'findAndScrollToText',
 		payload: { text: markerText }
 	}, window.location.origin);
-	
-	// 3. Scroll the main target container to bring the correct chapter/iframe into view.
-	const targetChapterWrapper = document.getElementById(`target-chapter-scroll-target-${chapterId}`);
-	if (targetChapterWrapper && targetContainer) {
-		const containerRect = targetContainer.getBoundingClientRect();
-		const targetRect = targetChapterWrapper.getBoundingClientRect();
-		
-		// Check if the chapter is already reasonably in view.
-		if (targetRect.top < containerRect.top || targetRect.bottom > containerRect.bottom) {
-			const offsetTop = targetRect.top - containerRect.top;
-			const scrollPosition = targetContainer.scrollTop + offsetTop - 100; // 100px offset from top
-			
-			targetContainer.scrollTo({
-				top: scrollPosition,
-				behavior: 'smooth'
-			});
-		}
-	}
 }
 // MODIFICATION END
 
@@ -738,6 +722,37 @@ document.addEventListener('DOMContentLoaded', async () => {
 						viewInfo.iframe.style.height = `${payload.height}px`;
 					}
 					break;
+				// MODIFICATION START: New case to handle scrolling to a marker within an iframe.
+				case 'markerFound': {
+					const { top: markerTopInIframe } = payload;
+					const sourceIframeWindow = event.source;
+					
+					// Find the iframe element that sent the message.
+					const viewInfo = Array.from(chapterEditorViews.values()).find(v => v.contentWindow === sourceIframeWindow);
+					if (!viewInfo) break;
+					
+					const iframeEl = viewInfo.iframe;
+					const targetContainer = document.getElementById('js-target-column-container');
+					
+					if (iframeEl && targetContainer) {
+						// Get the position of the iframe relative to the scroll container.
+						const iframeRect = iframeEl.getBoundingClientRect();
+						const containerRect = targetContainer.getBoundingClientRect();
+						const iframeOffsetTop = iframeRect.top - containerRect.top;
+						
+						// Calculate the final scroll position.
+						// It's the container's current scroll position, plus the iframe's offset within the container,
+						// plus the marker's offset within the iframe. We subtract an offset to position it nicely.
+						const scrollPosition = targetContainer.scrollTop + iframeOffsetTop + markerTopInIframe - 100; // 100px offset from top
+						
+						targetContainer.scrollTo({
+							top: scrollPosition,
+							behavior: 'smooth'
+						});
+					}
+					break;
+				}
+				// MODIFICATION END
 				case 'requestTranslation': {
 					const { from, to } = payload;
 					const viewInfo = Array.from(chapterEditorViews.values()).find(v => v.contentWindow === sourceWindow);
