@@ -404,6 +404,7 @@ function createImportWindow() {
 }
 
 /**
+ * MODIFICATION: This helper function is updated for clarity and robustness.
  * Extracts marker-based translation pairs from HTML content, respecting document order.
  * @param {string} sourceHtml - The source HTML content.
  * @param {string} targetHtml - The target HTML content.
@@ -446,7 +447,9 @@ const extractMarkerPairsFromHtml = (sourceHtml, targetHtml, selectedText = null)
 		const lastSourceSegment = sourceSegmentsArray[sourceSegmentsArray.length - 1];
 		// Only truncate if it's the very last segment in the source file.
 		if (lastSourceSegment.isLastSegment) {
-			const selectionIndex = lastSourceSegment.text.indexOf(selectedText.trim());
+			// Clean up selected text to match how segment text is cleaned.
+			const cleanedSelectedText = selectedText.replace(/\s\s+/g, ' ').trim();
+			const selectionIndex = lastSourceSegment.text.indexOf(cleanedSelectedText);
 			if (selectionIndex !== -1) {
 				lastSourceSegment.text = lastSourceSegment.text.substring(0, selectionIndex).trim();
 				// If truncation makes the text empty, remove the segment entirely from context.

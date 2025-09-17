@@ -109,7 +109,7 @@ function manageFloatingButton(view) {
 		
 		// Position the button to the left of the cursor, vertically centered
 		floatingTranslateBtn.style.position = 'absolute';
-		floatingTranslateBtn.style.left = `${coords.left - 16}px`;
+		floatingTranslateBtn.style.left = `${coords.left}px`;
 		floatingTranslateBtn.style.top = `${coords.top}px`;
 		
 		// Use mousedown to prevent the editor from losing focus, which would hide the button

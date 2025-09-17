@@ -219,13 +219,11 @@ const updatePreview = async (container, context) => {
 	
 	if (formData.contextPairs > 0 && context.chapterId) {
 		try {
-			// MODIFICATION START: Pass selectedText to getTranslationContext.
 			const pairs = await window.api.getTranslationContext({
 				chapterId: context.chapterId,
 				pairCount: formData.contextPairs,
 				selectedText: context.selectedText,
 			});
-			// MODIFICATION END
 			console.log('Fetched translation pairs for preview:', pairs);
 			previewContext.translationPairs = pairs;
 		} catch (error) {
@@ -295,13 +293,11 @@ export const init = async (container, context) => {
 		
 		if (contextPairCount > 0 && chapterId) {
 			try {
-				// MODIFICATION START: Pass selectedText to getTranslationContext.
 				const pairs = await window.api.getTranslationContext({
 					chapterId: chapterId,
 					pairCount: contextPairCount,
 					selectedText: selectedText,
 				});
-				// MODIFICATION END
 				
 				const tempDiv = document.createElement('div');
 				const historyText = pairs.map(p => {

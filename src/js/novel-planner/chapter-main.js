@@ -24,7 +24,7 @@ const debouncedContentSave = debounce(async ({ chapterId, field, value }) => {
 		const tempDiv = document.createElement('div');
 		tempDiv.innerHTML = value;
 		const wordCount = tempDiv.textContent.trim().split(/\s+/).filter(Boolean).length;
-		const chapterItem = document.getElementById(`chapter-scroll-target-${chapterId}`);
+		const chapterItem = document.getElementById(`target-chapter-scroll-target-${chapterId}`);
 		if (chapterItem) {
 			const wordCountEl = chapterItem.querySelector('.js-target-word-count');
 			if (wordCountEl) {
@@ -192,69 +192,69 @@ function processSourceContentForCodexLinks(htmlString, codexCategories) {
 }
 
 /**
- * Renders the entire manuscript into the container.
- * @param {HTMLElement} container - The manuscript container element.
+ * MODIFICATION: Renders the manuscript into two separate, independently scrolling columns.
  * @param {object} novelData - The full novel data.
  * @param {Array<object>} allCodexEntries - All codex entries for the novel.
  */
-async function renderManuscript(container, novelData, allCodexEntries) {
-	const fragment = document.createDocumentFragment();
+async function renderManuscript(novelData, allCodexEntries) {
+	const sourceContainer = document.getElementById('js-source-column-container');
+	const targetContainer = document.getElementById('js-target-column-container');
+	
+	const sourceFragment = document.createDocumentFragment();
+	const targetFragment = document.createDocumentFragment();
 	
 	for (const section of novelData.sections) {
+		// Create and append section headers to both columns
 		const sectionHeader = document.createElement('div');
 		sectionHeader.className = 'px-8 py-6 sticky top-0 bg-base-100/90 backdrop-blur-sm z-10 border-b border-base-300';
 		sectionHeader.innerHTML = `<h2 class="text-3xl font-bold text-indigo-500">${section.section_order}. ${section.title}</h2>`;
-		fragment.appendChild(sectionHeader);
+		sourceFragment.appendChild(sectionHeader);
+		targetFragment.appendChild(sectionHeader.cloneNode(true));
 		
 		if (!section.chapters || section.chapters.length === 0) {
 			const noChaptersMessage = document.createElement('p');
 			noChaptersMessage.className = 'px-8 py-6 text-base-content/60';
 			noChaptersMessage.textContent = t('editor.noChaptersInSection');
-			fragment.appendChild(noChaptersMessage);
+			sourceFragment.appendChild(noChaptersMessage);
+			targetFragment.appendChild(noChaptersMessage.cloneNode(true));
 			continue;
 		}
 		
 		for (const chapter of section.chapters) {
-			const chapterWrapper = document.createElement('div');
-			chapterWrapper.id = `chapter-scroll-target-${chapter.id}`;
-			chapterWrapper.className = 'manuscript-chapter-item px-8 py-6';
-			chapterWrapper.dataset.chapterId = chapter.id;
-			
-			const layoutGrid = document.createElement('div');
-			layoutGrid.className = 'grid grid-cols-2 gap-6';
+			// --- Source Column Chapter ---
+			const sourceChapterWrapper = document.createElement('div');
+			sourceChapterWrapper.id = `source-chapter-scroll-target-${chapter.id}`;
+			sourceChapterWrapper.className = 'manuscript-chapter-item px-8 py-6'; // Class for observer
+			sourceChapterWrapper.dataset.chapterId = chapter.id;
 			
 			const sourceCol = document.createElement('div');
-			sourceCol.className = 'js-source-column col-span-1 prose prose-sm dark:prose-invert max-w-none bg-base-200 p-4 rounded-lg';
-			sourceCol.innerHTML = `<h3 class="!mt-0 text-sm font-semibold uppercase tracking-wider text-base-content/70 border-b pb-1 mb-2">${t('common.source')} (<span class="js-source-word-count">${chapter.source_word_count.toLocaleString()} ${t('common.words')}</span>)</h3>`;
+			sourceCol.className = 'js-source-column prose prose-sm dark:prose-invert max-w-none bg-base-200 p-4 rounded-lg';
+			sourceCol.innerHTML = `<h3 class="!mt-0 text-sm font-semibold uppercase tracking-wider text-base-content/70 border-b pb-1 mb-2">${chapter.title} (<span class="js-source-word-count">${chapter.source_word_count.toLocaleString()} ${t('common.words')}</span>)</h3>`;
 			const sourceContentContainer = document.createElement('div');
 			sourceContentContainer.className = 'source-content-readonly';
 			
 			let processedSourceHtml = processSourceContentForCodexLinks(chapter.source_content || '', allCodexEntries);
-			
 			sourceContentContainer.innerHTML = processedSourceHtml;
 			sourceCol.appendChild(sourceContentContainer);
+			sourceChapterWrapper.appendChild(sourceCol);
+			sourceFragment.appendChild(sourceChapterWrapper);
 			
-			// The target editor is now an iframe.
+			// --- Target Column Chapter ---
+			const targetChapterWrapper = document.createElement('div');
+			targetChapterWrapper.id = `target-chapter-scroll-target-${chapter.id}`;
+			targetChapterWrapper.className = 'px-8 py-6';
+			targetChapterWrapper.dataset.chapterId = chapter.id;
+			
 			const targetCol = document.createElement('div');
-			targetCol.className = 'col-span-1'; // Removed prose styles from the container
-			targetCol.innerHTML = `<h3 class="!mt-0 text-sm font-semibold uppercase tracking-wider text-base-content/70 border-b pb-1 mb-2 pt-4">${t('common.target')} (<span class="js-target-word-count">${chapter.target_word_count.toLocaleString()} ${t('common.words')}</span>)</h3>`;
+			targetCol.innerHTML = `<h3 class="!mt-0 text-sm font-semibold uppercase tracking-wider text-base-content/70 border-b pb-1 mb-2 pt-4">${chapter.title} (<span class="js-target-word-count">${chapter.target_word_count.toLocaleString()} ${t('common.words')}</span>)</h3>`;
 			
 			const iframe = document.createElement('iframe');
 			iframe.className = 'js-target-content-editable w-full border-0 min-h-[300px]';
 			iframe.src = 'editor-iframe.html';
 			iframe.dataset.chapterId = chapter.id;
 			targetCol.appendChild(iframe);
-			
-			layoutGrid.appendChild(sourceCol);
-			layoutGrid.appendChild(targetCol);
-			
-			chapterWrapper.appendChild(layoutGrid);
-			
-			const hr = document.createElement('hr');
-			hr.className = 'mt-6';
-			chapterWrapper.appendChild(hr);
-			
-			fragment.appendChild(chapterWrapper);
+			targetChapterWrapper.appendChild(targetCol);
+			targetFragment.appendChild(targetChapterWrapper);
 			
 			const initialTargetContent = chapter.target_content || '';
 			
@@ -299,16 +299,18 @@ async function renderManuscript(container, novelData, allCodexEntries) {
 		}
 	}
 	
-	container.innerHTML = '';
-	container.appendChild(fragment);
+	sourceContainer.innerHTML = '';
+	targetContainer.innerHTML = '';
+	sourceContainer.appendChild(sourceFragment);
+	targetContainer.appendChild(targetFragment);
 }
 
 
 /**
- * Sets up the intersection observer to track the active chapter during scrolling.
+ * MODIFICATION: Sets up the intersection observer to track the active chapter in the source column.
  */
 function setupIntersectionObserver() {
-	const container = document.getElementById('js-manuscript-container');
+	const container = document.getElementById('js-source-column-container');
 	const navDropdown = document.getElementById('js-chapter-nav-dropdown');
 	
 	const observer = new IntersectionObserver((entries) => {
@@ -358,36 +360,49 @@ function populateNavDropdown(novelData) {
 }
 
 /**
- * Scrolls the manuscript to a specific chapter.
+ * MODIFICATION: Scrolls both manuscript columns to a specific chapter.
  * @param {string} chapterId - The ID of the chapter to scroll to.
  */
 function scrollToChapter(chapterId) {
-	const target = document.getElementById(`chapter-scroll-target-${chapterId}`);
-	const container = document.getElementById('js-manuscript-container');
+	const sourceTarget = document.getElementById(`source-chapter-scroll-target-${chapterId}`);
+	const targetTarget = document.getElementById(`target-chapter-scroll-target-${chapterId}`);
+	const sourceContainer = document.getElementById('js-source-column-container');
+	const targetContainer = document.getElementById('js-target-column-container');
 	
-	if (target && container) {
-		isScrollingProgrammatically = true;
-		
-		const containerRect = container.getBoundingClientRect();
-		const targetRect = target.getBoundingClientRect();
-		
+	isScrollingProgrammatically = true;
+	
+	if (sourceTarget && sourceContainer) {
+		const containerRect = sourceContainer.getBoundingClientRect();
+		const targetRect = sourceTarget.getBoundingClientRect();
 		const offsetTop = targetRect.top - containerRect.top;
-		const scrollPosition = container.scrollTop + offsetTop - 100;
+		// Scroll to 100px from the top of the container
+		const scrollPosition = sourceContainer.scrollTop + offsetTop - 100;
 		
-		container.scrollTo({
+		sourceContainer.scrollTo({
 			top: scrollPosition,
 			behavior: 'smooth'
 		});
-		
-		if (chapterId !== activeChapterId) {
-			activeChapterId = chapterId;
-		}
-		setTimeout(() => {
-			isScrollingProgrammatically = false;
-		}, 1000); // Increased timeout to ensure smooth scroll completes
-	} else {
-		console.warn(`[scrollToChapter] Could not find target element for chapter ${chapterId}`);
 	}
+	
+	if (targetTarget && targetContainer) {
+		const containerRect = targetContainer.getBoundingClientRect();
+		const targetRect = targetTarget.getBoundingClientRect();
+		const offsetTop = targetRect.top - containerRect.top;
+		const scrollPosition = targetContainer.scrollTop + offsetTop - 100;
+		
+		targetContainer.scrollTo({
+			top: scrollPosition,
+			behavior: 'smooth'
+		});
+	}
+	
+	if (chapterId !== activeChapterId) {
+		activeChapterId = chapterId;
+	}
+	
+	setTimeout(() => {
+		isScrollingProgrammatically = false;
+	}, 1000); // Increased timeout to ensure smooth scroll completes
 }
 
 /**
@@ -481,18 +496,33 @@ document.addEventListener('DOMContentLoaded', async () => {
 		document.title = t('editor.translating', { title: novelData.title });
 		document.getElementById('js-novel-title').textContent = novelData.title;
 		
-		const manuscriptContainer = document.getElementById('js-manuscript-container');
+		let totalTargetWords = 0;
+		if (novelData.sections) {
+			novelData.sections.forEach(section => {
+				if (section.chapters) {
+					section.chapters.forEach(chapter => {
+						totalTargetWords += chapter.target_word_count;
+					});
+				}
+			});
+		}
+		document.getElementById('js-total-word-count').textContent = `${totalTargetWords.toLocaleString()} ${t('common.words')}`;
+		
+		const sourceContainer = document.getElementById('js-source-column-container');
+		const targetContainer = document.getElementById('js-target-column-container');
 		
 		if (!novelData.sections || novelData.sections.length === 0) {
-			manuscriptContainer.innerHTML = `<div class="p-8 text-center text-base-content/70">
-				<p>${t('editor.noProjectContent')}</p>
-				<p class="text-sm mt-2">${t('editor.noProjectContentHelp')}</p>
-			</div>`;
+			const noContentHtml = `<div class="p-8 text-center text-base-content/70">
+                <p>${t('editor.noProjectContent')}</p>
+                <p class="text-sm mt-2">${t('editor.noProjectContentHelp')}</p>
+            </div>`;
+			sourceContainer.innerHTML = noContentHtml;
+			targetContainer.innerHTML = noContentHtml;
 			document.getElementById('js-chapter-nav-dropdown').disabled = true;
 			return;
 		}
 		
-		await renderManuscript(manuscriptContainer, novelData, allCodexEntries);
+		await renderManuscript(novelData, allCodexEntries);
 		populateNavDropdown(novelData);
 		
 		setupTopToolbar({
@@ -568,7 +598,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 			});
 		});
 		
-		manuscriptContainer.addEventListener('click', (event) => {
+		sourceContainer.addEventListener('click', (event) => {
 			const codexLink = event.target.closest('a.codex-link');
 			if (codexLink) {
 				event.preventDefault();

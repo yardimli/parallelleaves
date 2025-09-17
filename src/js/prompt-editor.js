@@ -234,7 +234,7 @@ async function startAiAction (params) {
 					// Use a short timeout to allow the iframe to resize itself via its postMessage mechanism before we calculate scroll.
 					setTimeout(() => {
 						const iframeEl = currentContext.activeEditorView.frameElement;
-						const container = document.getElementById('js-manuscript-container');
+						const container = document.getElementById('js-target-column-container');
 						const endCoords = replacementData.endCoords;
 						
 						if (iframeEl && container && endCoords) {
@@ -378,13 +378,11 @@ async function handleModalApply () {
 	if (action === 'translate' && formDataObj.contextPairs > 0) {
 		try {
 			const chapterId = currentContext.chapterId;
-			// MODIFICATION START: Pass selectedText to getTranslationContext.
 			const pairs = await window.api.getTranslationContext({
 				chapterId: chapterId,
 				pairCount: formDataObj.contextPairs,
 				selectedText: selectionInfo.selectedText,
 			});
-			// MODIFICATION END
 			promptContext.translationPairs = pairs;
 		} catch (error) {
 			console.error('Failed to fetch translation context:', error);
@@ -398,7 +396,7 @@ async function handleModalApply () {
 	let marker = '';
 	if (action === 'translate') {
 		const chapterId = currentContext.chapterId;
-		const sourceContainer = document.querySelector(`#chapter-scroll-target-${chapterId} .source-content-readonly`);
+		const sourceContainer = document.querySelector(`#source-chapter-scroll-target-${chapterId} .source-content-readonly`);
 		const sourceHtml = sourceContainer ? sourceContainer.innerHTML : '';
 		const targetHtml = await currentEditorInterface.getFullHtml();
 		

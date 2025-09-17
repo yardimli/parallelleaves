@@ -141,10 +141,6 @@
 			$hasImageSupport = in_array('image', $model['architecture']['input_modalities'] ?? []);
 			$hasReasoningSupport = in_array('reasoning', $model['supported_parameters'] ?? []);
 
-			if ($hasImageSupport) {
-				$name .= ' (i)';
-			}
-
 			if ($hasReasoningSupport && strpos(strtolower($name), 'think') === false) {
 				$processedModels[] = ['id' => $id, 'name' => $name];
 				$processedModels[] = ['id' => "{$id}--thinking", 'name' => "{$name} (thinking)"];
