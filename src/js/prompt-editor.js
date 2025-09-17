@@ -487,10 +487,13 @@ async function handleModalApply () {
 	if (action === 'translate' && formDataObj.contextPairs > 0) {
 		try {
 			const chapterId = currentContext.chapterId;
+			// MODIFICATION START: Pass selectedText to getTranslationContext.
 			const pairs = await window.api.getTranslationContext({
 				chapterId: chapterId,
 				pairCount: formDataObj.contextPairs,
+				selectedText: selectionInfo.selectedText,
 			});
+			// MODIFICATION END
 			promptContext.translationPairs = pairs;
 		} catch (error) {
 			console.error('Failed to fetch translation context:', error);

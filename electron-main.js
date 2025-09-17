@@ -407,14 +407,15 @@ function createImportWindow() {
  * Extracts marker-based translation pairs from HTML content.
  * @param {string} sourceHtml - The source HTML content.
  * @param {string} targetHtml - The target HTML content.
+ * @param {string|null} [selectedText=null] - The text currently selected by the user for translation, used to truncate the last source segment.
  * @returns {Array<object>} An array of {source, target} text pairs.
  */
-const extractMarkerPairsFromHtml = (sourceHtml, targetHtml) => {
+const extractMarkerPairsFromHtml = (sourceHtml, targetHtml, selectedText = null) => {
 	if (!sourceHtml || !targetHtml) {
 		return [];
 	}
 	
-	const getSegments = (html) => {
+	const getSegments = (html, isSource = false) => {
 		const segments = new Map();
 		const parts = html.split(/(\[#\d+\])/g);
 		for (let i = 1; i < parts.length; i += 2) {
@@ -423,7 +424,22 @@ const extractMarkerPairsFromHtml = (sourceHtml, targetHtml) => {
 			const match = marker.match(/\[#(\d+)\]/);
 			if (match) {
 				const number = parseInt(match[1], 10);
-				const plaintext = content.replace(/<br\s*\/?>/gi, '\n').replace(/<\/p>/gi, '\n').replace(/<[^>]+>/g, ' ').replace(/\s\s+/g, ' ').trim();
+				let plainText = content.replace(/<[^>]+>/g, ' ').trim();
+				//replace all multiple spaces with a single space
+				plainText = plainText.replace(/\s\s+/g, ' ');
+				
+				// MODIFICATION START: If this is the last source segment, truncate it before the user's selection.
+				// It's the last segment if it's the second to last part in the split array.
+				if (isSource && selectedText && i === parts.length - 2) {
+					console.log('Truncating last source segment before user selection:', selectedText);
+					console.log('Original last segment text:', plainText);
+					const selectionIndex = plainText.indexOf(selectedText.trim());
+					console.log('Index of selection in last segment:', selectionIndex);
+					if (selectionIndex !== -1) {
+						plainText = plainText.substring(0, selectionIndex).trim();
+					}
+				}
+				// MODIFICATION END
 				
 				if (plainText) {
 					segments.set(number, plainText);
@@ -433,8 +449,8 @@ const extractMarkerPairsFromHtml = (sourceHtml, targetHtml) => {
 		return segments;
 	};
 	
-	const sourceSegments = getSegments(sourceHtml);
-	const targetSegments = getSegments(targetHtml);
+	const sourceSegments = getSegments(sourceHtml, true);
+	const targetSegments = getSegments(targetHtml, false);
 	
 	const pairs = [];
 	const sortedKeys = Array.from(targetSegments.keys()).sort((a, b) => a - b);
@@ -828,8 +844,8 @@ function setupIpcHandlers() {
 		}
 	});
 	
-	// MODIFICATION: Updated to check previous chapter if current chapter lacks context.
-	ipcMain.handle('chapters:getTranslationContext', (event, { chapterId, pairCount }) => {
+	// MODIFICATION START: Updated handler to accept selectedText for context truncation.
+	ipcMain.handle('chapters:getTranslationContext', (event, { chapterId, pairCount, selectedText }) => {
 		if (pairCount <= 0) {
 			return [];
 		}
@@ -841,7 +857,8 @@ function setupIpcHandlers() {
 				throw new Error('Current chapter not found.');
 			}
 			
-			const currentChapterPairs = extractMarkerPairsFromHtml(currentChapter.source_content, currentChapter.target_content);
+			// Pass selectedText to truncate the last segment of the current chapter's source.
+			const currentChapterPairs = extractMarkerPairsFromHtml(currentChapter.source_content, currentChapter.target_content, selectedText);
 			
 			// 2. If we have enough context, return it.
 			if (currentChapterPairs.length >= pairCount) {
@@ -865,7 +882,7 @@ function setupIpcHandlers() {
 				return currentChapterPairs;
 			}
 			
-			// 6. Get pairs from the previous chapter.
+			// 6. Get pairs from the previous chapter (no truncation needed here).
 			const previousChapterPairs = extractMarkerPairsFromHtml(previousChapter.source_content, previousChapter.target_content);
 			
 			// 7. Take the last `neededPairs` from the previous chapter.
@@ -879,6 +896,7 @@ function setupIpcHandlers() {
 			throw new Error('Failed to retrieve translation context from the database.');
 		}
 	});
+	// MODIFICATION END
 	
 	
 	// --- Editor & Template Handlers ---
