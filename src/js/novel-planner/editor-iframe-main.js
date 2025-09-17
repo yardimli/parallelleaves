@@ -109,7 +109,7 @@ function manageFloatingButton(view) {
 		
 		// Position the button to the left of the cursor, vertically centered
 		floatingTranslateBtn.style.position = 'absolute';
-		floatingTranslateBtn.style.left = `${coords.left}px`;
+		floatingTranslateBtn.style.left = `${coords.left + 10}px`;
 		floatingTranslateBtn.style.top = `${coords.top}px`;
 		
 		// Use mousedown to prevent the editor from losing focus, which would hide the button
@@ -346,6 +346,47 @@ window.addEventListener('message', (event) => {
 			postToParent('replacementComplete', { finalRange: finalRange, endCoords: endCoords });
 			break;
 		}
+		
+		// MODIFICATION START: New handler to find and scroll to text within the editor.
+		case 'findAndScrollToText': {
+			const { text } = payload;
+			if (!editorView || !text) break;
+			
+			const { state } = editorView;
+			const { doc } = state;
+			let foundPos = -1;
+			
+			// Iterate through all text nodes in the document to find the marker.
+			doc.descendants((node, pos) => {
+				if (foundPos !== -1) return false; // Stop searching once found.
+				if (node.isText) {
+					const index = node.text.indexOf(text);
+					if (index !== -1) {
+						foundPos = pos + index; // Calculate the absolute position of the text.
+					}
+				}
+				return true;
+			});
+			
+			if (foundPos !== -1) {
+				// Create a selection at the found position to highlight it.
+				const tr = state.tr.setSelection(TextSelection.create(doc, foundPos, foundPos + text.length));
+				editorView.dispatch(tr);
+				
+				// Focus the editor and scroll the selection into view within the iframe.
+				editorView.focus();
+				const { from } = editorView.state.selection;
+				const coords = editorView.coordsAtPos(from);
+				
+				// Manually scroll the iframe's window to the coordinates of the selection.
+				window.scrollTo({
+					top: coords.top - 50, // Add a 50px offset from the top for better visibility.
+					behavior: 'smooth'
+				});
+			}
+			break;
+		}
+		// MODIFICATION END
 		
 		case 'setEditable':
 			//editorView.setProps({ editable: () => payload.isEditable });

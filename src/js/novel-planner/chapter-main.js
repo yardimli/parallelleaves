@@ -191,6 +191,25 @@ function processSourceContentForCodexLinks(htmlString, codexCategories) {
 	return tempDiv.innerHTML;
 }
 
+// MODIFICATION START: New function to wrap translation markers in clickable links.
+/**
+ * Finds translation markers ([[#123]]) in an HTML string and wraps them in links.
+ * @param {string} htmlString - The HTML content to process.
+ * @returns {string} The HTML string with markers linked.
+ */
+function processSourceContentForMarkers(htmlString) {
+	if (!htmlString) {
+		return htmlString;
+	}
+	// This regex finds the marker and captures the number inside.
+	const markerRegex = /\[\[#(\d+)\]\]/g;
+	// Replace the found marker with an anchor tag.
+	return htmlString.replace(markerRegex, (match, number) => {
+		return `<a href="#" class="translation-marker-link" data-marker-id="${number}">${match}</a>`;
+	});
+}
+// MODIFICATION END
+
 /**
  * MODIFICATION: Renders the manuscript into two separate, independently scrolling columns.
  * @param {object} novelData - The full novel data.
@@ -233,7 +252,9 @@ async function renderManuscript(novelData, allCodexEntries) {
 			const sourceContentContainer = document.createElement('div');
 			sourceContentContainer.className = 'source-content-readonly';
 			
+			// MODIFICATION: Chain processing for codex links and then for markers.
 			let processedSourceHtml = processSourceContentForCodexLinks(chapter.source_content || '', allCodexEntries);
+			processedSourceHtml = processSourceContentForMarkers(processedSourceHtml);
 			sourceContentContainer.innerHTML = processedSourceHtml;
 			sourceCol.appendChild(sourceContentContainer);
 			sourceChapterWrapper.appendChild(sourceCol);
@@ -404,6 +425,49 @@ function scrollToChapter(chapterId) {
 		isScrollingProgrammatically = false;
 	}, 1000); // Increased timeout to ensure smooth scroll completes
 }
+
+// MODIFICATION START: New function to handle scrolling to a specific marker in the target column.
+/**
+ * Finds and scrolls to a specific translation marker in the target editor.
+ * @param {string} chapterId - The ID of the chapter containing the marker.
+ * @param {string} markerId - The numerical ID of the marker to find.
+ */
+function scrollToTargetMarker(chapterId, markerId) {
+	// 1. Find the target chapter's iframe view info.
+	const viewInfo = chapterEditorViews.get(chapterId.toString());
+	if (!viewInfo || !viewInfo.isReady) {
+		console.warn(`Iframe for chapter ${chapterId} is not ready or not found.`);
+		return;
+	}
+	
+	const targetContainer = document.getElementById('js-target-column-container');
+	const markerText = `[[#${markerId}]]`;
+	
+	// 2. Send a message to the iframe, asking it to find the marker and scroll to it.
+	viewInfo.contentWindow.postMessage({
+		type: 'findAndScrollToText',
+		payload: { text: markerText }
+	}, window.location.origin);
+	
+	// 3. Scroll the main target container to bring the correct chapter/iframe into view.
+	const targetChapterWrapper = document.getElementById(`target-chapter-scroll-target-${chapterId}`);
+	if (targetChapterWrapper && targetContainer) {
+		const containerRect = targetContainer.getBoundingClientRect();
+		const targetRect = targetChapterWrapper.getBoundingClientRect();
+		
+		// Check if the chapter is already reasonably in view.
+		if (targetRect.top < containerRect.top || targetRect.bottom > containerRect.bottom) {
+			const offsetTop = targetRect.top - containerRect.top;
+			const scrollPosition = targetContainer.scrollTop + offsetTop - 100; // 100px offset from top
+			
+			targetContainer.scrollTo({
+				top: scrollPosition,
+				behavior: 'smooth'
+			});
+		}
+	}
+}
+// MODIFICATION END
 
 /**
  * Populates and configures the spellcheck language dropdown.
@@ -598,13 +662,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 			});
 		});
 		
+		// MODIFICATION: Consolidated click handler for the source container.
 		sourceContainer.addEventListener('click', (event) => {
 			const codexLink = event.target.closest('a.codex-link');
+			const markerLink = event.target.closest('a.translation-marker-link');
+			
 			if (codexLink) {
 				event.preventDefault();
 				const entryId = codexLink.dataset.codexEntryId;
 				if (entryId) {
 					window.api.openCodexEditor(entryId);
+				}
+			} else if (markerLink) {
+				event.preventDefault();
+				const markerId = markerLink.dataset.markerId;
+				const chapterId = markerLink.closest('.manuscript-chapter-item').dataset.chapterId;
+				if (markerId && chapterId) {
+					scrollToTargetMarker(chapterId, markerId);
 				}
 			}
 		});
