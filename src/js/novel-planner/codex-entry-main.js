@@ -1,6 +1,6 @@
 import { openPromptEditor, setupPromptEditor } from '../prompt-editor.js';
 import { DOMSerializer, Fragment, DOMParser, Schema } from 'prosemirror-model';
-import { undo, redo } from 'prosemirror-history';
+import { history, undo, redo } from 'prosemirror-history';
 import { toggleMark, setBlockType, wrapIn, baseKeymap } from 'prosemirror-commands';
 import { wrapInList } from 'prosemirror-schema-list';
 import { TextSelection, EditorState, Plugin } from 'prosemirror-state';
@@ -175,7 +175,7 @@ function triggerDebouncedSave (entryId) {
 	const timer = setTimeout(() => {
 		saveWindowContent(entryId);
 		debounceTimers.delete(key);
-	}, 2000);
+	}, 1000);
 	debounceTimers.set(key, timer);
 }
 

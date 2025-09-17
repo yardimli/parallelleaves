@@ -18,6 +18,11 @@ let isScrollingProgrammatically = false;
 const chapterEditorViews = new Map();
 let currentSourceSelection = { text: '', hasSelection: false, range: null };
 
+// NEW: Globals to manage view initialization and prevent race conditions.
+let totalIframes = 0;
+let iframesReadyCount = 0;
+let viewInitialized = false;
+
 let activeEditor = null;
 const getActiveEditor = () => activeEditor;
 const setActiveEditor = (editorWindow) => {
@@ -44,7 +49,46 @@ const debouncedContentSave = debounce(async ({ chapterId, field, value }) => {
 		console.error(`[SAVE] Error saving ${field} for chapter ${chapterId}:`, error);
 		window.showAlert(`Could not save ${field} changes.`); // This is not translated as it's a developer-facing error.
 	}
-}, 2000); // 2 second delay
+}, 1000); // 2 second delay
+
+// MODIFIED: Debounced function to save scroll positions to localStorage.
+const debouncedSaveScroll = debounce((novelId, sourceEl, targetEl) => {
+	// Don't save scroll position until the view has been fully initialized and restored.
+	if (!novelId || !sourceEl || !targetEl || viewInitialized === false) return;
+	const positions = {
+		source: sourceEl.scrollTop,
+		target: targetEl.scrollTop,
+	};
+	localStorage.setItem(`scroll-position-${novelId}`, JSON.stringify(positions));
+}, 500);
+
+/**
+ * MODIFIED: Restores scroll positions for both columns from localStorage.
+ * @param {string} novelId - The ID of the current novel.
+ * @param {HTMLElement} sourceEl - The source column container element.
+ * @param {HTMLElement} targetEl - The target column container element.
+ * @returns {boolean} - True if positions were found and restored, false otherwise.
+ */
+function restoreScrollPositions(novelId, sourceEl, targetEl) {
+	const saved = localStorage.getItem(`scroll-position-${novelId}`);
+	if (saved) {
+		try {
+			const positions = JSON.parse(saved);
+			if (positions.source) {
+				sourceEl.scrollTop = positions.source;
+			}
+			if (positions.target) {
+				targetEl.scrollTop = positions.target;
+			}
+			console.log('Scroll positions restored.', positions);
+			return true; // Indicate that restoration was successful.
+		} catch (e) {
+			console.error('Failed to parse saved scroll positions:', e);
+			localStorage.removeItem(`scroll-position-${novelId}`); // Clear corrupted data
+		}
+	}
+	return false; // Indicate no saved positions were found or they were corrupt.
+}
 
 /**
  * function to synchronize translation markers on load.
@@ -225,6 +269,8 @@ async function renderManuscript(novelData, allCodexEntries) {
 	const sourceFragment = document.createDocumentFragment();
 	const targetFragment = document.createDocumentFragment();
 	
+	totalIframes = 0; // MODIFIED: Reset iframe count before rendering.
+	
 	for (const section of novelData.sections) {
 		// Create and append section headers to both columns
 		const sectionHeader = document.createElement('div');
@@ -283,12 +329,15 @@ async function renderManuscript(novelData, allCodexEntries) {
 			
 			synchronizeMarkers(chapter.id, sourceContentContainer, initialTargetContent);
 			
+			totalIframes++; // MODIFIED: Increment total iframe count.
+			
 			// Store iframe info and initialize it on load.
 			const viewInfo = {
 				iframe: iframe,
 				contentWindow: iframe.contentWindow,
 				isReady: false,
 				initialContent: initialTargetContent,
+				initialResizeComplete: false, // NEW: Add flag to track initial resize.
 			};
 			chapterEditorViews.set(chapter.id.toString(), viewInfo);
 			
@@ -502,6 +551,33 @@ async function setupSpellcheckDropdown() {
 	}
 }
 
+/**
+ * NEW: Handles the final step of view initialization.
+ * Decides whether to restore scroll position or scroll to a specific chapter.
+ * @param {string} novelId - The ID of the current novel.
+ * @param {object} novelData - The full novel data object.
+ * @param {string|null} initialChapterId - The chapter ID passed in the URL, if any.
+ */
+function initializeView(novelId, novelData, initialChapterId) {
+	if (viewInitialized) return;
+	viewInitialized = true;
+	
+	const sourceContainer = document.getElementById('js-source-column-container');
+	const targetContainer = document.getElementById('js-target-column-container');
+	
+	// Try to restore scroll position. If successful, we're done with positioning.
+	const wasRestored = restoreScrollPositions(novelId, sourceContainer, targetContainer);
+	
+	if (!wasRestored) {
+		// If no saved position, fall back to scrolling to the specified or first chapter.
+		const chapterToLoad = initialChapterId || novelData.sections[0]?.chapters[0]?.id;
+		if (chapterToLoad) {
+			document.getElementById('js-chapter-nav-dropdown').value = chapterToLoad;
+			// Use a short timeout to ensure the DOM is fully settled before scrolling.
+			setTimeout(() => scrollToChapter(chapterToLoad), 50);
+		}
+	}
+}
 
 // Main Initialization
 document.addEventListener('DOMContentLoaded', async () => {
@@ -580,6 +656,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 		await renderManuscript(novelData, allCodexEntries);
 		populateNavDropdown(novelData);
 		
+		// MODIFIED: Add scroll listeners to save positions for both columns.
+		sourceContainer.addEventListener('scroll', () => {
+			debouncedSaveScroll(novelId, sourceContainer, targetContainer);
+		});
+		targetContainer.addEventListener('scroll', () => {
+			debouncedSaveScroll(novelId, sourceContainer, targetContainer);
+		});
+		
 		setupTopToolbar({
 			isChapterEditor: true,
 			getActiveChapterId: () => activeChapterId,
@@ -612,6 +696,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 		});
 		setupIntersectionObserver();
 		setupSpellcheckDropdown();
+		
+		// MODIFIED: If there are no chapters (and thus no iframes), initialize the view immediately.
+		if (totalIframes === 0) {
+			initializeView(novelId, novelData, initialChapterId);
+		}
 		
 		const throttledUpdateToolbar = debounce(() => {
 			updateToolbarState(null); // Pass null to indicate it's not a PM editor state
@@ -673,12 +762,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			}
 		});
 		
-		const chapterToLoad = initialChapterId || novelData.sections[0]?.chapters[0]?.id;
-		if (chapterToLoad) {
-			document.getElementById('js-chapter-nav-dropdown').value = chapterToLoad;
-			setTimeout(() => scrollToChapter(chapterToLoad), 100);
-		}
-		
 		if (window.api && typeof window.api.onManuscriptScrollToChapter === 'function') {
 			window.api.onManuscriptScrollToChapter((event, chapterId) => {
 				if (chapterId) {
@@ -722,12 +805,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 				case 'contentChanged':
 					debouncedContentSave(payload);
 					break;
-				case 'resize':
+				case 'resize': {
 					const viewInfo = Array.from(chapterEditorViews.values()).find(v => v.contentWindow === sourceWindow);
 					if (viewInfo) {
 						viewInfo.iframe.style.height = `${payload.height}px`;
+						
+						// MODIFIED: Logic to trigger view initialization after all iframes are ready.
+						if (!viewInfo.initialResizeComplete) {
+							viewInfo.initialResizeComplete = true;
+							iframesReadyCount++;
+							if (iframesReadyCount >= totalIframes && !viewInitialized) {
+								initializeView(novelId, novelData, initialChapterId);
+							}
+						}
 					}
 					break;
+				}
 				case 'markerFound': {
 					const { top: markerTopInIframe } = payload;
 					const sourceIframeWindow = event.source;
