@@ -1,34 +1,8 @@
 import { t, applyTranslationsTo } from '../i18n.js';
+// MODIFICATION: Import the centralized htmlToPlainText function.
+import { htmlToPlainText } from '../../utils/html-processing.js';
 
-/**
- * Converts an HTML string to a formatted plain text string.
- * @param {string} html - The HTML string to convert.
- * @returns {string} The resulting plain text.
- */
-function htmlToPlainText(html) {
-	if (!html) return '';
-	// 1) Normalize BRs to newlines
-	let s = html.replace(/<br\s*\/?>/gi, '\n');
-	// 2) Insert newlines around block-level elements to preserve separation
-	const block = '(?:p|div|section|article|header|footer|nav|aside|h[1-6]|ul|ol|li|table|thead|tbody|tfoot|tr|th|td|blockquote|pre|hr)';
-	s = s
-		.replace(new RegExp(`<\\s*${block}[^>]*>`, 'gi'), '\n')
-		.replace(new RegExp(`<\\/\\s*${block}\\s*>`, 'gi'), '\n');
-	// 3) Drop all remaining tags without adding spaces
-	s = s.replace(/<[^>]+>/g, '');
-	// 4) Trim accidental spaces before punctuation caused by earlier steps
-	s = s
-		.replace(/\s+([.,!?;:])/g, '$1')
-		.replace(/(\() +/g, '$1')
-		.replace(/ +(\))/g, '$1');
-	// 5) Collapse whitespace and normalize newlines
-	s = s
-		.replace(/[ \t]+\n/g, '\n')
-		.replace(/\n[ \t]+/g, '\n')
-		.replace(/\n{3,}/g, '\n\n')
-		.replace(/[ \t]{2,}/g, ' ');
-	return s.trim();
-}
+// MODIFICATION: The local htmlToPlainText function has been removed.
 
 const defaultState = {
 	instructions: '',

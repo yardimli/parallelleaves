@@ -2,6 +2,8 @@ import { init as initRephraseEditor, buildPromptJson as buildRephraseJson } from
 import { init as initTranslateEditor, buildPromptJson as buildTranslateJson } from './prompt-editors/translate-editor.js';
 import { updateToolbarState as updateChapterToolbarState } from './novel-planner/toolbar.js';
 import { t } from './i18n.js';
+// MODIFICATION: Import HTML processing functions from the new utility file.
+import { htmlToPlainText, processSourceContentForCodexLinks, processSourceContentForMarkers } from '../utils/html-processing.js';
 
 const editors = {
 	'rephrase': { init: initRephraseEditor },
@@ -445,12 +447,34 @@ async function handleModalApply () {
 			const markerNode = document.createTextNode(marker + ' ');
 			currentContext.sourceSelectionRange.insertNode(markerNode);
 			
-			// Persist the change to the database.
+			// MODIFICATION START: Convert source content to plain text, save, and re-render.
+			const plainTextContent = htmlToPlainText(sourceContainer.innerHTML);
+			const paragraphs = plainTextContent.split(/\n+/).filter(p => p.trim() !== '');
+			
+			let newDocumentContent = '';
+			paragraphs.forEach(pText => {
+				newDocumentContent += `<p>${pText.trim()}</p>`;
+			});
+			
+			
+			// Persist the plain text change to the database.
 			await window.api.updateChapterField({
 				chapterId: chapterId,
 				field: 'source_content',
-				value: sourceContainer.innerHTML
+				value: newDocumentContent
 			});
+			
+			// Re-render the source content in the UI to reflect the change.
+			const allCodexEntries = currentContext.allCodexEntries;
+			// Convert plain text with double newlines into paragraphs for display.
+			const basicHtml = '<p>' + plainTextContent.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>') + '</p>';
+			
+			let processedHtml = processSourceContentForCodexLinks(basicHtml, allCodexEntries);
+			processedHtml = processSourceContentForMarkers(processedHtml);
+			
+			sourceContainer.innerHTML = processedHtml;
+			// MODIFICATION END
+			
 		} catch (e) {
 			console.error("Could not insert marker into source text:", e);
 			// If this fails, we'll proceed without the marker to not break translation.

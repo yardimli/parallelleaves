@@ -155,6 +155,12 @@ i[class^="bi-"], i[class*=" bi-"] {
     @apply btn btn-circle btn-sm btn-outline btn-accent z-50 bg-base-100/80 backdrop-blur-sm;
 }
 
+/* MODIFICATION START: Add styling for the contentEditable source view */
+.source-content-readonly[contenteditable="true"] {
+    @apply ring-2 ring-accent focus:outline-none rounded-md p-2 -m-2;
+}
+/* MODIFICATION END */
+
 @layer base {
     .prose {
         font-family: var(--editor-font-family, 'Noto Serif', serif);

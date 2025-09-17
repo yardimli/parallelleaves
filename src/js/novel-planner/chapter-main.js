@@ -3,6 +3,8 @@ import { setupPromptEditor, openPromptEditor } from '../prompt-editor.js';
 import { setupTypographySettings, getTypographySettings, generateTypographyStyleProperties } from './typography-settings.js';
 import { initI18n, t } from '../i18n.js';
 import { supportedLanguages as languageCodeToName } from '../languages.js';
+// MODIFICATION: Import HTML processing functions from the new utility file.
+import { processSourceContentForCodexLinks, processSourceContentForMarkers } from '../../utils/html-processing.js';
 
 const debounce = (func, delay) => {
 	let timeout;
@@ -17,6 +19,7 @@ let activeChapterId = null;
 let isScrollingProgrammatically = false;
 const chapterEditorViews = new Map();
 let currentSourceSelection = { text: '', hasSelection: false, range: null };
+let allCodexEntriesForNovel = []; // MODIFICATION: Module-scope variable for codex entries
 
 // NEW: Globals to manage view initialization and prevent race conditions.
 let totalIframes = 0;
@@ -51,7 +54,7 @@ const debouncedContentSave = debounce(async ({ chapterId, field, value }) => {
 	}
 }, 1000); // 2 second delay
 
-// MODIFIED: Debounced function to save scroll positions to localStorage.
+// MODIFICATION: Debounced function to save scroll positions to localStorage.
 const debouncedSaveScroll = debounce((novelId, sourceEl, targetEl) => {
 	// Don't save scroll position until the view has been fully initialized and restored.
 	if (!novelId || !sourceEl || !targetEl || viewInitialized === false) return;
@@ -63,7 +66,7 @@ const debouncedSaveScroll = debounce((novelId, sourceEl, targetEl) => {
 }, 500);
 
 /**
- * MODIFIED: Restores scroll positions for both columns from localStorage.
+ * MODIFICATION: Restores scroll positions for both columns from localStorage.
  * @param {string} novelId - The ID of the current novel.
  * @param {HTMLElement} sourceEl - The source column container element.
  * @param {HTMLElement} targetEl - The target column container element.
@@ -89,6 +92,105 @@ function restoreScrollPositions(novelId, sourceEl, targetEl) {
 	}
 	return false; // Indicate no saved positions were found or they were corrupt.
 }
+
+/**
+ * MODIFICATION START: New helper functions for source editing.
+ */
+
+/**
+ * Re-renders a single chapter's source content with codex and marker links.
+ * @param {string} chapterId - The ID of the chapter to render.
+ * @param {string} rawHtml - The raw HTML content to process and render.
+ * @param {Array<object>} allCodexEntries - All codex entries for the novel.
+ */
+async function renderSourceChapterContent(chapterId, rawHtml, allCodexEntries) {
+	const chapterItem = document.getElementById(`source-chapter-scroll-target-${chapterId}`);
+	if (!chapterItem) return;
+	
+	const contentContainer = chapterItem.querySelector('.source-content-readonly');
+	if (!contentContainer) return;
+	
+	let processedSourceHtml = processSourceContentForCodexLinks(rawHtml || '', allCodexEntries);
+	processedSourceHtml = processSourceContentForMarkers(processedSourceHtml);
+	contentContainer.innerHTML = processedSourceHtml;
+}
+
+/**
+ * Toggles the edit mode for a source chapter content area.
+ * @param {string} chapterId - The ID of the chapter.
+ * @param {boolean} isEditing - True to enter edit mode, false to cancel/revert.
+ */
+async function toggleSourceEditMode(chapterId, isEditing) {
+	const chapterItem = document.getElementById(`source-chapter-scroll-target-${chapterId}`);
+	if (!chapterItem) return;
+	
+	const actionsContainer = chapterItem.querySelector('.js-source-actions');
+	const contentContainer = chapterItem.querySelector('.source-content-readonly');
+	if (!actionsContainer || !contentContainer) return;
+	
+	const editBtn = actionsContainer.querySelector('.js-edit-source-btn');
+	const saveBtn = actionsContainer.querySelector('.js-save-source-btn');
+	const cancelBtn = actionsContainer.querySelector('.js-cancel-source-btn');
+	
+	editBtn.classList.toggle('hidden', isEditing);
+	saveBtn.classList.toggle('hidden', !isEditing);
+	cancelBtn.classList.toggle('hidden', !isEditing);
+	
+	if (isEditing) {
+		const rawContent = await window.api.getRawChapterContent({ chapterId, field: 'source_content' });
+		contentContainer.contentEditable = true;
+		contentContainer.innerHTML = rawContent || '';
+		contentContainer.focus();
+	} else { // This is the "cancel" case, reverting to original content
+		contentContainer.contentEditable = false;
+		const rawContent = await window.api.getRawChapterContent({ chapterId, field: 'source_content' });
+		await renderSourceChapterContent(chapterId, rawContent, allCodexEntriesForNovel);
+	}
+}
+
+/**
+ * Saves the edited source content for a chapter.
+ * @param {string} chapterId - The ID of the chapter to save.
+ */
+async function saveSourceChanges(chapterId) {
+	const chapterItem = document.getElementById(`source-chapter-scroll-target-${chapterId}`);
+	if (!chapterItem) return;
+	
+	const contentContainer = chapterItem.querySelector('.source-content-readonly');
+	const actionsContainer = chapterItem.querySelector('.js-source-actions');
+	if (!contentContainer || !actionsContainer) return;
+	
+	const newContent = contentContainer.innerHTML;
+	
+	try {
+		await window.api.updateChapterField({ chapterId, field: 'source_content', value: newContent });
+		
+		// Update word count display
+		const tempDiv = document.createElement('div');
+		tempDiv.innerHTML = newContent;
+		const wordCount = tempDiv.textContent.trim().split(/\s+/).filter(Boolean).length;
+		const wordCountEl = chapterItem.querySelector('.js-source-word-count');
+		if (wordCountEl) {
+			wordCountEl.textContent = `${wordCount.toLocaleString()} ${t('common.words')}`;
+		}
+		
+		// Manually revert UI to non-editing state
+		contentContainer.contentEditable = false;
+		actionsContainer.querySelector('.js-edit-source-btn').classList.remove('hidden');
+		actionsContainer.querySelector('.js-save-source-btn').classList.add('hidden');
+		actionsContainer.querySelector('.js-cancel-source-btn').classList.add('hidden');
+		
+		// Re-render with the new saved content to apply links
+		await renderSourceChapterContent(chapterId, newContent, allCodexEntriesForNovel);
+		
+	} catch (error) {
+		console.error(`[SAVE] Error saving source content for chapter ${chapterId}:`, error);
+		window.showAlert('Could not save source content changes.');
+	}
+}
+/**
+ * MODIFICATION END
+ */
 
 /**
  * function to synchronize translation markers on load.
@@ -139,125 +241,6 @@ async function synchronizeMarkers(chapterId, sourceContainer, targetHtml) {
 }
 
 /**
- * Finds codex entry titles and phrases in an HTML string and wraps them in links.
- * @param {string} htmlString - The HTML content to process.
- * @param {Array<object>} codexCategories - The array of codex categories containing entries.
- * @returns {string} The HTML string with codex terms linked.
- */
-function processSourceContentForCodexLinks(htmlString, codexCategories) {
-	if (!codexCategories || codexCategories.length === 0 || !htmlString) {
-		return htmlString;
-	}
-	
-	// 1. Create a flat list of terms to search for (titles and document phrases).
-	const terms = [];
-	codexCategories.forEach(category => {
-		category.entries.forEach(entry => {
-			if (entry.title) {
-				terms.push({ text: entry.title, id: entry.id });
-			}
-			if (entry.document_phrases) {
-				const phrases = entry.document_phrases.split(',').map(p => p.trim()).filter(Boolean);
-				phrases.forEach(phrase => {
-					terms.push({ text: phrase, id: entry.id });
-				});
-			}
-		});
-	});
-	
-	if (terms.length === 0) {
-		return htmlString;
-	}
-	
-	// Sort by length descending to match longer phrases first (e.g., "King Arthur" before "King").
-	terms.sort((a, b) => b.text.length - a.text.length);
-	
-	const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-	const regex = new RegExp(`\\b(${terms.map(term => escapeRegex(term.text)).join('|')})\\b`, 'gi');
-	
-	// Map lower-cased phrases back to their entry IDs for case-insensitive matching.
-	const termMap = new Map();
-	terms.forEach(term => {
-		termMap.set(term.text.toLowerCase(), term.id);
-	});
-	
-	// 2. Parse HTML and walk through all text nodes.
-	const tempDiv = document.createElement('div');
-	tempDiv.innerHTML = htmlString;
-	
-	const walker = document.createTreeWalker(tempDiv, NodeFilter.SHOW_TEXT, null, false);
-	const nodesToProcess = [];
-	let node;
-	while ((node = walker.nextNode())) {
-		// Avoid creating links inside existing links or other unwanted elements.
-		if (node.parentElement.closest('a, script, style')) {
-			continue;
-		}
-		nodesToProcess.push(node);
-	}
-	
-	// 3. For each text node, find matches and replace them with link elements.
-	nodesToProcess.forEach(textNode => {
-		const text = textNode.textContent;
-		const matches = [...text.matchAll(regex)];
-		
-		if (matches.length > 0) {
-			const fragment = document.createDocumentFragment();
-			let lastIndex = 0;
-			
-			matches.forEach(match => {
-				const matchedText = match[0];
-				const entryId = termMap.get(matchedText.toLowerCase());
-				if (!entryId) return;
-				
-				// Add text before the match.
-				if (match.index > lastIndex) {
-					fragment.appendChild(document.createTextNode(text.substring(lastIndex, match.index)));
-				}
-				
-				// Create and add the link.
-				const link = document.createElement('a');
-				link.href = '#';
-				link.className = 'codex-link';
-				link.dataset.codexEntryId = entryId;
-				link.textContent = matchedText;
-				fragment.appendChild(link);
-				
-				lastIndex = match.index + matchedText.length;
-			});
-			
-			// Add any remaining text after the last match.
-			if (lastIndex < text.length) {
-				fragment.appendChild(document.createTextNode(text.substring(lastIndex)));
-			}
-			
-			// Replace the original text node with the new fragment.
-			textNode.parentNode.replaceChild(fragment, textNode);
-		}
-	});
-	
-	// 4. Return the modified HTML.
-	return tempDiv.innerHTML;
-}
-
-/**
- * Finds translation markers ([[#123]]) in an HTML string and wraps them in links.
- * @param {string} htmlString - The HTML content to process.
- * @returns {string} The HTML string with markers linked.
- */
-function processSourceContentForMarkers(htmlString) {
-	if (!htmlString) {
-		return htmlString;
-	}
-	// This regex finds the marker and captures the number inside.
-	const markerRegex = /\[\[#(\d+)\]\]/g;
-	// Replace the found marker with an anchor tag.
-	return htmlString.replace(markerRegex, (match, number) => {
-		return `<a href="#" class="translation-marker-link" data-marker-id="${number}">${match}</a>`;
-	});
-}
-
-/**
  * Renders the manuscript into two separate, independently scrolling columns.
  * @param {object} novelData - The full novel data.
  * @param {Array<object>} allCodexEntries - All codex entries for the novel.
@@ -297,7 +280,21 @@ async function renderManuscript(novelData, allCodexEntries) {
 			
 			const sourceCol = document.createElement('div');
 			sourceCol.className = 'js-source-column prose prose-sm dark:prose-invert max-w-none bg-base-200 p-4 rounded-lg';
-			sourceCol.innerHTML = `<h3 class="!mt-0 text-sm font-semibold uppercase tracking-wider text-base-content/70 border-b pb-1 mb-2">${chapter.title} (<span class="js-source-word-count">${chapter.source_word_count.toLocaleString()} ${t('common.words')}</span>)</h3>`;
+			
+			// MODIFICATION START: Add a header with Edit/Save/Cancel buttons.
+			const sourceHeader = document.createElement('div');
+			sourceHeader.className = 'flex justify-between items-center border-b pb-1 mb-2';
+			sourceHeader.innerHTML = `
+                <h3 class="!mt-0 text-sm font-semibold uppercase tracking-wider text-base-content/70">${chapter.title} (<span class="js-source-word-count">${chapter.source_word_count.toLocaleString()} ${t('common.words')}</span>)</h3>
+                <div class="js-source-actions">
+                    <button class="js-edit-source-btn btn btn-ghost btn-xs">${t('common.edit')}</button>
+                    <button class="js-save-source-btn btn btn-success btn-xs hidden">${t('common.save')}</button>
+                    <button class="js-cancel-source-btn btn btn-ghost btn-xs hidden">${t('common.cancel')}</button>
+                </div>
+            `;
+			sourceCol.appendChild(sourceHeader);
+			// MODIFICATION END
+			
 			const sourceContentContainer = document.createElement('div');
 			sourceContentContainer.className = 'source-content-readonly';
 			
@@ -621,8 +618,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 			throw new Error('Failed to load project data from the database.');
 		}
 		
-		// Fetch all codex entries for the novel.
-		const allCodexEntries = await window.api.getAllCodexEntriesForNovel(novelId);
+		// MODIFICATION: Assign fetched codex entries to the module-scope variable.
+		allCodexEntriesForNovel = await window.api.getAllCodexEntriesForNovel(novelId);
 		
 		document.title = t('editor.translating', { title: novelData.title });
 		document.getElementById('js-novel-title').textContent = novelData.title;
@@ -653,7 +650,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 			return;
 		}
 		
-		await renderManuscript(novelData, allCodexEntries);
+		// MODIFICATION: Pass the codex entries to the rendering function.
+		await renderManuscript(novelData, allCodexEntriesForNovel);
 		populateNavDropdown(novelData);
 		
 		// MODIFIED: Add scroll listeners to save positions for both columns.
@@ -742,9 +740,33 @@ document.addEventListener('DOMContentLoaded', async () => {
 			});
 		});
 		
-		sourceContainer.addEventListener('click', (event) => {
+		// MODIFICATION: Updated click handler to manage source editing buttons.
+		sourceContainer.addEventListener('click', async (event) => {
 			const codexLink = event.target.closest('a.codex-link');
 			const markerLink = event.target.closest('a.translation-marker-link');
+			
+			// Handle edit/save/cancel buttons
+			const editBtn = event.target.closest('.js-edit-source-btn');
+			const saveBtn = event.target.closest('.js-save-source-btn');
+			const cancelBtn = event.target.closest('.js-cancel-source-btn');
+			const chapterItem = event.target.closest('.manuscript-chapter-item');
+			
+			if (chapterItem) {
+				const chapterId = chapterItem.dataset.chapterId;
+				if (editBtn) {
+					event.preventDefault();
+					await toggleSourceEditMode(chapterId, true);
+					return; // Prevent other handlers from firing
+				} else if (saveBtn) {
+					event.preventDefault();
+					await saveSourceChanges(chapterId);
+					return;
+				} else if (cancelBtn) {
+					event.preventDefault();
+					await toggleSourceEditMode(chapterId, false); // This is the cancel action
+					return;
+				}
+			}
 			
 			if (codexLink) {
 				event.preventDefault();

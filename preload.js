@@ -38,6 +38,9 @@ contextBridge.exposeInMainWorld('api', {
 	
 	// --- Editor Specific APIs ---
 	getTemplate: (templateName) => ipcRenderer.invoke('templates:get', templateName),
+	// MODIFICATION START: Expose the new function to get raw chapter content.
+	getRawChapterContent: (data) => ipcRenderer.invoke('chapters:getRawContent', data),
+	// MODIFICATION END
 	getTranslationContext: (data) => ipcRenderer.invoke('chapters:getTranslationContext', data),
 	
 	openChapterEditor: (data) => ipcRenderer.send('chapters:openEditor', data),

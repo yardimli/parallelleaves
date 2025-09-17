@@ -891,6 +891,22 @@ function setupIpcHandlers() {
 		}
 	});
 	
+	// MODIFICATION START: Added a new handler to get raw, unprocessed content.
+	ipcMain.handle('chapters:getRawContent', (event, { chapterId, field }) => {
+		const allowedFields = ['source_content', 'target_content'];
+		if (!allowedFields.includes(field)) {
+			throw new Error('Invalid field specified.');
+		}
+		try {
+			const result = db.prepare(`SELECT ${field} FROM chapters WHERE id = ?`).get(chapterId);
+			return result ? result[field] : null;
+		} catch (error) {
+			console.error(`Failed to get raw content for chapter ${chapterId}:`, error);
+			throw new Error('Database error while fetching chapter content.');
+		}
+	});
+	// MODIFICATION END
+	
 	ipcMain.handle('chapters:getTranslationContext', (event, { chapterId, pairCount, selectedText }) => {
 		if (pairCount <= 0) {
 			return [];
