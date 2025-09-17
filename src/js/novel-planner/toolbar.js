@@ -179,17 +179,28 @@ async function handleToolbarAction(button) {
 		// This is for the 'rephrase' action in the chapter editor.
 		if (!activeContentWindow) return;
 		
-		const { selectionText } = currentToolbarState;
+		// MODIFIED: Get selection info (including surrounding text) from the editor *before* opening the modal.
+		const editorInterface = createIframeEditorInterface(activeContentWindow);
+		const selectionInfo = await editorInterface.getSelectionInfo(action);
+		
+		if (!selectionInfo) {
+			console.log('Rephrase action cancelled: no text selected in the editor.');
+			return;
+		}
+		
 		const chapterId = toolbarConfig.getActiveChapterId ? toolbarConfig.getActiveChapterId() : null;
 		
 		const allCodexEntries = await window.api.getAllCodexEntriesForNovel(novelId);
 		
+		// MODIFIED: Build the context with the complete selection info for the preview.
 		const context = {
-			selectedText: selectionText,
+			selectedText: selectionInfo.selectedText,
+			wordsBefore: selectionInfo.wordsBefore,
+			wordsAfter: selectionInfo.wordsAfter,
 			allCodexEntries,
 			languageForPrompt: novelData.target_language || 'English',
-			activeEditorView: activeContentWindow, // Kept for backward compatibility
-			editorInterface: createIframeEditorInterface(activeContentWindow),
+			activeEditorView: activeContentWindow,
+			editorInterface: editorInterface,
 			chapterId: chapterId,
 		};
 		openPromptEditor(context, action, settings);

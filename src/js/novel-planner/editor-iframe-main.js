@@ -417,11 +417,24 @@ window.addEventListener('message', (event) => {
 				postToParent('selectionResponse', null);
 				return;
 			}
+			
+			const { doc, selection } = state;
+			const { from, to } = selection;
+			
+			// MODIFIED: Extract surrounding text (up to 50 words before and after) for context.
+			const textBefore = doc.textBetween(0, from, ' ');
+			const wordsBefore = textBefore.trim().split(/\s+/).slice(-50).join(' ');
+			
+			const textAfter = doc.textBetween(to, doc.content.size, ' ');
+			const wordsAfter = textAfter.trim().split(/\s+/).slice(0, 50).join(' ');
+			
 			postToParent('selectionResponse', {
-				from: state.selection.from,
-				to: state.selection.to,
-				originalFragmentJson: state.doc.slice(state.selection.from, state.selection.to).content.toJSON(),
-				selectedText: state.doc.textBetween(state.selection.from, state.selection.to, ' ')
+				from: from,
+				to: to,
+				originalFragmentJson: doc.slice(from, to).content.toJSON(),
+				selectedText: doc.textBetween(from, to, ' '),
+				wordsBefore: wordsBefore,
+				wordsAfter: wordsAfter
 			});
 			break;
 		}

@@ -373,7 +373,14 @@ async function handleModalApply () {
 	originalFragmentJson = selectionInfo.originalFragmentJson;
 	
 	const wordCount = selectionInfo.selectedText ? selectionInfo.selectedText.trim().split(/\s+/).filter(Boolean).length : 0;
-	const promptContext = { ...currentContext, selectedText: selectionInfo.selectedText, wordCount };
+	// MODIFIED: Add wordsBefore and wordsAfter from selectionInfo to the context for the prompt builder.
+	const promptContext = {
+		...currentContext,
+		selectedText: selectionInfo.selectedText,
+		wordCount,
+		wordsBefore: selectionInfo.wordsBefore,
+		wordsAfter: selectionInfo.wordsAfter
+	};
 	
 	if (action === 'translate' && formDataObj.contextPairs > 0) {
 		try {
