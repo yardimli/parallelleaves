@@ -3,58 +3,7 @@ import { setupPromptEditor } from '../prompt-editor.js';
 import { getActiveEditor, setActiveEditor } from './content-editor.js';
 import { setupTypographySettings, getTypographySettings, generateTypographyStyleProperties } from './typography-settings.js';
 import { initI18n, t } from '../i18n.js';
-
-const languageCodeToName = {
-	'af': 'Afrikaans',
-	'bg': 'Bulgarian',
-	'ca': 'Catalan',
-	'cs': 'Czech',
-	'cy': 'Welsh',
-	'da': 'Danish',
-	'de': 'German',
-	'el': 'Greek',
-	'en-GB': 'English (UK)',
-	'en-US': 'English (US)',
-	'es': 'Spanish',
-	'es-419': 'Spanish (Latin America)',
-	'es-AR': 'Spanish (Argentina)',
-	'es-ES': 'Spanish (Spain)',
-	'es-MX': 'Spanish (Mexico)',
-	'es-US': 'Spanish (US)',
-	'et': 'Estonian',
-	'fa': 'Persian',
-	'fo': 'Faroese',
-	'fr': 'French',
-	'he': 'Hebrew',
-	'hi': 'Hindi',
-	'hr': 'Croatian',
-	'hu': 'Hungarian',
-	'hy': 'Armenian',
-	'id': 'Indonesian',
-	'it': 'Italian',
-	'ja': 'Japanese',
-	'ko': 'Korean',
-	'lt': 'Lithuanian',
-	'lv': 'Latvian',
-	'nb': 'Norwegian (Bokmål)',
-	'nl': 'Dutch',
-	'pl': 'Polish',
-	'pt-BR': 'Portuguese (Brazil)',
-	'pt-PT': 'Portuguese (Portugal)',
-	'ro': 'Romanian',
-	'ru': 'Russian',
-	'sh': 'Serbo-Croatian',
-	'sk': 'Slovak',
-	'sl': 'Slovenian',
-	'sq': 'Albanian',
-	'sr': 'Serbian',
-	'sv': 'Swedish',
-	'ta': 'Tamil',
-	'tg': 'Tajik',
-	'tr': 'Turkish',
-	'uk': 'Ukrainian',
-	'vi': 'Vietnamese',
-};
+import { supportedLanguages as languageCodeToName } from '../languages.js';
 
 const debounce = (func, delay) => {
 	let timeout;
@@ -90,25 +39,6 @@ const debouncedContentSave = debounce(async ({ chapterId, field, value }) => {
 		window.showAlert(`Could not save ${field} changes.`); // This is not translated as it's a developer-facing error.
 	}
 }, 2000); // 2 second delay
-
-/**
- * Replaces {{TranslationBlock-X}} placeholders with styled HTML divs for display.
- * @param {string} sourceHtml - The raw HTML from the database.
- * @returns {string} HTML with placeholders replaced by styled divs.
- */
-function processSourceContentForDisplay(sourceHtml) {
-	if (!sourceHtml) return '';
-	// This regex finds all instances of {{TranslationBlock-NUMBER}} and replaces them.
-	return sourceHtml.replace(/{{TranslationBlock-(\d+)}}/g, (match, blockNumber) => {
-		const stylingClasses = 'note-wrapper not-prose p-1 my-1 border-l-4 border-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-600 rounded-r-md flex justify-between items-center';
-		return `<div class="${stylingClasses}" data-block-number="${blockNumber}">
-                    <p class="m-0 text-sm font-semibold">Translation Block #${blockNumber}</p>
-                    <button type="button" class="js-translate-block-btn btn btn-xs btn-ghost gap-1" title="${t('editor.translate')}">
-                        <i class="bi bi-translate"></i> <span data-i18n="editor.translate">${t('editor.translate')}</span>
-                    </button>
-                </div>`;
-	});
-}
 
 /**
  * Finds codex entry titles and phrases in an HTML string and wraps them in links.
@@ -250,9 +180,7 @@ async function renderManuscript(container, novelData, allCodexEntries) {
 			const sourceContentContainer = document.createElement('div');
 			sourceContentContainer.className = 'source-content-readonly';
 			
-			// Process source content for both translation blocks and codex links.
-			let processedSourceHtml = processSourceContentForDisplay(chapter.source_content || '');
-			processedSourceHtml = processSourceContentForCodexLinks(processedSourceHtml, allCodexEntries);
+			let processedSourceHtml = processSourceContentForCodexLinks(chapter.source_content || '', allCodexEntries);
 			
 			sourceContentContainer.innerHTML = processedSourceHtml;
 			sourceCol.appendChild(sourceContentContainer);
@@ -279,19 +207,7 @@ async function renderManuscript(container, novelData, allCodexEntries) {
 			
 			fragment.appendChild(chapterWrapper);
 			
-			let initialTargetContent = chapter.target_content;
-			if (!initialTargetContent && chapter.source_content) {
-				const tempDiv = document.createElement('div');
-				tempDiv.innerHTML = processedSourceHtml;
-				const markers = tempDiv.querySelectorAll('.note-wrapper');
-				
-				let skeletonHtml = '';
-				markers.forEach(markerNode => {
-					skeletonHtml += markerNode.outerHTML;
-					skeletonHtml += '<p></p>';
-				});
-				initialTargetContent = skeletonHtml;
-			}
+			const initialTargetContent = chapter.target_content;
 			
 			// Store iframe info and initialize it on load.
 			const viewInfo = {
@@ -325,10 +241,7 @@ async function renderManuscript(container, novelData, allCodexEntries) {
 						chapterId: chapter.id,
 						field: 'target_content',
 						theme: currentTheme,
-						i18n: {
-							editNote: t('editor.note.editTitle'),
-							deleteNote: t('editor.note.deleteTitle')
-						}
+						i18n: {}
 					}
 				}, window.location.origin);
 			});
@@ -424,109 +337,6 @@ function scrollToChapter(chapterId) {
 	} else {
 		console.warn(`[scrollToChapter] Could not find target element for chapter ${chapterId}`);
 	}
-}
-
-/**
- * Sets up the note editor modal for creating and editing notes.
- */
-function setupNoteEditorModal() {
-	const modal = document.getElementById('note-editor-modal');
-	const form = document.getElementById('note-editor-form');
-	const closeBtn = modal.querySelector('.js-close-note-modal');
-	if (!modal || !form || !closeBtn) {
-		console.error('[setupNoteEditorModal] Could not find all required modal elements.');
-		return;
-	}
-	
-	form.addEventListener('submit', (event) => {
-		event.preventDefault();
-		
-		const activeContentWindow = getActiveEditor();
-		if (!activeContentWindow) {
-			console.error('[NoteEditor] No active editor iframe to save note to.');
-			window.showAlert(t('editor.noteModal.errorNoEditor'), t('common.error'));
-			return;
-		}
-		
-		const contentInput = document.getElementById('note-content-input');
-		const posInput = document.getElementById('note-pos');
-		const noteText = contentInput.value.trim();
-		
-		if (!noteText) {
-			window.showAlert(t('editor.noteModal.errorEmpty'), t('common.error'));
-			return;
-		}
-		
-		const pos = posInput.value ? parseInt(posInput.value, 10) : null;
-		
-		activeContentWindow.postMessage({
-			type: 'saveNote',
-			payload: { pos, noteText }
-		}, window.location.origin);
-		
-		modal.close();
-		form.reset();
-	});
-	
-	closeBtn.addEventListener('click', () => {
-		modal.close();
-		form.reset();
-	});
-}
-
-/**
- * Sets up the event listener for the "Translate Block" button in the source panel.
- */
-function setupTranslateBlockAction() {
-	const container = document.getElementById('js-manuscript-container');
-	container.addEventListener('click', (event) => {
-		const translateBtn = event.target.closest('.js-translate-block-btn');
-		if (!translateBtn) return;
-		
-		event.preventDefault();
-		event.stopPropagation();
-		
-		const marker = translateBtn.closest('[data-block-number]');
-		const sourceContainer = marker.closest('.source-content-readonly');
-		const blockNumber = parseInt(marker.dataset.blockNumber, 10);
-		
-		if (!sourceContainer || isNaN(blockNumber)) {
-			console.error('[TranslateBlock] Could not find source container or block number for translation.');
-			return;
-		}
-		
-		const allMarkers = Array.from(sourceContainer.querySelectorAll('[data-block-number]'));
-		const currentMarkerIndex = allMarkers.findIndex(m => parseInt(m.dataset.blockNumber, 10) === blockNumber);
-		if (currentMarkerIndex === -1) return;
-		
-		const startNode = allMarkers[currentMarkerIndex];
-		const endNode = (currentMarkerIndex + 1 < allMarkers.length) ? allMarkers[currentMarkerIndex + 1] : null;
-		
-		const range = document.createRange();
-		range.setStartAfter(startNode);
-		
-		if (endNode) {
-			range.setEndBefore(endNode);
-		} else {
-			range.selectNodeContents(sourceContainer);
-			range.setStartAfter(startNode);
-		}
-		
-		const selection = window.getSelection();
-		selection.removeAllRanges();
-		selection.addRange(range);
-		
-		const toolbarTranslateBtn = document.querySelector('#top-toolbar .js-ai-action-btn[data-action="translate"]');
-		if (toolbarTranslateBtn) {
-			setTimeout(() => {
-				if (!toolbarTranslateBtn.disabled) {
-					toolbarTranslateBtn.click();
-				} else {
-					console.warn('[TranslateBlock] Translate button was disabled after block selection, likely empty block.');
-				}
-			}, 500);
-		}
-	});
 }
 
 /**
@@ -655,19 +465,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 					}
 				});
 				
-				// NEW SECTION START: Apply styles to all source columns in the manuscript view
+				// Apply styles to all source columns in the manuscript view
 				const sourceColumns = document.querySelectorAll('.js-source-column');
 				sourceColumns.forEach(col => {
 					Object.entries(styleProps).forEach(([prop, value]) => {
 						col.style.setProperty(prop, value);
 					});
 				});
-				// NEW SECTION END
 			}
 		});
 		setupIntersectionObserver();
-		setupNoteEditorModal();
-		setupTranslateBlockAction();
 		setupSpellcheckDropdown();
 		
 		const throttledUpdateToolbar = debounce(() => {
@@ -742,24 +549,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 						viewInfo.iframe.style.height = `${payload.height}px`;
 					}
 					break;
-				case 'openNoteModal': {
-					const noteModal = document.getElementById('note-editor-modal');
-					const form = document.getElementById('note-editor-form');
-					const title = noteModal.querySelector('.js-note-modal-title');
-					const contentInput = document.getElementById('note-content-input');
-					const posInput = document.getElementById('note-pos');
-					
-					title.textContent = t(payload.title);
-					contentInput.value = payload.content;
-					posInput.value = payload.pos;
-					noteModal.showModal();
-					break;
-				}
 			}
 		});
 		
 	} catch (error) {
 		console.error('Failed to load manuscript data:', error);
-		document.body.innerHTML = `<p class="text-error p-8">${t('editor.errorLoadManuscript', { message: error.message })}</p>`;
+		document.body.innerHTML = `<p class="p-8 text-error">${t('editor.errorLoadManuscript', { message: error.message })}</p>`;
 	}
 });

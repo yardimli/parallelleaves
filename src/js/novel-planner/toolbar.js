@@ -61,9 +61,6 @@ export function updateToolbarState(newState) {
 				case 'create_codex':
 					btn.disabled = !newState.isTextSelected;
 					break;
-				case 'add_note':
-					btn.disabled = !newState.canAddNote;
-					break;
 				case 'bold':
 					btn.classList.toggle('active', newState.activeMarks.includes('strong'));
 					break;
@@ -130,7 +127,8 @@ const createIframeEditorInterface = (contentWindow) => {
 	
 	return {
 		type: 'iframe',
-		getSelectionInfo: (action, translationInfo) => new Promise((resolve) => {
+		// getting the current selection from the target editor to use as an insertion point.
+		getSelectionInfo: (action) => new Promise((resolve) => {
 			const listener = (event) => {
 				if (event.source === contentWindow && event.data.type === 'selectionResponse') {
 					window.removeEventListener('message', listener);
@@ -139,11 +137,8 @@ const createIframeEditorInterface = (contentWindow) => {
 			};
 			window.addEventListener('message', listener);
 			
-			if (action === 'translate') {
-				post('prepareForTranslate', { blockNumber: translationInfo.blockNumber });
-			} else {
-				post('prepareForRephrase');
-			}
+			// Both actions now just need the current selection state from the editor.
+			post('prepareForRephrase', { isRephrase: action === 'rephrase' });
 		}),
 		setEditable: (isEditable) => post('setEditable', { isEditable }),
 		cleanupSuggestion: () => post('cleanupAiSuggestion'),
@@ -203,30 +198,9 @@ async function handleToolbarAction(button) {
 			
 			if (!sourceContainer) return;
 			
-			const findBlockMarkerForNode = (node, container, offset) => {
-				let el = node === container ? container.childNodes[offset - 1] : (node.nodeType === Node.TEXT_NODE ? node.parentElement : node);
-				while (el && el.parentElement !== container) el = el.parentElement;
-				if (!el) return null;
-				let current = el;
-				while (current) {
-					if (current.nodeType === Node.ELEMENT_NODE && current.hasAttribute('data-block-number')) return current;
-					current = current.previousElementSibling;
-				}
-				return null;
-			};
-			
-			const startMarker = findBlockMarkerForNode(range.startContainer, sourceContainer, range.startOffset);
-			const endMarker = findBlockMarkerForNode(range.endContainer, sourceContainer, range.endOffset);
-			
-			if (startMarker !== endMarker) {
-				window.showAlert(t('editor.toolbar.errorSelectionAcrossBlocks'), t('common.error'));
-				return;
-			}
-			
 			const selectedText = selection.toString();
 			const chapterItem = sourceContainer.closest('.manuscript-chapter-item');
 			const chapterId = chapterItem.dataset.chapterId;
-			const blockNumber = startMarker ? parseInt(startMarker.dataset.blockNumber, 10) : 1;
 			
 			// Pass the iframe editor interface to openPromptEditor.
 			const targetContentWindow = toolbarConfig.getChapterViews(chapterId)?.iframe.contentWindow;
@@ -237,14 +211,15 @@ async function handleToolbarAction(button) {
 			
 			const allCodexEntries = await window.api.getAllCodexEntriesForNovel(novelId);
 			
+			// The context no longer needs block-specific info.
 			const context = {
 				selectedText,
 				allCodexEntries,
 				languageForPrompt: novelData.source_language || 'English',
 				targetLanguage: novelData.target_language || 'English',
-				activeEditorView: targetContentWindow, // Kept for backward compatibility in some parts
-				translationInfo: { blockNumber },
+				activeEditorView: targetContentWindow,
 				editorInterface: createIframeEditorInterface(targetContentWindow),
+				chapterId: chapterId, // Pass chapterId for context fetching
 			};
 			openPromptEditor(context, 'translate', settings);
 			return;
@@ -264,6 +239,7 @@ async function handleToolbarAction(button) {
 			languageForPrompt: novelData.target_language || 'English',
 			activeEditorView: activeContentWindow, // Kept for backward compatibility
 			editorInterface: createIframeEditorInterface(activeContentWindow),
+			chapterId: chapterId,
 		};
 		openPromptEditor(context, action, settings);
 		return;
@@ -282,19 +258,6 @@ async function handleToolbarAction(button) {
 			if (novelId && currentToolbarState.selectionText) {
 				window.api.openNewCodexEditor({ novelId, selectedText: currentToolbarState.selectionText });
 			}
-		} else if (command === 'add_note') {
-			const activeChapterId = toolbarConfig.getActiveChapterId ? toolbarConfig.getActiveChapterId() : null;
-			if (!activeChapterId) {
-				window.showAlert(t('editor.toolbar.errorNoActiveChapter'));
-				return;
-			}
-			const noteModal = document.getElementById('note-editor-modal');
-			const form = document.getElementById('note-editor-form');
-			form.reset();
-			noteModal.querySelector('.js-note-modal-title').textContent = t('editor.noteModal.addTitle');
-			document.getElementById('note-pos').value = '';
-			noteModal.showModal();
-			document.getElementById('note-content-input').focus();
 		} else {
 			applyCommand(command);
 		}

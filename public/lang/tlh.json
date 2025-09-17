@@ -93,7 +93,6 @@
     "autoDetect": "mI' nugh tu'lu'",
     "selectFile": "teywI' wuq (.txt, .docx)",
     "projectTitle": "jup pagh",
-    "blockSize": "raS nugh (mu'tlhegh)",
     "sourceLanguage": "chanvo' Hol",
     "targetLanguage": "nugh Hol",
     "begin": "naDev teywI' wuq.",
@@ -226,7 +225,6 @@
     },
     "toolbar": {
       "errorNoProject": "DaH jup Sovbe'.",
-      "errorSelectionAcrossBlocks": "law' mugh raS DIch wuq DIch pagh. wa' raS DIch ghItlhmegh wuq.",
       "errorNoTargetEditor": "mI' nugh choq DIch tu'be'lu'.",
       "errorNoActiveChapter": "DIch mI' Hutlhbe'ghach qorDu' chel DIch pagh."
     }

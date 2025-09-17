@@ -287,7 +287,7 @@
 		http_response_code($httpCode);
 		echo $response;
 		exit;
-	} elseif ($action === 'generate_cover') { // NEW SECTION START
+	} elseif ($action === 'generate_cover') {
 		if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 			sendJsonError(405, 'Method Not Allowed. Please use POST for cover generation.');
 		}
@@ -324,7 +324,7 @@
 		http_response_code($httpCode);
 		echo $response;
 		exit;
-	} // NEW SECTION END
+	}
 	else {
 		sendJsonError(400, 'Invalid action specified. Supported actions are "chat", "get_models", and "generate_cover".');
 	}

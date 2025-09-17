@@ -90,7 +90,6 @@
       "sourceWords": "Kaynak",
       "targetWords": "Hedef",
       "chapters": "Bölümler",
-      "blocks": "Bloklar",
       "created": "Oluşturuldu:",
       "updated": "Güncellendi:"
     }
@@ -102,7 +101,6 @@
     "autoDetect": "Bölümleri Otomatik Bul",
     "selectFile": "Dosya Seç (.txt, .docx)",
     "projectTitle": "Proje Adı",
-    "blockSize": "Blok Boyutu (Sözcük Sayısı)",
     "sourceLanguage": "Kaynak Dil",
     "targetLanguage": "Hedef Dil",
     "begin": "Başlamak için bir dosya seçin.",
@@ -132,7 +130,8 @@
       "keywordDesc": "\"Bölüm\" veya \"Perde\" ile başlayan satırları algılar.",
       "allCapsLabel": "Tamamı Büyük Harf Satırlar",
       "allCapsDesc": "Tamamı büyük harflerle yazılmış kısa satırları (50 karakterden az) algılar.",
-      "runDetection": "Algılamayı Çalıştır"
+      "runDetection": "Algılamayı Çalıştır",
+      "results" : "{count} bölüm ve perde algılandı."
     }
   },
   "outline": {
@@ -247,7 +246,6 @@
     },
     "toolbar": {
       "errorNoProject": "Aktif proje bulunamadı.",
-      "errorSelectionAcrossBlocks": "Seçiminiz birden fazla çeviri bloğunu kapsayamaz. Lütfen tek bir blok içinden metin seçin.",
       "errorNoTargetEditor": "Bu bölüm için hedef metin alanı bulunamadı.",
       "errorNoActiveChapter": "Not eklemek için aktif bir bölüm gerekli."
     }

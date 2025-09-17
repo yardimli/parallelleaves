@@ -1,4 +1,3 @@
-
 import { init as initRephraseEditor, buildPromptJson as buildRephraseJson } from './prompt-editors/rephrase-editor.js';
 import { init as initTranslateEditor, buildPromptJson as buildTranslateJson } from './prompt-editors/translate-editor.js';
 import { updateToolbarState as updateChapterToolbarState } from './novel-planner/toolbar.js';
@@ -316,8 +315,8 @@ async function handleModalApply () {
 			.catch(err => console.error('Failed to save prompt settings:', err));
 	}
 	
-	console.log('AI Action Params:', { model, action, formData: formDataObj, currentContext:currentContext.translationInfo });
-	const selectionInfo = await currentEditorInterface.getSelectionInfo(action, currentContext.translationInfo);
+	console.log('AI Action Params:', { model, action, formData: formDataObj });
+	const selectionInfo = await currentEditorInterface.getSelectionInfo(action);
 	
 	if (!selectionInfo) {
 		window.showAlert(t('prompt.errorNoSelection'));
@@ -334,12 +333,9 @@ async function handleModalApply () {
 	
 	if (action === 'translate' && formDataObj.contextPairs > 0) {
 		try {
-			const chapterId = currentContext.activeEditorView.frameElement.dataset.chapterId;
-			const blockNumber = currentContext.translationInfo.blockNumber;
-			
+			const chapterId = currentContext.chapterId;
 			const pairs = await window.api.getTranslationContext({
 				chapterId: chapterId,
-				endBlockNumber: blockNumber,
 				pairCount: formDataObj.contextPairs,
 			});
 			promptContext.translationPairs = pairs;

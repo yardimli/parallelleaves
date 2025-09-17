@@ -98,11 +98,9 @@ i[class^="bi-"], i[class*=" bi-"] {
     @apply bg-base-200;
 }
 
-/* MODIFICATION START: Removed 'not-prose' from the @apply directive. */
 .chapter-break-marker, .act-break-marker {
     @apply relative py-2 my-4 cursor-pointer;
 }
-/* MODIFICATION END */
 
 .chapter-break-marker {
     @apply border-t-2 border-dashed border-accent;

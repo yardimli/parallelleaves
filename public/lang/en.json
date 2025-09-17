@@ -90,7 +90,6 @@
       "sourceWords": "Source",
       "targetWords": "Target",
       "chapters": "Chapters",
-      "blocks": "Blocks",
       "created": "Created:",
       "updated": "Updated:"
     }
@@ -102,7 +101,6 @@
     "autoDetect": "Auto-detect Chapters",
     "selectFile": "Select File (.txt, .docx)",
     "projectTitle": "Project Title",
-    "blockSize": "Block Size (Words)",
     "sourceLanguage": "Source Language",
     "targetLanguage": "Target Language",
     "begin": "Select a file to begin.",
@@ -132,7 +130,8 @@
       "keywordDesc": "Detects lines starting with \"Chapter\" or \"Act\".",
       "allCapsLabel": "All-Caps Lines",
       "allCapsDesc": "Detects short lines (under 50 chars) written entirely in uppercase.",
-      "runDetection": "Run Detection"
+      "runDetection": "Run Detection",
+      "results": "{count} chapters and acts detected.",
     }
   },
   "outline": {
@@ -247,7 +246,6 @@
     },
     "toolbar": {
       "errorNoProject": "Could not determine the current project.",
-      "errorSelectionAcrossBlocks": "Selection cannot span across multiple translation blocks. Please select text within a single block.",
       "errorNoTargetEditor": "Could not find the target editor for this chapter.",
       "errorNoActiveChapter": "Cannot add a note without an active chapter."
     }

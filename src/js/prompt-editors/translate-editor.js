@@ -217,14 +217,10 @@ const updatePreview = async (container, context) => {
 	
 	const previewContext = { ...context, translationPairs: [] };
 	
-	if (formData.contextPairs > 0 && context.translationInfo && context.activeEditorView) {
+	if (formData.contextPairs > 0 && context.chapterId) {
 		try {
-			const chapterId = context.activeEditorView.frameElement.dataset.chapterId;
-			const blockNumber = context.translationInfo.blockNumber;
-			
 			const pairs = await window.api.getTranslationContext({
-				chapterId: chapterId,
-				endBlockNumber: blockNumber,
+				chapterId: context.chapterId,
 				pairCount: formData.contextPairs,
 			});
 			console.log('Fetched translation pairs for preview:', pairs);
@@ -285,22 +281,19 @@ export const init = async (container, context) => {
 		container.innerHTML = templateHtml;
 		applyTranslationsTo(container);
 		
-		const { selectedText, allCodexEntries, translationInfo, activeEditorView } = context;
+		const { selectedText, allCodexEntries, chapterId } = context;
 		
-		// 1. Get text from current selection. This is already plain text.
+		// 1. Get text from current selection.
 		let textToScan = selectedText;
 		
-		// 2. Get text from historical pairs.
+		// 2. Get text from historical pairs (from the previous chapter).
 		const formForDefaults = container.querySelector('#translate-editor-form');
 		const contextPairCount = formForDefaults ? parseInt(formForDefaults.elements.context_pairs.value, 10) : (context.initialState?.contextPairs || defaultState.contextPairs);
 		
-		if (contextPairCount > 0 && translationInfo && activeEditorView) {
+		if (contextPairCount > 0 && chapterId) {
 			try {
-				const chapterId = activeEditorView.frameElement.dataset.chapterId;
-				const blockNumber = translationInfo.blockNumber;
 				const pairs = await window.api.getTranslationContext({
 					chapterId: chapterId,
-					endBlockNumber: blockNumber,
 					pairCount: contextPairCount,
 				});
 				

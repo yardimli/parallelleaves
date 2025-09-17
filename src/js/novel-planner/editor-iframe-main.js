@@ -5,7 +5,7 @@ import { history, undo, redo } from 'prosemirror-history';
 import { keymap } from 'prosemirror-keymap';
 import { baseKeymap, toggleMark, setBlockType, wrapIn, lift } from 'prosemirror-commands';
 import { wrapInList, liftListItem } from 'prosemirror-schema-list';
-import { schema, NoteNodeView } from './content-editor.js';
+import { schema } from './content-editor.js';
 
 let editorView;
 let parentOrigin; // Store the parent window's origin for security
@@ -61,13 +61,10 @@ const getToolbarState = (state) => {
 		headingLevel = parent.attrs.level;
 	}
 	
-	const isAtEmptyPara = empty && $from.parent.type.name === 'paragraph' && $from.parent.content.size === 0;
-	
 	return {
 		canUndo: undo(state),
 		canRedo: redo(state),
 		isTextSelected: !empty,
-		canAddNote: isAtEmptyPara,
 		activeMarks: Object.keys(schema.marks).filter(markName => isMarkActive(schema.marks[markName])),
 		activeNodes: Object.keys(schema.nodes).filter(nodeName => isNodeActive(schema.nodes[nodeName])),
 		headingLevel: headingLevel,
@@ -85,19 +82,6 @@ function createEditorView (mount, config) {
 	chapterId = id;
 	field = fieldName;
 	
-	const noteProtectionPlugin = new Plugin({
-		filterTransaction (tr, state) {
-			if (!tr.docChanged) return true;
-			let noteDeleted = false;
-			state.doc.descendants((node, pos) => {
-				if (node.type.name === 'note' && tr.mapping.mapResult(pos).deleted) {
-					noteDeleted = true;
-				}
-			});
-			return !noteDeleted;
-		},
-	});
-	
 	const editorPlugin = new Plugin({
 		props: {
 			editable: () => isEditable,
@@ -114,21 +98,12 @@ function createEditorView (mount, config) {
 	
 	const doc = DOMParser.fromSchema(schema).parse(document.createRange().createContextualFragment(initialHtml || ''));
 	
-	const i18nTitles = i18n || { edit: 'Edit note', delete: 'Delete note' };
-	
 	editorView = new EditorView(mount, {
 		state: EditorState.create({
 			doc: doc,
-			plugins: [history(), keymap({ 'Mod-z': undo, 'Mod-y': redo }), keymap(baseKeymap), editorPlugin, noteProtectionPlugin],
+			plugins: [history(), keymap({ 'Mod-z': undo, 'Mod-y': redo }), keymap(baseKeymap), editorPlugin],
 		}),
-		nodeViews: {
-			note (node, view, getPos) {
-				return new NoteNodeView(node, view, getPos, (type, payload) => postToParent(type, payload), {
-					edit: i18nTitles.editNote,
-					delete: i18nTitles.deleteNote
-				});
-			}
-		},
+
 		dispatchTransaction (transaction) {
 			const newState = this.state.apply(transaction);
 			this.updateState(newState);
@@ -216,45 +191,7 @@ function executeCommand ({ command, attrs }) {
 	editorView.focus();
 }
 
-// MODIFICATION START: Updated function to parse block number from note content.
-// This accommodates non-sequential block numbers that are consistent across chapters.
-function findTranslationBlockPositions (blockNumber) {
-	const { doc } = editorView.state;
-	let blockStartPos = -1;
-	let blockEndPos = doc.content.size;
-	let blockFound = false;
-	
-	doc.forEach((node, pos) => {
-		if (node.type.name === 'note') {
-			// If we have already found the starting block, the current note node
-			// marks the end of the content section we are interested in.
-			if (blockFound) {
-				blockEndPos = pos;
-				blockFound = false; // Stop searching for another end marker.
-				return; // Continue forEach but skip logic below for this iteration.
-			}
-			
-			// Check the note's text attribute for a block number.
-			// e.g., "Translation Block #123"
-			const text = node.attrs.text || '';
-			const match = text.match(/Translation Block #(\d+)/);
-			
-			if (match && parseInt(match[1], 10) === blockNumber) {
-				// This is the starting block. The content begins right after this node.
-				blockStartPos = pos + node.nodeSize;
-				blockFound = true;
-			}
-		}
-	});
-	
-	// If blockFound is still true, it means the target block was the last one in the document.
-	// In this case, blockEndPos correctly remains as the total document size.
-	
-	return { blockStartPos, blockEndPos };
-}
-// MODIFICATION END
-
-// NEW FUNCTION: Applies typography styles received from the parent window.
+// Applies typography styles received from the parent window.
 function applyTypography ({ styleProps, settings }) {
 	const root = document.documentElement;
 	Object.entries(styleProps).forEach(([prop, value]) => {
@@ -292,20 +229,6 @@ window.addEventListener('message', (event) => {
 		case 'command':
 			executeCommand(payload);
 			break;
-		case 'saveNote': {
-			const { pos, noteText } = payload;
-			let tr;
-			if (pos !== null && !isNaN(pos)) {
-				tr = editorView.state.tr.setNodeMarkup(pos, null, { text: noteText });
-			} else {
-				const { $from } = editorView.state.selection;
-				const noteNode = schema.nodes.note.create({ text: noteText });
-				tr = editorView.state.tr.replaceRangeWith($from.start(), $from.end(), noteNode);
-			}
-			editorView.dispatch(tr);
-			editorView.focus();
-			break;
-		}
 		
 		case 'replaceRange': {
 			const { from, to, newContentHtml } = payload;
@@ -334,13 +257,15 @@ window.addEventListener('message', (event) => {
 			if (nodeBefore && nodeBefore.type.name === 'paragraph' && nodeBefore.content.size === 0) {
 				const paraFrom = from - nodeBefore.nodeSize;
 				const paraTo = from;
-				console.log('Deleting empty paragraph from', paraFrom, 'to', paraTo);
-				
-				// Create and dispatch a NEW transaction
-				const deleteTr = currentState.tr.delete(paraFrom, paraTo);
-				editorView.dispatch(deleteTr);
-				
-				finalTo -= nodeBefore.nodeSize;
+				if (paraFrom>=0 && paraTo<=currentState.doc.content.size && paraFrom < paraTo) {
+					console.log('Deleting empty paragraph from', paraFrom, 'to', paraTo);
+					
+					// Create and dispatch a NEW transaction
+					const deleteTr = currentState.tr.delete(paraFrom, paraTo);
+					editorView.dispatch(deleteTr);
+					
+					finalTo -= nodeBefore.nodeSize;
+				}
 			}
 			
 			const finalRange = { from, to: finalTo };
@@ -377,41 +302,10 @@ window.addEventListener('message', (event) => {
 			editorView.dispatch(tr);
 			break;
 		}
-		case 'prepareForTranslate': {
-			const { blockNumber } = payload;
-			const { state, dispatch } = editorView;
-			const { schema } = state;
-			let tr = state.tr;
-			
-			const { blockStartPos, blockEndPos } = findTranslationBlockPositions(blockNumber);
-			
-			if (blockStartPos === -1) {
-				postToParent('selectionResponse', null); // Signal error
-				return;
-			}
-			
-			const before = state.doc.childBefore(blockEndPos);
-			let insertPos = (before.node && before.offset >= blockStartPos)
-				? before.offset + before.node.nodeSize
-				: blockStartPos;
-			
-			tr.insert(insertPos, schema.nodes.paragraph.create());
-			const fromPos = insertPos + 1;
-			tr.setSelection(TextSelection.create(tr.doc, fromPos));
-			dispatch(tr);
-			
-			const finalState = editorView.state;
-			postToParent('selectionResponse', {
-				from: finalState.selection.from,
-				to: finalState.selection.to,
-				originalFragmentJson: finalState.doc.slice(finalState.selection.from, finalState.selection.to).content.toJSON(),
-				selectedText: ''
-			});
-			break;
-		}
 		case 'prepareForRephrase': {
 			const { state } = editorView;
-			if (state.selection.empty) {
+			const isForRephrase = payload && payload.isRephrase;
+			if (isForRephrase && state.selection.empty) {
 				postToParent('selectionResponse', null);
 				return;
 			}

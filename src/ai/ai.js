@@ -63,7 +63,6 @@ async function callOpenRouter(payload, token) {
 	return data;
 }
 
-// NEW SECTION START
 /**
  * Generates a creative prompt for a book cover based on its title.
  * @param {object} params - The parameters for prompt generation.
@@ -126,7 +125,6 @@ async function generateCoverImageViaProxy({ prompt, token }) {
 	
 	return response.json();
 }
-// NEW SECTION END
 
 /**
  * Generates codex entries based on a novel outline.
@@ -176,6 +174,7 @@ Focus on the most prominent elements mentioned in the synopsis and chapter summa
  * @returns {Promise<object>} The parsed JSON response with new and updated entries.
  */
 async function generateCodexFromTextChunk({ textChunk, existingCodexJson, language, targetLanguage, model, token }) {
+	// The prompt has been updated to be more explicit and provide a clear example.
 	const prompt = `
 You are a meticulous world-building assistant for a novelist. Your task is to analyze a chunk of text from a novel and identify entities that should be in a codex (an encyclopedia of the world). These entities are typically People, Locations, or Objects/Lore.
 
@@ -184,8 +183,9 @@ You are a meticulous world-building assistant for a novelist. Your task is to an
 2.  Review the **Existing Codex Entries** to understand what is already documented.
 3.  Identify new characters, locations, or significant objects/lore within the text chunk that are not in the codex.
 4.  If you find new information about an entity that is ALREADY in the codex, update its description. The new description should integrate the old and new information seamlessly.
-5.  For each new or updated entry, provide:
-    - A concise title (the name of the entity).
+5.  For each new or updated entry, provide the following fields:
+    - **For NEW entries only**, assign a 'category': "People", "Locations", or "Objects/Lore".
+    - A concise 'title' (the name of the entity).
     - A descriptive paragraph for the 'content' field in the source language (**${language}**).
     - A translation of the 'content' into the 'target_content' field in the target language (**${targetLanguage}**).
     - A comma-separated list of exact phrases from the **Text Chunk** that refer to this entity for the 'document_phrases' field.
@@ -200,6 +200,35 @@ ${textChunk}
 
 **Output Format:**
 Respond with a single, valid JSON object. Do not include any text or markdown before or after the JSON. The JSON object must have two keys: \`new_entries\` and \`updated_entries\`.
+For example:
+\`\`\`json
+{
+  "new_entries": [
+    {
+      "category": "People",
+      "title": "Elaria",
+      "content": "A skilled archer from the Whisperwood, known for her silent movements and keen eye. She assisted Lord Kael during the siege.",
+      "target_content": "Una hábil arquera del Bosque Susurrante, conocida por sus movimientos silenciosos y su vista aguda. Ayudó a Lord Kael durante el asedio.",
+      "document_phrases": "Elaria, the archer from Whisperwood"
+    },
+    {
+      "category": "Locations",
+      "title": "Shadowfang Keep",
+      "content": "An ancient fortress located in the northern mountains, now serving as Lord Kael's stronghold. It is known for its imposing black stone walls.",
+      "target_content": "Una antigua fortaleza ubicada en las montañas del norte, que ahora sirve como el bastión de Lord Kael. Es conocida por sus imponentes muros de piedra negra.",
+      "document_phrases": "Shadowfang Keep, the northern mountains, his stronghold"
+    }
+  ],
+  "updated_entries": [
+    {
+      "title": "Lord Kael",
+      "content": "The stern ruler of the Northern Reaches. He is a formidable warrior who wields a black-bladed sword and commands the garrison at Shadowfang Keep.",
+      "target_content": "El severo gobernante de los Confines del Norte. Es un guerrero formidable que empuña una espada de hoja negra y comanda la guarnición en la Fortaleza Colmillo de Sombra.",
+      "document_phrases": "Lord Kael, wields a black-bladed sword"
+    }
+  ]
+}
+\`\`\`
 `;
 	
 	return callOpenRouter({

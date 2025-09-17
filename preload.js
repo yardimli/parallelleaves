@@ -18,7 +18,7 @@ contextBridge.exposeInMainWorld('api', {
 	openOutline: (novelId) => ipcRenderer.send('novels:openOutline', novelId),
 	getOutlineData: (novelId) => ipcRenderer.invoke('novels:getOutlineData', novelId),
 	getOutlineState: (novelId) => ipcRenderer.invoke('novels:getOutlineState', novelId),
-	startCodexAutogen: (data) => ipcRenderer.send('autogen:start-cod-generation', data),
+	startCodexAutogen: (data) => ipcRenderer.send('autogen:start-codex-generation', data),
 	onCodexAutogenUpdate: (callback) => ipcRenderer.on('autogen:progress-update', callback),
 	updateProseSettings: (data) => ipcRenderer.invoke('novels:updateProseSettings', data),
 	updatePromptSettings: (data) => ipcRenderer.invoke('novels:updatePromptSettings', data),
@@ -33,7 +33,7 @@ contextBridge.exposeInMainWorld('api', {
 	showOpenDocumentDialog: () => ipcRenderer.invoke('dialog:showOpenDocument'),
 	readDocumentContent: (filePath) => ipcRenderer.invoke('document:read', filePath),
 	importDocumentAsNovel: (data) => ipcRenderer.invoke('document:import', data),
-	onImportStatusUpdate: (callback) => ipcRenderer.on('import:status-update', callback), // MODIFICATION: Added listener
+	onImportStatusUpdate: (callback) => ipcRenderer.on('import:status-update', (event, ...args) => callback(...args)),
 	
 	// --- Editor Specific APIs ---
 	getTemplate: (templateName) => ipcRenderer.invoke('templates:get', templateName),

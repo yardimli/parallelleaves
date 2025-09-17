@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 	
 	let novelsData = [];
 	let stagedCover = null;
-	let isRefreshingData = false; // MODIFICATION: Add a flag to prevent concurrent refreshes.
+	let isRefreshingData = false;
 	
 	const languages = [
 		"English", "Spanish", "French", "German", "Mandarin Chinese", "Hindi", "Arabic", "Bengali", "Russian", "Portuguese", "Indonesian", "Urdu", "Japanese", "Swahili", "Marathi", "Telugu", "Turkish", "Korean", "Tamil", "Vietnamese", "Italian", "Javanese", "Thai", "Gujarati", "Polish", "Ukrainian", "Malayalam", "Kannada", "Oriya", "Burmese", "Norwegian", "Finnish", "Danish", "Swedish", "Dutch", "Greek", "Czech", "Hungarian", "Romanian", "Bulgarian", "Serbian", "Croatian", "Slovak", "Slovenian", "Lithuanian", "Latvian", "Estonian", "Hebrew", "Persian", "Afrikaans", "Zulu", "Xhosa", "Amharic", "Yoruba", "Igbo", "Hausa", "Nepali", "Sinhala", "Khmer", "Lao", "Mongolian", "Pashto", "Tajik", "Uzbek", "Kurdish", "Albanian", "Macedonian", "Bosnian", "Icelandic", "Irish", "Welsh", "Catalan", "Basque", "Galician", "Luxembourgish", "Maltese"
@@ -208,7 +208,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 	}
 	
 	async function loadInitialData() {
-		// MODIFICATION: Add a guard to prevent multiple refreshes from running at the same time.
 		if (isRefreshingData) {
 			return;
 		}
@@ -221,7 +220,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			console.error('Failed to load initial data:', error);
 			loadingMessage.textContent = t('dashboard.errorLoading');
 		} finally {
-			// MODIFICATION: Reset the flag when the operation is complete.
 			isRefreshingData = false;
 		}
 	}
@@ -274,15 +272,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                             </div>
                         </div>
 
-                        <!-- Chapter/Block Counts -->
+                        <!-- Chapter Counts -->
                         <div class="grid grid-cols-2 gap-x-4">
                             <div>
                                 <div class="font-semibold" data-i18n="dashboard.card.chapters">Chapters</div>
                                 <div class="js-chapter-count">0</div>
-                            </div>
-                            <div>
-                                <div class="font-semibold" data-i18n="dashboard.card.blocks">Blocks</div>
-                                <div class="js-block-count">0/0</div>
                             </div>
                         </div>
 
@@ -315,7 +309,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			const sourceWords = novelCard.querySelector('.js-source-words');
 			const targetWords = novelCard.querySelector('.js-target-words');
 			const chapterCountEl = novelCard.querySelector('.js-chapter-count');
-			const blockCount = novelCard.querySelector('.js-block-count');
 			const createdDateEl = novelCard.querySelector('.js-created-date');
 			const updatedDateEl = novelCard.querySelector('.js-updated-date');
 			
@@ -336,7 +329,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			if (sourceWords) sourceWords.textContent = `${numberFormat.format(novel.source_word_count)} ${wordLabel}`;
 			if (targetWords) targetWords.textContent = `${numberFormat.format(novel.target_word_count)} ${wordLabel}`;
 			if (chapterCountEl) chapterCountEl.textContent = novel.chapter_count;
-			if (blockCount) blockCount.textContent = `${novel.completed_blocks}/${novel.total_blocks}`;
 			
 			const dateFormatOptions = { year: 'numeric', month: 'short', day: 'numeric' };
 			if (createdDateEl && novel.created_at) {
@@ -526,7 +518,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 	populateLanguages();
 	initAuth();
 	
-	// MODIFICATION: Add a 'focus' event listener to the window to refresh data.
 	window.addEventListener('focus', () => {
 		// Only refresh if the user is logged in (auth container has a logout button).
 		if (document.getElementById('logout-btn')) {

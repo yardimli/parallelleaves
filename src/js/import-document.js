@@ -33,7 +33,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 	const documentContent = document.getElementById('document-content');
 	const importStatus = document.getElementById('js-import-status');
 	const popover = document.getElementById('break-type-popover');
-	const blockSizeInput = document.getElementById('block_size');
 	const importOverlay = document.getElementById('import-overlay');
 	const importOverlayStatus = document.getElementById('import-overlay-status');
 	
@@ -177,46 +176,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 		targetedParagraph = null;
 	}
 	
-	/**
-	 * Processes an array of paragraph texts for a chapter, injecting translation block placeholders.
-	 * @param {string[]} paragraphsArray - An array of paragraph strings.
-	 * @param {number} blockSize - The number of words before inserting a placeholder.
-	 * @param {number} startBlockNumber - The starting number for the translation blocks.
-	 * @returns {{html: string, nextBlockNumber: number}} An object containing the final HTML and the next block number to use.
-	 */
-	function insertTranslationBlockPlaceholders(paragraphsArray, blockSize, startBlockNumber) {
-		if (!paragraphsArray || paragraphsArray.length === 0) {
-			return { html: '', nextBlockNumber: startBlockNumber };
-		}
-		
-		if (!blockSize || blockSize <= 0) {
-			return { html: `<p>${paragraphsArray.join('</p><p>')}</p>`, nextBlockNumber: startBlockNumber };
-		}
-		
-		let finalHtml = '';
-		let wordCountSinceLastMarker = 0;
-		let blockNumber = startBlockNumber;
-		
-		finalHtml += `{{TranslationBlock-${blockNumber}}}`;
-		blockNumber++;
-		
-		for (const pText of paragraphsArray) {
-			finalHtml += `<p>${pText}</p>`;
-			const wordsInP = pText.split(/\s+/).filter(Boolean).length;
-			
-			if (wordsInP > 0) {
-				wordCountSinceLastMarker += wordsInP;
-			}
-			
-			if (wordCountSinceLastMarker >= blockSize && wordsInP > 0) {
-				finalHtml += `{{TranslationBlock-${blockNumber}}}`;
-				wordCountSinceLastMarker = 0;
-				blockNumber++;
-			}
-		}
-		return { html: finalHtml, nextBlockNumber: blockNumber };
-	}
-	
 	selectFileBtn.addEventListener('click', async () => {
 		const filePath = await window.api.showOpenDocumentDialog();
 		if (filePath) {
@@ -272,7 +231,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			const title = targetedParagraph.textContent.trim();
 			marker.dataset.title = title;
 			
-			// MODIFICATION: Add 'not-prose' class directly here.
 			const breakClass = action === 'set-act' ? 'act-break-marker' : 'chapter-break-marker';
 			marker.className = `${breakClass} not-prose`;
 			
@@ -361,7 +319,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			
 			if (isBreak) {
 				const marker = document.createElement('div');
-				// MODIFICATION: Add 'not-prose' class directly here.
 				marker.className = `${breakType} not-prose`;
 				marker.dataset.title = text;
 				
@@ -414,11 +371,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 		importOverlayStatus.textContent = t('import.importingContent');
 		importOverlay.classList.remove('hidden');
 		
-		const blockSize = parseInt(blockSizeInput.value, 10);
+		// MODIFICATION START: Simplified the entire import process.
 		const acts = [];
 		let currentAct = { title: 'Act 1', chapters: [] };
-		let currentChapter = { title: 'Chapter 1', content: [] };
-		let globalBlockNumber = 1;
+		let currentChapter = { title: 'Chapter 1', content: [] }; // Now collects an array of paragraph strings
 		
 		const allNodes = documentContent.childNodes;
 		
@@ -429,48 +385,53 @@ document.addEventListener('DOMContentLoaded', async () => {
 			const isChapterBreak = node.classList.contains('chapter-break-marker');
 			
 			if (isActBreak || isChapterBreak) {
+				// If the current chapter has content, finalize it.
 				if (currentChapter.content.length > 0) {
-					const result = insertTranslationBlockPlaceholders(currentChapter.content, blockSize, globalBlockNumber);
-					currentChapter.content = result.html;
-					globalBlockNumber = result.nextBlockNumber;
+					// Join the collected paragraphs into a single HTML string.
+					currentChapter.content = `<p>${currentChapter.content.join('</p><p>')}</p>`;
 					currentAct.chapters.push(currentChapter);
 				}
 				
+				// If it's an act break, finalize the current act.
 				if (isActBreak) {
 					if (currentAct.chapters.length > 0) {
 						acts.push(currentAct);
 					}
+					// Start a new act.
 					currentAct = { title: node.dataset.title || `Act ${acts.length + 1}`, chapters: [] };
 				}
 				
+				// Start a new chapter.
 				currentChapter = { title: node.dataset.title || `Chapter ${currentAct.chapters.length + 1}`, content: [] };
 				
 			} else if (node.tagName === 'P') {
+				// Collect the text content of the paragraph.
 				currentChapter.content.push(node.textContent.trim());
 			}
 		}
 		
+		// Finalize the last chapter and act after the loop.
 		if (currentChapter.content.length > 0) {
-			const result = insertTranslationBlockPlaceholders(currentChapter.content, blockSize, globalBlockNumber);
-			currentChapter.content = result.html;
+			currentChapter.content = `<p>${currentChapter.content.join('</p><p>')}</p>`;
 			currentAct.chapters.push(currentChapter);
 		}
 		if (currentAct.chapters.length > 0) {
 			acts.push(currentAct);
 		}
 		
+		// Handle case where there are no breaks, treating the whole document as one chapter.
 		if (acts.length === 0 && allNodes.length > 0) {
 			const allContent = Array.from(allNodes)
 				.filter(node => node.tagName === 'P')
 				.map(p => p.textContent.trim());
 			
 			if (allContent.length > 0) {
-				const result = insertTranslationBlockPlaceholders(allContent, blockSize, globalBlockNumber);
-				currentChapter.content = result.html;
+				currentChapter.content = `<p>${allContent.join('</p><p>')}</p>`;
 				currentAct.chapters.push(currentChapter);
 				acts.push(currentAct);
 			}
 		}
+		// MODIFICATION END
 		
 		if (acts.length === 0) {
 			window.showAlert(t('import.alertNoContent'));

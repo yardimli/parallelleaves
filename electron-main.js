@@ -465,43 +465,6 @@ function setupIpcHandlers() {
 		}
 	});
 	
-	const extractAllPairs = (sourceContent, targetContent) => {
-		if (!sourceContent || !targetContent) {
-			return [];
-		}
-		
-		const sourceMarkers = [...sourceContent.matchAll(/{{\s*TranslationBlock-(\d+)\s*}}/gi)];
-		if (sourceMarkers.length === 0) {
-			return [];
-		}
-		
-		const allPairs = [];
-		for (let i = 0; i < sourceMarkers.length; i++) {
-			const currentMarker = sourceMarkers[i];
-			const nextMarker = sourceMarkers[i + 1];
-			const blockNumber = parseInt(currentMarker[1], 10);
-			
-			const sourceStart = currentMarker.index + currentMarker[0].length;
-			const sourceEnd = nextMarker ? nextMarker.index : sourceContent.length;
-			const sourceText = sourceContent.substring(sourceStart, sourceEnd).trim();
-			
-			const targetRegex = new RegExp(
-				`<div class="note-wrapper not-prose"><p>Translation Block #${blockNumber}</p></div>` +
-				`([\\s\\S]*?)` +
-				`(?=<div class="note-wrapper not-prose"><p>Translation Block #\\d+</p></div>|$)`,
-				'i'
-			);
-			
-			const targetMatch = targetContent.match(targetRegex);
-			const targetText = targetMatch ? targetMatch[1].trim() : '';
-			
-			if (sourceText && targetText) {
-				allPairs.push({ blockNumber, source: sourceText, target: targetText });
-			}
-		}
-		return allPairs;
-	};
-	
 	ipcMain.on('app:open-import-window', () => {
 		createImportWindow();
 	});
@@ -509,7 +472,7 @@ function setupIpcHandlers() {
 	// --- Novel Handlers ---
 	
 	ipcMain.handle('novels:getAllWithCovers', () => {
-		// MODIFICATION START: Expanded query and logic to include detailed stats for each novel.
+		// This query remains the same as it was already correct.
 		const stmt = db.prepare(`
             SELECT
                 n.*,
@@ -524,35 +487,24 @@ function setupIpcHandlers() {
         `);
 		const novels = stmt.all();
 		
-		// Loop through each novel to calculate detailed statistics.
+		// This logic also remains as it calculates stats without relying on translation blocks.
 		for (const novel of novels) {
 			const chapters = db.prepare('SELECT source_content, target_content FROM chapters WHERE novel_id = ?').all(novel.id);
 			
 			let sourceWordCount = 0;
 			let targetWordCount = 0;
-			let totalBlocks = 0;
-			let completedBlocks = 0;
 			
 			for (const chapter of chapters) {
 				if (chapter.source_content) {
 					sourceWordCount += countWordsInHtml(chapter.source_content);
-					const blockMatches = chapter.source_content.match(/{{TranslationBlock-\d+}}/g);
-					totalBlocks += blockMatches ? blockMatches.length : 0;
 				}
 				if (chapter.target_content) {
 					targetWordCount += countWordsInHtml(chapter.target_content);
-					
-					// Use the existing helper function to find pairs of source/target blocks that both have content.
-					// This serves as a good proxy for "completed" or "translated" blocks.
-					const pairs = extractAllPairs(chapter.source_content, chapter.target_content);
-					completedBlocks += pairs.length;
 				}
 			}
 			
 			novel.source_word_count = sourceWordCount;
 			novel.target_word_count = targetWordCount;
-			novel.total_blocks = totalBlocks;
-			novel.completed_blocks = completedBlocks;
 			
 			if (novel.cover_path) {
 				novel.cover_path = path.join(imageHandler.IMAGES_DIR, novel.cover_path);
@@ -560,7 +512,6 @@ function setupIpcHandlers() {
 		}
 		
 		return novels;
-		// MODIFICATION END
 	});
 	
 	ipcMain.handle('novels:getOne', (event, novelId) => {
@@ -620,11 +571,7 @@ function setupIpcHandlers() {
 					
 					const contentToUse = chapter.target_content || chapter.source_content;
 					if (contentToUse) {
-						const cleanedContent = contentToUse
-							.replace(/{{\s*TranslationBlock-\d+\s*}}/gi, '')
-							.replace(/<div class="note-wrapper not-prose"><p>Translation Block #\d+<\/p><\/div>/gi, '');
-						
-						const textContent = cleanedContent.replace(/<[^>]+>/g, ' ').replace(/\s\s+/g, ' ').trim();
+						const textContent = contentToUse.replace(/<[^>]+>/g, ' ').replace(/\s\s+/g, ' ').trim();
 						
 						const words = textContent.split(/\s+/);
 						const wordLimitedText = words.slice(0, 200).join(' ');
@@ -834,44 +781,56 @@ function setupIpcHandlers() {
 		}
 	});
 	
-	ipcMain.handle('chapters:getTranslationContext', (event, { chapterId, endBlockNumber, pairCount }) => {
+	ipcMain.handle('chapters:getTranslationContext', (event, { chapterId, pairCount }) => {
 		if (pairCount <= 0) {
 			return [];
 		}
 		
 		try {
-			const currentChapter = db.prepare('SELECT source_content, target_content, novel_id, chapter_order FROM chapters WHERE id = ?').get(chapterId);
+			const currentChapter = db.prepare('SELECT novel_id, chapter_order FROM chapters WHERE id = ?').get(chapterId);
 			if (!currentChapter) {
 				throw new Error('Current chapter not found.');
 			}
 			
-			const allPairsCurrent = extractAllPairs(currentChapter.source_content, currentChapter.target_content);
+			// Find the chapter immediately preceding the current one.
+			const previousChapter = db.prepare(`
+                SELECT source_content, target_content
+                FROM chapters
+                WHERE novel_id = ? AND chapter_order < ?
+                ORDER BY chapter_order DESC
+                LIMIT 1
+            `).get(currentChapter.novel_id, currentChapter.chapter_order);
 			
-			const relevantPairsCurrent = allPairsCurrent.filter(p => p.blockNumber < endBlockNumber);
-			
-			let collectedPairs = relevantPairsCurrent.slice(-pairCount);
-			
-			let remainingPairsNeeded = pairCount - collectedPairs.length;
-			
-			if (remainingPairsNeeded > 0) {
-				const previousChapter = db.prepare(`
-                    SELECT source_content, target_content
-                    FROM chapters
-                    WHERE novel_id = ? AND chapter_order < ?
-                    ORDER BY chapter_order DESC
-                    LIMIT 1
-                `).get(currentChapter.novel_id, currentChapter.chapter_order);
-				
-				if (previousChapter) {
-					const allPairsPrevious = extractAllPairs(previousChapter.source_content, previousChapter.target_content);
-					
-					const pairsFromPrevious = allPairsPrevious.slice(-remainingPairsNeeded);
-					
-					collectedPairs = [...pairsFromPrevious, ...collectedPairs];
-				}
+			if (!previousChapter || !previousChapter.source_content || !previousChapter.target_content) {
+				return []; // No previous chapter or it's empty, so no context.
 			}
 			
-			return collectedPairs;
+			// Helper to split HTML content into an array of paragraphs.
+			const splitToParagraphs = (html) => {
+				if (!html) return [];
+				// A simple regex to capture content within <p> tags.
+				const matches = html.match(/<p>.*?<\/p>/gs) || [];
+				return matches.map(p => p.slice(3, -4)); // Remove <p> and </p>
+			};
+			
+			const sourceParagraphs = splitToParagraphs(previousChapter.source_content);
+			const targetParagraphs = splitToParagraphs(previousChapter.target_content);
+			
+			// Take the last `pairCount` paragraphs from each.
+			const sourceContext = sourceParagraphs.slice(-pairCount);
+			const targetContext = targetParagraphs.slice(-pairCount);
+			
+			// Create pairs, assuming a 1-to-1 paragraph correspondence at the end of the chapter.
+			const pairs = [];
+			const numPairs = Math.min(sourceContext.length, targetContext.length);
+			for (let i = 0; i < numPairs; i++) {
+				pairs.push({
+					source: sourceContext[i],
+					target: targetContext[i],
+				});
+			}
+			
+			return pairs;
 			
 		} catch (error) {
 			console.error(`Failed to get translation context for chapter ${chapterId}:`, error);
@@ -932,7 +891,6 @@ function setupIpcHandlers() {
 			
 			const fullText = chapters.map(c => c.source_content).join('\n');
 			const cleanedText = fullText
-				.replace(/{{\s*TranslationBlock-\d+\s*}}/gi, '')
 				.replace(/<[^>]+>/g, ' ')
 				.replace(/\s\s+/g, ' ');
 			

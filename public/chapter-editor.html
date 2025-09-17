@@ -116,10 +116,6 @@
 	</div>
 	<div class="divider divider-horizontal mx-0"></div>
 	<div class="flex items-center gap-1">
-		<button type="button" class="js-toolbar-btn btn btn-ghost btn-sm btn-square" data-command="add_note"
-		        data-i18n-title="editor.addNote" disabled>
-			<i class="bi bi-journal-text text-lg"></i>
-		</button>
 		<button type="button" class="js-toolbar-btn btn btn-ghost btn-sm btn-square" data-command="create_codex"
 		        data-i18n-title="editor.createCodex" disabled>
 			<i class="bi bi-journal-plus text-lg"></i>
@@ -216,26 +212,6 @@
 				<button class="btn" data-i18n="common.close">Close</button>
 			</form>
 		</div>
-	</div>
-</dialog>
-
-<!-- Note Editor Modal -->
-<dialog id="note-editor-modal" class="modal">
-	<div class="modal-box">
-		<h3 class="js-note-modal-title font-bold text-lg" data-i18n="editor.noteModal.addTitle">Add Note</h3>
-		<form id="note-editor-form" class="py-4 space-y-4" novalidate>
-			<input type="hidden" id="note-pos" value="">
-			<input type="hidden" id="note-chapter-id" value="">
-			<div class="form-control">
-				<label class="label"><span class="label-text" data-i18n="editor.noteModal.content">Note Content</span></label>
-				<textarea id="note-content-input" name="note_content" rows="5" class="textarea textarea-bordered" required
-				          data-i18n-placeholder="editor.noteModal.placeholder"></textarea>
-			</div>
-			<div class="modal-action">
-				<button type="button" class="js-close-note-modal btn" data-i18n="common.cancel">Cancel</button>
-				<button type="submit" class="js-save-note-btn btn btn-primary" data-i18n="editor.noteModal.save">Save Note</button>
-			</div>
-		</form>
 	</div>
 </dialog>
 
