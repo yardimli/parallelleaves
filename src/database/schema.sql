@@ -15,8 +15,7 @@ CREATE TABLE IF NOT EXISTS series (
     title TEXT NOT NULL,
     description TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS novels (
@@ -35,9 +34,7 @@ CREATE TABLE IF NOT EXISTS novels (
     rephrase_settings TEXT,
     translate_settings TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (series_id) REFERENCES series(id) ON DELETE SET NULL
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS sections (
@@ -47,8 +44,7 @@ CREATE TABLE IF NOT EXISTS sections (
     description TEXT,
     section_order INTEGER NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (novel_id) REFERENCES novels(id) ON DELETE CASCADE
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS chapters (
@@ -61,9 +57,7 @@ CREATE TABLE IF NOT EXISTS chapters (
     status TEXT,
     chapter_order INTEGER NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (novel_id) REFERENCES novels(id) ON DELETE CASCADE,
-    FOREIGN KEY (section_id) REFERENCES sections(id) ON DELETE CASCADE
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS codex_categories (
@@ -72,8 +66,7 @@ CREATE TABLE IF NOT EXISTS codex_categories (
     name TEXT NOT NULL,
     description TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (novel_id) REFERENCES novels(id) ON DELETE CASCADE
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS codex_entries (
@@ -85,9 +78,7 @@ CREATE TABLE IF NOT EXISTS codex_entries (
     target_content TEXT,
     document_phrases TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (novel_id) REFERENCES novels(id) ON DELETE CASCADE,
-    FOREIGN KEY (codex_category_id) REFERENCES codex_categories(id) ON DELETE CASCADE
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ALTER statements for existing databases:
@@ -104,9 +95,7 @@ CREATE TABLE IF NOT EXISTS images (
     prompt TEXT,
     image_type TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (novel_id) REFERENCES novels(id) ON DELETE CASCADE
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Seed a default user if none exists
