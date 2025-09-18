@@ -51,12 +51,12 @@
 	/**
 	 * Logs an interaction to the database.
 	 *
-	 * @param mysqli      $db             The mysqli database connection object.
-	 * @param int         $userId         The ID of the user making the request.
-	 * @param string      $action         The action being performed.
-	 * @param array|null  $requestPayload The decoded JSON payload of the request.
-	 * @param string      $responseBody   The raw string body of the response.
-	 * @param int         $responseCode   The HTTP response code.
+	 * @param mysqli $db The mysqli database connection object.
+	 * @param int $userId The ID of the user making the request.
+	 * @param string $action The action being performed.
+	 * @param array|null $requestPayload The decoded JSON payload of the request.
+	 * @param string $responseBody The raw string body of the response.
+	 * @param int $responseCode The HTTP response code.
 	 * @return void
 	 */
 	function logInteraction(mysqli $db, int $userId, string $action, ?array $requestPayload, string $responseBody, int $responseCode): void
@@ -77,8 +77,8 @@
 	/**
 	 * Sends a JSON formatted error response and terminates the script.
 	 *
-	 * @param int    $statusCode The HTTP status code to send.
-	 * @param string $message    The error message.
+	 * @param int $statusCode The HTTP status code to send.
+	 * @param string $message The error message.
 	 * @return void
 	 */
 	function sendJsonError(int $statusCode, string $message): void
@@ -115,6 +115,7 @@
 				'models' => [
 					['id' => 'anthropic/claude-sonnet-4', 'name' => 'Claude Sonnet 4'],
 					['id' => 'openai/gpt-5', 'name' => 'OpenAI GPT-5'],
+					['id' => 'openai/gpt-oss-120b', 'name' => 'OpenAI: gpt-oss-120b'],
 					['id' => 'openai/gpt-5-chat', 'name' => 'OpenAI GPT-5 Chat'],
 					['id' => 'openai/gpt-5-mini', 'name' => 'OpenAI GPT-5 mini'],
 					['id' => 'moonshotai/kimi-k2-0905', 'name' => 'MoonshotAI: Kimi K2 0905'],
@@ -125,20 +126,20 @@
 				'group' => 'Other',
 				'models' => [
 					['id' => 'google/gemini-2.5-flash', 'name' => 'Gemini 2.5 Flash'],
-					['id' => 'openai/gpt-4-turbo', 'name' => 'OpenAI GPT-4 Turbo'],
+					['id' => 'openai/gpt-4.1', 'name' => 'OpenAI GPT-4.1'],
 					['id' => 'openai/gpt-4o-mini', 'name' => 'OpenAI GPT-4o mini'],
 				],
+			],
 			[
 				'group' => 'NSFW',
 				'models' => [
-					['id' => 'qwen/qwen-3-235b', 'name' => 'Qwen 3 235b'],
-					['id' => 'google/gemma-3-27b', 'name' => 'Gemma 3 27b'],
+					['id' => 'qwen/qwen3-235b-a22b-2507', 'name' => 'Qwen 3 235b'],
+					['id' => 'google/gemma-3-27b-it', 'name' => 'Gemma 3 27b'],
 					['id' => 'mistralai/mistral-medium-3.1', 'name' => 'Mistral Medium 3.1'],
 					['id' => 'mistralai/mistral-large-2411', 'name' => 'Mistral Large'],
 					['id' => 'microsoft/wizardlm-2-8x22b', 'name' => 'WizardLM 2 8x22b'],
 					['id' => 'x-ai/grok-4', 'name' => 'Grok 4'],
 				],
-			],
 			],
 		];
 	}

@@ -1547,6 +1547,192 @@ function setupIpcHandlers() {
 		return supportedLanguages;
 	});
 	
+	// MODIFICATION START: Add handlers for backup and restore
+	ipcMain.handle('novels:getForBackup', (event, novelId) => {
+		try {
+			const novel = db.prepare('SELECT * FROM novels WHERE id = ?').get(novelId);
+			if (!novel) {
+				throw new Error('Novel not found.');
+			}
+			
+			const sections = db.prepare('SELECT * FROM sections WHERE novel_id = ? ORDER BY section_order').all(novelId);
+			const chapters = db.prepare('SELECT * FROM chapters WHERE novel_id = ? ORDER BY section_id, chapter_order').all(novelId);
+			const codex_categories = db.prepare('SELECT * FROM codex_categories WHERE novel_id = ? ORDER BY name').all(novelId);
+			const codex_entries = db.prepare('SELECT * FROM codex_entries WHERE novel_id = ? ORDER BY codex_category_id, title').all(novelId);
+			
+			// Handle cover image backup
+			let image = null;
+			const imageRecord = db.prepare('SELECT image_local_path FROM images WHERE novel_id = ?').get(novelId);
+			if (imageRecord && imageRecord.image_local_path) {
+				const imagePath = path.join(imageHandler.IMAGES_DIR, imageRecord.image_local_path);
+				if (fs.existsSync(imagePath)) {
+					const imageData = fs.readFileSync(imagePath);
+					image = {
+						filename: path.basename(imageRecord.image_local_path),
+						data: imageData.toString('base64')
+					};
+				}
+			}
+			
+			return {
+				novel,
+				sections,
+				chapters,
+				codex_categories,
+				codex_entries,
+				image // Add image data to the backup object
+			};
+		} catch (error) {
+			console.error(`Failed to get novel for backup (ID: ${novelId}):`, error);
+			throw error; // Let the renderer process handle the error display.
+		}
+	});
+	
+	ipcMain.handle('novels:restoreFromBackup', (event, backupData) => {
+		const restoreTransaction = db.transaction(() => {
+			const { novel, sections, chapters, codex_categories, codex_entries, image } = backupData;
+			
+			// 1. Insert the novel, getting the new ID.
+			const newNovelStmt = db.prepare(`
+                INSERT INTO novels (user_id, series_id, title, author, genre, logline, synopsis, status, order_in_series, source_language, target_language, rephrase_settings, translate_settings)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `);
+			const newNovelResult = newNovelStmt.run(
+				currentUserSession ? currentUserSession.user.id : 1,
+				null, // series_id is not backed up/restored for simplicity
+				`${novel.title} (Restored)`,
+				novel.author,
+				novel.genre,
+				novel.logline,
+				novel.synopsis,
+				novel.status,
+				novel.order_in_series,
+				novel.source_language,
+				novel.target_language,
+				novel.rephrase_settings,
+				novel.translate_settings
+			);
+			const newNovelId = newNovelResult.lastInsertRowid;
+			
+			// ID mapping tables
+			const sectionIdMap = new Map();
+			const categoryIdMap = new Map();
+			
+			// 2. Insert sections
+			for (const section of sections) {
+				const oldSectionId = section.id;
+				const newSectionStmt = db.prepare(`
+                    INSERT INTO sections (novel_id, title, description, section_order)
+                    VALUES (?, ?, ?, ?)
+                `);
+				const newSectionResult = newSectionStmt.run(newNovelId, section.title, section.description, section.section_order);
+				sectionIdMap.set(oldSectionId, newSectionResult.lastInsertRowid);
+			}
+			
+			// 3. Insert chapters
+			for (const chapter of chapters) {
+				const newSectionId = sectionIdMap.get(chapter.section_id);
+				if (newSectionId) {
+					const newChapterStmt = db.prepare(`
+                        INSERT INTO chapters (novel_id, section_id, title, source_content, target_content, status, chapter_order)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    `);
+					newChapterStmt.run(newNovelId, newSectionId, chapter.title, chapter.source_content, chapter.target_content, chapter.status, chapter.chapter_order);
+				}
+			}
+			
+			// 4. Insert codex categories
+			for (const category of codex_categories) {
+				const oldCategoryId = category.id;
+				const newCategoryStmt = db.prepare(`
+                    INSERT INTO codex_categories (novel_id, name, description)
+                    VALUES (?, ?, ?)
+                `);
+				const newCategoryResult = newCategoryStmt.run(newNovelId, category.name, category.description);
+				categoryIdMap.set(oldCategoryId, newCategoryResult.lastInsertRowid);
+			}
+			
+			// 5. Insert codex entries
+			for (const entry of codex_entries) {
+				const newCategoryId = categoryIdMap.get(entry.codex_category_id);
+				if (newCategoryId) {
+					const newEntryStmt = db.prepare(`
+                        INSERT INTO codex_entries (novel_id, codex_category_id, title, content, target_content, document_phrases)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    `);
+					newEntryStmt.run(newNovelId, newCategoryId, entry.title, entry.content, entry.target_content, entry.document_phrases);
+				}
+			}
+			
+			// 6. Restore cover image if it exists in the backup
+			if (image && image.data && image.filename) {
+				try {
+					const imageBuffer = Buffer.from(image.data, 'base64');
+					// This is a simplified version of what would be in image-handler.js
+					const fileExtension = path.extname(image.filename);
+					const uniqueName = `${Date.now()}-${newNovelId}-restored${fileExtension}`;
+					const savePath = path.join(imageHandler.IMAGES_DIR, uniqueName);
+					fs.writeFileSync(savePath, imageBuffer);
+					
+					// Insert image record into the database
+					db.prepare(`
+                        INSERT INTO images (user_id, novel_id, image_local_path, thumbnail_local_path, image_type)
+                        VALUES (?, ?, ?, ?, ?)
+                    `).run(currentUserSession ? currentUserSession.user.id : 1, newNovelId, uniqueName, uniqueName, 'restored');
+				} catch (e) {
+					// Log the error but don't fail the entire transaction
+					console.error('Failed to restore cover image:', e);
+				}
+			}
+		});
+		
+		try {
+			restoreTransaction();
+			return { success: true };
+		} catch (error) {
+			console.error('Failed to restore novel from backup:', error);
+			return { success: false, message: error.message };
+		}
+	});
+	
+	ipcMain.handle('dialog:saveBackup', async (event, defaultFileName, jsonString) => {
+		const { canceled, filePath } = await dialog.showSaveDialog({
+			title: 'Save Novel Backup',
+			defaultPath: defaultFileName,
+			filters: [{ name: 'JSON Files', extensions: ['json'] }]
+		});
+		
+		if (!canceled && filePath) {
+			try {
+				fs.writeFileSync(filePath, jsonString);
+				return { success: true };
+			} catch (error) {
+				console.error('Failed to save backup file:', error);
+				return { success: false, message: error.message };
+			}
+		}
+		return { success: false, message: 'Save cancelled by user.' };
+	});
+	
+	ipcMain.handle('dialog:openBackup', async (event) => {
+		const { canceled, filePaths } = await dialog.showOpenDialog({
+			title: 'Open Novel Backup',
+			properties: ['openFile'],
+			filters: [{ name: 'JSON Files', extensions: ['json'] }]
+		});
+		
+		if (!canceled && filePaths.length > 0) {
+			try {
+				return fs.readFileSync(filePaths[0], 'utf8');
+			} catch (error) {
+				console.error('Failed to read backup file:', error);
+				throw error;
+			}
+		}
+		return null; // User cancelled
+	});
+	// MODIFICATION END
+	
 }
 
 // --- App Lifecycle Events ---

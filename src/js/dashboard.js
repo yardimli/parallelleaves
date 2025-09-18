@@ -1,5 +1,6 @@
 import { initI18n, t, applyTranslationsTo, setLanguage, appLanguages} from './i18n.js';
 import { exportNovel } from './exporter.js';
+import { backupNovel, restoreNovel } from './backup-restore.js';
 
 /**
  * Compares two semantic version strings (e.g., '1.10.2' vs '1.2.0').
@@ -46,6 +47,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 	const novelList = document.getElementById('novel-list');
 	const loadingMessage = document.getElementById('loading-message');
 	const importDocBtn = document.getElementById('import-doc-btn');
+	const restoreBackupBtn = document.getElementById('restore-backup-btn');
 	const authContainer = document.getElementById('auth-container');
 	const loginModal = document.getElementById('login-modal');
 	const loginForm = document.getElementById('login-form');
@@ -346,6 +348,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                     
                     <div class="card-actions justify-end items-center mt-4">
+                        <!-- MODIFICATION START: Added backup button -->
+                        <button class="btn btn-ghost btn-sm js-backup-novel" data-i18n-title="dashboard.card.backupProject">
+                            <i class="bi bi-download text-lg"></i>
+                        </button>
+                        <!-- MODIFICATION END -->
                         <button class="btn btn-ghost btn-sm js-export-docx" data-i18n-title="outline.exportDocx">
                             <i class="bi bi-file-earmark-word text-lg"></i>
                         </button>
@@ -398,6 +405,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 			novelCard.querySelector('.js-meta-settings').addEventListener('click', () => openMetaSettingsModal(novel));
 			novelCard.querySelector('.js-open-outline').addEventListener('click', () => window.api.openOutline(novel.id));
 			novelCard.querySelector('.js-export-docx').addEventListener('click', () => exportNovel(novel.id));
+			novelCard.querySelector('.js-backup-novel').addEventListener('click', () => backupNovel(novel.id, novel.title));
 			
 			novelList.appendChild(novelCard);
 		});
@@ -417,6 +425,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 	if (importDocBtn) {
 		importDocBtn.addEventListener('click', () => {
 			window.api.openImportWindow();
+		});
+	}
+	
+	if (restoreBackupBtn) {
+		restoreBackupBtn.addEventListener('click', () => {
+			restoreNovel();
 		});
 	}
 	

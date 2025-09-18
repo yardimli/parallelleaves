@@ -78,4 +78,8 @@ contextBridge.exposeInMainWorld('api', {
 	
 	getSupportedLanguages: () => ipcRenderer.invoke('languages:get-supported'),
 	
+	getNovelForBackup: (novelId) => ipcRenderer.invoke('novels:getForBackup', novelId),
+	restoreNovelFromBackup: (backupData) => ipcRenderer.invoke('novels:restoreFromBackup', backupData),
+	saveBackupToFile: (defaultFileName, jsonString) => ipcRenderer.invoke('dialog:saveBackup', defaultFileName, jsonString),
+	openBackupFile: () => ipcRenderer.invoke('dialog:openBackup'),
 });
