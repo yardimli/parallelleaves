@@ -19,20 +19,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 		userGreetingEl.textContent = 'Welcome to Parallel Leaves';
 	}
 	
-	// 2. Animate the loader bar to fill over 2 seconds.
+	// 2. Animate the loader bar to fill over 1 seconds.
 	if (loaderBar) {
-		// This transition will animate the 'width' property over 2 seconds.
-		loaderBar.style.transition = 'width 2s linear';
+		loaderBar.style.transition = 'width 1s linear';
 		
-		// We use a minimal timeout to ensure the CSS transition is applied correctly
-		// after the element has been rendered in the DOM.
 		setTimeout(() => {
 			loaderBar.style.width = '100%';
 		}, 10);
 	}
 	
-	// 3. Send a message to the main process to close the splash screen after 2 seconds.
 	setTimeout(() => {
 		window.api.splashClose();
-	}, 2000);
+	}, 1000);
 });

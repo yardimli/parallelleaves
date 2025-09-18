@@ -1,7 +1,7 @@
 const LANG_KEY = 'app_lang';
 let translations = {};
 
-export const supportedLanguages = {
+export const appLanguages = {
 	en: 'English',
 	tr: 'Türkçe',
 	tlh: 'Klingon'
@@ -110,7 +110,7 @@ function populateLanguageSwitcher() {
 	
 	menus.forEach(menu => {
 		menu.innerHTML = '';
-		for (const [code, name] of Object.entries(supportedLanguages)) {
+		for (const [code, name] of Object.entries(appLanguages)) {
 			const li = document.createElement('li');
 			const a = document.createElement('a');
 			a.href = '#';

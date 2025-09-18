@@ -170,7 +170,12 @@
     "exportSuccessTitle": "Dışa Aktarma Başarılı",
     "exportSuccessMessage": "'{title}' adlı romanınız başarıyla dışa aktarıldı.",
     "exportErrorTitle": "Dışa Aktarma Başarısız",
-    "exportErrorMessage": "Romanınızı dışa aktarırken bir hata oluştu: {message}"
+    "exportErrorMessage": "Romanınızı dışa aktarırken bir hata oluştu: {message}",
+    "exportDialogTitle": "Dışa Aktarma Başarılı",
+    "exportDialogMessage": "'{title}' başarıyla dışa aktarıldı.",
+    "exportDialogDetail": "Dosya şu konuma kaydedildi:\n{filePath}",
+    "exportDialogOpenFolder": "İçeren Klasörü Aç",
+    "exportDialogOK": "Tamam"
   },
   "editor": {
     "translating": "Çeviri: {title}",

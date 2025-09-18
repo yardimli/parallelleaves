@@ -180,7 +180,6 @@
 			}
 		}
 
-		// MODIFICATION: Fetch live models from OpenRouter to verify our static list.
 		$ch = curl_init('https://openrouter.ai/api/v1/models');
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($ch, CURLOPT_HTTPHEADER, [

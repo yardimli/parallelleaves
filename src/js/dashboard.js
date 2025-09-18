@@ -1,8 +1,6 @@
-import { initI18n, t, applyTranslationsTo, setLanguage, supportedLanguages } from './i18n.js';
-// MODIFICATION: Import the new export function.
+import { initI18n, t, applyTranslationsTo, setLanguage, appLanguages} from './i18n.js';
 import { exportNovel } from './exporter.js';
 
-// MODIFICATION START: Add version comparison function
 /**
  * Compares two semantic version strings (e.g., '1.10.2' vs '1.2.0').
  * @param {string} v1 The first version string.
@@ -21,7 +19,6 @@ function compareVersions(v1, v2) {
 	}
 	return 0;
 }
-// MODIFICATION END
 
 document.addEventListener('DOMContentLoaded', async () => {
 	await initI18n(true);
@@ -85,12 +82,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 	let stagedCover = null;
 	let isRefreshingData = false;
 	
-	const languages = [
-		"English", "Spanish", "French", "German", "Mandarin Chinese", "Hindi", "Arabic", "Bengali", "Russian", "Portuguese", "Indonesian", "Urdu", "Japanese", "Swahili", "Marathi", "Telugu", "Turkish", "Korean", "Tamil", "Vietnamese", "Italian", "Javanese", "Thai", "Gujarati", "Polish", "Ukrainian", "Malayalam", "Kannada", "Oriya", "Burmese", "Norwegian", "Finnish", "Danish", "Swedish", "Dutch", "Greek", "Czech", "Hungarian", "Romanian", "Bulgarian", "Serbian", "Croatian", "Slovak", "Slovenian", "Lithuanian", "Latvian", "Estonian", "Hebrew", "Persian", "Afrikaans", "Zulu", "Xhosa", "Amharic", "Yoruba", "Igbo", "Hausa", "Nepali", "Sinhala", "Khmer", "Lao", "Mongolian", "Pashto", "Tajik", "Uzbek", "Kurdish", "Albanian", "Macedonian", "Bosnian", "Icelandic", "Irish", "Welsh", "Catalan", "Basque", "Galician", "Luxembourgish", "Maltese"
-	];
 	
-	function populateLanguages() {
-		languages.forEach(lang => {
+	async function populateLanguages() {
+		const supportedLanguages = await window.api.getSupportedLanguages();
+		const langNames = Object.values(supportedLanguages).sort((a, b) => a.localeCompare(b));
+		langNames.forEach(lang => {
 			sourceLangSelect.add(new Option(lang, lang));
 			targetLangSelect.add(new Option(lang, lang));
 		});
@@ -101,7 +97,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 	function populateLoginLanguageSelect() {
 		const currentLang = localStorage.getItem('app_lang') || 'en';
 		loginLangSelect.innerHTML = '';
-		for (const [code, name] of Object.entries(supportedLanguages)) {
+		for (const [code, name] of Object.entries(appLanguages)) {
 			const option = new Option(name, code);
 			if (code === currentLang) {
 				option.selected = true;
@@ -186,7 +182,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 		});
 	}
 	
-	// MODIFICATION START: Add update check logic
 	/**
 	 * Checks for application updates on startup and shows a modal if a new version is available.
 	 */
@@ -218,7 +213,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			console.error('Failed to check for updates:', error);
 		}
 	}
-	// MODIFICATION END
 	
 	function setButtonLoading(button, isLoading) {
 		const content = button.querySelector('.js-btn-content');
@@ -352,11 +346,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                     
                     <div class="card-actions justify-end items-center mt-4">
-                        <!-- MODIFICATION START: Add export button -->
                         <button class="btn btn-ghost btn-sm js-export-docx" data-i18n-title="outline.exportDocx">
                             <i class="bi bi-file-earmark-word text-lg"></i>
                         </button>
-                        <!-- MODIFICATION END -->
                         <button class="btn btn-ghost btn-sm js-meta-settings" data-i18n-title="common.edit">
                             <i class="bi bi-pencil-square text-lg"></i>
                         </button>
@@ -405,7 +397,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			novelCard.querySelector('.js-prose-settings').addEventListener('click', () => openProseSettingsModal(novel));
 			novelCard.querySelector('.js-meta-settings').addEventListener('click', () => openMetaSettingsModal(novel));
 			novelCard.querySelector('.js-open-outline').addEventListener('click', () => window.api.openOutline(novel.id));
-			// MODIFICATION: Add event listener for the new export button.
 			novelCard.querySelector('.js-export-docx').addEventListener('click', () => exportNovel(novel.id));
 			
 			novelList.appendChild(novelCard);
@@ -589,7 +580,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 	// --- Initializations ---
 	populateLanguages();
 	initAuth();
-	checkForUpdates(); // MODIFICATION: Run the update check on startup.
+	checkForUpdates();
 	
 	window.addEventListener('focus', () => {
 		// Only refresh if the user is logged in (auth container has a logout button).

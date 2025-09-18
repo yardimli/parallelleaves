@@ -6,13 +6,12 @@
  * as is standard practice for server environments.
  */
 module.exports = {
-	// MODIFICATION START: Add version and update check URL.
 	/**
 	 * The current version of the application.
 	 * Used by the splash screen to check for updates.
 	 * @type {string}
 	 */
-	APP_VERSION: '0.1.1',
+	APP_VERSION: '0.1.2',
 	
 	/**
 	 * URL for the server-side version check script (version-check.php).
@@ -20,7 +19,6 @@ module.exports = {
 	 * @type {string}
 	 */
 	VERSION_CHECK_URL: 'https://playground.computer/parallelleaves/version-check.php',
-	// MODIFICATION END
 	
 	/**
 	 * URL for the server-side AI proxy script (ai-proxy.php).

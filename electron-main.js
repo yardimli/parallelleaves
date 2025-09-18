@@ -4,7 +4,6 @@ const url = require('url');
 const fetch = require('node-fetch');
 const fs = require('fs');
 const mammoth = require('mammoth');
-// MODIFICATION: Add dependency for DOCX generation.
 const HTMLtoDOCX = require('html-to-docx');
 
 const config = require('./config.js');
@@ -12,6 +11,7 @@ const config = require('./config.js');
 const {initializeDatabase} = require('./src/database/database.js');
 const aiService = require('./src/ai/ai.js');
 const imageHandler = require('./src/utils/image-handler.js');
+const { supportedLanguages, mapLanguageToIsoCode } = require('./src/js/languages.js');
 
 let db;
 let mainWindow;
@@ -194,7 +194,7 @@ function createSplashWindow() {
 
 function createMainWindow() {
 	mainWindow = new BrowserWindow({
-		show: false, // MODIFICATION: Start hidden to prevent flash of unstyled content.
+		show: false,
 		width: 1400,
 		height: 1000,
 		icon: path.join(__dirname, 'public/assets/icon.png'),
@@ -253,8 +253,6 @@ function createMainWindow() {
 	
 	mainWindow.loadFile('public/index.html');
 	
-	// MODIFICATION: Show the main window as soon as it's ready to be displayed.
-	// The splash screen will remain on top due to its 'alwaysOnTop' property.
 	mainWindow.once('ready-to-show', () => {
 		mainWindow.show();
 	});
@@ -563,7 +561,6 @@ function setupIpcHandlers() {
 		}
 	});
 	
-	// MODIFICATION: This handler now only closes the splash window and focuses the main window.
 	ipcMain.on('splash:close', () => {
 		if (splashWindow && !splashWindow.isDestroyed()) {
 			splashWindow.close();
@@ -647,7 +644,6 @@ function setupIpcHandlers() {
 	// --- Novel Handlers ---
 	
 	ipcMain.handle('novels:getAllWithCovers', () => {
-		// This query remains the same as it was already correct.
 		const stmt = db.prepare(`
             SELECT
                 n.*,
@@ -662,7 +658,6 @@ function setupIpcHandlers() {
         `);
 		const novels = stmt.all();
 		
-		// This logic also remains as it calculates stats without relying on translation blocks.
 		for (const novel of novels) {
 			const chapters = db.prepare('SELECT source_content, target_content FROM chapters WHERE novel_id = ?').all(novel.id);
 			
@@ -712,10 +707,9 @@ function setupIpcHandlers() {
 		return novel;
 	});
 	
-	// MODIFICATION START: Add handler to get all data needed for DOCX export.
 	ipcMain.handle('novels:getForExport', (event, novelId) => {
 		try {
-			const novel = db.prepare('SELECT id, title, author FROM novels WHERE id = ?').get(novelId);
+			const novel = db.prepare('SELECT id, title, author, target_language FROM novels WHERE id = ?').get(novelId);
 			if (!novel) {
 				throw new Error('Novel not found.');
 			}
@@ -732,8 +726,7 @@ function setupIpcHandlers() {
 		}
 	});
 	
-	// MODIFICATION START: Add handler to convert HTML to DOCX and save the file.
-	ipcMain.handle('novels:exportToDocx', async (event, { title, htmlContent }) => {
+	ipcMain.handle('novels:exportToDocx', async (event, { title, htmlContent, targetLanguage, dialogStrings }) => {
 		const defaultFileName = `${title.replace(/[^a-z0-9]/gi, '_')} - ${new Date().toISOString().split('T')[0]}.docx`;
 		const { canceled, filePath } = await dialog.showSaveDialog({
 			title: 'Export Novel as DOCX',
@@ -746,20 +739,36 @@ function setupIpcHandlers() {
 		}
 		
 		try {
+			const langCode = mapLanguageToIsoCode(targetLanguage || 'English');
+			
 			const fileBuffer = await HTMLtoDOCX(htmlContent, null, {
 				table: { row: { cantSplit: true } },
 				footer: true,
 				pageNumber: true,
+				lang: langCode,
 			});
 			
 			fs.writeFileSync(filePath, fileBuffer);
+			
+			const { response } = await dialog.showMessageBox({
+				type: 'info',
+				title: dialogStrings.title,
+				message: dialogStrings.message,
+				detail: dialogStrings.detail.replace('{filePath}', filePath),
+				buttons: [dialogStrings.openFolder, dialogStrings.ok],
+				defaultId: 1,
+			});
+			
+			if (response === 0) {
+				shell.showItemInFolder(filePath);
+			}
+			
 			return { success: true, path: filePath };
 		} catch (error) {
 			console.error('Failed to convert HTML to DOCX:', error);
 			return { success: false, message: error.message };
 		}
 	});
-	// MODIFICATION END
 	
 	ipcMain.handle('novels:updatePromptSettings', (event, { novelId, promptType, settings }) => {
 		const allowedTypes = ['rephrase', 'translate'];
@@ -1532,6 +1541,10 @@ function setupIpcHandlers() {
 		}
 		
 		return entry;
+	});
+	
+	ipcMain.handle('languages:get-supported', () => {
+		return supportedLanguages;
 	});
 	
 }

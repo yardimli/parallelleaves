@@ -2,7 +2,7 @@
  * A centralized list of supported languages for dropdowns and other UI elements.
  * The key is the language code (e.g., 'en', 'fr') and the value is the display name.
  */
-export const supportedLanguages = {
+const supportedLanguages = {
 	'af': 'Afrikaans',
 	'bg': 'Bulgarian',
 	'ca': 'Catalan',
@@ -11,10 +11,8 @@ export const supportedLanguages = {
 	'da': 'Danish',
 	'de': 'German',
 	'el': 'Greek',
-	'en': 'English',
 	'en-GB': 'English (UK)',
 	'en-US': 'English (US)',
-	'es': 'Spanish',
 	'es-419': 'Spanish (Latin America)',
 	'es-AR': 'Spanish (Argentina)',
 	'es-ES': 'Spanish (Spain)',
@@ -54,3 +52,24 @@ export const supportedLanguages = {
 	'uk': 'Ukrainian',
 	'vi': 'Vietnamese',
 };
+
+/**
+ * @param {string} languageName - The full language name (e.g., "English", "Spanish").
+ * @returns {string} The corresponding ISO code (e.g., "en-US", "es-ES"). Defaults to "en-US".
+ */
+function mapLanguageToIsoCode(languageName) {
+	if (!languageName) return 'en-US';
+	const lowerCaseLangName = languageName.toLowerCase();
+	
+	// Find the key (ISO code) by matching the value (language name).
+	for (const [code, name] of Object.entries(supportedLanguages)) {
+		if (name.toLowerCase() === lowerCaseLangName) {
+			return code; // Return the ISO code.
+		}
+	}
+	
+	return 'en-US'; // Default to English (US) if no match is found.
+}
+
+module.exports = { supportedLanguages, mapLanguageToIsoCode };
+

@@ -179,7 +179,6 @@ async function handleToolbarAction(button) {
 		// This is for the 'rephrase' action in the chapter editor.
 		if (!activeContentWindow) return;
 		
-		// MODIFIED: Get selection info (including surrounding text) from the editor *before* opening the modal.
 		const editorInterface = createIframeEditorInterface(activeContentWindow);
 		const selectionInfo = await editorInterface.getSelectionInfo(action);
 		
@@ -192,7 +191,6 @@ async function handleToolbarAction(button) {
 		
 		const allCodexEntries = await window.api.getAllCodexEntriesForNovel(novelId);
 		
-		// MODIFIED: Build the context with the complete selection info for the preview.
 		const context = {
 			selectedText: selectionInfo.selectedText,
 			wordsBefore: selectionInfo.wordsBefore,

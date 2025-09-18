@@ -16,7 +16,7 @@
 			height: 100vh;
 			width: 100vw;
 			background-color: #191919; /* Match dark theme */
-			position: relative; /* MODIFICATION: Added for loader positioning */
+			position: relative;
 		}
 		.splash-image {
 			flex: 3;
@@ -43,16 +43,13 @@
 </head>
 <body class="overflow-hidden">
 <div class="splash-container">
-	<!-- MODIFICATION START: Added fake loader bar -->
 	<div class="absolute top-0 left-0 w-full h-1.5 bg-gray-700/50">
 		<div id="loader-bar" class="h-full bg-accent" style="width: 0%;"></div>
 	</div>
-	<!-- MODIFICATION END -->
 	<div class="splash-image"></div>
 	<div class="splash-info space-y-2">
 		<p id="user-greeting" class="text-lg font-semibold"></p>
 		<p id="version-info" class="text-sm text-base-content/70"></p>
-		<!-- MODIFICATION: Removed update status and website link -->
 	</div>
 </div>
 <script type="module" src="../src/js/splash.js"></script>

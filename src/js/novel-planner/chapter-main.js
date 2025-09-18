@@ -2,8 +2,6 @@ import { setupTopToolbar, setActiveContentWindow, updateToolbarState, createIfra
 import { setupPromptEditor, openPromptEditor } from '../prompt-editor.js';
 import { setupTypographySettings, getTypographySettings, generateTypographyStyleProperties } from './typography-settings.js';
 import { initI18n, t } from '../i18n.js';
-import { supportedLanguages as languageCodeToName } from '../languages.js';
-// MODIFICATION: Import HTML processing functions from the new utility file.
 import { processSourceContentForCodexLinks, processSourceContentForMarkers } from '../../utils/html-processing.js';
 
 const debounce = (func, delay) => {
@@ -19,9 +17,9 @@ let activeChapterId = null;
 let isScrollingProgrammatically = false;
 const chapterEditorViews = new Map();
 let currentSourceSelection = { text: '', hasSelection: false, range: null };
-let allCodexEntriesForNovel = []; // MODIFICATION: Module-scope variable for codex entries
+let allCodexEntriesForNovel = [];
 
-// NEW: Globals to manage view initialization and prevent race conditions.
+// Globals to manage view initialization and prevent race conditions.
 let totalIframes = 0;
 let iframesReadyCount = 0;
 let viewInitialized = false;
@@ -54,7 +52,6 @@ const debouncedContentSave = debounce(async ({ chapterId, field, value }) => {
 	}
 }, 1000); // 2 second delay
 
-// MODIFICATION: Debounced function to save scroll positions to localStorage.
 const debouncedSaveScroll = debounce((novelId, sourceEl, targetEl) => {
 	// Don't save scroll position until the view has been fully initialized and restored.
 	if (!novelId || !sourceEl || !targetEl || viewInitialized === false) return;
@@ -66,7 +63,6 @@ const debouncedSaveScroll = debounce((novelId, sourceEl, targetEl) => {
 }, 500);
 
 /**
- * MODIFICATION: Restores scroll positions for both columns from localStorage.
  * @param {string} novelId - The ID of the current novel.
  * @param {HTMLElement} sourceEl - The source column container element.
  * @param {HTMLElement} targetEl - The target column container element.
@@ -92,10 +88,6 @@ function restoreScrollPositions(novelId, sourceEl, targetEl) {
 	}
 	return false; // Indicate no saved positions were found or they were corrupt.
 }
-
-/**
- * MODIFICATION START: New helper functions for source editing.
- */
 
 /**
  * Re-renders a single chapter's source content with codex and marker links.
@@ -188,9 +180,6 @@ async function saveSourceChanges(chapterId) {
 		window.showAlert('Could not save source content changes.');
 	}
 }
-/**
- * MODIFICATION END
- */
 
 /**
  * function to synchronize translation markers on load.
@@ -252,7 +241,7 @@ async function renderManuscript(novelData, allCodexEntries) {
 	const sourceFragment = document.createDocumentFragment();
 	const targetFragment = document.createDocumentFragment();
 	
-	totalIframes = 0; // MODIFIED: Reset iframe count before rendering.
+	totalIframes = 0;
 	
 	for (const section of novelData.sections) {
 		// Create and append section headers to both columns
@@ -281,7 +270,6 @@ async function renderManuscript(novelData, allCodexEntries) {
 			const sourceCol = document.createElement('div');
 			sourceCol.className = 'js-source-column prose prose-sm dark:prose-invert max-w-none bg-base-200 p-4 rounded-lg';
 			
-			// MODIFICATION START: Add a header with Edit/Save/Cancel buttons.
 			const sourceHeader = document.createElement('div');
 			sourceHeader.className = 'flex justify-between items-center border-b pb-1 mb-2';
 			sourceHeader.innerHTML = `
@@ -293,7 +281,6 @@ async function renderManuscript(novelData, allCodexEntries) {
                 </div>
             `;
 			sourceCol.appendChild(sourceHeader);
-			// MODIFICATION END
 			
 			const sourceContentContainer = document.createElement('div');
 			sourceContentContainer.className = 'source-content-readonly';
@@ -326,7 +313,7 @@ async function renderManuscript(novelData, allCodexEntries) {
 			
 			synchronizeMarkers(chapter.id, sourceContentContainer, initialTargetContent);
 			
-			totalIframes++; // MODIFIED: Increment total iframe count.
+			totalIframes++;
 			
 			// Store iframe info and initialize it on load.
 			const viewInfo = {
@@ -334,7 +321,7 @@ async function renderManuscript(novelData, allCodexEntries) {
 				contentWindow: iframe.contentWindow,
 				isReady: false,
 				initialContent: initialTargetContent,
-				initialResizeComplete: false, // NEW: Add flag to track initial resize.
+				initialResizeComplete: false,
 			};
 			chapterEditorViews.set(chapter.id.toString(), viewInfo);
 			
@@ -518,8 +505,9 @@ async function setupSpellcheckDropdown() {
 		const disableOption = new Option('Disable Spellcheck', '');
 		dropdown.appendChild(disableOption);
 		
+		const supportedLanguages = await window.api.getSupportedLanguages();
 		availableLangs.sort().forEach(code => {
-			const name = languageCodeToName[code] || code;
+			const name = supportedLanguages[code] || code;
 			const option = new Option(name, code);
 			dropdown.appendChild(option);
 		});
@@ -549,7 +537,7 @@ async function setupSpellcheckDropdown() {
 }
 
 /**
- * NEW: Handles the final step of view initialization.
+ * Handles the final step of view initialization.
  * Decides whether to restore scroll position or scroll to a specific chapter.
  * @param {string} novelId - The ID of the current novel.
  * @param {object} novelData - The full novel data object.
@@ -618,7 +606,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			throw new Error('Failed to load project data from the database.');
 		}
 		
-		// MODIFICATION: Assign fetched codex entries to the module-scope variable.
 		allCodexEntriesForNovel = await window.api.getAllCodexEntriesForNovel(novelId);
 		
 		document.title = t('editor.translating', { title: novelData.title });
@@ -650,11 +637,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 			return;
 		}
 		
-		// MODIFICATION: Pass the codex entries to the rendering function.
 		await renderManuscript(novelData, allCodexEntriesForNovel);
 		populateNavDropdown(novelData);
 		
-		// MODIFIED: Add scroll listeners to save positions for both columns.
 		sourceContainer.addEventListener('scroll', () => {
 			debouncedSaveScroll(novelId, sourceContainer, targetContainer);
 		});
@@ -695,7 +680,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 		setupIntersectionObserver();
 		setupSpellcheckDropdown();
 		
-		// MODIFIED: If there are no chapters (and thus no iframes), initialize the view immediately.
 		if (totalIframes === 0) {
 			initializeView(novelId, novelData, initialChapterId);
 		}
@@ -740,7 +724,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			});
 		});
 		
-		// MODIFICATION: Updated click handler to manage source editing buttons.
 		sourceContainer.addEventListener('click', async (event) => {
 			const codexLink = event.target.closest('a.codex-link');
 			const markerLink = event.target.closest('a.translation-marker-link');
@@ -832,7 +815,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 					if (viewInfo) {
 						viewInfo.iframe.style.height = `${payload.height}px`;
 						
-						// MODIFIED: Logic to trigger view initialization after all iframes are ready.
 						if (!viewInfo.initialResizeComplete) {
 							viewInfo.initialResizeComplete = true;
 							iframesReadyCount++;

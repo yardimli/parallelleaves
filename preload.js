@@ -9,12 +9,10 @@ contextBridge.exposeInMainWorld('api', {
 	getSession: () => ipcRenderer.invoke('auth:get-session'),
 	openExternalRegister: () => ipcRenderer.send('auth:open-register-url'),
 	
-	// MODIFICATION START: Add splash screen and utility APIs.
 	splashGetInitData: () => ipcRenderer.invoke('splash:get-init-data'),
 	splashCheckForUpdates: () => ipcRenderer.invoke('splash:check-for-updates'),
 	splashClose: () => ipcRenderer.send('splash:close'),
 	openExternalUrl: (url) => ipcRenderer.send('app:open-external-url', url),
-	// MODIFICATION END
 	
 	// --- Dashboard/Novel Creation ---
 	getNovelsWithCovers: () => ipcRenderer.invoke('novels:getAllWithCovers'),
@@ -22,10 +20,8 @@ contextBridge.exposeInMainWorld('api', {
 	getFullManuscript: (novelId) => ipcRenderer.invoke('novels:getFullManuscript', novelId),
 	getAllNovelContent: (novelId) => ipcRenderer.invoke('novels:getAllContent', novelId),
 	
-	// MODIFICATION START: Add APIs for DOCX export.
 	getNovelForExport: (novelId) => ipcRenderer.invoke('novels:getForExport', novelId),
 	exportNovelToDocx: (data) => ipcRenderer.invoke('novels:exportToDocx', data),
-	// MODIFICATION END
 	
 	openEditor: (novelId) => ipcRenderer.send('novels:openEditor', novelId),
 	openOutline: (novelId) => ipcRenderer.send('novels:openOutline', novelId),
@@ -50,9 +46,7 @@ contextBridge.exposeInMainWorld('api', {
 	
 	// --- Editor Specific APIs ---
 	getTemplate: (templateName) => ipcRenderer.invoke('templates:get', templateName),
-	// MODIFICATION START: Expose the new function to get raw chapter content.
 	getRawChapterContent: (data) => ipcRenderer.invoke('chapters:getRawContent', data),
-	// MODIFICATION END
 	getTranslationContext: (data) => ipcRenderer.invoke('chapters:getTranslationContext', data),
 	
 	openChapterEditor: (data) => ipcRenderer.send('chapters:openEditor', data),
@@ -81,4 +75,7 @@ contextBridge.exposeInMainWorld('api', {
 	getAvailableSpellCheckerLanguages: () => ipcRenderer.invoke('session:getAvailableSpellCheckerLanguages'),
 	getCurrentSpellCheckerLanguage: () => ipcRenderer.invoke('session:getCurrentSpellCheckerLanguage'),
 	setSpellCheckerLanguage: (lang) => ipcRenderer.invoke('session:setSpellCheckerLanguage', lang),
+	
+	getSupportedLanguages: () => ipcRenderer.invoke('languages:get-supported'),
+	
 });

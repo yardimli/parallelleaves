@@ -154,7 +154,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 				if (result.success && result.models.length > 0) {
 					select.innerHTML = '';
 					
-					// MODIFICATION: New logic to handle grouped models
 					const modelGroups = result.models;
 					modelGroups.forEach(group => {
 						const optgroup = document.createElement('optgroup');
@@ -166,7 +165,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 						select.appendChild(optgroup);
 					});
 					
-					const defaultModel = 'openai/gpt-4o'; // MODIFICATION: Updated default model
+					const defaultModel = 'openai/gpt-4o';
 					const allModels = modelGroups.flatMap(g => g.models);
 					if (allModels.some(m => m.id === defaultModel)) {
 						select.value = defaultModel;

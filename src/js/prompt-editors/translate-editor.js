@@ -1,5 +1,4 @@
 import { t, applyTranslationsTo } from '../i18n.js';
-// MODIFICATION: Import the centralized htmlToPlainText function.
 import { htmlToPlainText } from '../../utils/html-processing.js';
 
 const defaultState = {

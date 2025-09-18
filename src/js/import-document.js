@@ -43,91 +43,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 	let currentMarkIndex = -1;
 	let targetedParagraph = null;
 	
-	const languages = [
-		"English",
-		"Norwegian",
-		"Turkish",
-		"Afrikaans",
-		"Albanian",
-		"Amharic",
-		"Arabic",
-		"Basque",
-		"Bengali",
-		"Bosnian",
-		"Bulgarian",
-		"Burmese",
-		"Catalan",
-		"Croatian",
-		"Czech",
-		"Danish",
-		"Dutch",
-		"Estonian",
-		"Finnish",
-		"French",
-		"Galician",
-		"German",
-		"Greek",
-		"Gujarati",
-		"Hausa",
-		"Hebrew",
-		"Hindi",
-		"Hungarian",
-		"Icelandic",
-		"Igbo",
-		"Indonesian",
-		"Irish",
-		"Italian",
-		"Japanese",
-		"Javanese",
-		"Kannada",
-		"Khmer",
-		"Korean",
-		"Kurdish",
-		"Lao",
-		"Latvian",
-		"Lithuanian",
-		"Luxembourgish",
-		"Macedonian",
-		"Malayalam",
-		"Maltese",
-		"Mandarin Chinese",
-		"Marathi",
-		"Mongolian",
-		"Nepali",
-		"Oriya",
-		"Pashto",
-		"Persian",
-		"Polish",
-		"Portuguese",
-		"Romanian",
-		"Russian",
-		"Serbian",
-		"Sinhala",
-		"Slovak",
-		"Slovenian",
-		"Spanish",
-		"Swahili",
-		"Swedish",
-		"Tajik",
-		"Tamil",
-		"Telugu",
-		"Thai",
-		"Ukrainian",
-		"Urdu",
-		"Uzbek",
-		"Vietnamese",
-		"Welsh",
-		"Xhosa",
-		"Yoruba",
-		"Zulu"
-	];
 	
-	function populateLanguages() {
-		languages.forEach(lang => {
+	async function populateLanguages() {
+		const supportedLanguages = await window.api.getSupportedLanguages();
+		const langNames = Object.values(supportedLanguages).sort((a, b) => a.localeCompare(b));
+		langNames.forEach(lang => {
 			sourceLangSelect.add(new Option(lang, lang));
 			targetLangSelect.add(new Option(lang, lang));
 		});
-		sourceLangSelect.value = 'Norwegian';
+
+		sourceLangSelect.value = 'Norwegian (Bokmål)';
 		targetLangSelect.value = 'Turkish';
 	}
 	

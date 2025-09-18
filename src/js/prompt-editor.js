@@ -2,7 +2,6 @@ import { init as initRephraseEditor, buildPromptJson as buildRephraseJson } from
 import { init as initTranslateEditor, buildPromptJson as buildTranslateJson } from './prompt-editors/translate-editor.js';
 import { updateToolbarState as updateChapterToolbarState } from './novel-planner/toolbar.js';
 import { t } from './i18n.js';
-// MODIFICATION: Import HTML processing functions from the new utility file.
 import { htmlToPlainText, processSourceContentForCodexLinks, processSourceContentForMarkers } from '../utils/html-processing.js';
 
 const editors = {
@@ -212,8 +211,6 @@ async function startAiAction (params) {
 			let newContentText = result.data.choices[0].message.content ?? 'No content generated.';
 			newContentText = newContentText.trim();
 			
-			// MODIFICATION START: Smartly format the replacement HTML.
-			// This prevents inline selections (e.g., a sentence in a paragraph) from being replaced by a new block-level paragraph.
 			let newContentHtml;
 			const textWithMarker = marker ? marker + ' ' + newContentText : newContentText;
 			
@@ -233,7 +230,6 @@ async function startAiAction (params) {
 				// For block-level replacement, wrap in <p> tags and handle paragraph breaks.
 				newContentHtml = '<p>' + textWithMarker.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>') + '</p>';
 			}
-			// MODIFICATION END
 			
 			console.log('AI Action Result:', newContentText, newContentHtml);
 			
@@ -307,7 +303,6 @@ async function populateModelDropdown (initialState = null) {
 		
 		select.innerHTML = '';
 		
-		// MODIFICATION: New logic to handle grouped models using <optgroup>
 		modelGroups.forEach(group => {
 			const optgroup = document.createElement('optgroup');
 			optgroup.label = group.group;
@@ -398,7 +393,6 @@ async function handleModalApply () {
 	originalFragmentJson = selectionInfo.originalFragmentJson;
 	
 	const wordCount = selectionInfo.selectedText ? selectionInfo.selectedText.trim().split(/\s+/).filter(Boolean).length : 0;
-	// MODIFIED: Add wordsBefore and wordsAfter from selectionInfo to the context for the prompt builder.
 	const promptContext = {
 		...currentContext,
 		selectedText: selectionInfo.selectedText,
@@ -447,7 +441,6 @@ async function handleModalApply () {
 			const markerNode = document.createTextNode(marker + ' ');
 			currentContext.sourceSelectionRange.insertNode(markerNode);
 			
-			// MODIFICATION START: Convert source content to plain text, save, and re-render.
 			const plainTextContent = htmlToPlainText(sourceContainer.innerHTML);
 			const paragraphs = plainTextContent.split(/\n+/).filter(p => p.trim() !== '');
 			
@@ -473,7 +466,6 @@ async function handleModalApply () {
 			processedHtml = processSourceContentForMarkers(processedHtml);
 			
 			sourceContainer.innerHTML = processedHtml;
-			// MODIFICATION END
 			
 		} catch (e) {
 			console.error("Could not insert marker into source text:", e);

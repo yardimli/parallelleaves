@@ -25,24 +25,28 @@ export async function exportNovel(novelId) {
 			section.chapters.forEach(chapter => {
 				// Add Chapter breaks
 				htmlContent += `<h3>${chapter.title}</h3>`;
-				// Add the chapter's target content (which is already HTML)
-				htmlContent += chapter.target_content || '<p><em>(No content)</em></p>';
+				
+				const content = chapter.target_content || '<p><em>(No content)</em></p>';
+				const cleanedContent = content.replace(/\[\[#\d+\]\]/g, '');
+				htmlContent += cleanedContent;
 			});
 		});
 		
-		// 3. Send the constructed HTML to the main process for conversion and saving.
+		// 3. Send the constructed HTML, target language, and localized dialog strings to the main process.
 		const exportResult = await window.api.exportNovelToDocx({
 			title: novel.title,
 			htmlContent: htmlContent,
+			targetLanguage: novel.target_language,
+			dialogStrings: {
+				title: t('outline.exportDialogTitle'),
+				message: t('outline.exportDialogMessage', { title: novel.title }),
+				detail: t('outline.exportDialogDetail'), // {filePath} is a placeholder for the main process
+				openFolder: t('outline.exportDialogOpenFolder'),
+				ok: t('outline.exportDialogOK'),
+			},
 		});
 		
-		if (exportResult.success) {
-			window.showAlert(
-				t('outline.exportSuccessMessage', { title: novel.title }),
-				t('outline.exportSuccessTitle')
-			);
-		} else {
-			// Don't show an error if the user just cancelled the dialog.
+		if (!exportResult.success) {
 			if (exportResult.message !== 'Export cancelled by user.') {
 				throw new Error(exportResult.message);
 			}
