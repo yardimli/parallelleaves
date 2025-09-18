@@ -169,7 +169,6 @@ async function generateAndSaveCover(novelId, title, token) {
 
 function createSplashWindow() {
 	splashWindow = new BrowserWindow({
-		// MODIFICATION: Set width and height to be equal for a square window.
 		width: 500,
 		height: 500,
 		transparent: true,
@@ -193,7 +192,7 @@ function createSplashWindow() {
 
 function createMainWindow() {
 	mainWindow = new BrowserWindow({
-		show: false,
+		show: false, // MODIFICATION: Start hidden to prevent flash of unstyled content.
 		width: 1400,
 		height: 1000,
 		icon: path.join(__dirname, 'public/assets/icon.png'),
@@ -252,9 +251,10 @@ function createMainWindow() {
 	
 	mainWindow.loadFile('public/index.html');
 	
+	// MODIFICATION: Show the main window as soon as it's ready to be displayed.
+	// The splash screen will remain on top due to its 'alwaysOnTop' property.
 	mainWindow.once('ready-to-show', () => {
-		// The main window is ready in the background.
-		// The splash screen's logic will trigger the 'splash:close' IPC event to show it.
+		mainWindow.show();
 	});
 	
 	mainWindow.on('closed', () => {
@@ -561,12 +561,12 @@ function setupIpcHandlers() {
 		}
 	});
 	
+	// MODIFICATION: This handler now only closes the splash window and focuses the main window.
 	ipcMain.on('splash:close', () => {
 		if (splashWindow && !splashWindow.isDestroyed()) {
 			splashWindow.close();
 		}
 		if (mainWindow && !mainWindow.isDestroyed()) {
-			mainWindow.show();
 			mainWindow.focus();
 		}
 	});

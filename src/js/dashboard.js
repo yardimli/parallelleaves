@@ -1,5 +1,26 @@
 import { initI18n, t, applyTranslationsTo, setLanguage, supportedLanguages } from './i18n.js';
 
+// MODIFICATION START: Add version comparison function
+/**
+ * Compares two semantic version strings (e.g., '1.10.2' vs '1.2.0').
+ * @param {string} v1 The first version string.
+ * @param {string} v2 The second version string.
+ * @returns {number} 1 if v1 > v2, -1 if v1 < v2, 0 if v1 === v2.
+ */
+function compareVersions(v1, v2) {
+	const parts1 = v1.split('.').map(Number);
+	const parts2 = v2.split('.').map(Number);
+	const len = Math.max(parts1.length, parts2.length);
+	for (let i = 0; i < len; i++) {
+		const p1 = parts1[i] || 0;
+		const p2 = parts2[i] || 0;
+		if (p1 > p2) return 1;
+		if (p1 < p2) return -1;
+	}
+	return 0;
+}
+// MODIFICATION END
+
 document.addEventListener('DOMContentLoaded', async () => {
 	await initI18n(true);
 	
@@ -162,6 +183,40 @@ document.addEventListener('DOMContentLoaded', async () => {
 			window.api.openExternalRegister();
 		});
 	}
+	
+	// MODIFICATION START: Add update check logic
+	/**
+	 * Checks for application updates on startup and shows a modal if a new version is available.
+	 */
+	async function checkForUpdates() {
+		try {
+			// Note: splashGetInitData is a generic init data getter.
+			const { version: currentVersion, websiteUrl } = await window.api.splashGetInitData();
+			const latestVersion = await window.api.splashCheckForUpdates();
+			
+			if (latestVersion && compareVersions(latestVersion, currentVersion) > 0) {
+				const modal = document.getElementById('update-modal');
+				const content = document.getElementById('update-modal-content');
+				const link = document.getElementById('update-modal-link');
+				
+				if (modal && content && link) {
+					// Populate the modal with details about the new version.
+					content.textContent = t('dashboard.update.description', { latestVersion, currentVersion });
+					
+					// Set up the link to open the project website.
+					link.addEventListener('click', (e) => {
+						e.preventDefault();
+						window.api.openExternalUrl(websiteUrl);
+					});
+					
+					modal.showModal();
+				}
+			}
+		} catch (error) {
+			console.error('Failed to check for updates:', error);
+		}
+	}
+	// MODIFICATION END
 	
 	function setButtonLoading(button, isLoading) {
 		const content = button.querySelector('.js-btn-content');
@@ -525,6 +580,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 	// --- Initializations ---
 	populateLanguages();
 	initAuth();
+	checkForUpdates(); // MODIFICATION: Run the update check on startup.
 	
 	window.addEventListener('focus', () => {
 		// Only refresh if the user is logged in (auth container has a logout button).

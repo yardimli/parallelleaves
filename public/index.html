@@ -164,6 +164,21 @@
 	</div>
 </dialog>
 
+<!-- MODIFICATION START: Add update notification modal -->
+<dialog id="update-modal" class="modal">
+	<div class="modal-box w-11/12 max-w-md">
+		<h3 id="update-modal-title" class="font-bold text-lg" data-i18n="dashboard.update.title">Update Available</h3>
+		<p id="update-modal-content" class="py-4"></p>
+		<div class="modal-action">
+			<form method="dialog" class="flex gap-3 w-full">
+				<button class="btn flex-1" data-i18n="common.close">Later</button>
+				<a id="update-modal-link" href="#" class="btn btn-primary flex-1" data-i18n="dashboard.update.updateNow">Update Now</a>
+			</form>
+		</div>
+	</div>
+</dialog>
+<!-- MODIFICATION END -->
+
 <dialog id="login-modal" class="modal">
 	<div class="modal-box w-11/12 max-w-sm">
 		<h3 class="font-bold text-lg" data-i18n="dashboard.login.title">Sign In</h3>

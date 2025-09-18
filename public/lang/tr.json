@@ -10,6 +10,7 @@
     "information": "Bilgi",
     "changeTheme": "Tema Değiştir",
     "changeLanguage": "Dil Değiştir",
+    "refresh": "Yenile",
     "typography": "TİPOGRAFİ",
     "fontFamily": "Yazı Tipi",
     "serif": "Serif",
@@ -92,6 +93,11 @@
       "chapters": "Bölümler",
       "created": "Oluşturuldu:",
       "updated": "Güncellendi:"
+    },
+    "update": {
+      "title": "Güncelleme Mevcut",
+      "description": "Yeni bir sürüm ({latestVersion}) mevcut! Şu anki sürümünüz {currentVersion}.",
+      "updateNow": "Şimdi Güncelle"
     }
   },
   "import": {
@@ -131,7 +137,7 @@
       "allCapsLabel": "Tamamı Büyük Harf Satırlar",
       "allCapsDesc": "Tamamı büyük harflerle yazılmış kısa satırları (50 karakterden az) algılar.",
       "runDetection": "Algılamayı Çalıştır",
-      "results" : "{count} bölüm ve perde algılandı."
+      "results": "{count} bölüm ve perde algılandı."
     }
   },
   "outline": {

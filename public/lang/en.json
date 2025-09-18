@@ -10,6 +10,7 @@
     "information": "Information",
     "changeTheme": "Change Theme",
     "changeLanguage": "Change Language",
+    "refresh": "Refresh",
     "typography": "TYPOGRAPHY",
     "fontFamily": "Font family",
     "serif": "Serif",
@@ -92,6 +93,11 @@
       "chapters": "Chapters",
       "created": "Created:",
       "updated": "Updated:"
+    },
+    "update": {
+      "title": "Update Available",
+      "description": "A new version ({latestVersion}) is available! You are currently on version {currentVersion}.",
+      "updateNow": "Update Now"
     }
   },
   "import": {
@@ -131,7 +137,7 @@
       "allCapsLabel": "All-Caps Lines",
       "allCapsDesc": "Detects short lines (under 50 chars) written entirely in uppercase.",
       "runDetection": "Run Detection",
-      "results": "{count} chapters and acts detected.",
+      "results": "{count} chapters and acts detected."
     }
   },
   "outline": {
