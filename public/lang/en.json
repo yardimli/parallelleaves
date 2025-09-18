@@ -165,7 +165,12 @@
     "errorProjectMissing": "Error: Project ID is missing.",
     "errorLoad": "Error: Could not load outline data. {message}",
     "chapterLabel_one": "chapter",
-    "chapterLabel_other": "chapters"
+    "chapterLabel_other": "chapters",
+    "exportDocx": "Export to DOCX",
+    "exportSuccessTitle": "Export Successful",
+    "exportSuccessMessage": "Your novel '{title}' has been successfully exported.",
+    "exportErrorTitle": "Export Failed",
+    "exportErrorMessage": "There was an error exporting your novel: {message}"
   },
   "editor": {
     "translating": "Translating: {title}",

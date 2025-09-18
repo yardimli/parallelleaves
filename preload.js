@@ -22,6 +22,11 @@ contextBridge.exposeInMainWorld('api', {
 	getFullManuscript: (novelId) => ipcRenderer.invoke('novels:getFullManuscript', novelId),
 	getAllNovelContent: (novelId) => ipcRenderer.invoke('novels:getAllContent', novelId),
 	
+	// MODIFICATION START: Add APIs for DOCX export.
+	getNovelForExport: (novelId) => ipcRenderer.invoke('novels:getForExport', novelId),
+	exportNovelToDocx: (data) => ipcRenderer.invoke('novels:exportToDocx', data),
+	// MODIFICATION END
+	
 	openEditor: (novelId) => ipcRenderer.send('novels:openEditor', novelId),
 	openOutline: (novelId) => ipcRenderer.send('novels:openOutline', novelId),
 	getOutlineData: (novelId) => ipcRenderer.invoke('novels:getOutlineData', novelId),

@@ -4,6 +4,8 @@ const url = require('url');
 const fetch = require('node-fetch');
 const fs = require('fs');
 const mammoth = require('mammoth');
+// MODIFICATION: Add dependency for DOCX generation.
+const HTMLtoDOCX = require('html-to-docx');
 
 const config = require('./config.js');
 
@@ -709,6 +711,55 @@ function setupIpcHandlers() {
 		});
 		return novel;
 	});
+	
+	// MODIFICATION START: Add handler to get all data needed for DOCX export.
+	ipcMain.handle('novels:getForExport', (event, novelId) => {
+		try {
+			const novel = db.prepare('SELECT id, title, author FROM novels WHERE id = ?').get(novelId);
+			if (!novel) {
+				throw new Error('Novel not found.');
+			}
+			
+			novel.sections = db.prepare('SELECT id, title FROM sections WHERE novel_id = ? ORDER BY section_order').all(novelId);
+			for (const section of novel.sections) {
+				section.chapters = db.prepare('SELECT id, title, target_content FROM chapters WHERE section_id = ? ORDER BY chapter_order').all(section.id);
+			}
+			
+			return { success: true, data: novel };
+		} catch (error) {
+			console.error(`Failed to get novel for export (ID: ${novelId}):`, error);
+			return { success: false, message: error.message };
+		}
+	});
+	
+	// MODIFICATION START: Add handler to convert HTML to DOCX and save the file.
+	ipcMain.handle('novels:exportToDocx', async (event, { title, htmlContent }) => {
+		const defaultFileName = `${title.replace(/[^a-z0-9]/gi, '_')} - ${new Date().toISOString().split('T')[0]}.docx`;
+		const { canceled, filePath } = await dialog.showSaveDialog({
+			title: 'Export Novel as DOCX',
+			defaultPath: defaultFileName,
+			filters: [{ name: 'Word Document', extensions: ['docx'] }]
+		});
+		
+		if (canceled || !filePath) {
+			return { success: false, message: 'Export cancelled by user.' };
+		}
+		
+		try {
+			const fileBuffer = await HTMLtoDOCX(htmlContent, null, {
+				table: { row: { cantSplit: true } },
+				footer: true,
+				pageNumber: true,
+			});
+			
+			fs.writeFileSync(filePath, fileBuffer);
+			return { success: true, path: filePath };
+		} catch (error) {
+			console.error('Failed to convert HTML to DOCX:', error);
+			return { success: false, message: error.message };
+		}
+	});
+	// MODIFICATION END
 	
 	ipcMain.handle('novels:updatePromptSettings', (event, { novelId, promptType, settings }) => {
 		const allowedTypes = ['rephrase', 'translate'];

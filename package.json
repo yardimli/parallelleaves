@@ -37,6 +37,7 @@
   "dependencies": {
     "better-sqlite3": "^12.2.0",
     "bootstrap-icons": "^1.13.1",
+    "html-to-docx": "^1.8.0",
     "mammoth": "^1.10.0",
     "node-fetch": "^2.7.0",
     "prosemirror-commands": "^1.7.1",

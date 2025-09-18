@@ -1,4 +1,6 @@
 import { initI18n, t, applyTranslationsTo, setLanguage, supportedLanguages } from './i18n.js';
+// MODIFICATION: Import the new export function.
+import { exportNovel } from './exporter.js';
 
 // MODIFICATION START: Add version comparison function
 /**
@@ -350,6 +352,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                     
                     <div class="card-actions justify-end items-center mt-4">
+                        <!-- MODIFICATION START: Add export button -->
+                        <button class="btn btn-ghost btn-sm js-export-docx" data-i18n-title="outline.exportDocx">
+                            <i class="bi bi-file-earmark-word text-lg"></i>
+                        </button>
+                        <!-- MODIFICATION END -->
                         <button class="btn btn-ghost btn-sm js-meta-settings" data-i18n-title="common.edit">
                             <i class="bi bi-pencil-square text-lg"></i>
                         </button>
@@ -398,6 +405,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 			novelCard.querySelector('.js-prose-settings').addEventListener('click', () => openProseSettingsModal(novel));
 			novelCard.querySelector('.js-meta-settings').addEventListener('click', () => openMetaSettingsModal(novel));
 			novelCard.querySelector('.js-open-outline').addEventListener('click', () => window.api.openOutline(novel.id));
+			// MODIFICATION: Add event listener for the new export button.
+			novelCard.querySelector('.js-export-docx').addEventListener('click', () => exportNovel(novel.id));
 			
 			novelList.appendChild(novelCard);
 		});

@@ -165,7 +165,12 @@
     "errorProjectMissing": "Hata: Proje kimliği bulunamadı.",
     "errorLoad": "Hata: Özet verileri yüklenemedi. {message}",
     "chapterLabel_one": "bölüm",
-    "chapterLabel_other": "bölüm"
+    "chapterLabel_other": "bölüm",
+    "exportDocx": "DOCX Olarak Dışa Aktar",
+    "exportSuccessTitle": "Dışa Aktarma Başarılı",
+    "exportSuccessMessage": "'{title}' adlı romanınız başarıyla dışa aktarıldı.",
+    "exportErrorTitle": "Dışa Aktarma Başarısız",
+    "exportErrorMessage": "Romanınızı dışa aktarırken bir hata oluştu: {message}"
   },
   "editor": {
     "translating": "Çeviri: {title}",
