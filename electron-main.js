@@ -1590,7 +1590,16 @@ function setupIpcHandlers() {
 	
 	ipcMain.handle('novels:restoreFromBackup', (event, backupData) => {
 		const restoreTransaction = db.transaction(() => {
-			const { novel, sections, chapters, codex_categories, codex_entries, image } = backupData;
+			// MODIFICATION: Default to empty arrays if properties are missing from the backup file.
+			// This prevents "cannot read properties of undefined (reading 'length')" errors.
+			const {
+				novel,
+				sections = [],
+				chapters = [],
+				codex_categories = [],
+				codex_entries = [],
+				image
+			} = backupData;
 			
 			// 1. Insert the novel, getting the new ID.
 			const newNovelStmt = db.prepare(`
@@ -1618,13 +1627,27 @@ function setupIpcHandlers() {
 			const sectionIdMap = new Map();
 			const categoryIdMap = new Map();
 			
+			// MODIFICATION: Prepare statements outside the loops for efficiency.
+			const newSectionStmt = db.prepare(`
+                INSERT INTO sections (novel_id, title, description, section_order)
+                VALUES (?, ?, ?, ?)
+            `);
+			const newChapterStmt = db.prepare(`
+                INSERT INTO chapters (novel_id, section_id, title, source_content, target_content, status, chapter_order)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            `);
+			const newCategoryStmt = db.prepare(`
+                INSERT INTO codex_categories (novel_id, name, description)
+                VALUES (?, ?, ?)
+            `);
+			const newEntryStmt = db.prepare(`
+                INSERT INTO codex_entries (novel_id, codex_category_id, title, content, target_content, document_phrases)
+                VALUES (?, ?, ?, ?, ?, ?)
+            `);
+			
 			// 2. Insert sections
 			for (const section of sections) {
 				const oldSectionId = section.id;
-				const newSectionStmt = db.prepare(`
-                    INSERT INTO sections (novel_id, title, description, section_order)
-                    VALUES (?, ?, ?, ?)
-                `);
 				const newSectionResult = newSectionStmt.run(newNovelId, section.title, section.description, section.section_order);
 				sectionIdMap.set(oldSectionId, newSectionResult.lastInsertRowid);
 			}
@@ -1633,10 +1656,6 @@ function setupIpcHandlers() {
 			for (const chapter of chapters) {
 				const newSectionId = sectionIdMap.get(chapter.section_id);
 				if (newSectionId) {
-					const newChapterStmt = db.prepare(`
-                        INSERT INTO chapters (novel_id, section_id, title, source_content, target_content, status, chapter_order)
-                        VALUES (?, ?, ?, ?, ?, ?, ?)
-                    `);
 					newChapterStmt.run(newNovelId, newSectionId, chapter.title, chapter.source_content, chapter.target_content, chapter.status, chapter.chapter_order);
 				}
 			}
@@ -1644,10 +1663,6 @@ function setupIpcHandlers() {
 			// 4. Insert codex categories
 			for (const category of codex_categories) {
 				const oldCategoryId = category.id;
-				const newCategoryStmt = db.prepare(`
-                    INSERT INTO codex_categories (novel_id, name, description)
-                    VALUES (?, ?, ?)
-                `);
 				const newCategoryResult = newCategoryStmt.run(newNovelId, category.name, category.description);
 				categoryIdMap.set(oldCategoryId, newCategoryResult.lastInsertRowid);
 			}
@@ -1656,10 +1671,6 @@ function setupIpcHandlers() {
 			for (const entry of codex_entries) {
 				const newCategoryId = categoryIdMap.get(entry.codex_category_id);
 				if (newCategoryId) {
-					const newEntryStmt = db.prepare(`
-                        INSERT INTO codex_entries (novel_id, codex_category_id, title, content, target_content, document_phrases)
-                        VALUES (?, ?, ?, ?, ?, ?)
-                    `);
 					newEntryStmt.run(newNovelId, newCategoryId, entry.title, entry.content, entry.target_content, entry.document_phrases);
 				}
 			}
