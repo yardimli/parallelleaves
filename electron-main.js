@@ -1748,6 +1748,15 @@ function setupIpcHandlers() {
 
 // --- App Lifecycle Events ---
 app.on('ready', () => {
+	// MODIFICATION START: Set the application icon for the macOS Dock.
+	// This is necessary for the icon to appear correctly during development.
+	// For a packaged application, the icon is typically set in the build configuration.
+	if (process.platform === 'darwin') { // 'darwin' is the platform name for macOS.
+		const iconPath = path.join(__dirname, 'public/assets/icon.png');
+		app.dock.setIcon(iconPath);
+	}
+	// MODIFICATION END
+	
 	db = initializeDatabase();
 	loadSession();
 	setupIpcHandlers();
