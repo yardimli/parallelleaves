@@ -1,13 +1,12 @@
 const LANG_KEY = 'app_lang';
 let translations = {};
 
-// MODIFIED: Added Traditional Chinese as a UI language
 export const appLanguages = {
 	en: 'English',
 	tr: 'Türkçe',
 	tlh: 'Klingon',
 	no: 'Norsk',
-	'zh-TW': '繁體中文' // NEW: Add Traditional Chinese
+	'zh-TW': '繁體中文'
 };
 
 /**
@@ -185,12 +184,11 @@ export async function initI18n(isDashboard = false) {
 					modal.close();
 					resolve('no');
 				};
-				// MODIFIED: Added event handler for the new Traditional Chinese button
-				document.getElementById('select-lang-zh-TW').onclick = async () => { // NEW
-					await setAndApply('zh-TW'); // NEW
-					modal.close(); // NEW
-					resolve('zh-TW'); // NEW
-				}; // NEW
+				document.getElementById('select-lang-zh-TW').onclick = async () => {
+					await setAndApply('zh-TW');
+					modal.close();
+					resolve('zh-TW');
+				};
 			} else {
 				setAndApply('en').then(() => resolve('en'));
 			}

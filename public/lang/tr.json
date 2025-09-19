@@ -227,6 +227,18 @@
     "noChaptersInSection": "Bu kısımda henüz hiç bölüm yok.",
     "chapterTitlePlaceholder": "Bölüm Başlığı",
     "search": "Ara (Ctrl+F)",
+    "openChat": "Yapay Zeka Sohbetini Aç",
+    "chat": {
+      "title": "Yapay Zeka Sohbeti",
+      "selectModel": "Model Seçin",
+      "loadingModels": "Modeller yükleniyor...",
+      "sendMessagePlaceholder": "Mesajınızı buraya yazın...",
+      "send": "Gönder",
+      "copy": "Kopyala",
+      "copied": "Kopyalandı!",
+      "errorLoadModels": "Modeller yüklenirken hata oluştu.",
+      "errorSendMessage": "Mesaj gönderilirken hata oluştu: {message}"
+    },
     "searchBar": {
       "placeholder": "Belgede bul...",
       "source": "Kaynak",

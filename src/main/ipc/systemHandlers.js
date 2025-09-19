@@ -12,7 +12,7 @@ const { getTemplate } = require('../utils.js');
  * @param {object} sessionManager - The session manager instance.
  * @param {object} windowManager - The window manager instance.
  */
-function registerSystemHandlers(db, sessionManager, windowManager) { // MODIFIED: Accept windowManager
+function registerSystemHandlers(db, sessionManager, windowManager) {
 	ipcMain.handle('splash:get-init-data', () => {
 		return {
 			version: config.APP_VERSION,
@@ -46,8 +46,6 @@ function registerSystemHandlers(db, sessionManager, windowManager) { // MODIFIED
 		}
 	});
 	
-	// NEW: This handler is triggered by the splash screen after its animation.
-	// It tells the window manager to close the splash and show the main window.
 	ipcMain.on('splash:finished', () => {
 		if (windowManager && typeof windowManager.closeSplashAndShowMain === 'function') {
 			windowManager.closeSplashAndShowMain();
@@ -57,6 +55,12 @@ function registerSystemHandlers(db, sessionManager, windowManager) { // MODIFIED
 	ipcMain.on('app:open-external-url', (event, url) => {
 		if (url) {
 			shell.openExternal(url);
+		}
+	});
+	
+	ipcMain.on('app:openChatWindow', () => {
+		if (windowManager && typeof windowManager.createChatWindow === 'function') {
+			windowManager.createChatWindow();
 		}
 	});
 	

@@ -11,7 +11,6 @@
 </head>
 <body class="h-full bg-base-100 text-base-content overflow-hidden flex flex-col">
 <!-- Header -->
-<!-- MODIFIED: The header is now a single row containing the title and all action buttons. -->
 <div class="flex-shrink-0 h-12 bg-base-200 flex items-center px-4 z-10 border-b border-base-300 gap-4">
 	<h1 class="text-xl font-bold truncate">
 		<span id="js-novel-title" data-i18n="outline.loading">Loading...</span>
@@ -19,7 +18,6 @@
 		<span data-i18n="outline.codex">Codex</span>
 	</h1>
 	<div class="flex-grow"></div>
-	<!-- NEW: Codex action buttons are moved into the main header. -->
 	<div class="flex items-center gap-2">
 		<button id="js-autogen-codex" class="btn btn-sm btn-ghost">
 			<i class="bi bi-magic"></i> <span data-i18n="outline.autoGenerate">Auto-generate</span>
@@ -47,7 +45,6 @@
 
 <!-- Main Content -->
 <div class="flex-grow flex flex-col min-h-0">
-	<!-- MODIFIED: The wrapper div is removed, leaving only the codex container. -->
 	<div id="js-codex-container" class="flex-grow overflow-y-auto pt-2 px-4 pb-4 space-y-6">
 		<!-- Codex content will be rendered here by JS -->
 	</div>

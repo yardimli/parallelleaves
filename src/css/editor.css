@@ -53,13 +53,10 @@ i[class^="bi-"], i[class*=" bi-"] {
     color: #7f1d1d;
 }
 
-/* MODIFIED: Changed selectors from 'mark.search-highlight' to '.search-highlight' and removed redundant oklch line. */
-/* This ensures the style applies to the <span> tags created by ProseMirror decorations. */
 .search-highlight {
     @apply bg-primary/30 text-primary-content rounded px-0.5;
 }
 
-/* MODIFIED: Changed selector from 'mark.search-highlight-active' to '.search-highlight-active' */
 .search-highlight-active {
     @apply bg-accent text-accent-content;
 }

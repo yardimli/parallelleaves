@@ -28,9 +28,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 		}, 10);
 	}
 	
-	// MODIFIED: Instead of just closing itself, the splash screen now signals
-	// the main process that it's finished, allowing the main process to
-	// coordinate showing the main window.
 	setTimeout(() => {
 		window.api.splashFinished();
 	}, 1000);

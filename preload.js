@@ -3,6 +3,7 @@ const {contextBridge, ipcRenderer} = require('electron');
 contextBridge.exposeInMainWorld('api', {
 	// --- App Level ---
 	openImportWindow: () => ipcRenderer.send('app:open-import-window'),
+	openChatWindow: () => ipcRenderer.send('app:openChatWindow'),
 	getLangFile: (lang) => ipcRenderer.invoke('i18n:get-lang-file', lang),
 	login: (credentials) => ipcRenderer.invoke('auth:login', credentials),
 	logout: () => ipcRenderer.invoke('auth:logout'),
@@ -12,7 +13,7 @@ contextBridge.exposeInMainWorld('api', {
 	splashGetInitData: () => ipcRenderer.invoke('splash:get-init-data'),
 	splashCheckForUpdates: () => ipcRenderer.invoke('splash:check-for-updates'),
 	splashClose: () => ipcRenderer.send('splash:close'),
-	splashFinished: () => ipcRenderer.send('splash:finished'), // MODIFIED: Expose new splash finished event
+	splashFinished: () => ipcRenderer.send('splash:finished'),
 	openExternalUrl: (url) => ipcRenderer.send('app:open-external-url', url),
 	
 	// --- Dashboard/Novel Creation ---
@@ -68,6 +69,7 @@ contextBridge.exposeInMainWorld('api', {
 	
 	//LLM
 	processLLMText: (data) => ipcRenderer.invoke('llm:process-text', data),
+	chatSendMessage: (data) => ipcRenderer.invoke('chat:send-message', data),
 	getModels: () => ipcRenderer.invoke('ai:getModels'),
 	generateCoverPrompt: (data) => ipcRenderer.invoke('ai:generate-cover-prompt', data),
 	generateCover: (data) => ipcRenderer.invoke('ai:generate-cover', data),

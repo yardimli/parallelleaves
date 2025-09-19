@@ -425,7 +425,6 @@ function navigateToSearchMatch(matchIndex, isActive) {
 		const scrollTr = editorView.state.tr.scrollIntoView();
 		editorView.dispatch(scrollTr);
 		
-		// MODIFIED: Calculate the coordinates of the match *within the iframe* and send them to the parent.
 		// The parent will then use these coordinates to scroll its own container.
 		const coords = editorView.coordsAtPos(from);
 		postToParent('scrollToCoordinates', { top: coords.top });
@@ -545,7 +544,6 @@ window.addEventListener('message', (event) => {
 				const { from } = editorView.state.selection;
 				const coords = editorView.coordsAtPos(from);
 				
-				// MODIFIED: Use the generic scrolling message
 				postToParent('scrollToCoordinates', { top: coords.top });
 			}
 			break;

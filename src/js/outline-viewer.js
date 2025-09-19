@@ -229,7 +229,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			try {
 				const currentState = await window.api.getOutlineState(novelId);
 				if (currentState.success) {
-					// MODIFIED: The refresh check now only compares the codex entry count.
 					if (currentState.codexCount !== initialState.codexCount) {
 						console.log('Changes detected, reloading outline viewer.');
 						window.location.reload();

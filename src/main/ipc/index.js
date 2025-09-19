@@ -2,6 +2,7 @@ const { registerAiHandlers } = require('./aiHandlers.js');
 const { registerAuthHandlers } = require('./authHandlers.js');
 const { registerBackupRestoreHandlers } = require('./backupRestoreHandlers.js');
 const { registerChapterHandlers } = require('./chapterHandlers.js');
+const { registerChatHandlers } = require('./chatHandlers.js');
 const { registerCodexHandlers } = require('./codexHandlers.js');
 const { registerImportHandlers } = require('./importHandlers.js');
 const { registerNovelHandlers } = require('./novelHandlers.js');
@@ -18,10 +19,11 @@ function registerIpcHandlers(db, sessionManager, windowManager) {
 	registerAuthHandlers(sessionManager);
 	registerBackupRestoreHandlers(db, sessionManager);
 	registerChapterHandlers(db, windowManager);
+	registerChatHandlers(db, sessionManager);
 	registerCodexHandlers(db, sessionManager, windowManager);
 	registerImportHandlers(db, sessionManager, windowManager);
 	registerNovelHandlers(db, windowManager);
-	registerSystemHandlers(db, sessionManager, windowManager); // MODIFIED: Pass windowManager to system handlers
+	registerSystemHandlers(db, sessionManager, windowManager);
 }
 
 module.exports = { registerIpcHandlers };

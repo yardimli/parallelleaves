@@ -7,7 +7,8 @@ let importWindow = null;
 let chapterEditorWindows = new Map();
 let outlineWindows = new Map();
 let codexEditorWindows = new Map();
-let isMainWindowReady = false; // NEW: Flag to track if the main window has finished loading.
+let chatWindow = null;
+let isMainWindowReady = false;
 
 /**
  * Sets a Content Security Policy for the window's webContents.
@@ -105,9 +106,6 @@ function createMainWindow() {
 	
 	mainWindow.loadFile('public/index.html');
 	
-	// MODIFIED: The 'ready-to-show' event now just flags that the window is ready.
-	// It no longer closes the splash screen or shows the main window directly,
-	// preventing the splash screen from closing prematurely.
 	mainWindow.once('ready-to-show', () => {
 		isMainWindowReady = true;
 	});
@@ -253,7 +251,34 @@ function createImportWindow() {
 	});
 }
 
-// NEW: This function coordinates closing the splash screen and showing the main window.
+function createChatWindow() {
+	if (chatWindow) {
+		chatWindow.focus();
+		return;
+	}
+	
+	chatWindow = new BrowserWindow({
+		width: 600,
+		height: 800,
+		icon: path.join(__dirname, '..', '..', 'public/assets/icon.png'),
+		title: 'AI Chat',
+		autoHideMenuBar: true,
+		webPreferences: {
+			preload: path.join(__dirname, '..', '..', 'preload.js'),
+			contextIsolation: true,
+			nodeIntegration: false,
+		},
+	});
+	
+	setContentSecurityPolicy(chatWindow);
+	
+	chatWindow.loadFile('public/chat-window.html');
+	
+	chatWindow.on('closed', () => {
+		chatWindow = null;
+	});
+}
+
 function closeSplashAndShowMain() {
 	if (splashWindow && !splashWindow.isDestroyed()) {
 		splashWindow.close();
@@ -266,8 +291,6 @@ function closeSplashAndShowMain() {
 		}
 	};
 	
-	// If the main window is already loaded, show it.
-	// Otherwise, wait for it to finish loading before showing it.
 	if (isMainWindowReady) {
 		show();
 	} else if (mainWindow) {
@@ -282,7 +305,8 @@ module.exports = {
 	createOutlineWindow,
 	createCodexEditorWindow,
 	createImportWindow,
-	closeSplashAndShowMain, // NEW: Export the new function
+	createChatWindow,
+	closeSplashAndShowMain,
 	getMainWindow: () => mainWindow,
 	getImportWindow: () => importWindow,
 };

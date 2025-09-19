@@ -11,24 +11,20 @@
 <body>
 <div class="container mx-auto p-8">
 	<div class="flex justify-between items-center mb-8">
-		<!-- MODIFIED: Title font size reduced from text-4xl to text-2xl -->
 		<h1 class="text-2xl font-bold" data-i18n="dashboard.title">My Translation Projects</h1>
 		
-		<!-- MODIFIED: Top-right controls have been completely reorganized -->
 		<div class="flex items-center gap-2">
 			<!-- Refresh Page Button -->
 			<button id="js-refresh-page-btn" class="btn btn-ghost btn-circle" data-i18n-title="common.refresh">
 				<i class="bi bi-arrow-clockwise text-2xl"></i>
 			</button>
 			
-			<!-- REMOVED: View Toggle Button has been removed. -->
-			
 			<!-- Theme Toggle Button -->
 			<button id="theme-toggle" class="btn btn-ghost btn-circle" data-i18n-title="common.changeTheme">
 				<i class="bi bi-sun-fill text-2xl"></i>
 			</button>
 			
-			<!-- NEW: Hamburger Menu Dropdown -->
+			<!-- Hamburger Menu Dropdown -->
 			<div class="dropdown dropdown-end">
 				<button tabindex="0" role="button" class="btn btn-ghost btn-circle">
 					<i class="bi bi-list text-3xl"></i>
@@ -72,7 +68,6 @@
 		</div>
 	</div>
 	
-	<!-- MODIFIED: The novel list now defaults to a flex column (list view) instead of a grid. -->
 	<div id="novel-list" class="flex flex-col gap-6">
 		<p id="loading-message" data-i18n="dashboard.loadingProjects">Loading projects...</p>
 	</div>

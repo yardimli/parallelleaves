@@ -127,9 +127,11 @@
 		        data-i18n-title="editor.rephrase" disabled data-i18n="editor.rephrase">Rephrase
 		</button>
 	</div>
-	<!-- MODIFIED: Added search button -->
 	<div class="divider divider-horizontal mx-0"></div>
 	<div class="flex items-center gap-1">
+		<button type="button" id="js-open-chat-btn" class="btn btn-ghost btn-sm btn-square" data-i18n-title="editor.openChat">
+			<i class="bi bi-chat-dots text-lg"></i>
+		</button>
 		<button type="button" id="js-search-btn" class="btn btn-ghost btn-sm btn-square" data-i18n-title="editor.search">
 			<i class="bi bi-search text-lg"></i>
 		</button>
@@ -159,7 +161,7 @@
 	</button>
 </div>
 
-<!-- NEW: Search Bar -->
+<!-- Search Bar -->
 <div id="js-search-bar" class="hidden flex-shrink-0 h-12 bg-base-200 flex items-center px-4 gap-4 z-40 border-b border-base-300">
 	<input type="text" id="js-search-input" class="input input-sm input-bordered w-full max-w-xs" data-i18n-placeholder="editor.searchBar.placeholder">
 	<div class="form-control">

@@ -1,4 +1,3 @@
-// MODIFIED: Removed imports for AI prompt editor functionality
 import { DOMSerializer, Fragment, DOMParser, Schema } from 'prosemirror-model';
 import { history, undo, redo } from 'prosemirror-history';
 import { toggleMark, setBlockType, wrapIn, baseKeymap } from 'prosemirror-commands';
@@ -64,7 +63,6 @@ export const schema = new Schema({
 		highlight_green: highlightMarkSpec('highlight-green'),
 		highlight_blue: highlightMarkSpec('highlight-blue'),
 		highlight_red: highlightMarkSpec('highlight-red'),
-		// MODIFIED: Removed the 'ai_suggestion' mark as it's no longer needed without AI functions.
 	}
 });
 
@@ -98,8 +96,6 @@ const serializeDocToHtml = (view) => {
 	tempDiv.appendChild(fragment);
 	return tempDiv.innerHTML;
 };
-
-// MODIFIED: Removed the createDirectEditorInterface function as it was only for AI integration.
 
 function triggerDebouncedSave (entryId) {
 	const key = `codex-${entryId}`;
@@ -258,7 +254,6 @@ function updateCodexToolbarState (view) {
 	if (currentEditorState) {
 		allBtns.forEach(btn => {
 			const cmd = btn.dataset.command;
-			// MODIFIED: Removed check for AI action buttons
 			
 			switch (cmd) {
 				case 'undo': btn.disabled = !currentEditorState.canUndo; break;
@@ -306,8 +301,6 @@ function applyCommand (command) {
 async function handleToolbarAction (button) {
 	const view = activeEditorView;
 	if (!view) return;
-	
-	// MODIFIED: Removed the block that handled AI action buttons.
 	
 	const command = button.dataset.command;
 	const schema = view.state.schema;
@@ -619,8 +612,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			alert(message);
 		}
 	};
-	
-	// MODIFIED: Removed call to setupPromptEditor()
 	
 	const params = new URLSearchParams(window.location.search);
 	const mode = params.get('mode') || 'edit';

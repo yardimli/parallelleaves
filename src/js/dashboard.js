@@ -46,9 +46,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 	// --- DOM Elements ---
 	const novelList = document.getElementById('novel-list');
 	const loadingMessage = document.getElementById('loading-message');
-	const importDocBtn = document.getElementById('import-doc-btn-menu'); // MODIFIED: ID updated for menu item
-	const restoreBackupBtn = document.getElementById('restore-backup-btn-menu'); // MODIFIED: ID updated for menu item
-	const authMenuSection = document.getElementById('auth-menu-section'); // MODIFIED: New container for auth UI in menu
+	const importDocBtn = document.getElementById('import-doc-btn-menu');
+	const restoreBackupBtn = document.getElementById('restore-backup-btn-menu');
+	const authMenuSection = document.getElementById('auth-menu-section');
 	const loginModal = document.getElementById('login-modal');
 	const loginForm = document.getElementById('login-form');
 	const loginErrorMsg = document.getElementById('login-error-message');
@@ -109,7 +109,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 		}
 	}
 	
-	// MODIFIED: This function now updates the new hamburger menu with auth status.
 	function updateAuthUI(session) {
 		const authDivider = document.getElementById('auth-divider');
 		
@@ -132,7 +131,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			document.getElementById('login-btn').addEventListener('click', () => loginModal.showModal());
 			if (authDivider) authDivider.classList.add('hidden');
 			
-			// MODIFIED: Removed col-span-full as the layout is no longer a grid.
 			novelList.innerHTML = `<p class="text-base-content/70 text-center">${t('dashboard.signInPrompt')}</p>`;
 			loadingMessage.style.display = 'none';
 			
@@ -286,10 +284,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 		}
 	}
 	
-	/**
-	 * MODIFIED: This function is simplified to only apply list view styles to project cards.
-	 * The container is already a flex column from the HTML.
-	 */
 	function applyListViewStyles() {
 		const cards = document.querySelectorAll('#novel-list > .card');
 		
@@ -307,7 +301,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 		loadingMessage.style.display = 'none';
 		
 		if (novelsData.length === 0) {
-			// MODIFIED: Removed col-span-full as the layout is no longer a grid.
 			novelList.innerHTML = `<p class="text-base-content/70 text-center" data-i18n="dashboard.noProjects">${t('dashboard.noProjects')}</p>`;
 			return;
 		}
@@ -322,8 +315,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 				? `<img src="file://${novel.cover_path}?t=${new Date(novel.updated_at).getTime()}" alt="${t('dashboard.metaSettings.altCoverFor', { title: novel.title })}" class="w-full">`
 				: `<img src="./assets/bookcover-placeholder.jpg" alt="${t('dashboard.metaSettings.altNoCover')}" class="w-full h-auto">`;
 			
-			// MODIFIED: The figure now has the 'js-open-editor' class instead of 'js-open-outline'.
-			// MODIFIED: A new button 'js-open-outline-btn' has been added to the card actions.
 			novelCard.innerHTML = `
                 <figure class="cursor-pointer js-open-editor">${coverHtml}</figure>
                 <div class="card-body flex flex-col flex-grow">
@@ -420,18 +411,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 				updatedDateEl.textContent = new Date(novel.updated_at).toLocaleDateString(undefined, dateFormatOptions);
 			}
 			
-			// MODIFIED: Event listener setup updated to reflect the new button and changed figure class.
 			novelCard.querySelectorAll('.js-open-editor').forEach(el => el.addEventListener('click', () => window.api.openEditor(novel.id)));
 			novelCard.querySelector('.js-prose-settings').addEventListener('click', () => openProseSettingsModal(novel));
 			novelCard.querySelector('.js-meta-settings').addEventListener('click', () => openMetaSettingsModal(novel));
-			novelCard.querySelector('.js-open-outline-btn').addEventListener('click', () => window.api.openOutline(novel.id)); // NEW: Listener for the outline button.
+			novelCard.querySelector('.js-open-outline-btn').addEventListener('click', () => window.api.openOutline(novel.id));
 			novelCard.querySelector('.js-export-docx').addEventListener('click', () => exportNovel(novel.id));
 			novelCard.querySelector('.js-backup-novel').addEventListener('click', () => backupNovel(novel.id, novel.title));
 			
 			novelList.appendChild(novelCard);
 		});
 		
-		// MODIFIED: Always apply the list view styles. No more toggling.
 		applyListViewStyles();
 		applyTranslationsTo(novelList);
 	}

@@ -227,6 +227,18 @@
     "noChaptersInSection": "This section has no chapters yet.",
     "chapterTitlePlaceholder": "Chapter Title",
     "search": "Search (Ctrl+F)",
+    "openChat": "Open AI Chat",
+    "chat": {
+      "title": "AI Chat",
+      "selectModel": "Select AI Model",
+      "loadingModels": "Loading models...",
+      "sendMessagePlaceholder": "Type your message here...",
+      "send": "Send",
+      "copy": "Copy",
+      "copied": "Copied!",
+      "errorLoadModels": "Error loading models.",
+      "errorSendMessage": "Error sending message: {message}"
+    },
     "searchBar": {
       "placeholder": "Find in document...",
       "source": "Source",

@@ -678,7 +678,6 @@ function setupSearch() {
 			newMatch.element.classList.add('search-highlight-active');
 			newMatch.element.scrollIntoView({ behavior: 'smooth', block: 'center' });
 		} else {
-			// MODIFIED: No longer need to scroll the parent container. The iframe will handle it.
 			const view = chapterEditorViews.get(newMatch.chapterId.toString());
 			if (view && view.isReady) {
 				view.contentWindow.postMessage({ type: 'search:navigateTo', payload: { matchIndex: newMatch.matchIndex, isActive: true } }, window.location.origin);
@@ -822,6 +821,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 	if (refreshBtn) {
 		refreshBtn.addEventListener('click', () => {
 			window.location.reload();
+		});
+	}
+	
+	const openChatBtn = document.getElementById('js-open-chat-btn');
+	if (openChatBtn) {
+		openChatBtn.addEventListener('click', () => {
+			window.api.openChatWindow();
 		});
 	}
 	
@@ -1075,7 +1081,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 					}
 					break;
 				}
-				// MODIFIED: This message is now named more generically and handles scrolling for both markers and search.
 				case 'scrollToCoordinates': {
 					const { top: targetTopInIframe } = payload;
 					const sourceIframeWindow = event.source;
