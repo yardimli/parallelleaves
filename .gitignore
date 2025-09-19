@@ -6,3 +6,4 @@ server/.env
 /.idea
 .scp/settings.yaml
 /dist
+/release
