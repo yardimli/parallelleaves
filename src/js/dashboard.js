@@ -46,9 +46,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 	// --- DOM Elements ---
 	const novelList = document.getElementById('novel-list');
 	const loadingMessage = document.getElementById('loading-message');
-	const importDocBtn = document.getElementById('import-doc-btn');
-	const restoreBackupBtn = document.getElementById('restore-backup-btn');
-	const authContainer = document.getElementById('auth-container');
+	const importDocBtn = document.getElementById('import-doc-btn-menu'); // MODIFIED: ID updated for menu item
+	const restoreBackupBtn = document.getElementById('restore-backup-btn-menu'); // MODIFIED: ID updated for menu item
+	const authMenuSection = document.getElementById('auth-menu-section'); // MODIFIED: New container for auth UI in menu
 	const loginModal = document.getElementById('login-modal');
 	const loginForm = document.getElementById('login-form');
 	const loginErrorMsg = document.getElementById('login-error-message');
@@ -78,7 +78,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 	const metaAiPrompt = document.getElementById('meta-ai-prompt');
 	const runGenerateCoverBtn = document.getElementById('run-generate-cover-btn');
 	const cancelGenerateCoverBtn = document.getElementById('cancel-generate-cover-btn');
-	const refreshBtn = document.getElementById('js-refresh-page-btn'); // Added refresh button
+	const refreshBtn = document.getElementById('js-refresh-page-btn');
+	const viewToggleBtn = document.getElementById('js-view-toggle-btn'); // NEW: View toggle button
 	
 	let novelsData = [];
 	let stagedCover = null;
@@ -108,22 +109,28 @@ document.addEventListener('DOMContentLoaded', async () => {
 		}
 	}
 	
+	// MODIFIED: This function now updates the new hamburger menu with auth status.
 	function updateAuthUI(session) {
+		const authDivider = document.getElementById('auth-divider');
+		
 		if (session && session.user) {
-			authContainer.innerHTML = `
-                <span class="font-semibold">${t('dashboard.welcome', { username: session.user.username })}</span>
-                <button id="logout-btn" class="btn btn-ghost btn-sm">${t('dashboard.signOut')}</button>
+			authMenuSection.innerHTML = `
+                <li class="menu-title"><span>${t('dashboard.welcome', { username: session.user.username })}</span></li>
+                <li><a id="logout-btn"><i class="bi bi-box-arrow-right"></i>${t('dashboard.signOut')}</a></li>
             `;
 			document.getElementById('logout-btn').addEventListener('click', handleLogout);
+			if (authDivider) authDivider.classList.remove('hidden');
+			
 			loadInitialData(); // Load projects only when logged in
 			window.api.getModels().catch(err => {
 				console.error('Failed to pre-fetch AI models on startup:', err);
 			});
 		} else {
-			authContainer.innerHTML = `
-                <button id="login-btn" class="btn btn-primary">${t('dashboard.signIn')}</button>
+			authMenuSection.innerHTML = `
+                 <li><a id="login-btn"><i class="bi bi-box-arrow-in-right"></i>${t('dashboard.signIn')}</a></li>
             `;
 			document.getElementById('login-btn').addEventListener('click', () => loginModal.showModal());
+			if (authDivider) authDivider.classList.add('hidden');
 			
 			novelList.innerHTML = `<p class="text-base-content/70 col-span-full text-center">${t('dashboard.signInPrompt')}</p>`;
 			loadingMessage.style.display = 'none';
@@ -278,6 +285,36 @@ document.addEventListener('DOMContentLoaded', async () => {
 		}
 	}
 	
+	// NEW: Function to toggle between grid and list view
+	function setDashboardView(view) {
+		const icon = viewToggleBtn.querySelector('i');
+		const cards = document.querySelectorAll('#novel-list > .card');
+		
+		if (view === 'list') {
+			novelList.className = 'flex flex-col gap-6'; // Set class for list container
+			cards.forEach(card => {
+				card.classList.remove('card-compact', 'flex-col');
+				card.classList.add('card-side', 'flex-row'); // Use DaisyUI side card
+				card.querySelector('figure')?.classList.add('max-w-xs'); // Constrain image width
+			});
+			if (icon) {
+				icon.className = 'bi bi-list-ul text-2xl'; // Update icon
+			}
+			localStorage.setItem('dashboardView', 'list');
+		} else { // Default to grid view
+			novelList.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6';
+			cards.forEach(card => {
+				card.classList.remove('card-side', 'flex-row');
+				card.classList.add('card-compact', 'flex-col');
+				card.querySelector('figure')?.classList.remove('max-w-xs');
+			});
+			if (icon) {
+				icon.className = 'bi bi-grid-3x3-gap text-2xl'; // Update icon
+			}
+			localStorage.setItem('dashboardView', 'grid');
+		}
+	}
+	
 	function renderNovels() {
 		loadingMessage.style.display = 'none';
 		
@@ -289,7 +326,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 		novelList.innerHTML = '';
 		novelsData.forEach(novel => {
 			const novelCard = document.createElement('div');
-			novelCard.className = 'card card-compact bg-base-200 shadow-xl transition-shadow h-full flex flex-col';
+			// MODIFIED: Use generic base classes; view-specific classes are applied later
+			novelCard.className = 'card bg-base-200 shadow-xl transition-shadow h-full flex';
 			novelCard.dataset.novelId = novel.id;
 			
 			const coverHtml = novel.cover_path
@@ -408,15 +446,25 @@ document.addEventListener('DOMContentLoaded', async () => {
 			novelList.appendChild(novelCard);
 		});
 		
+		// MODIFIED: Apply the saved view after all cards have been rendered
+		setDashboardView(localStorage.getItem('dashboardView') || 'grid');
 		applyTranslationsTo(novelList);
 	}
 	
 	// --- Event Listeners ---
 	
-	// Added: Refresh button listener
 	if (refreshBtn) {
 		refreshBtn.addEventListener('click', () => {
 			window.location.reload();
+		});
+	}
+	
+	// NEW: Event listener for the view toggle button
+	if (viewToggleBtn) {
+		viewToggleBtn.addEventListener('click', () => {
+			const currentView = localStorage.getItem('dashboardView') || 'grid';
+			const newView = currentView === 'grid' ? 'list' : 'grid';
+			setDashboardView(newView);
 		});
 	}
 	

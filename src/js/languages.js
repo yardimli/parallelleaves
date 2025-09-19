@@ -2,10 +2,13 @@
  * A centralized list of supported languages for dropdowns and other UI elements.
  * The key is the language code (e.g., 'en', 'fr') and the value is the display name.
  */
+// MODIFIED: Added Simplified and Traditional Chinese
 const supportedLanguages = {
 	'af': 'Afrikaans',
 	'bg': 'Bulgarian',
 	'ca': 'Catalan',
+	'zh-CN': 'Chinese (Simplified)', // NEW
+	'zh-TW': 'Chinese (Traditional)', // NEW
 	'cs': 'Czech',
 	'cy': 'Welsh',
 	'da': 'Danish',
@@ -72,4 +75,3 @@ function mapLanguageToIsoCode(languageName) {
 }
 
 module.exports = { supportedLanguages, mapLanguageToIsoCode };
-

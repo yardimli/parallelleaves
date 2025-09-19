@@ -10,6 +10,7 @@
     "information": "De'",
     "changeTheme": "mI' choH",
     "changeLanguage": "Hol choH",
+    "refresh": "Refresh",
     "typography": "GHITLHMEGH MUGH",
     "fontFamily": "ghItlhmegh tuq",
     "serif": "naQ DIch",
@@ -31,6 +32,7 @@
   "dashboard": {
     "title": "jIj mugh jup",
     "importDocument": "nav chup",
+    "restoreBackup": "Restore Backup",
     "loadingProjects": "jup choq...",
     "noProjects": "mugh jup naQ DIch pagh.",
     "errorLoading": "jup choq Qob.",
@@ -38,6 +40,9 @@
     "signOut": "mej",
     "signIn": "yap",
     "signInPrompt": "jup nugh Danaw'meH yap.",
+    "backupFailed": "Backup failed: {message}",
+    "restoreSuccess": "Successfully restored project '{title}'. The page will now reload.",
+    "restoreFailed": "Restore failed: {message}",
     "login": {
       "title": "yap",
       "username": "lo'wI' pagh",
@@ -84,6 +89,20 @@
     "langSelect": {
       "title": "Hol wuq",
       "description": "nugh maH DIch Hol wuq."
+    },
+    "card": {
+      "progress": "Progress",
+      "sourceWords": "Source",
+      "targetWords": "Target",
+      "chapters": "Chapters",
+      "created": "Created:",
+      "updated": "Updated:",
+      "backupProject": "Backup Project"
+    },
+    "update": {
+      "title": "Update Available",
+      "description": "A new version ({latestVersion}) is available! You are currently on version {currentVersion}.",
+      "updateNow": "Update Now"
     }
   },
   "import": {
@@ -111,7 +130,20 @@
     "actLabel_one": "mI'",
     "actLabel_other": "mI'pu'",
     "chapterLabel_one": "mI'",
-    "chapterLabel_other": "mI'pu'"
+    "chapterLabel_other": "mI'pu'",
+    "importingContent": "Importing content...",
+    "generatingCover": "Generating AI cover...",
+    "autoDetectModal": {
+      "title": "Auto-detection Options",
+      "numericLabel": "Numeric or Roman Numerals",
+      "numericDesc": "Detects lines containing only a number (e.g., \"2\", \"IV\").",
+      "keywordLabel": "Keywords (Chapter, Act)",
+      "keywordDesc": "Detects lines starting with \"Chapter\" or \"Act\".",
+      "allCapsLabel": "All-Caps Lines",
+      "allCapsDesc": "Detects short lines (under 50 chars) written entirely in uppercase.",
+      "runDetection": "Run Detection",
+      "results": "{count} chapters and acts detected."
+    }
   },
   "outline": {
     "loading": "mI' choq...",
@@ -138,7 +170,17 @@
     "errorProjectMissing": "Qob: jup DIch pagh.",
     "errorLoad": "Qob: mI' DIch choq DIch pagh. {message}",
     "chapterLabel_one": "mI'",
-    "chapterLabel_other": "mI'pu'"
+    "chapterLabel_other": "mI'pu'",
+    "exportDocx": "Export to DOCX",
+    "exportSuccessTitle": "Export Successful",
+    "exportSuccessMessage": "Your novel '{title}' has been successfully exported.",
+    "exportErrorTitle": "Export Failed",
+    "exportErrorMessage": "There was an error exporting your novel: {message}",
+    "exportDialogTitle": "Export Successful",
+    "exportDialogMessage": "Successfully exported '{title}'.",
+    "exportDialogDetail": "The file has been saved at:\n{filePath}",
+    "exportDialogOpenFolder": "Open Containing Folder",
+    "exportDialogOK": "OK"
   },
   "editor": {
     "translating": "mughmeH: {title}",
@@ -300,5 +342,12 @@
     "codexGenNoText": "DIch ghItlhmegh tu'be'lu'. mI' rur.",
     "codexGenComplete": "naQ mugh chenmoH DIch! nugh choq!",
     "codexGenError": "Qob qorgh: {message}"
+  },
+  "error": {
+    "credentialsRequired": "Username and password are required.",
+    "invalidCredentials": "Invalid username or password.",
+    "dbConnection": "Database connection failed.",
+    "unexpected": "An unexpected error occurred.",
+    "methodNotAllowed": "Method Not Allowed."
   }
 }

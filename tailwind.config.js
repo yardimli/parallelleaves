@@ -8,7 +8,6 @@ module.exports = {
 	content: [
 		'./public/**/*.html',
 		'./src/js/**/*.js',
-		'./src/js/novel-planner/**/*.js',
 	],
 	
 	theme: {

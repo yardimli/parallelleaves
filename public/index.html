@@ -11,34 +11,67 @@
 <body>
 <div class="container mx-auto p-8">
 	<div class="flex justify-between items-center mb-8">
-		<h1 class="text-4xl font-bold" data-i18n="dashboard.title">My Translation Projects</h1>
-		<div class="flex items-center gap-4">
-			<div id="auth-container" class="flex items-center gap-4">
-				<!-- This will be populated by dashboard.js -->
-			</div>
-			<div class="dropdown dropdown-end">
-				<button tabindex="0" role="button" class="btn btn-ghost btn-circle" data-i18n-title="common.changeLanguage">
-					<i class="bi bi-translate text-2xl"></i>
-				</button>
-				<ul tabindex="0" id="js-lang-switcher-menu" class="dropdown-content z-[1] menu p-2 shadow bg-base-200 rounded-box w-32">
-					<!-- Populated by i18n.js -->
-				</ul>
-			</div>
+		<!-- MODIFIED: Title font size reduced from text-4xl to text-2xl -->
+		<h1 class="text-2xl font-bold" data-i18n="dashboard.title">My Translation Projects</h1>
+		
+		<!-- MODIFIED: Top-right controls have been completely reorganized -->
+		<div class="flex items-center gap-2">
 			<!-- Refresh Page Button -->
 			<button id="js-refresh-page-btn" class="btn btn-ghost btn-circle" data-i18n-title="common.refresh">
 				<i class="bi bi-arrow-clockwise text-2xl"></i>
 			</button>
+			
+			<!-- NEW: View Toggle Button -->
+			<button id="js-view-toggle-btn" class="btn btn-ghost btn-circle" data-i18n-title="dashboard.toggleView">
+				<i class="bi bi-grid-3x3-gap text-2xl"></i> <!-- Icon changes dynamically -->
+			</button>
+			
+			<!-- Theme Toggle Button -->
 			<button id="theme-toggle" class="btn btn-ghost btn-circle" data-i18n-title="common.changeTheme">
 				<i class="bi bi-sun-fill text-2xl"></i>
 			</button>
-			<button id="restore-backup-btn" class="btn btn-neutral gap-2">
-				<i class="bi bi-upload"></i>
-				<span data-i18n="dashboard.restoreBackup">Restore Backup</span>
-			</button>
-			<button id="import-doc-btn" class="btn btn-neutral gap-2">
-				<i class="bi bi-file-earmark-arrow-up"></i>
-				<span data-i18n="dashboard.importDocument">Import Document</span>
-			</button>
+			
+			<!-- NEW: Hamburger Menu Dropdown -->
+			<div class="dropdown dropdown-end">
+				<button tabindex="0" role="button" class="btn btn-ghost btn-circle">
+					<i class="bi bi-list text-3xl"></i>
+				</button>
+				<ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-200 rounded-box w-56 mt-4">
+					<!-- Auth section is populated by JS -->
+					<div id="auth-menu-section"></div>
+					
+					<!-- Divider is shown/hidden by JS -->
+					<div class="divider my-1" id="auth-divider"></div>
+					
+					<!-- Menu items that were previously buttons -->
+					<li>
+						<a id="import-doc-btn-menu">
+							<i class="bi bi-file-earmark-arrow-up"></i>
+							<span data-i18n="dashboard.importDocument">Import Document</span>
+						</a>
+					</li>
+					<li>
+						<a id="restore-backup-btn-menu">
+							<i class="bi bi-upload"></i>
+							<span data-i18n="dashboard.restoreBackup">Restore Backup</span>
+						</a>
+					</li>
+					
+					<div class="divider my-1"></div>
+					
+					<!-- Language Switcher Submenu -->
+					<li>
+						<a>
+							<i class="bi bi-translate"></i>
+							<span data-i18n="common.changeLanguage">Change Language</span>
+							<i class="bi bi-chevron-right ml-auto"></i>
+						</a>
+						<ul id="js-lang-switcher-menu" class="p-2 bg-base-300">
+							<!-- Populated by i18n.js -->
+						</ul>
+					</li>
+				</ul>
+			</div>
 		</div>
 	</div>
 	
@@ -219,9 +252,12 @@
 		<h3 class="font-bold text-lg" data-i18n="dashboard.langSelect.title">Select a Language</h3>
 		<p class="py-4" data-i18n="dashboard.langSelect.description">Please choose your preferred language for the application interface.</p>
 		<div class="modal-action">
-			<button id="select-lang-tr" class="btn">Türkçe</button>
-			<button id="select-lang-tlh" class="btn">Klingon</button>
 			<button id="select-lang-en" class="btn btn-primary">English</button>
+			<button id="select-lang-tlh" class="btn">Klingon</button>
+			<button id="select-lang-nb" class="btn">Norsk Bokmål</button>
+			<button id="select-lang-tr" class="btn">Türkçe</button>
+			<button id="select-lang-zh-TW" class="btn">繁體中文</button>
+		
 		</div>
 	</div>
 </dialog>

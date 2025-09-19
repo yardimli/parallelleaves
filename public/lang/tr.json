@@ -43,6 +43,7 @@
     "backupFailed": "Yedekleme başarısız: {message}",
     "restoreSuccess": "'{title}' projesi başarıyla geri yüklendi. Sayfa şimdi yeniden yüklenecek.",
     "restoreFailed": "Geri yükleme başarısız: {message}",
+    "toggleView": "Görünümü Değiştir",
     "login": {
       "title": "Giriş Yap",
       "username": "Kullanıcı Adı",
