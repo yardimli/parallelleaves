@@ -8,7 +8,7 @@
 	 * and provides a verified, grouped list of available models.
 	 *
 	 * @version 1.8.0
-	 * @author locutus de borg
+	 * @author Ekim Emre Yardimli
 	 */
 
 // Enforce PSR-12 standards
@@ -185,7 +185,7 @@
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($ch, CURLOPT_HTTPHEADER, [
 			'Accept: application/json',
-			'HTTP-Referer: https://github.com/locutusdeborg/novel-skriver', // Recommended by OpenRouter
+			'HTTP-Referer: https://github.com/yardimli/paralleleaves', // Recommended by OpenRouter
 			'X-Title: Parallel Leaves', // Recommended by OpenRouter
 		]);
 

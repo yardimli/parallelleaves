@@ -16,9 +16,12 @@
     "watch": "concurrently \"npm:watch:css\" \"npm:watch:js:chapter-editor\" \"npm:watch:js:codex-editor\" \"npm:watch:js:editor-iframe\"",
     "start": "npm run build && electron .",
     "postinstall": "electron-rebuild",
-    "rebuild": "electron-rebuild -f -w better-sqlite3"
+    "rebuild": "electron-rebuild -f -w better-sqlite3",
+    "package": "npm run build && electron-builder",
+    "package:win": "npm run build && electron-builder --win",
+    "package:mac": "npm run build && electron-builder --mac"
   },
-  "author": "locutus de borg",
+  "author": "Ekim Emre Yardimli",
   "license": "ISC",
   "devDependencies": {
     "@tailwindcss/forms": "^0.5.7",
@@ -27,6 +30,7 @@
     "concurrently": "^8.2.2",
     "daisyui": "^4.10.2",
     "electron": "^37.2.0",
+    "electron-builder": "^24.13.3",
     "electron-rebuild": "^3.2.9",
     "electron-reloader": "^1.2.3",
     "esbuild": "^0.25.9",
@@ -48,5 +52,32 @@
     "prosemirror-schema-list": "^1.5.1",
     "prosemirror-state": "^1.4.3",
     "prosemirror-view": "^1.40.1"
+  },
+  "build": {
+    "appId": "com.elo.parallelleaves",
+    "productName": "Parallel Leaves",
+    "copyright": "Copyright © 2024 Elo",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "public/**/*",
+      "src/main/**/*",
+      "src/database/**/*",
+      "src/ai/**/*",
+      "src/js/languages.js",
+      "electron-main.js",
+      "preload.js",
+      "config.js"
+    ],
+    "win": {
+      "target": "portable",
+      "icon": "public/assets/icon.png"
+    },
+    "mac": {
+      "target": "zip",
+      "icon": "public/assets/icon.png"
+    }
   }
 }
