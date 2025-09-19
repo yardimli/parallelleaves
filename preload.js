@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('api', {
 	splashGetInitData: () => ipcRenderer.invoke('splash:get-init-data'),
 	splashCheckForUpdates: () => ipcRenderer.invoke('splash:check-for-updates'),
 	splashClose: () => ipcRenderer.send('splash:close'),
+	splashFinished: () => ipcRenderer.send('splash:finished'), // MODIFIED: Expose new splash finished event
 	openExternalUrl: (url) => ipcRenderer.send('app:open-external-url', url),
 	
 	// --- Dashboard/Novel Creation ---

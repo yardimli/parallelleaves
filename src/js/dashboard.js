@@ -326,7 +326,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 		novelList.innerHTML = '';
 		novelsData.forEach(novel => {
 			const novelCard = document.createElement('div');
-			// MODIFIED: Use generic base classes; view-specific classes are applied later
 			novelCard.className = 'card bg-base-200 shadow-xl transition-shadow h-full flex';
 			novelCard.dataset.novelId = novel.id;
 			
@@ -334,9 +333,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 				? `<img src="file://${novel.cover_path}?t=${new Date(novel.updated_at).getTime()}" alt="${t('dashboard.metaSettings.altCoverFor', { title: novel.title })}" class="w-full">`
 				: `<img src="./assets/bookcover-placeholder.jpg" alt="${t('dashboard.metaSettings.altNoCover')}" class="w-full h-auto">`;
 			
-			
+			// MODIFIED: The figure now has the 'js-open-editor' class instead of 'js-open-outline'.
+			// MODIFIED: A new button 'js-open-outline-btn' has been added to the card actions.
 			novelCard.innerHTML = `
-                <figure class="cursor-pointer js-open-outline">${coverHtml}</figure>
+                <figure class="cursor-pointer js-open-editor">${coverHtml}</figure>
                 <div class="card-body flex flex-col flex-grow">
                     <h2 class="card-title js-open-editor cursor-pointer">${novel.title}</h2>
                     <p class="text-base-content/80 -mt-2 mb-2">${novel.author || t('common.unknownAuthor')}</p>
@@ -386,6 +386,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                     
                     <div class="card-actions justify-end items-center mt-4">
+                        <button class="btn btn-ghost btn-sm js-open-outline-btn" data-i18n-title="outline.codex">
+                            <i class="bi bi-journal-richtext text-lg"></i>
+                        </button>
                         <button class="btn btn-ghost btn-sm js-backup-novel" data-i18n-title="dashboard.card.backupProject">
                             <i class="bi bi-download text-lg"></i>
                         </button>
@@ -436,17 +439,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 				updatedDateEl.textContent = new Date(novel.updated_at).toLocaleDateString(undefined, dateFormatOptions);
 			}
 			
+			// MODIFIED: Event listener setup updated to reflect the new button and changed figure class.
 			novelCard.querySelectorAll('.js-open-editor').forEach(el => el.addEventListener('click', () => window.api.openEditor(novel.id)));
 			novelCard.querySelector('.js-prose-settings').addEventListener('click', () => openProseSettingsModal(novel));
 			novelCard.querySelector('.js-meta-settings').addEventListener('click', () => openMetaSettingsModal(novel));
-			novelCard.querySelector('.js-open-outline').addEventListener('click', () => window.api.openOutline(novel.id));
+			novelCard.querySelector('.js-open-outline-btn').addEventListener('click', () => window.api.openOutline(novel.id)); // NEW: Listener for the outline button.
 			novelCard.querySelector('.js-export-docx').addEventListener('click', () => exportNovel(novel.id));
 			novelCard.querySelector('.js-backup-novel').addEventListener('click', () => backupNovel(novel.id, novel.title));
 			
 			novelList.appendChild(novelCard);
 		});
 		
-		// MODIFIED: Apply the saved view after all cards have been rendered
 		setDashboardView(localStorage.getItem('dashboardView') || 'grid');
 		applyTranslationsTo(novelList);
 	}
@@ -459,7 +462,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 		});
 	}
 	
-	// NEW: Event listener for the view toggle button
 	if (viewToggleBtn) {
 		viewToggleBtn.addEventListener('click', () => {
 			const currentView = localStorage.getItem('dashboardView') || 'grid';

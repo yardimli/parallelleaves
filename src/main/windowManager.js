@@ -7,6 +7,7 @@ let importWindow = null;
 let chapterEditorWindows = new Map();
 let outlineWindows = new Map();
 let codexEditorWindows = new Map();
+let isMainWindowReady = false; // NEW: Flag to track if the main window has finished loading.
 
 /**
  * Sets a Content Security Policy for the window's webContents.
@@ -104,11 +105,11 @@ function createMainWindow() {
 	
 	mainWindow.loadFile('public/index.html');
 	
+	// MODIFIED: The 'ready-to-show' event now just flags that the window is ready.
+	// It no longer closes the splash screen or shows the main window directly,
+	// preventing the splash screen from closing prematurely.
 	mainWindow.once('ready-to-show', () => {
-		if (splashWindow && !splashWindow.isDestroyed()) {
-			splashWindow.close();
-		}
-		mainWindow.show();
+		isMainWindowReady = true;
 	});
 	
 	mainWindow.on('closed', () => {
@@ -252,6 +253,28 @@ function createImportWindow() {
 	});
 }
 
+// NEW: This function coordinates closing the splash screen and showing the main window.
+function closeSplashAndShowMain() {
+	if (splashWindow && !splashWindow.isDestroyed()) {
+		splashWindow.close();
+	}
+	
+	const show = () => {
+		if (mainWindow && !mainWindow.isDestroyed()) {
+			mainWindow.show();
+			mainWindow.focus();
+		}
+	};
+	
+	// If the main window is already loaded, show it.
+	// Otherwise, wait for it to finish loading before showing it.
+	if (isMainWindowReady) {
+		show();
+	} else if (mainWindow) {
+		mainWindow.once('ready-to-show', show);
+	}
+}
+
 module.exports = {
 	createSplashWindow,
 	createMainWindow,
@@ -259,6 +282,7 @@ module.exports = {
 	createOutlineWindow,
 	createCodexEditorWindow,
 	createImportWindow,
+	closeSplashAndShowMain, // NEW: Export the new function
 	getMainWindow: () => mainWindow,
 	getImportWindow: () => importWindow,
 };

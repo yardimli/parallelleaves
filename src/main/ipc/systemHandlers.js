@@ -10,8 +10,9 @@ const { getTemplate } = require('../utils.js');
  * Registers IPC handlers for system-level functionality.
  * @param {Database.Database} db - The application's database connection.
  * @param {object} sessionManager - The session manager instance.
+ * @param {object} windowManager - The window manager instance.
  */
-function registerSystemHandlers(db, sessionManager) {
+function registerSystemHandlers(db, sessionManager, windowManager) { // MODIFIED: Accept windowManager
 	ipcMain.handle('splash:get-init-data', () => {
 		return {
 			version: config.APP_VERSION,
@@ -42,6 +43,14 @@ function registerSystemHandlers(db, sessionManager) {
 		const splashWindow = event.sender.getOwnerBrowserWindow();
 		if (splashWindow && !splashWindow.isDestroyed()) {
 			splashWindow.close();
+		}
+	});
+	
+	// NEW: This handler is triggered by the splash screen after its animation.
+	// It tells the window manager to close the splash and show the main window.
+	ipcMain.on('splash:finished', () => {
+		if (windowManager && typeof windowManager.closeSplashAndShowMain === 'function') {
+			windowManager.closeSplashAndShowMain();
 		}
 	});
 	

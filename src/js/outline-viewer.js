@@ -18,57 +18,7 @@ const truncateHtml = (html, wordLimit) => {
 	return html;
 };
 
-/**
- * Renders the entire novel outline into the specified container.
- * @param {HTMLElement} container - The container element for the outline.
- * @param {Array<object>} sections - The array of section data.
- */
-async function renderOutline(container, sections) {
-	if (!sections || sections.length === 0) {
-		container.innerHTML = `<p class="text-base-content/70">${t('outline.noSections')}</p>`;
-		return;
-	}
-	
-	const sectionTemplate = await window.api.getTemplate('outline/outline-viewer-section');
-	const chapterTemplate = await window.api.getTemplate('outline/outline-viewer-chapter-item');
-	
-	const fragment = document.createDocumentFragment();
-	
-	for (const section of sections) {
-		const chapterLabel = section.chapter_count === 1 ? t('outline.chapterLabel_one') : t('outline.chapterLabel_other');
-		const chapterCountText = `${section.chapter_count} ${chapterLabel}`;
-		const chapterStats = `${chapterCountText} - ${section.total_word_count.toLocaleString()} ${t('common.words')}`;
-		
-		let sectionHtml = sectionTemplate
-			.replace('{{SECTION_ID}}', section.id)
-			.replace('{{SECTION_ORDER}}', section.section_order)
-			.replace('{{SECTION_TITLE}}', section.title)
-			.replace('{{SECTION_DESCRIPTION}}', section.description || '')
-			.replace('{{CHAPTER_STATS}}', chapterStats);
-		
-		const sectionEl = document.createElement('div');
-		sectionEl.innerHTML = sectionHtml;
-		const chaptersContainer = sectionEl.querySelector('.js-chapters-container');
-		
-		if (section.chapters && section.chapters.length > 0) {
-			for (const chapter of section.chapters) {
-				const summaryHtml = chapter.summary || `<p class="italic text-base-content/60">${t('outline.noSummary')}</p>`;
-				const chapterHtml = chapterTemplate
-					.replace(/{{CHAPTER_ID}}/g, chapter.id)
-					.replace('{{CHAPTER_ORDER}}', chapter.chapter_order)
-					.replace('{{CHAPTER_TITLE}}', chapter.title)
-					.replace('{{WORD_COUNT}}', chapter.word_count.toLocaleString())
-					.replace('{{CHAPTER_SUMMARY_HTML}}', summaryHtml);
-				
-				chaptersContainer.innerHTML += chapterHtml;
-			}
-		} else {
-			chaptersContainer.innerHTML = `<p class="text-base-content/70 text-sm">${t('outline.noChapters')}</p>`;
-		}
-		fragment.appendChild(sectionEl.firstElementChild);
-	}
-	container.appendChild(fragment);
-}
+// REMOVED: The renderOutline function is no longer needed as the chapter view has been removed.
 
 /**
  * Renders all codex entries, grouped by category, into the specified container.
@@ -115,7 +65,6 @@ async function renderCodex(container, categories) {
 document.addEventListener('DOMContentLoaded', async () => {
 	await initI18n();
 	
-	// Added: Refresh button listener
 	const refreshBtn = document.getElementById('js-refresh-page-btn');
 	if (refreshBtn) {
 		refreshBtn.addEventListener('click', () => {
@@ -127,7 +76,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 	const novelId = params.get('novelId');
 	
 	const novelTitleEl = document.getElementById('js-novel-title');
-	const outlineContainer = document.getElementById('js-outline-container');
+	// REMOVED: The outlineContainer element reference is no longer needed.
 	const codexContainer = document.getElementById('js-codex-container');
 	
 	if (!novelId) {
@@ -237,10 +186,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 		document.title = data.novel_title;
 		novelTitleEl.textContent = data.novel_title;
 		
-		await renderOutline(outlineContainer, data.sections);
+		// REMOVED: Call to render the chapter outline.
 		await renderCodex(codexContainer, data.codex_categories);
 		
-		applyTranslationsTo(outlineContainer);
+		// REMOVED: Translation application for the outline container.
 		applyTranslationsTo(codexContainer);
 		
 		const addCodexBtn = document.getElementById('js-add-codex-entry');
@@ -253,13 +202,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 		setupAutogenCodex(novelId);
 		
 		document.body.addEventListener('click', (event) => {
-			const editBtn = event.target.closest('.js-edit-chapter');
-			if (editBtn) {
-				const novelId = params.get('novelId');
-				const chapterId = editBtn.dataset.chapterId;
-				window.api.openChapterEditor({ novelId, chapterId });
-			}
-			
+			// REMOVED: Event listener logic for editing chapters.
 			const editCodexBtn = event.target.closest('.js-edit-codex-entry');
 			if (editCodexBtn) {
 				const entryId = editCodexBtn.dataset.entryId;
@@ -286,7 +229,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 			try {
 				const currentState = await window.api.getOutlineState(novelId);
 				if (currentState.success) {
-					if (currentState.chapterCount !== initialState.chapterCount || currentState.codexCount !== initialState.codexCount) {
+					// MODIFIED: The refresh check now only compares the codex entry count.
+					if (currentState.codexCount !== initialState.codexCount) {
 						console.log('Changes detected, reloading outline viewer.');
 						window.location.reload();
 					}

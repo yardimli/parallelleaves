@@ -21,7 +21,7 @@ function registerIpcHandlers(db, sessionManager, windowManager) {
 	registerCodexHandlers(db, sessionManager, windowManager);
 	registerImportHandlers(db, sessionManager, windowManager);
 	registerNovelHandlers(db, windowManager);
-	registerSystemHandlers(db, sessionManager);
+	registerSystemHandlers(db, sessionManager, windowManager); // MODIFIED: Pass windowManager to system handlers
 }
 
 module.exports = { registerIpcHandlers };

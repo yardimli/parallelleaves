@@ -11,9 +11,24 @@
 </head>
 <body class="h-full bg-base-100 text-base-content overflow-hidden flex flex-col">
 <!-- Header -->
-<div class="flex-shrink-0 h-12 bg-base-200 flex items-center px-4 z-10 border-b border-base-300">
-	<h1 id="js-novel-title" class="text-xl font-bold" data-i18n="outline.loading">Loading Outline...</h1>
+<!-- MODIFIED: The header is now a single row containing the title and all action buttons. -->
+<div class="flex-shrink-0 h-12 bg-base-200 flex items-center px-4 z-10 border-b border-base-300 gap-4">
+	<h1 class="text-xl font-bold truncate">
+		<span id="js-novel-title" data-i18n="outline.loading">Loading...</span>
+		<span class="font-normal text-base-content/70"> &gt; </span>
+		<span data-i18n="outline.codex">Codex</span>
+	</h1>
 	<div class="flex-grow"></div>
+	<!-- NEW: Codex action buttons are moved into the main header. -->
+	<div class="flex items-center gap-2">
+		<button id="js-autogen-codex" class="btn btn-sm btn-ghost">
+			<i class="bi bi-magic"></i> <span data-i18n="outline.autoGenerate">Auto-generate</span>
+		</button>
+		<button id="js-add-codex-entry" class="btn btn-sm btn-primary">
+			<i class="bi bi-plus-lg"></i> <span data-i18n="outline.newEntry">New Entry</span>
+		</button>
+	</div>
+	<div class="divider divider-horizontal mx-0"></div>
 	<div class="dropdown dropdown-end">
 		<button tabindex="0" role="button" class="btn btn-ghost btn-circle" data-i18n-title="common.changeLanguage">
 			<i class="bi bi-translate text-xl"></i>
@@ -31,28 +46,10 @@
 </div>
 
 <!-- Main Content -->
-<div class="flex-grow flex min-h-0">
-	<!-- Left Column: Outline -->
-	<div id="js-outline-container" class="w-1/2 border-r border-base-300 overflow-y-auto pt-0 px-4 pb-4 space-y-6">
-		<!-- Outline content will be rendered here by JS -->
-	</div>
-	
-	<!-- Right Column: Codex -->
-	<div class="w-1/2 flex flex-col">
-		<div class="flex-shrink-0 flex justify-between items-center pt-2 px-4 pb-2 border-b border-base-300 sticky top-0 bg-base-100/90 backdrop-blur-sm z-10">
-			<h2 class="text-xl font-bold" data-i18n="outline.codex">Codex</h2>
-			<div class="flex items-center gap-2">
-				<button id="js-autogen-codex" class="btn btn-sm btn-ghost">
-					<i class="bi bi-magic"></i> <span data-i18n="outline.autoGenerate">Auto-generate</span>
-				</button>
-				<button id="js-add-codex-entry" class="btn btn-sm btn-primary">
-					<i class="bi bi-plus-lg"></i> <span data-i18n="outline.newEntry">New Entry</span>
-				</button>
-			</div>
-		</div>
-		<div id="js-codex-container" class="flex-grow overflow-y-auto pt-2 px-4 pb-4 space-y-6">
-			<!-- Codex content will be rendered here by JS -->
-		</div>
+<div class="flex-grow flex flex-col min-h-0">
+	<!-- MODIFIED: The wrapper div is removed, leaving only the codex container. -->
+	<div id="js-codex-container" class="flex-grow overflow-y-auto pt-2 px-4 pb-4 space-y-6">
+		<!-- Codex content will be rendered here by JS -->
 	</div>
 </div>
 
