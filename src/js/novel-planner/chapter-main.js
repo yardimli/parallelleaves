@@ -863,7 +863,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 		
 		allCodexEntriesForNovel = await window.api.getAllCodexEntriesForNovel(novelId);
 		
-		// New: Check if codex is empty and show the welcome modal
+		// Check if codex is empty and show the welcome modal
 		if (!allCodexEntriesForNovel || allCodexEntriesForNovel.length === 0) {
 			const codexModal = document.getElementById('codex-welcome-modal');
 			if (codexModal) {

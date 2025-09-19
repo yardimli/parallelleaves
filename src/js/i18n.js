@@ -147,53 +147,15 @@ export async function setLanguage(lang) {
 
 /**
  * Initializes the internationalization module.
- * @param {boolean} [isDashboard=false] - True if this is the main dashboard page, to handle initial language selection.
+ * @param {boolean} [isDashboard=false] - Kept for call compatibility, but no longer used for special logic.
  */
 export async function initI18n(isDashboard = false) {
-	let lang = localStorage.getItem(LANG_KEY);
+	// MODIFIED: Default to 'en' if no language is set in localStorage.
+	// This removes the initial language selection modal on the dashboard.
+	const lang = localStorage.getItem(LANG_KEY) || 'en';
 	
-	const setAndApply = async (newLang) => {
-		localStorage.setItem(LANG_KEY, newLang);
-		await loadLanguage(newLang);
-		applyTranslations();
-		populateLanguageSwitcher();
-	};
-	
-	if (!lang && isDashboard) {
-		return new Promise((resolve) => {
-			const modal = document.getElementById('language-selection-modal');
-			if (modal) {
-				modal.showModal();
-				document.getElementById('select-lang-en').onclick = async () => {
-					await setAndApply('en');
-					modal.close();
-					resolve('en');
-				};
-				document.getElementById('select-lang-tr').onclick = async () => {
-					await setAndApply('tr');
-					modal.close();
-					resolve('tr');
-				};
-				document.getElementById('select-lang-tlh').onclick = async () => {
-					await setAndApply('tlh');
-					modal.close();
-					resolve('tlh');
-				};
-				document.getElementById('select-lang-no').onclick = async () => {
-					await setAndApply('no');
-					modal.close();
-					resolve('no');
-				};
-				document.getElementById('select-lang-zh-TW').onclick = async () => {
-					await setAndApply('zh-TW');
-					modal.close();
-					resolve('zh-TW');
-				};
-			} else {
-				setAndApply('en').then(() => resolve('en'));
-			}
-		});
-	} else {
-		await setAndApply(lang || 'en');
-	}
+	localStorage.setItem(LANG_KEY, lang);
+	await loadLanguage(lang);
+	applyTranslations();
+	populateLanguageSwitcher();
 }

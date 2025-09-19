@@ -328,7 +328,6 @@ function registerNovelHandlers(db, windowManager) {
 		windowManager.createOutlineWindow(novelId);
 	});
 	
-	// New: Handler to open outline and trigger autogen modal
 	ipcMain.on('novels:openOutlineAndAutogenCodex', (event, novelId) => {
 		windowManager.createOutlineWindow(novelId, true);
 	});

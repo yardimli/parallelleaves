@@ -15,6 +15,10 @@
 	<div class="flex justify-between items-center">
 		<h1 class="text-2xl font-bold" data-i18n="import.title">Import Document for Translation</h1>
 		<div class="flex items-center gap-2">
+			<!-- NEW: Search Button -->
+			<button id="js-search-btn" class="btn btn-ghost btn-square" data-i18n-title="editor.search">
+				<i class="bi bi-search text-lg"></i>
+			</button>
 			<div class="join">
 				<button id="prev-mark-btn" class="btn btn-neutral join-item" disabled data-i18n-title="import.prevMark">
 					<i class="bi bi-arrow-up"></i>
@@ -51,11 +55,29 @@
 	</div>
 </div>
 
+<!-- NEW: Search Bar -->
+<div id="js-search-bar" class="hidden flex-shrink-0 h-12 bg-base-200 flex items-center px-4 gap-4 z-40 border-b border-base-300">
+	<input type="text" id="js-search-input" class="input input-sm input-bordered w-full max-w-xs" data-i18n-placeholder="editor.searchBar.placeholder">
+	<div class="flex items-center gap-1">
+		<button id="js-search-prev-btn" class="btn btn-ghost btn-sm btn-square" data-i18n-title="editor.searchBar.previous" disabled>
+			<i class="bi bi-chevron-up"></i>
+		</button>
+		<button id="js-search-next-btn" class="btn btn-ghost btn-sm btn-square" data-i18n-title="editor.searchBar.next" disabled>
+			<i class="bi bi-chevron-down"></i>
+		</button>
+	</div>
+	<span id="js-search-results-count" class="text-sm text-base-content/70 w-24 text-center"></span>
+	<div class="flex-grow"></div>
+	<button id="js-search-close-btn" class="btn btn-ghost btn-sm btn-square" data-i18n-title="editor.searchBar.close">
+		<i class="bi bi-x-lg"></i>
+	</button>
+</div>
+
 <!-- Main Content -->
 <div id="document-content-wrapper" class="flex-grow overflow-y-auto p-8 prose max-w-none">
 	<div id="document-content" class="space-y-4">
 		<div class="text-center text-base-content/60 py-16">
-			<i class="bi bi-file-earmark-arrow-up text-6xl"></i>
+			<i class="bi bi-book text-6xl"></i>
 			<p class="mt-4" data-i18n="import.begin">Select a file to begin.</p>
 		</div>
 	</div>

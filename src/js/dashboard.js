@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 	// --- DOM Elements ---
 	const novelList = document.getElementById('novel-list');
 	const loadingMessage = document.getElementById('loading-message');
-	const importDocBtn = document.getElementById('import-doc-btn-menu');
+	const importDocBtn = document.getElementById('import-doc-btn');
 	const restoreBackupBtn = document.getElementById('restore-backup-btn-menu');
 	const authMenuSection = document.getElementById('auth-menu-section');
 	const loginModal = document.getElementById('login-modal');

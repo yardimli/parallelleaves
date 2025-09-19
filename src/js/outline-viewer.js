@@ -63,7 +63,6 @@ async function renderCodex(container, categories) {
 document.addEventListener('DOMContentLoaded', async () => {
 	await initI18n();
 	
-	// New: Listen for a trigger from the main process to open the autogen modal.
 	window.api.onCodexAutogenTrigger(() => {
 		const autogenBtn = document.getElementById('js-autogen-codex');
 		if (autogenBtn) {

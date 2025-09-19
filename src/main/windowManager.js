@@ -51,11 +51,20 @@ function createContextMenu(win) {
 			);
 		}
 		
+		// MODIFIED: Show context menu items for both editable and non-editable content.
 		if (params.isEditable) {
 			if (menu.items.length > 0) menu.append(new MenuItem({ type: 'separator' }));
-			menu.append(new MenuItem({ label: 'Cut', role: 'cut', enabled: params.selectionText }));
-			menu.append(new MenuItem({ label: 'Copy', role: 'copy', enabled: params.selectionText }));
+			menu.append(new MenuItem({ label: 'Cut', role: 'cut', enabled: params.selectionText.trim() !== '' }));
+			menu.append(new MenuItem({ label: 'Copy', role: 'copy', enabled: params.selectionText.trim() !== '' }));
 			menu.append(new MenuItem({ label: 'Paste', role: 'paste' }));
+			menu.append(new MenuItem({ type: 'separator' }));
+			menu.append(new MenuItem({ label: 'Select All', role: 'selectAll' }));
+		} else if (params.selectionText.trim() !== '') {
+			// If not editable, but text is selected, provide "Copy" and "Select All".
+			if (menu.items.length > 0 && menu.items[menu.items.length - 1].type !== 'separator') {
+				menu.append(new MenuItem({ type: 'separator' }));
+			}
+			menu.append(new MenuItem({ label: 'Copy', role: 'copy' }));
 			menu.append(new MenuItem({ type: 'separator' }));
 			menu.append(new MenuItem({ label: 'Select All', role: 'selectAll' }));
 		}

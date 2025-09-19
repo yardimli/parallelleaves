@@ -19,9 +19,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 		userGreetingEl.textContent = 'Welcome to Parallel Leaves';
 	}
 	
-	// 2. Animate the loader bar to fill over 1 seconds.
+	// 2. Animate the loader bar to fill over 2 seconds.
 	if (loaderBar) {
-		loaderBar.style.transition = 'width 1s linear';
+		loaderBar.style.transition = 'width 2s linear';
 		
 		setTimeout(() => {
 			loaderBar.style.width = '100%';
@@ -30,5 +30,5 @@ document.addEventListener('DOMContentLoaded', async () => {
 	
 	setTimeout(() => {
 		window.api.splashFinished();
-	}, 1000);
+	}, 2000);
 });

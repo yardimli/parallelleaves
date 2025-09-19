@@ -24,6 +24,12 @@
 				<i class="bi bi-sun-fill text-2xl"></i>
 			</button>
 			
+			<!-- Import Document Button -->
+			<button id="import-doc-btn" class="btn btn-primary">
+				<i class="bi bi-file-earmark-arrow-up"></i>
+				<span data-i18n="dashboard.importDocument">Import Document</span>
+			</button>
+			
 			<!-- Hamburger Menu Dropdown -->
 			<div class="dropdown dropdown-end">
 				<button tabindex="0" role="button" class="btn btn-ghost btn-circle">
@@ -37,12 +43,6 @@
 					<div class="divider my-1" id="auth-divider"></div>
 					
 					<!-- Menu items that were previously buttons -->
-					<li>
-						<a id="import-doc-btn-menu">
-							<i class="bi bi-file-earmark-arrow-up"></i>
-							<span data-i18n="dashboard.importDocument">Import Document</span>
-						</a>
-					</li>
 					<li>
 						<a id="restore-backup-btn-menu">
 							<i class="bi bi-upload"></i>
@@ -240,20 +240,7 @@
 	</div>
 </dialog>
 
-<dialog id="language-selection-modal" class="modal modal-bottom sm:modal-middle">
-	<div class="modal-box">
-		<h3 class="font-bold text-lg" data-i18n="dashboard.langSelect.title">Select a Language</h3>
-		<p class="py-4" data-i18n="dashboard.langSelect.description">Please choose your preferred language for the application interface.</p>
-		<div class="modal-action">
-			<button id="select-lang-en" class="btn btn-primary">English</button>
-			<button id="select-lang-tlh" class="btn">Klingon</button>
-			<button id="select-lang-nb" class="btn">Norsk Bokmål</button>
-			<button id="select-lang-tr" class="btn">Türkçe</button>
-			<button id="select-lang-zh-TW" class="btn">繁體中文</button>
-		
-		</div>
-	</div>
-</dialog>
+<!-- REMOVED: The language selection modal is no longer needed. -->
 
 <script src="../src/js/theme.js"></script>
 <script type="module" src="../src/js/dashboard.js"></script>

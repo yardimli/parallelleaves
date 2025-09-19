@@ -1,5 +1,15 @@
 import { initI18n, t } from './i18n.js';
 
+// NEW: Debounce utility for search input
+const debounce = (func, delay) => {
+	let timeout;
+	return function(...args) {
+		const context = this;
+		clearTimeout(timeout);
+		timeout = setTimeout(() => func.apply(context, args), delay);
+	};
+};
+
 document.addEventListener('DOMContentLoaded', async () => {
 	await initI18n();
 	
@@ -51,7 +61,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 			sourceLangSelect.add(new Option(lang, lang));
 			targetLangSelect.add(new Option(lang, lang));
 		});
-
+		
 		sourceLangSelect.value = 'Norwegian (Bokmål)';
 		targetLangSelect.value = 'Turkish';
 	}
@@ -99,6 +109,157 @@ document.addEventListener('DOMContentLoaded', async () => {
 	function hidePopover() {
 		popover.classList.add('hidden');
 		targetedParagraph = null;
+	}
+	
+	// NEW: Search functionality for the import document view
+	function setupSearch() {
+		const searchBtn = document.getElementById('js-search-btn');
+		const searchBar = document.getElementById('js-search-bar');
+		const searchInput = document.getElementById('js-search-input');
+		const searchCloseBtn = document.getElementById('js-search-close-btn');
+		const searchPrevBtn = document.getElementById('js-search-prev-btn');
+		const searchNextBtn = document.getElementById('js-search-next-btn');
+		const searchResultsCount = document.getElementById('js-search-results-count');
+		
+		let globalSearchMatches = [];
+		let currentMatchIndex = -1;
+		
+		const toggleSearchBar = (show) => {
+			if (show) {
+				searchBar.classList.remove('hidden');
+				searchInput.focus();
+				searchInput.select();
+			} else {
+				searchBar.classList.add('hidden');
+				clearSearch();
+			}
+		};
+		
+		const clearSearch = () => {
+			const marks = documentContent.querySelectorAll('mark.search-highlight');
+			marks.forEach(mark => {
+				const parent = mark.parentNode;
+				parent.replaceChild(document.createTextNode(mark.textContent), mark);
+				parent.normalize(); // Merges adjacent text nodes
+			});
+			globalSearchMatches = [];
+			currentMatchIndex = -1;
+			searchResultsCount.textContent = '';
+			searchPrevBtn.disabled = true;
+			searchNextBtn.disabled = true;
+		};
+		
+		const updateSearchResultsUI = () => {
+			const total = globalSearchMatches.length;
+			if (total > 0) {
+				searchResultsCount.textContent = t('editor.searchBar.results', { current: currentMatchIndex + 1, total });
+			} else {
+				searchResultsCount.textContent = t('editor.searchBar.noResults');
+			}
+			searchPrevBtn.disabled = total <= 1;
+			searchNextBtn.disabled = total <= 1;
+		};
+		
+		const navigateToMatch = (index) => {
+			if (index < 0 || index >= globalSearchMatches.length) return;
+			
+			if (currentMatchIndex !== -1) {
+				globalSearchMatches[currentMatchIndex].classList.remove('search-highlight-active');
+			}
+			
+			currentMatchIndex = index;
+			const newMatch = globalSearchMatches[currentMatchIndex];
+			newMatch.classList.add('search-highlight-active');
+			newMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+			
+			updateSearchResultsUI();
+		};
+		
+		const startSearch = () => {
+			const query = searchInput.value;
+			clearSearch();
+			if (query.length < 2) return;
+			
+			const walker = document.createTreeWalker(documentContent, NodeFilter.SHOW_TEXT, null, false);
+			const nodesToProcess = [];
+			let node;
+			while ((node = walker.nextNode())) {
+				if (node.parentElement.closest('script, style, .act-break-marker, .chapter-break-marker')) continue;
+				if (new RegExp(query, 'gi').test(node.textContent)) {
+					nodesToProcess.push(node);
+				}
+			}
+			
+			nodesToProcess.forEach(textNode => {
+				const text = textNode.textContent;
+				const fragment = document.createDocumentFragment();
+				let lastIndex = 0;
+				const regex = new RegExp(query, 'gi');
+				let match;
+				
+				while ((match = regex.exec(text)) !== null) {
+					if (match.index > lastIndex) {
+						fragment.appendChild(document.createTextNode(text.substring(lastIndex, match.index)));
+					}
+					const mark = document.createElement('mark');
+					mark.className = 'search-highlight';
+					mark.textContent = match[0];
+					fragment.appendChild(mark);
+					lastIndex = regex.lastIndex;
+				}
+				
+				if (lastIndex < text.length) {
+					fragment.appendChild(document.createTextNode(text.substring(lastIndex)));
+				}
+				
+				if (textNode.parentNode) {
+					textNode.parentNode.replaceChild(fragment, textNode);
+				}
+			});
+			
+			globalSearchMatches = Array.from(documentContent.querySelectorAll('mark.search-highlight'));
+			
+			if (globalSearchMatches.length > 0) {
+				navigateToMatch(0);
+			}
+			updateSearchResultsUI();
+		};
+		
+		// Event Listeners
+		searchBtn.addEventListener('click', () => toggleSearchBar(true));
+		searchCloseBtn.addEventListener('click', () => toggleSearchBar(false));
+		searchInput.addEventListener('input', debounce(startSearch, 300));
+		
+		searchNextBtn.addEventListener('click', () => {
+			const nextIndex = (currentMatchIndex + 1) % globalSearchMatches.length;
+			navigateToMatch(nextIndex);
+		});
+		
+		searchPrevBtn.addEventListener('click', () => {
+			const prevIndex = (currentMatchIndex - 1 + globalSearchMatches.length) % globalSearchMatches.length;
+			navigateToMatch(prevIndex);
+		});
+		
+		searchInput.addEventListener('keydown', (e) => {
+			if (e.key === 'Enter') {
+				e.preventDefault();
+				if (e.shiftKey) {
+					if (!searchPrevBtn.disabled) searchPrevBtn.click();
+				} else {
+					if (!searchNextBtn.disabled) searchNextBtn.click();
+				}
+			}
+		});
+		
+		document.addEventListener('keydown', (e) => {
+			if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+				e.preventDefault();
+				toggleSearchBar(true);
+			}
+			if (e.key === 'Escape' && !searchBar.classList.contains('hidden')) {
+				toggleSearchBar(false);
+			}
+		});
 	}
 	
 	selectFileBtn.addEventListener('click', async () => {
@@ -383,4 +544,5 @@ document.addEventListener('DOMContentLoaded', async () => {
 	});
 	
 	populateLanguages();
+	setupSearch(); // NEW: Initialize search functionality
 });
