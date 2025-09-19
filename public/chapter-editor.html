@@ -444,6 +444,20 @@
 	</div>
 </dialog>
 
+<!-- New: Codex Welcome Modal -->
+<dialog id="codex-welcome-modal" class="modal">
+	<div class="modal-box w-11/12 max-w-lg">
+		<h3 class="font-bold text-lg" data-i18n="editor.codexWelcomeModal.title"></h3>
+		<p class="py-4" data-i18n="editor.codexWelcomeModal.description"></p>
+		<div class="modal-action">
+			<form method="dialog" class="flex gap-3 w-full">
+				<button class="btn flex-1" data-i18n="editor.codexWelcomeModal.laterButton"></button>
+				<button id="codex-welcome-create-btn" type="button" class="btn btn-primary flex-1" data-i18n="editor.codexWelcomeModal.createButton"></button>
+			</form>
+		</div>
+	</div>
+</dialog>
+
 <script src="../src/js/theme.js"></script>
 <script type="module" src="../dist/chapter-editor-bundle.js"></script>
 </body>

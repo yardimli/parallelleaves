@@ -270,6 +270,12 @@
       "errorNoProject": "無法確定目前專案。",
       "errorNoTargetEditor": "找不到此章節的目標編輯器。",
       "errorNoActiveChapter": "沒有活動章節，無法新增筆記。"
+    },
+    "codexWelcomeModal": {
+      "title": "使用資料庫解鎖一致的翻譯",
+      "description": "資料庫可作為您專案的詞彙表。透過為角色、地點和關鍵術語建立條目，您為 AI 提供了必要的上下文。這確保了名稱和傳說每次都能得到一致的翻譯，從而顯著提高您的翻譯品質。",
+      "createButton": "自動生成首批條目",
+      "laterButton": "我稍後再做"
     }
   },
   "prompt": {
@@ -283,15 +289,15 @@
       "loadingCodex": "正在載入資料庫條目...",
       "useCodex": "使用資料庫條目",
       "system": {
-        "base": "您是一位專業的散文編輯。\n\n當您收到文本時，請使用以下指示進行改寫：<instructions>{instructions}</instructions>\n\n模仿並保持目前的寫作風格，並保留習慣用語、詞語選擇和句子結構。您可以刪除多餘的對話行。保持相同的時態和風格選擇。使用 {language} 的拼寫和語法。\n\n僅返回改寫後的文本，不要包含其他內容。",
-        "defaultInstruction": "改寫給定的文本。"
+        "base": "You are an expert prose editor.\n\nWhenever you're given text, rephrase it using the following instructions: <instructions>{instructions}</instructions>\n\nImitiate and keep the current writing style, and leave mannerisms, word choice and sentence structure intact.\nYou are free to remove redundant lines of speech. Keep the same tense and stylistic choices. Use {language} spelling and grammar.\n\nOnly return the rephrased text, nothing else.",
+        "defaultInstruction": "Rephrase the given text."
       },
       "user": {
-        "codexBlock": "在撰寫您的回應時，請考慮以下角色/地點/物品/傳說的詞彙表：\n<codex>\n{codexContent}\n</codex>",
-        "surroundingTextBlock": "有關上下文資訊，請參考場景中的周圍文字，不要重複它們：\n<textBefore>\n{wordsBefore}\n</textBefore>\n<textAfter>\n{wordsAfter}\n</textAfter>",
-        "surroundingTextBlockBeforeOnly": "有關上下文資訊，請參考場景中的周圍文字，不要重複它們：\n<textBefore>\n{wordsBefore}\n</textBefore>",
-        "surroundingTextBlockAfterOnly": "有關上下文資訊，請參考場景中的周圍文字，不要重複它們：\n<textAfter>\n{wordsAfter}\n</textAfter>",
-        "textToRewrite": "要重寫的文本：\n<text words=\"{wordCount}\">\n{text}\n</text>"
+        "codexBlock": "Take into account the following glossary of characters/locations/items/lore... when writing your response:\n<codex>\n{codexContent}\n</codex>",
+        "surroundingTextBlock": "For contextual information, refer to surrounding words in the scene, DO NOT REPEAT THEM:\n<textBefore>\n{wordsBefore}\n</textBefore>\n<textAfter>\n{wordsAfter}\n</textAfter>",
+        "surroundingTextBlockBeforeOnly": "For contextual information, refer to surrounding words in the scene, DO NOT REPEAT THEM:\n<textBefore>\n{wordsBefore}\n</textBefore>",
+        "surroundingTextBlockAfterOnly": "For contextual information, refer to surrounding words in the scene, DO NOT REPEAT THEM:\n<textAfter>\n{wordsAfter}\n</textAfter>",
+        "textToRewrite": "Text to rewrite:\n<text words=\"{wordCount}\">\n{text}\n</text>"
       }
     },
     "translate": {
@@ -306,14 +312,14 @@
       "prevPairs": "先前的翻譯配對",
       "prevPairsHelp": "包含 N 個先前的翻譯區塊作為 AI 的上下文。（0 為停用）",
       "system": {
-        "base": "您是一位專業的文學翻譯家。您的任務是將文本從 {sourceLanguage} 翻譯成 {targetLanguage}。\n盡可能保留原始的語氣、風格和文學手法。保持原始的段落分隔。\n\n{instructionsBlock}\n\n僅返回翻譯後的文本，不要包含其他內容。",
-        "instructionsBlock": "請遵循以下具體指示：<instructions>{instructions}</instructions>"
+        "base": "You are an expert literary translator. Your task is to translate a text from {sourceLanguage} to {targetLanguage}.\nPreserve the original tone, style, and literary devices as much as possible. Maintain the original paragraph breaks.\n\n{instructionsBlock}\n\nOnly return the translated text, nothing else.",
+        "instructionsBlock": "Follow these specific instructions: <instructions>{instructions}</instructions>"
       },
       "user": {
-        "codexBlock": "使用以下詞彙表以確保關鍵術語的一致翻譯。如果詞彙表提供了特定的翻譯或上下文，請勿直譯術語。\n<glossary>\n{codexContent}\n</glossary>",
-        "codexEntry": "術語 ({sourceLanguage})：{title}\n描述/翻譯提示：{content}\n\n在 {targetLanguage} 中的翻譯：{translation}",
-        "codexEntryNoTranslation": "（未提供具體翻譯）",
-        "textToTranslate": "將以下文本從 {sourceLanguage} 翻譯成 {targetLanguage}：\n\n<text>\n{text}\n</text>"
+        "codexBlock": "Use the following glossary for consistent translation of key terms. Do not translate the terms literally if the glossary provides a specific translation or context.\n<glossary>\n{codexContent}\n</glossary>",
+        "codexEntry": "Term ({sourceLanguage}): {title}\nDescription/Translation Hint: {content}\n\nTranslation in {targetLanguage}: {translation}",
+        "codexEntryNoTranslation": "(No specific translation provided)",
+        "textToTranslate": "Translate the following text from {sourceLanguage} to {targetLanguage}:\n\n<text>\n{text}\n</text>"
       }
     },
     "preview": {

@@ -153,11 +153,15 @@ function createChapterEditorWindow({ novelId, chapterId }) {
 	createContextMenu(win);
 }
 
-function createOutlineWindow(novelId) {
+function createOutlineWindow(novelId, triggerAutogen = false) {
 	if (outlineWindows.has(novelId)) {
 		const existingWin = outlineWindows.get(novelId);
 		if (existingWin) {
 			existingWin.focus();
+			// If the window already exists, we can still trigger the autogen modal
+			if (triggerAutogen) {
+				existingWin.webContents.send('outline:trigger-autogen');
+			}
 			return;
 		}
 	}
@@ -179,6 +183,13 @@ function createOutlineWindow(novelId) {
 	
 	win.loadFile('public/outline-viewer.html', { query: { novelId: novelId } });
 	outlineWindows.set(novelId, win);
+	
+	// If the trigger is set, wait for the window to finish loading then send the event
+	if (triggerAutogen) {
+		win.webContents.once('did-finish-load', () => {
+			win.webContents.send('outline:trigger-autogen');
+		});
+	}
 	
 	win.on('closed', () => {
 		outlineWindows.delete(novelId);

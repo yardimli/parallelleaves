@@ -293,6 +293,12 @@
       "errorNoProject": "Aktif proje bulunamadı.",
       "errorNoTargetEditor": "Bu bölüm için hedef metin alanı bulunamadı.",
       "errorNoActiveChapter": "Not eklemek için aktif bir bölüm gerekli."
+    },
+    "codexWelcomeModal": {
+      "title": "Sözlük ile Tutarlı Çevirilerin Kilidini Açın",
+      "description": "Sözlük, projeniz için bir terimler sözlüğü görevi görür. Karakterler, yerler ve anahtar terimler için kayıtlar oluşturarak yapay zekaya temel bağlam sağlarsınız. Bu, isimlerin ve hikaye unsurlarının her seferinde tutarlı bir şekilde çevrilmesini sağlayarak çevirinizin kalitesini önemli ölçüde artırır.",
+      "createButton": "İlk Kayıtları Otomatik Oluştur",
+      "laterButton": "Daha Sonra Yaparım"
     }
   },
   "prompt": {

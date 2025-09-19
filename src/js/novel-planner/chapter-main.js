@@ -863,6 +863,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 		
 		allCodexEntriesForNovel = await window.api.getAllCodexEntriesForNovel(novelId);
 		
+		// New: Check if codex is empty and show the welcome modal
+		if (!allCodexEntriesForNovel || allCodexEntriesForNovel.length === 0) {
+			const codexModal = document.getElementById('codex-welcome-modal');
+			if (codexModal) {
+				codexModal.showModal();
+				
+				const createBtn = document.getElementById('codex-welcome-create-btn');
+				
+				createBtn.addEventListener('click', () => {
+					window.api.openOutlineAndAutogenCodex(novelId);
+					codexModal.close();
+				}, { once: true }); // Use once to avoid multiple listeners
+			}
+		}
+		
 		document.title = t('editor.translating', { title: novelData.title });
 		document.getElementById('js-novel-title').textContent = novelData.title;
 		

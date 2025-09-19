@@ -281,6 +281,12 @@
       "errorNoProject": "Kunne ikke bestemme gjeldende prosjekt.",
       "errorNoTargetEditor": "Kunne ikke finne målredigeringsprogrammet for dette kapittelet.",
       "errorNoActiveChapter": "Kan ikke legge til et notat uten et aktivt kapittel."
+    },
+    "codexWelcomeModal": {
+      "title": "Lås opp konsekvente oversettelser med Codex",
+      "description": "Codex fungerer som en ordliste for prosjektet ditt. Ved å opprette oppføringer for karakterer, steder og nøkkelbegreper, gir du AI-en viktig kontekst. Dette sikrer at navn og lore oversettes konsekvent hver gang, noe som dramatisk forbedrer kvaliteten på oversettelsen din.",
+      "createButton": "Autogenerer første oppføringer",
+      "laterButton": "Jeg gjør det senere"
     }
   },
   "prompt": {

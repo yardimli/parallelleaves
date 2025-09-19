@@ -79,7 +79,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 	const runGenerateCoverBtn = document.getElementById('run-generate-cover-btn');
 	const cancelGenerateCoverBtn = document.getElementById('cancel-generate-cover-btn');
 	const refreshBtn = document.getElementById('js-refresh-page-btn');
-	// REMOVED: The view toggle button element is no longer needed.
 	
 	let novelsData = [];
 	let stagedCover = null;
@@ -432,8 +431,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			window.location.reload();
 		});
 	}
-	
-	// REMOVED: The event listener for the view toggle button is no longer needed.
 	
 	if (importDocBtn) {
 		importDocBtn.addEventListener('click', () => {

@@ -293,6 +293,12 @@
       "errorNoProject": "Could not determine the current project.",
       "errorNoTargetEditor": "Could not find the target editor for this chapter.",
       "errorNoActiveChapter": "Cannot add a note without an active chapter."
+    },
+    "codexWelcomeModal": {
+      "title": "Unlock Consistent Translations with the Codex",
+      "description": "The Codex acts as a glossary for your project. By creating entries for characters, locations, and key terms, you provide the AI with essential context. This ensures names and lore are translated consistently every time, dramatically improving the quality of your translation.",
+      "createButton": "Auto-generate First Entries",
+      "laterButton": "I'll Do It Later"
     }
   },
   "prompt": {

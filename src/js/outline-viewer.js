@@ -18,8 +18,6 @@ const truncateHtml = (html, wordLimit) => {
 	return html;
 };
 
-// REMOVED: The renderOutline function is no longer needed as the chapter view has been removed.
-
 /**
  * Renders all codex entries, grouped by category, into the specified container.
  * @param {HTMLElement} container - The container element for the codex list.
@@ -65,6 +63,14 @@ async function renderCodex(container, categories) {
 document.addEventListener('DOMContentLoaded', async () => {
 	await initI18n();
 	
+	// New: Listen for a trigger from the main process to open the autogen modal.
+	window.api.onCodexAutogenTrigger(() => {
+		const autogenBtn = document.getElementById('js-autogen-codex');
+		if (autogenBtn) {
+			autogenBtn.click();
+		}
+	});
+	
 	const refreshBtn = document.getElementById('js-refresh-page-btn');
 	if (refreshBtn) {
 		refreshBtn.addEventListener('click', () => {
@@ -76,7 +82,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 	const novelId = params.get('novelId');
 	
 	const novelTitleEl = document.getElementById('js-novel-title');
-	// REMOVED: The outlineContainer element reference is no longer needed.
 	const codexContainer = document.getElementById('js-codex-container');
 	
 	if (!novelId) {
@@ -186,10 +191,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 		document.title = data.novel_title;
 		novelTitleEl.textContent = data.novel_title;
 		
-		// REMOVED: Call to render the chapter outline.
 		await renderCodex(codexContainer, data.codex_categories);
-		
-		// REMOVED: Translation application for the outline container.
 		applyTranslationsTo(codexContainer);
 		
 		const addCodexBtn = document.getElementById('js-add-codex-entry');
@@ -202,7 +204,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 		setupAutogenCodex(novelId);
 		
 		document.body.addEventListener('click', (event) => {
-			// REMOVED: Event listener logic for editing chapters.
 			const editCodexBtn = event.target.closest('.js-edit-codex-entry');
 			if (editCodexBtn) {
 				const entryId = editCodexBtn.dataset.entryId;

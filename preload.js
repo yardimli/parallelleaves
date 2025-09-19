@@ -27,10 +27,12 @@ contextBridge.exposeInMainWorld('api', {
 	
 	openEditor: (novelId) => ipcRenderer.send('novels:openEditor', novelId),
 	openOutline: (novelId) => ipcRenderer.send('novels:openOutline', novelId),
+	openOutlineAndAutogenCodex: (novelId) => ipcRenderer.send('novels:openOutlineAndAutogenCodex', novelId),
 	getOutlineData: (novelId) => ipcRenderer.invoke('novels:getOutlineData', novelId),
 	getOutlineState: (novelId) => ipcRenderer.invoke('novels:getOutlineState', novelId),
 	startCodexAutogen: (data) => ipcRenderer.send('autogen:start-codex-generation', data),
 	onCodexAutogenUpdate: (callback) => ipcRenderer.on('autogen:progress-update', callback),
+	onCodexAutogenTrigger: (callback) => ipcRenderer.on('outline:trigger-autogen', callback),
 	updateProseSettings: (data) => ipcRenderer.invoke('novels:updateProseSettings', data),
 	updatePromptSettings: (data) => ipcRenderer.invoke('novels:updatePromptSettings', data),
 	
