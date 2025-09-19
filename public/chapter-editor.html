@@ -137,10 +137,7 @@
 		</button>
 	</div>
 	<div class="flex-grow"></div>
-	<div class="flex items-center text-sm text-base-content/70">
-		<span id="js-total-word-count" class="mr-4"></span>
-		<span id="js-word-count" data-i18n="editor.noTextSelected">No text selected</span>
-	</div>
+	<!-- MODIFIED: Removed word count elements from here -->
 	<button id="typography-settings-btn" class="btn btn-ghost btn-circle" data-i18n-title="common.typography">
 		<i class="bi bi-fonts text-xl"></i>
 	</button>
@@ -220,6 +217,15 @@
 		<div id="js-target-column-container" class="w-1/2 overflow-y-auto">
 			<!-- Target iframes will be rendered here by JS -->
 		</div>
+	</div>
+</div>
+
+<!-- NEW: Bottom Status Bar -->
+<div id="bottom-status-bar" class="flex-shrink-0 h-8 bg-base-100 flex items-center px-4 gap-4 z-40 border-t border-base-300 dark:border-base-100/10 text-sm">
+	<div class="flex-grow"></div> <!-- Spacer to push content to the right -->
+	<div class="flex items-center text-base-content/70">
+		<span id="js-total-word-count" class="mr-4"></span>
+		<span id="js-word-count" data-i18n="editor.noTextSelected">No text selected</span>
 	</div>
 </div>
 
