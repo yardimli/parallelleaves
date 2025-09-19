@@ -226,6 +226,17 @@
     "errorProjectMissing": "Hata: Proje kimliği bulunamadı.",
     "noChaptersInSection": "Bu kısımda henüz hiç bölüm yok.",
     "chapterTitlePlaceholder": "Bölüm Başlığı",
+    "search": "Ara (Ctrl+F)",
+    "searchBar": {
+      "placeholder": "Belgede bul...",
+      "source": "Kaynak",
+      "target": "Hedef",
+      "previous": "Önceki Eşleşme",
+      "next": "Sonraki Eşleşme",
+      "close": "Aramayı Kapat",
+      "results": "{total} sonuçtan {current}",
+      "noResults": "Sonuç bulunamadı"
+    },
     "note": {
       "editTitle": "Notu Düzenle",
       "deleteTitle": "Notu Sil"

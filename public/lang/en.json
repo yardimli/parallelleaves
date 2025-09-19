@@ -226,6 +226,17 @@
     "errorProjectMissing": "Error: Project ID is missing.",
     "noChaptersInSection": "This section has no chapters yet.",
     "chapterTitlePlaceholder": "Chapter Title",
+    "search": "Search (Ctrl+F)",
+    "searchBar": {
+      "placeholder": "Find in document...",
+      "source": "Source",
+      "target": "Target",
+      "previous": "Previous Match",
+      "next": "Next Match",
+      "close": "Close Search",
+      "results": "{current} of {total}",
+      "noResults": "No results"
+    },
     "note": {
       "editTitle": "Edit Note",
       "deleteTitle": "Delete Note"

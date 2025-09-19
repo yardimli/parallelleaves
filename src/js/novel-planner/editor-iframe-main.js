@@ -75,6 +75,7 @@ let chapterId;
 let field;
 let hasSourceSelection = false;
 let floatingTranslateBtn = null;
+let localSearchMatches = []; // NEW: State for local search matches
 
 /**
  * Posts a message to the parent window.
@@ -326,6 +327,70 @@ function applyTypography ({ styleProps, settings }) {
 	});
 }
 
+// NEW: Clears all search highlights from the document.
+function clearSearchHighlights() {
+	const editorContainer = document.getElementById('editor-container');
+	if (!editorContainer) return;
+	
+	const marks = editorContainer.querySelectorAll('mark.search-highlight');
+	marks.forEach(mark => {
+		const parent = mark.parentNode;
+		// Replace the mark with its text content
+		parent.replaceChild(document.createTextNode(mark.textContent), mark);
+		// Merge adjacent text nodes
+		parent.normalize();
+	});
+	localSearchMatches = [];
+}
+
+// NEW: Finds and highlights all occurrences of a query.
+function findAndHighlight(query) {
+	clearSearchHighlights();
+	if (!query) return;
+	
+	const editorContainer = document.getElementById('editor-container');
+	const regex = new RegExp(query, 'gi');
+	const walker = document.createTreeWalker(editorContainer, NodeFilter.SHOW_TEXT, null, false);
+	
+	let node;
+	const nodesToProcess = [];
+	while (node = walker.nextNode()) {
+		// Avoid highlighting text in script or style tags if they were ever to be present
+		if (node.parentElement.closest('script, style')) continue;
+		nodesToProcess.push(node);
+	}
+	
+	nodesToProcess.forEach(textNode => {
+		const text = textNode.textContent;
+		let match;
+		let lastIndex = 0;
+		const fragment = document.createDocumentFragment();
+		
+		while ((match = regex.exec(text)) !== null) {
+			// Add text before the match
+			if (match.index > lastIndex) {
+				fragment.appendChild(document.createTextNode(text.substring(lastIndex, match.index)));
+			}
+			// Create and add the highlighted mark
+			const mark = document.createElement('mark');
+			mark.className = 'search-highlight';
+			mark.textContent = match[0];
+			fragment.appendChild(mark);
+			localSearchMatches.push(mark);
+			lastIndex = regex.lastIndex;
+		}
+		
+		// If any matches were found, replace the original text node with the new fragment
+		if (lastIndex > 0) {
+			// Add any remaining text after the last match
+			if (lastIndex < text.length) {
+				fragment.appendChild(document.createTextNode(text.substring(lastIndex)));
+			}
+			textNode.parentNode.replaceChild(fragment, textNode);
+		}
+	});
+}
+
 /**
  * Main message listener for communication from the parent window.
  */
@@ -441,6 +506,28 @@ window.addEventListener('message', (event) => {
 				
 				postToParent('markerFound', { top: coords.top });
 			}
+			break;
+		}
+		
+		// NEW: Handle search commands from the parent window
+		case 'search:findAndHighlight': {
+			findAndHighlight(payload.query);
+			postToParent('search:results', { chapterId, matchCount: localSearchMatches.length });
+			break;
+		}
+		case 'search:navigateTo': {
+			const { matchIndex, isActive } = payload;
+			if (localSearchMatches[matchIndex]) {
+				const element = localSearchMatches[matchIndex];
+				element.classList.toggle('search-highlight-active', isActive);
+				if (isActive) {
+					element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+				}
+			}
+			break;
+		}
+		case 'search:clear': {
+			clearSearchHighlights();
 			break;
 		}
 		

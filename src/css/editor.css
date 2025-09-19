@@ -53,6 +53,17 @@ i[class^="bi-"], i[class*=" bi-"] {
     color: #7f1d1d;
 }
 
+/* NEW: Styles for search highlights */
+mark.search-highlight {
+    @apply bg-primary/30 text-primary-content rounded px-0.5;
+    background-color: oklch(var(--p)/.4); /* Use oklch for better color mixing with opacity */
+}
+
+mark.search-highlight-active {
+    @apply bg-accent text-accent-content;
+}
+
+
 .ProseMirror {
     @apply min-h-full focus:outline-none;
 }

@@ -30,6 +30,11 @@ const setActiveEditor = (editorWindow) => {
 	activeEditor = editorWindow;
 };
 
+// Search state variables
+let globalSearchMatches = [];
+let currentMatchIndex = -1;
+let searchResponsesPending = 0;
+
 const debouncedContentSave = debounce(async ({ chapterId, field, value }) => {
 	if (field === 'target_content') {
 		const tempDiv = document.createElement('div');
@@ -536,6 +541,237 @@ async function setupSpellcheckDropdown() {
 	}
 }
 
+// All search-related functionality is encapsulated here.
+function setupSearch() {
+	const searchBtn = document.getElementById('js-search-btn');
+	const searchBar = document.getElementById('js-search-bar');
+	const searchInput = document.getElementById('js-search-input');
+	const searchCloseBtn = document.getElementById('js-search-close-btn');
+	const searchPrevBtn = document.getElementById('js-search-prev-btn');
+	const searchNextBtn = document.getElementById('js-search-next-btn');
+	const searchResultsCount = document.getElementById('js-search-results-count');
+	const searchScopeRadios = document.querySelectorAll('input[name="search-scope"]');
+	
+	const toggleSearchBar = (show) => {
+		if (show) {
+			searchBar.classList.remove('hidden');
+			searchInput.focus();
+			searchInput.select();
+		} else {
+			searchBar.classList.add('hidden');
+			clearSearch();
+		}
+	};
+	
+	const clearHighlightsInSource = () => {
+		const sourceContainer = document.getElementById('js-source-column-container');
+		const marks = sourceContainer.querySelectorAll('mark.search-highlight');
+		marks.forEach(mark => {
+			const parent = mark.parentNode;
+			parent.replaceChild(document.createTextNode(mark.textContent), mark);
+			parent.normalize(); // Merges adjacent text nodes
+		});
+	};
+	
+	const clearSearch = () => {
+		clearHighlightsInSource();
+		chapterEditorViews.forEach(view => {
+			if (view.isReady) {
+				view.contentWindow.postMessage({ type: 'search:clear' }, window.location.origin);
+			}
+		});
+		globalSearchMatches = [];
+		currentMatchIndex = -1;
+		searchResultsCount.textContent = '';
+		searchPrevBtn.disabled = true;
+		searchNextBtn.disabled = true;
+	};
+	
+	// MODIFIED: This function is corrected to not modify the DOM while iterating with TreeWalker.
+	const findAndHighlightInSource = (query) => {
+		clearHighlightsInSource();
+		if (!query) return [];
+		
+		const sourceContainer = document.getElementById('js-source-column-container');
+		const matches = [];
+		const walker = document.createTreeWalker(sourceContainer, NodeFilter.SHOW_TEXT, null, false);
+		
+		// First, collect all text nodes that contain a match without modifying the DOM.
+		const nodesToProcess = [];
+		let node;
+		while (node = walker.nextNode()) {
+			if (node.parentElement.closest('script, style')) continue;
+			// Use a temporary regex to test for presence without advancing the global one.
+			if (new RegExp(query, 'gi').test(node.textContent)) {
+				nodesToProcess.push(node);
+			}
+		}
+		
+		// Now, iterate over the collected nodes and perform DOM modifications.
+		nodesToProcess.forEach(textNode => {
+			const text = textNode.textContent;
+			const fragment = document.createDocumentFragment();
+			let lastIndex = 0;
+			// Use a fresh regex for each node to ensure correct state.
+			const regex = new RegExp(query, 'gi');
+			let match;
+			
+			while ((match = regex.exec(text)) !== null) {
+				// Append text before the match
+				if (match.index > lastIndex) {
+					fragment.appendChild(document.createTextNode(text.substring(lastIndex, match.index)));
+				}
+				// Create and append the highlighted mark
+				const mark = document.createElement('mark');
+				mark.className = 'search-highlight';
+				mark.textContent = match[0];
+				fragment.appendChild(mark);
+				matches.push(mark); // Collect the mark element for navigation
+				lastIndex = regex.lastIndex;
+			}
+			
+			// Append any remaining text after the last match
+			if (lastIndex < text.length) {
+				fragment.appendChild(document.createTextNode(text.substring(lastIndex)));
+			}
+			
+			// Replace the original text node with the new fragment
+			if (textNode.parentNode) {
+				textNode.parentNode.replaceChild(fragment, textNode);
+			}
+		});
+		
+		return matches;
+	};
+	
+	const updateSearchResultsUI = () => {
+		const total = globalSearchMatches.length;
+		if (total > 0) {
+			searchResultsCount.textContent = t('editor.searchBar.results', { current: currentMatchIndex + 1, total });
+		} else {
+			searchResultsCount.textContent = t('editor.searchBar.noResults');
+		}
+		searchPrevBtn.disabled = total <= 1;
+		searchNextBtn.disabled = total <= 1;
+	};
+	
+	const navigateToMatch = (index) => {
+		if (index < 0 || index >= globalSearchMatches.length) return;
+		
+		// De-highlight previous match
+		if (currentMatchIndex !== -1) {
+			const oldMatch = globalSearchMatches[currentMatchIndex];
+			if (oldMatch.scope === 'source') {
+				oldMatch.element.classList.remove('search-highlight-active');
+			} else {
+				const view = chapterEditorViews.get(oldMatch.chapterId.toString());
+				if (view && view.isReady) {
+					view.contentWindow.postMessage({ type: 'search:navigateTo', payload: { matchIndex: oldMatch.matchIndex, isActive: false } }, window.location.origin);
+				}
+			}
+		}
+		
+		currentMatchIndex = index;
+		const newMatch = globalSearchMatches[currentMatchIndex];
+		
+		// Highlight new match
+		if (newMatch.scope === 'source') {
+			newMatch.element.classList.add('search-highlight-active');
+			newMatch.element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+		} else {
+			const chapterContainer = document.getElementById(`target-chapter-scroll-target-${newMatch.chapterId}`);
+			if (chapterContainer) {
+				chapterContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+			}
+			const view = chapterEditorViews.get(newMatch.chapterId.toString());
+			if (view && view.isReady) {
+				view.contentWindow.postMessage({ type: 'search:navigateTo', payload: { matchIndex: newMatch.matchIndex, isActive: true } }, window.location.origin);
+			}
+		}
+		
+		updateSearchResultsUI();
+	};
+	
+	const startSearch = debounce(() => {
+		const query = searchInput.value;
+		const scope = document.querySelector('input[name="search-scope"]:checked').value;
+		
+		clearSearch();
+		
+		if (query.length < 2) return;
+		
+		if (scope === 'source') {
+			const matches = findAndHighlightInSource(query);
+			globalSearchMatches = matches.map(el => ({ scope: 'source', element: el }));
+			if (globalSearchMatches.length > 0) {
+				navigateToMatch(0);
+			}
+			updateSearchResultsUI();
+		} else { // Target scope
+			searchResponsesPending = chapterEditorViews.size;
+			globalSearchMatches = [];
+			chapterEditorViews.forEach(view => {
+				if (view.isReady) {
+					view.contentWindow.postMessage({ type: 'search:findAndHighlight', payload: { query } }, window.location.origin);
+				} else {
+					searchResponsesPending--;
+				}
+			});
+		}
+	}, 300);
+	
+	// Event Listeners
+	searchBtn.addEventListener('click', () => toggleSearchBar(true));
+	searchCloseBtn.addEventListener('click', () => toggleSearchBar(false));
+	searchInput.addEventListener('input', startSearch);
+	searchScopeRadios.forEach(radio => radio.addEventListener('change', startSearch));
+	
+	searchNextBtn.addEventListener('click', () => {
+		const nextIndex = (currentMatchIndex + 1) % globalSearchMatches.length;
+		navigateToMatch(nextIndex);
+	});
+	
+	searchPrevBtn.addEventListener('click', () => {
+		const prevIndex = (currentMatchIndex - 1 + globalSearchMatches.length) % globalSearchMatches.length;
+		navigateToMatch(prevIndex);
+	});
+	
+	document.addEventListener('keydown', (e) => {
+		if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+			e.preventDefault();
+			toggleSearchBar(true);
+		}
+		if (e.key === 'Escape' && !searchBar.classList.contains('hidden')) {
+			toggleSearchBar(false);
+		}
+	});
+	
+	// This function will be called from the main message listener
+	window.handleSearchResult = (payload) => {
+		const { chapterId, matchCount } = payload;
+		for (let i = 0; i < matchCount; i++) {
+			globalSearchMatches.push({ scope: 'target', chapterId, matchIndex: i });
+		}
+		
+		searchResponsesPending--;
+		if (searchResponsesPending === 0) {
+			// Sort matches based on chapter element order in the DOM
+			const chapterOrder = Array.from(document.querySelectorAll('.manuscript-chapter-item[data-chapter-id]')).map(el => el.dataset.chapterId);
+			globalSearchMatches.sort((a, b) => {
+				const orderA = chapterOrder.indexOf(a.chapterId.toString());
+				const orderB = chapterOrder.indexOf(b.chapterId.toString());
+				if (orderA !== orderB) return orderA - orderB;
+				return a.matchIndex - b.matchIndex;
+			});
+			
+			if (globalSearchMatches.length > 0) {
+				navigateToMatch(0);
+			}
+			updateSearchResultsUI();
+		}
+	};
+}
+
 /**
  * Handles the final step of view initialization.
  * Decides whether to restore scroll position or scroll to a specific chapter.
@@ -679,6 +915,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 		});
 		setupIntersectionObserver();
 		setupSpellcheckDropdown();
+		setupSearch(); // Initialize search functionality
 		
 		if (totalIframes === 0) {
 			initializeView(novelId, novelData, initialChapterId);
@@ -851,6 +1088,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 							top: scrollPosition,
 							behavior: 'smooth'
 						});
+					}
+					break;
+				}
+				// Handle search results from iframes
+				case 'search:results': {
+					if (typeof window.handleSearchResult === 'function') {
+						window.handleSearchResult(payload);
 					}
 					break;
 				}

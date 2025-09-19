@@ -226,6 +226,17 @@
     "errorProjectMissing": "Feil: Prosjekt-ID mangler.",
     "noChaptersInSection": "Denne seksjonen har ingen kapitler ennå.",
     "chapterTitlePlaceholder": "Kapitteltittel",
+    "search": "Søk (Ctrl+F)",
+    "searchBar": {
+      "placeholder": "Finn i dokumentet...",
+      "source": "Kilde",
+      "target": "Mål",
+      "previous": "Forrige treff",
+      "next": "Neste treff",
+      "close": "Lukk søk",
+      "results": "{current} av {total}",
+      "noResults": "Ingen resultater"
+    },
     "note": {
       "editTitle": "Rediger notat",
       "deleteTitle": "Slett notat"
@@ -283,15 +294,15 @@
       "loadingCodex": "Laster codex-oppføringer...",
       "useCodex": "Bruk Codex-oppføringer",
       "system": {
-        "base": "Du er en ekspert på prosa-redigering.\n\nNår du får tekst, omformuler den ved hjelp av følgende instruksjoner: <instructions>{instructions}</instructions>\n\nEtterlign og behold den nåværende skrivestilen, og la manerer, ordvalg og setningsstruktur være intakt.\nDu kan fjerne overflødige talelinjer. Behold samme tid og stilistiske valg. Bruk {language} staving og grammatikk.\n\nReturner kun den omformulerte teksten, ingenting annet.",
-        "defaultInstruction": "Omformuler den gitte teksten."
+        "base": "You are an expert prose editor.\n\nWhenever you're given text, rephrase it using the following instructions: <instructions>{instructions}</instructions>\n\nImitiate and keep the current writing style, and leave mannerisms, word choice and sentence structure intact.\nYou are free to remove redundant lines of speech. Keep the same tense and stylistic choices. Use {language} spelling and grammar.\n\nOnly return the rephrased text, nothing else.",
+        "defaultInstruction": "Rephrase the given text."
       },
       "user": {
-        "codexBlock": "Ta hensyn til følgende ordliste over karakterer/steder/gjenstander/lore... når du skriver svaret ditt:\n<codex>\n{codexContent}\n</codex>",
-        "surroundingTextBlock": "For kontekstuell informasjon, se på omkringliggende ord i scenen, IKKE GJENTA DEM:\n<textBefore>\n{wordsBefore}\n</textBefore>\n<textAfter>\n{wordsAfter}\n</textAfter>",
-        "surroundingTextBlockBeforeOnly": "For kontekstuell informasjon, se på omkringliggende ord i scenen, IKKE GJENTA DEM:\n<textBefore>\n{wordsBefore}\n</textBefore>",
-        "surroundingTextBlockAfterOnly": "For kontekstuell informasjon, se på omkringliggende ord i scenen, IKKE GJENTA DEM:\n<textAfter>\n{wordsAfter}\n</textAfter>",
-        "textToRewrite": "Tekst som skal skrives om:\n<text words=\"{wordCount}\">\n{text}\n</text>"
+        "codexBlock": "Take into account the following glossary of characters/locations/items/lore... when writing your response:\n<codex>\n{codexContent}\n</codex>",
+        "surroundingTextBlock": "For contextual information, refer to surrounding words in the scene, DO NOT REPEAT THEM:\n<textBefore>\n{wordsBefore}\n</textBefore>\n<textAfter>\n{wordsAfter}\n</textAfter>",
+        "surroundingTextBlockBeforeOnly": "For contextual information, refer to surrounding words in the scene, DO NOT REPEAT THEM:\n<textBefore>\n{wordsBefore}\n</textBefore>",
+        "surroundingTextBlockAfterOnly": "For contextual information, refer to surrounding words in the scene, DO NOT REPEAT THEM:\n<textAfter>\n{wordsAfter}\n</textAfter>",
+        "textToRewrite": "Text to rewrite:\n<text words=\"{wordCount}\">\n{text}\n</text>"
       }
     },
     "translate": {
@@ -306,14 +317,14 @@
       "prevPairs": "Forrige oversettelsespar",
       "prevPairsHelp": "Inkluder N forrige oversettelsesblokker som kontekst for AI-en. (0 for å deaktivere)",
       "system": {
-        "base": "Du er en ekspert litterær oversetter. Din oppgave er å oversette en tekst fra {sourceLanguage} til {targetLanguage}.\nBevar den opprinnelige tonen, stilen og litterære virkemidlene så mye som mulig. Oppretthold de opprinnelige avsnittsskillene.\n\n{instructionsBlock}\n\nReturner kun den oversatte teksten, ingenting annet.",
-        "instructionsBlock": "Følg disse spesifikke instruksjonene: <instructions>{instructions}</instructions>"
+        "base": "You are an expert literary translator. Your task is to translate a text from {sourceLanguage} to {targetLanguage}.\nPreserve the original tone, style, and literary devices as much as possible. Maintain the original paragraph breaks.\n\n{instructionsBlock}\n\nOnly return the translated text, nothing else.",
+        "instructionsBlock": "Follow these specific instructions: <instructions>{instructions}</instructions>"
       },
       "user": {
-        "codexBlock": "Bruk følgende ordliste for konsekvent oversettelse av nøkkeltermer. Ikke oversett termene bokstavelig hvis ordlisten gir en spesifikk oversettelse eller kontekst.\n<glossary>\n{codexContent}\n</glossary>",
-        "codexEntry": "Term ({sourceLanguage}): {title}\nBeskrivelse/Oversettelsestips: {content}\n\nOversettelse på {targetLanguage}: {translation}",
-        "codexEntryNoTranslation": "(Ingen spesifikk oversettelse gitt)",
-        "textToTranslate": "Oversett følgende tekst fra {sourceLanguage} til {targetLanguage}:\n\n<text>\n{text}\n</text>"
+        "codexBlock": "Use the following glossary for consistent translation of key terms. Do not translate the terms literally if the glossary provides a specific translation or context.\n<glossary>\n{codexContent}\n</glossary>",
+        "codexEntry": "Term ({sourceLanguage}): {title}\nDescription/Translation Hint: {content}\n\nTranslation in {targetLanguage}: {translation}",
+        "codexEntryNoTranslation": "(No specific translation provided)",
+        "textToTranslate": "Translate the following text from {sourceLanguage} to {targetLanguage}:\n\n<text>\n{text}\n</text>"
       }
     },
     "preview": {

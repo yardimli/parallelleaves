@@ -127,6 +127,13 @@
 		        data-i18n-title="editor.rephrase" disabled data-i18n="editor.rephrase">Rephrase
 		</button>
 	</div>
+	<!-- MODIFIED: Added search button -->
+	<div class="divider divider-horizontal mx-0"></div>
+	<div class="flex items-center gap-1">
+		<button type="button" id="js-search-btn" class="btn btn-ghost btn-sm btn-square" data-i18n-title="editor.search">
+			<i class="bi bi-search text-lg"></i>
+		</button>
+	</div>
 	<div class="flex-grow"></div>
 	<div class="flex items-center text-sm text-base-content/70">
 		<span id="js-total-word-count" class="mr-4"></span>
@@ -149,6 +156,36 @@
 	</button>
 	<button id="theme-toggle" class="btn btn-ghost btn-circle mr-2" data-i18n-title="common.changeTheme">
 		<i class="bi bi-sun-fill text-xl"></i>
+	</button>
+</div>
+
+<!-- NEW: Search Bar -->
+<div id="js-search-bar" class="hidden flex-shrink-0 h-12 bg-base-200 flex items-center px-4 gap-4 z-40 border-b border-base-300">
+	<input type="text" id="js-search-input" class="input input-sm input-bordered w-full max-w-xs" data-i18n-placeholder="editor.searchBar.placeholder">
+	<div class="form-control">
+		<label class="label cursor-pointer gap-2 p-0">
+			<span class="label-text text-sm" data-i18n="editor.searchBar.source">Source</span>
+			<input type="radio" name="search-scope" class="radio radio-sm" value="source" checked />
+		</label>
+	</div>
+	<div class="form-control">
+		<label class="label cursor-pointer gap-2 p-0">
+			<span class="label-text text-sm" data-i18n="editor.searchBar.target">Target</span>
+			<input type="radio" name="search-scope" class="radio radio-sm" value="target" />
+		</label>
+	</div>
+	<div class="flex items-center gap-1">
+		<button id="js-search-prev-btn" class="btn btn-ghost btn-sm btn-square" data-i18n-title="editor.searchBar.previous" disabled>
+			<i class="bi bi-chevron-up"></i>
+		</button>
+		<button id="js-search-next-btn" class="btn btn-ghost btn-sm btn-square" data-i18n-title="editor.searchBar.next" disabled>
+			<i class="bi bi-chevron-down"></i>
+		</button>
+	</div>
+	<span id="js-search-results-count" class="text-sm text-base-content/70 w-24 text-center"></span>
+	<div class="flex-grow"></div>
+	<button id="js-search-close-btn" class="btn btn-ghost btn-sm btn-square" data-i18n-title="editor.searchBar.close">
+		<i class="bi bi-x-lg"></i>
 	</button>
 </div>
 
