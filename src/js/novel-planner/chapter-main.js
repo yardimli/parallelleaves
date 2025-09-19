@@ -587,7 +587,6 @@ function setupSearch() {
 		searchNextBtn.disabled = true;
 	};
 	
-	// MODIFIED: This function is corrected to not modify the DOM while iterating with TreeWalker.
 	const findAndHighlightInSource = (query) => {
 		clearHighlightsInSource();
 		if (!query) return [];
@@ -734,6 +733,24 @@ function setupSearch() {
 	searchPrevBtn.addEventListener('click', () => {
 		const prevIndex = (currentMatchIndex - 1 + globalSearchMatches.length) % globalSearchMatches.length;
 		navigateToMatch(prevIndex);
+	});
+	
+	// MODIFIED: Added keydown listener to the search input for Enter/Shift+Enter navigation.
+	searchInput.addEventListener('keydown', (e) => {
+		if (e.key === 'Enter') {
+			e.preventDefault(); // Prevent default form submission behavior
+			if (e.shiftKey) {
+				// If Shift is held, trigger the "previous" button if it's enabled
+				if (!searchPrevBtn.disabled) {
+					searchPrevBtn.click();
+				}
+			} else {
+				// Otherwise, trigger the "next" button if it's enabled
+				if (!searchNextBtn.disabled) {
+					searchNextBtn.click();
+				}
+			}
+		}
 	});
 	
 	document.addEventListener('keydown', (e) => {

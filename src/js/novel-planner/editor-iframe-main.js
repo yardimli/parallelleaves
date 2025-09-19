@@ -1,5 +1,5 @@
 import { EditorState, Plugin, TextSelection } from 'prosemirror-state';
-import { EditorView } from 'prosemirror-view';
+import { EditorView, Decoration, DecorationSet } from 'prosemirror-view'; // MODIFIED: Import Decoration and DecorationSet
 import { DOMParser, DOMSerializer, Fragment, Schema } from 'prosemirror-model';
 import { history, undo, redo } from 'prosemirror-history';
 import { keymap } from 'prosemirror-keymap';
@@ -75,7 +75,34 @@ let chapterId;
 let field;
 let hasSourceSelection = false;
 let floatingTranslateBtn = null;
-let localSearchMatches = []; // NEW: State for local search matches
+let localSearchMatches = []; // State for local search match positions {from, to}
+
+// NEW: ProseMirror plugin to manage search result decorations.
+const searchPlugin = new Plugin({
+	state: {
+		init() {
+			return DecorationSet.empty;
+		},
+		apply(tr, value) {
+			// Get metadata from the transaction. If it's a search transaction, update the decorations.
+			const meta = tr.getMeta('search');
+			if (meta) {
+				return meta.decorations;
+			}
+			// If the document changed, map the decorations to their new positions.
+			if (tr.docChanged) {
+				return value.map(tr.mapping, tr.doc);
+			}
+			return value;
+		},
+	},
+	props: {
+		// This tells the editor to draw the decorations from our plugin's state.
+		decorations(state) {
+			return this.getState(state);
+		},
+	},
+});
 
 /**
  * Posts a message to the parent window.
@@ -227,7 +254,8 @@ function createEditorView (mount, config) {
 	editorView = new EditorView(mount, {
 		state: EditorState.create({
 			doc: doc,
-			plugins: [history(), keymap({ 'Mod-z': undo, 'Mod-y': redo }), keymap(baseKeymap), editorPlugin],
+			// MODIFIED: Added the searchPlugin to the editor state.
+			plugins: [history(), keymap({ 'Mod-z': undo, 'Mod-y': redo }), keymap(baseKeymap), editorPlugin, searchPlugin],
 		}),
 		
 		dispatchTransaction (transaction) {
@@ -327,68 +355,74 @@ function applyTypography ({ styleProps, settings }) {
 	});
 }
 
-// NEW: Clears all search highlights from the document.
-function clearSearchHighlights() {
-	const editorContainer = document.getElementById('editor-container');
-	if (!editorContainer) return;
-	
-	const marks = editorContainer.querySelectorAll('mark.search-highlight');
-	marks.forEach(mark => {
-		const parent = mark.parentNode;
-		// Replace the mark with its text content
-		parent.replaceChild(document.createTextNode(mark.textContent), mark);
-		// Merge adjacent text nodes
-		parent.normalize();
-	});
+// --- NEW/MODIFIED: Search functionality using ProseMirror Decorations ---
+
+/**
+ * Clears all search decorations from the editor.
+ */
+function clearSearchDecorations() {
 	localSearchMatches = [];
+	const tr = editorView.state.tr.setMeta('search', { decorations: DecorationSet.empty });
+	editorView.dispatch(tr);
 }
 
-// NEW: Finds and highlights all occurrences of a query.
-function findAndHighlight(query) {
-	clearSearchHighlights();
+/**
+ * Scans the document for a query and applies highlight decorations.
+ * @param {string} query - The text to search for.
+ */
+function performSearch(query) {
+	clearSearchDecorations();
 	if (!query) return;
 	
-	const editorContainer = document.getElementById('editor-container');
+	const { doc } = editorView.state;
+	const decorations = [];
 	const regex = new RegExp(query, 'gi');
-	const walker = document.createTreeWalker(editorContainer, NodeFilter.SHOW_TEXT, null, false);
 	
-	let node;
-	const nodesToProcess = [];
-	while (node = walker.nextNode()) {
-		// Avoid highlighting text in script or style tags if they were ever to be present
-		if (node.parentElement.closest('script, style')) continue;
-		nodesToProcess.push(node);
-	}
-	
-	nodesToProcess.forEach(textNode => {
-		const text = textNode.textContent;
+	doc.descendants((node, pos) => {
+		if (!node.isText) return;
+		
 		let match;
-		let lastIndex = 0;
-		const fragment = document.createDocumentFragment();
-		
-		while ((match = regex.exec(text)) !== null) {
-			// Add text before the match
-			if (match.index > lastIndex) {
-				fragment.appendChild(document.createTextNode(text.substring(lastIndex, match.index)));
-			}
-			// Create and add the highlighted mark
-			const mark = document.createElement('mark');
-			mark.className = 'search-highlight';
-			mark.textContent = match[0];
-			fragment.appendChild(mark);
-			localSearchMatches.push(mark);
-			lastIndex = regex.lastIndex;
-		}
-		
-		// If any matches were found, replace the original text node with the new fragment
-		if (lastIndex > 0) {
-			// Add any remaining text after the last match
-			if (lastIndex < text.length) {
-				fragment.appendChild(document.createTextNode(text.substring(lastIndex)));
-			}
-			textNode.parentNode.replaceChild(fragment, textNode);
+		while ((match = regex.exec(node.text)) !== null) {
+			const from = pos + match.index;
+			const to = from + match[0].length;
+			localSearchMatches.push({ from, to });
+			decorations.push(Decoration.inline(from, to, { class: 'search-highlight' }));
 		}
 	});
+	
+	const decorationSet = DecorationSet.create(doc, decorations);
+	const tr = editorView.state.tr.setMeta('search', { decorations: decorationSet });
+	editorView.dispatch(tr);
+	
+	postToParent('search:results', { chapterId, matchCount: localSearchMatches.length });
+}
+
+/**
+ * Navigates to a specific search match, highlighting it as active.
+ * @param {number} matchIndex - The index of the match in the localSearchMatches array.
+ * @param {boolean} isActive - Whether to apply the active highlight.
+ */
+function navigateToSearchMatch(matchIndex, isActive) {
+	if (!editorView) return;
+	
+	// Rebuild all decorations, applying the active class if needed.
+	const decorations = localSearchMatches.map((match, i) => {
+		const className = (isActive && i === matchIndex)
+			? 'search-highlight search-highlight-active'
+			: 'search-highlight';
+		return Decoration.inline(match.from, match.to, { class: className });
+	});
+	
+	const decorationSet = DecorationSet.create(editorView.state.doc, decorations);
+	const tr = editorView.state.tr.setMeta('search', { decorations: decorationSet });
+	editorView.dispatch(tr);
+	
+	// If activating a match, scroll it into view.
+	if (isActive && localSearchMatches[matchIndex]) {
+		const match = localSearchMatches[matchIndex];
+		const scrollTr = editorView.state.tr.setSelection(TextSelection.create(editorView.state.doc, match.from, match.to));
+		editorView.dispatch(scrollTr.scrollIntoView());
+	}
 }
 
 /**
@@ -509,25 +543,17 @@ window.addEventListener('message', (event) => {
 			break;
 		}
 		
-		// NEW: Handle search commands from the parent window
+		// MODIFIED: Handle search commands using ProseMirror decorations.
 		case 'search:findAndHighlight': {
-			findAndHighlight(payload.query);
-			postToParent('search:results', { chapterId, matchCount: localSearchMatches.length });
+			performSearch(payload.query);
 			break;
 		}
 		case 'search:navigateTo': {
-			const { matchIndex, isActive } = payload;
-			if (localSearchMatches[matchIndex]) {
-				const element = localSearchMatches[matchIndex];
-				element.classList.toggle('search-highlight-active', isActive);
-				if (isActive) {
-					element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-				}
-			}
+			navigateToSearchMatch(payload.matchIndex, payload.isActive);
 			break;
 		}
 		case 'search:clear': {
-			clearSearchHighlights();
+			clearSearchDecorations();
 			break;
 		}
 		
