@@ -54,19 +54,20 @@
     "prosemirror-view": "^1.40.1"
   },
   "build": {
-    "appId": "com.elo.parallelleaves",
+    "appId": "com.locutusdeborg.parallelleaves",
     "productName": "Parallel Leaves",
-    "copyright": "Copyright © 2024 Elo",
+    "copyright": "Copyright © 2024 Ekim Emre Yardimli",
     "directories": {
       "output": "release"
     },
     "files": [
       "dist/**/*",
       "public/**/*",
-      "src/main/**/*",
-      "src/database/**/*",
       "src/ai/**/*",
-      "src/js/languages.js",
+      "src/database/**/*",
+      "src/js/**/*",
+      "src/main/**/*",
+      "src/utils/**/*",
       "electron-main.js",
       "preload.js",
       "config.js"
