@@ -678,10 +678,7 @@ function setupSearch() {
 			newMatch.element.classList.add('search-highlight-active');
 			newMatch.element.scrollIntoView({ behavior: 'smooth', block: 'center' });
 		} else {
-			const chapterContainer = document.getElementById(`target-chapter-scroll-target-${newMatch.chapterId}`);
-			if (chapterContainer) {
-				chapterContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
-			}
+			// MODIFIED: No longer need to scroll the parent container. The iframe will handle it.
 			const view = chapterEditorViews.get(newMatch.chapterId.toString());
 			if (view && view.isReady) {
 				view.contentWindow.postMessage({ type: 'search:navigateTo', payload: { matchIndex: newMatch.matchIndex, isActive: true } }, window.location.origin);
@@ -735,7 +732,6 @@ function setupSearch() {
 		navigateToMatch(prevIndex);
 	});
 	
-	// MODIFIED: Added keydown listener to the search input for Enter/Shift+Enter navigation.
 	searchInput.addEventListener('keydown', (e) => {
 		if (e.key === 'Enter') {
 			e.preventDefault(); // Prevent default form submission behavior
@@ -1079,11 +1075,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 					}
 					break;
 				}
-				case 'markerFound': {
-					const { top: markerTopInIframe } = payload;
+				// MODIFIED: This message is now named more generically and handles scrolling for both markers and search.
+				case 'scrollToCoordinates': {
+					const { top: targetTopInIframe } = payload;
 					const sourceIframeWindow = event.source;
 					
-					// Find the iframe element that sent the message.
 					const viewInfo = Array.from(chapterEditorViews.values()).find(v => v.contentWindow === sourceIframeWindow);
 					if (!viewInfo) break;
 					
@@ -1091,15 +1087,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 					const targetContainer = document.getElementById('js-target-column-container');
 					
 					if (iframeEl && targetContainer) {
-						// Get the position of the iframe relative to the scroll container.
 						const iframeRect = iframeEl.getBoundingClientRect();
 						const containerRect = targetContainer.getBoundingClientRect();
 						const iframeOffsetTop = iframeRect.top - containerRect.top;
 						
-						// Calculate the final scroll position.
-						// It's the container's current scroll position, plus the iframe's offset within the container,
-						// plus the marker's offset within the iframe. We subtract an offset to position it nicely.
-						const scrollPosition = targetContainer.scrollTop + iframeOffsetTop + markerTopInIframe - 100; // 100px offset from top
+						const scrollPosition = targetContainer.scrollTop + iframeOffsetTop + targetTopInIframe - 100; // 100px offset from top
 						
 						targetContainer.scrollTo({
 							top: scrollPosition,

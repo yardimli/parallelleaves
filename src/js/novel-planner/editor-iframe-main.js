@@ -1,5 +1,5 @@
 import { EditorState, Plugin, TextSelection } from 'prosemirror-state';
-import { EditorView, Decoration, DecorationSet } from 'prosemirror-view'; // MODIFIED: Import Decoration and DecorationSet
+import { EditorView, Decoration, DecorationSet } from 'prosemirror-view';
 import { DOMParser, DOMSerializer, Fragment, Schema } from 'prosemirror-model';
 import { history, undo, redo } from 'prosemirror-history';
 import { keymap } from 'prosemirror-keymap';
@@ -77,7 +77,7 @@ let hasSourceSelection = false;
 let floatingTranslateBtn = null;
 let localSearchMatches = []; // State for local search match positions {from, to}
 
-// NEW: ProseMirror plugin to manage search result decorations.
+// ProseMirror plugin to manage search result decorations.
 const searchPlugin = new Plugin({
 	state: {
 		init() {
@@ -254,7 +254,6 @@ function createEditorView (mount, config) {
 	editorView = new EditorView(mount, {
 		state: EditorState.create({
 			doc: doc,
-			// MODIFIED: Added the searchPlugin to the editor state.
 			plugins: [history(), keymap({ 'Mod-z': undo, 'Mod-y': redo }), keymap(baseKeymap), editorPlugin, searchPlugin],
 		}),
 		
@@ -355,7 +354,7 @@ function applyTypography ({ styleProps, settings }) {
 	});
 }
 
-// --- NEW/MODIFIED: Search functionality using ProseMirror Decorations ---
+// --- Search functionality using ProseMirror Decorations ---
 
 /**
  * Clears all search decorations from the editor.
@@ -417,11 +416,19 @@ function navigateToSearchMatch(matchIndex, isActive) {
 	const tr = editorView.state.tr.setMeta('search', { decorations: decorationSet });
 	editorView.dispatch(tr);
 	
-	// If activating a match, scroll it into view.
+	// If activating a match, scroll it into view and notify the parent.
 	if (isActive && localSearchMatches[matchIndex]) {
 		const match = localSearchMatches[matchIndex];
-		const scrollTr = editorView.state.tr.setSelection(TextSelection.create(editorView.state.doc, match.from, match.to));
-		editorView.dispatch(scrollTr.scrollIntoView());
+		const { from } = match;
+		
+		// Create a transaction to scroll the view.
+		const scrollTr = editorView.state.tr.scrollIntoView();
+		editorView.dispatch(scrollTr);
+		
+		// MODIFIED: Calculate the coordinates of the match *within the iframe* and send them to the parent.
+		// The parent will then use these coordinates to scroll its own container.
+		const coords = editorView.coordsAtPos(from);
+		postToParent('scrollToCoordinates', { top: coords.top });
 	}
 }
 
@@ -538,12 +545,13 @@ window.addEventListener('message', (event) => {
 				const { from } = editorView.state.selection;
 				const coords = editorView.coordsAtPos(from);
 				
-				postToParent('markerFound', { top: coords.top });
+				// MODIFIED: Use the generic scrolling message
+				postToParent('scrollToCoordinates', { top: coords.top });
 			}
 			break;
 		}
 		
-		// MODIFIED: Handle search commands using ProseMirror decorations.
+		// Handle search commands using ProseMirror decorations.
 		case 'search:findAndHighlight': {
 			performSearch(payload.query);
 			break;
