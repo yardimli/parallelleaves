@@ -21,10 +21,7 @@
 				<i class="bi bi-arrow-clockwise text-2xl"></i>
 			</button>
 			
-			<!-- NEW: View Toggle Button -->
-			<button id="js-view-toggle-btn" class="btn btn-ghost btn-circle" data-i18n-title="dashboard.toggleView">
-				<i class="bi bi-grid-3x3-gap text-2xl"></i> <!-- Icon changes dynamically -->
-			</button>
+			<!-- REMOVED: View Toggle Button has been removed. -->
 			
 			<!-- Theme Toggle Button -->
 			<button id="theme-toggle" class="btn btn-ghost btn-circle" data-i18n-title="common.changeTheme">
@@ -75,7 +72,8 @@
 		</div>
 	</div>
 	
-	<div id="novel-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+	<!-- MODIFIED: The novel list now defaults to a flex column (list view) instead of a grid. -->
+	<div id="novel-list" class="flex flex-col gap-6">
 		<p id="loading-message" data-i18n="dashboard.loadingProjects">Loading projects...</p>
 	</div>
 </div>

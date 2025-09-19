@@ -79,7 +79,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 	const runGenerateCoverBtn = document.getElementById('run-generate-cover-btn');
 	const cancelGenerateCoverBtn = document.getElementById('cancel-generate-cover-btn');
 	const refreshBtn = document.getElementById('js-refresh-page-btn');
-	const viewToggleBtn = document.getElementById('js-view-toggle-btn'); // NEW: View toggle button
+	// REMOVED: The view toggle button element is no longer needed.
 	
 	let novelsData = [];
 	let stagedCover = null;
@@ -132,7 +132,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 			document.getElementById('login-btn').addEventListener('click', () => loginModal.showModal());
 			if (authDivider) authDivider.classList.add('hidden');
 			
-			novelList.innerHTML = `<p class="text-base-content/70 col-span-full text-center">${t('dashboard.signInPrompt')}</p>`;
+			// MODIFIED: Removed col-span-full as the layout is no longer a grid.
+			novelList.innerHTML = `<p class="text-base-content/70 text-center">${t('dashboard.signInPrompt')}</p>`;
 			loadingMessage.style.display = 'none';
 			
 			loginModal.showModal();
@@ -285,41 +286,29 @@ document.addEventListener('DOMContentLoaded', async () => {
 		}
 	}
 	
-	// NEW: Function to toggle between grid and list view
-	function setDashboardView(view) {
-		const icon = viewToggleBtn.querySelector('i');
+	/**
+	 * MODIFIED: This function is simplified to only apply list view styles to project cards.
+	 * The container is already a flex column from the HTML.
+	 */
+	function applyListViewStyles() {
 		const cards = document.querySelectorAll('#novel-list > .card');
 		
-		if (view === 'list') {
-			novelList.className = 'flex flex-col gap-6'; // Set class for list container
-			cards.forEach(card => {
-				card.classList.remove('card-compact', 'flex-col');
-				card.classList.add('card-side', 'flex-row'); // Use DaisyUI side card
-				card.querySelector('figure')?.classList.add('max-w-xs'); // Constrain image width
-			});
-			if (icon) {
-				icon.className = 'bi bi-list-ul text-2xl'; // Update icon
-			}
-			localStorage.setItem('dashboardView', 'list');
-		} else { // Default to grid view
-			novelList.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6';
-			cards.forEach(card => {
-				card.classList.remove('card-side', 'flex-row');
-				card.classList.add('card-compact', 'flex-col');
-				card.querySelector('figure')?.classList.remove('max-w-xs');
-			});
-			if (icon) {
-				icon.className = 'bi bi-grid-3x3-gap text-2xl'; // Update icon
-			}
-			localStorage.setItem('dashboardView', 'grid');
-		}
+		cards.forEach(card => {
+			// Remove any grid-specific layout classes that might exist
+			card.classList.remove('card-compact', 'flex-col');
+			// Add list-view layout classes (DaisyUI side card for horizontal layout)
+			card.classList.add('card-side', 'flex-row');
+			// Constrain the width of the cover image in list view for a better look
+			card.querySelector('figure')?.classList.add('max-w-[200px]');
+		});
 	}
 	
 	function renderNovels() {
 		loadingMessage.style.display = 'none';
 		
 		if (novelsData.length === 0) {
-			novelList.innerHTML = `<p class="text-base-content/70 col-span-full text-center" data-i18n="dashboard.noProjects">${t('dashboard.noProjects')}</p>`;
+			// MODIFIED: Removed col-span-full as the layout is no longer a grid.
+			novelList.innerHTML = `<p class="text-base-content/70 text-center" data-i18n="dashboard.noProjects">${t('dashboard.noProjects')}</p>`;
 			return;
 		}
 		
@@ -353,7 +342,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </div>
                         
                         <!-- Word Counts -->
-                        <div class="grid grid-cols-2 gap-x-4">
+                        <div class="grid grid-cols-5 gap-x-4">
                             <div>
                                 <div class="font-semibold" data-i18n="dashboard.card.sourceWords">Source</div>
                                 <div class="js-source-words">0 words</div>
@@ -362,44 +351,36 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 <div class="font-semibold" data-i18n="dashboard.card.targetWords">Target</div>
                                 <div class="js-target-words">0 words</div>
                             </div>
-                        </div>
-
-                        <!-- Chapter Counts -->
-                        <div class="grid grid-cols-2 gap-x-4">
                             <div>
                                 <div class="font-semibold" data-i18n="dashboard.card.chapters">Chapters</div>
                                 <div class="js-chapter-count">0</div>
                             </div>
-                        </div>
-
-                        <!-- Dates -->
-                        <div class="border-t border-base-content/10 pt-2 mt-2 text-base-content/50">
-                             <div class="flex justify-between">
-                                <span data-i18n="dashboard.card.created">Created:</span>
-                                <span class="js-created-date"></span>
+                              <div>
+                                <div class="font-semibold" data-i18n="dashboard.card.created">Created:</div>
+                                <div class="js-created-date"></div>
                              </div>
-                             <div class="flex justify-between">
-                                <span data-i18n="dashboard.card.updated">Updated:</span>
-                                <span class="js-updated-date"></span>
+                             <div>
+                                <div class="font-semibold" data-i18n="dashboard.card.updated">Updated:</div>
+                                <div class="js-updated-date"></div>
                              </div>
                         </div>
                     </div>
                     
-                    <div class="card-actions justify-end items-center mt-4">
+                    <div class="card-actions start items-center mt-4">
+                        <button class="btn btn-ghost btn-sm js-meta-settings" data-i18n-title="common.edit">
+                            <i class="bi bi-pencil-square text-lg"></i>
+                        </button>
                         <button class="btn btn-ghost btn-sm js-open-outline-btn" data-i18n-title="outline.codex">
                             <i class="bi bi-journal-richtext text-lg"></i>
                         </button>
-                        <button class="btn btn-ghost btn-sm js-backup-novel" data-i18n-title="dashboard.card.backupProject">
-                            <i class="bi bi-download text-lg"></i>
+                        <button class="btn btn-ghost btn-sm js-prose-settings" data-i18n-title="dashboard.proseSettings.title">
+                            <i class="bi bi-translate text-lg"></i>
                         </button>
                         <button class="btn btn-ghost btn-sm js-export-docx" data-i18n-title="outline.exportDocx">
                             <i class="bi bi-file-earmark-word text-lg"></i>
                         </button>
-                        <button class="btn btn-ghost btn-sm js-meta-settings" data-i18n-title="common.edit">
-                            <i class="bi bi-pencil-square text-lg"></i>
-                        </button>
-                        <button class="btn btn-ghost btn-sm js-prose-settings" data-i18n-title="dashboard.proseSettings.title">
-                            <i class="bi bi-translate text-lg"></i>
+                        <button class="btn btn-ghost btn-sm js-backup-novel" data-i18n-title="dashboard.card.backupProject">
+                            <i class="bi bi-download text-lg"></i>
                         </button>
                     </div>
                 </div>
@@ -450,7 +431,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 			novelList.appendChild(novelCard);
 		});
 		
-		setDashboardView(localStorage.getItem('dashboardView') || 'grid');
+		// MODIFIED: Always apply the list view styles. No more toggling.
+		applyListViewStyles();
 		applyTranslationsTo(novelList);
 	}
 	
@@ -462,13 +444,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 		});
 	}
 	
-	if (viewToggleBtn) {
-		viewToggleBtn.addEventListener('click', () => {
-			const currentView = localStorage.getItem('dashboardView') || 'grid';
-			const newView = currentView === 'grid' ? 'list' : 'grid';
-			setDashboardView(newView);
-		});
-	}
+	// REMOVED: The event listener for the view toggle button is no longer needed.
 	
 	if (importDocBtn) {
 		importDocBtn.addEventListener('click', () => {
