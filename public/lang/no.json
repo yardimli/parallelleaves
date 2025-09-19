@@ -111,6 +111,7 @@
     "prevMark": "Forrige merke",
     "nextMark": "Neste merke",
     "autoDetect": "Autodetekter kapitler",
+    "autoSplit": "Autodél kapitler",
     "selectFile": "Velg fil (.txt, .docx)",
     "projectTitle": "Prosjekttittel",
     "sourceLanguage": "Kildespråk",
@@ -127,6 +128,7 @@
     "alertNoTitle": "Vennligst oppgi en prosjekttittel.",
     "alertNoContent": "Ikke noe innhold å importere.",
     "errorImport": "Feil under import: {message}",
+    "errorChapterTooLong": "Import mislyktes: Kapittel '{chapterTitle}' er for langt ({wordCount} ord). Vennligst del opp kapitler til å være under 5000 ord.",
     "statusSummary": "{actCount} {actLabel} og {chapterCount} {chapterLabel} vil bli opprettet.",
     "actLabel_one": "Akt",
     "actLabel_other": "Akter",
@@ -290,6 +292,14 @@
     }
   },
   "prompt": {
+    "common": {
+      "dictionary": "Ordbok",
+      "dictionaryHelp": "Oppgi en egendefinert ordbok eller ordliste for AI-en. Én oppføring per linje, f.eks. 'Karakternavn = Oversatt Navn'.",
+      "useDictionary": "Bruk Egendefinert Ordbok",
+      "user": {
+        "dictionaryBlock": "Ta hensyn til følgende egendefinerte ordbok:\n<dictionary>\n{dictionaryContent}\n</dictionary>"
+      }
+    },
     "rephrase": {
       "title": "Omformuler",
       "instructions": "Instruksjoner",

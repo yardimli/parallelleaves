@@ -1,6 +1,16 @@
 import { t, applyTranslationsTo } from '../i18n.js';
 import { htmlToPlainText } from '../../utils/html-processing.js';
 
+// NEW: Add debounce utility
+const debounce = (func, delay) => {
+	let timeout;
+	return function(...args) {
+		const context = this;
+		clearTimeout(timeout);
+		timeout = setTimeout(() => func.apply(context, args), delay);
+	};
+};
+
 const defaultState = {
 	instructions: '',
 	selectedCodexIds: [],
@@ -154,6 +164,12 @@ export const buildPromptJson = (formData, context) => {
 		instructionsBlock: instructionsBlock
 	}).trim();
 	
+	// NEW: Add dictionary block
+	let dictionaryBlock = '';
+	if (formData.useDictionary && formData.dictionary) {
+		dictionaryBlock = t('prompt.common.user.dictionaryBlock', { dictionaryContent: formData.dictionary });
+	}
+	
 	let codexBlock = '';
 	if (formData.selectedCodexIds && formData.selectedCodexIds.length > 0) {
 		const allEntriesFlat = allCodexEntries.flatMap(category => category.entries);
@@ -178,7 +194,8 @@ export const buildPromptJson = (formData, context) => {
 	
 	const contextMessages = buildTranslationContextBlock(translationPairs, languageForPrompt, targetLanguage);
 	
-	const finalUserPromptParts = [codexBlock];
+	// MODIFIED: Add dictionaryBlock to user prompt parts
+	const finalUserPromptParts = [dictionaryBlock, codexBlock];
 	finalUserPromptParts.push(t('prompt.translate.user.textToTranslate', {
 		sourceLanguage: languageForPrompt,
 		targetLanguage: targetLanguage,
@@ -198,10 +215,13 @@ const updatePreview = async (container, context) => {
 	const form = container.querySelector('#translate-editor-form');
 	if (!form) return;
 	
+	// MODIFIED: Add dictionary fields to formData
 	const formData = {
 		instructions: form.elements.instructions.value.trim(),
 		selectedCodexIds: form.elements.codex_entry ? Array.from(form.elements.codex_entry).filter(cb => cb.checked).map(cb => cb.value) : [],
 		contextPairs: parseInt(form.elements.context_pairs.value, 10) || 0,
+		useDictionary: form.elements.use_dictionary.checked,
+		dictionary: form.elements.dictionary.value.trim(),
 	};
 	
 	const systemPreview = container.querySelector('.js-preview-system');
@@ -316,6 +336,36 @@ export const init = async (container, context) => {
 		renderCodexList(container, fullContext, context.initialState, preselectedIds);
 		
 		const form = container.querySelector('#translate-editor-form');
+		
+		// NEW: Dictionary logic
+		const novelId = context.novelId;
+		const dictionaryTextarea = container.querySelector('textarea[name="dictionary"]');
+		const useDictionaryToggle = container.querySelector('.js-use-dictionary-toggle');
+		const dictionaryContainer = container.querySelector('.js-dictionary-container');
+		
+		if (novelId && dictionaryTextarea && useDictionaryToggle && dictionaryContainer) {
+			const storageKey = `customDictionary-${novelId}`;
+			
+			const savedDictionary = localStorage.getItem(storageKey);
+			if (savedDictionary) {
+				dictionaryTextarea.value = savedDictionary;
+			}
+			
+			useDictionaryToggle.addEventListener('change', () => {
+				dictionaryContainer.classList.toggle('hidden', !useDictionaryToggle.checked);
+				updatePreview(container, fullContext);
+			});
+			
+			const debouncedSave = debounce((value) => {
+				localStorage.setItem(storageKey, value);
+			}, 500);
+			
+			dictionaryTextarea.addEventListener('input', () => {
+				debouncedSave(dictionaryTextarea.value);
+				// The main form listener will handle the preview update
+			});
+		}
+		
 		if (form) {
 			form.addEventListener('input', () => updatePreview(container, fullContext));
 		}

@@ -16,6 +16,18 @@
 				<p class="text-sm text-base-content/60" data-i18n="prompt.translate.loadingCodex">Loading codex entries...</p>
 			</div>
 			
+			<!-- NEW: Custom Dictionary Section -->
+			<div class="form-control">
+				<label class="label cursor-pointer justify-start gap-2 py-1">
+					<input type="checkbox" name="use_dictionary" class="js-use-dictionary-toggle checkbox checkbox-sm" />
+					<span class="label-text font-semibold" data-i18n="prompt.common.useDictionary">Use Custom Dictionary</span>
+				</label>
+			</div>
+			<div class="js-dictionary-container hidden">
+				<textarea name="dictionary" class="textarea textarea-bordered w-full h-32 font-mono text-sm" data-i18n-placeholder="prompt.common.dictionaryHelp"></textarea>
+				<p class="text-xs text-base-content/60 mt-1" data-i18n="prompt.common.dictionaryHelp"></p>
+			</div>
+			
 			<div>
 				<label for="translate-context-pairs" class="label pb-1">
 					<span class="label-text font-semibold" data-i18n="prompt.translate.prevPairs">Previous Translation Pairs</span>

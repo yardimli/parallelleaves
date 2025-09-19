@@ -111,6 +111,7 @@
     "prevMark": "Önceki İşaret",
     "nextMark": "Sonraki İşaret",
     "autoDetect": "Bölümleri Otomatik Bul",
+    "autoSplit": "Bölümleri Otomatik Böl",
     "selectFile": "Dosya Seç (.txt, .docx)",
     "projectTitle": "Proje Adı",
     "sourceLanguage": "Kaynak Dil",
@@ -127,6 +128,7 @@
     "alertNoTitle": "Lütfen bir proje adı girin.",
     "alertNoContent": "Yüklenecek içerik yok.",
     "errorImport": "Yükleme sırasında hata: {message}",
+    "errorChapterTooLong": "İçeri aktarma başarısız: '{chapterTitle}' bölümü çok uzun ({wordCount} kelime). Lütfen bölümleri 5000 kelimenin altında olacak şekilde bölün.",
     "statusSummary": "{actCount} {actLabel} ve {chapterCount} {chapterLabel} oluşturulacak.",
     "actLabel_one": "Perde",
     "actLabel_other": "Perde",
@@ -302,6 +304,14 @@
     }
   },
   "prompt": {
+    "common": {
+      "dictionary": "Sözlük",
+      "dictionaryHelp": "Yapay zeka için özel bir sözlük veya terimler listesi sağlayın. Her satıra bir girdi, örn: 'Karakter Adı = Çevrilmiş Adı'.",
+      "useDictionary": "Özel Sözlük Kullan",
+      "user": {
+        "dictionaryBlock": "Aşağıdaki özel sözlüğü dikkate al:\n<dictionary>\n{dictionaryContent}\n</dictionary>"
+      }
+    },
     "rephrase": {
       "title": "Yeniden Yaz",
       "instructions": "Talimatlar",

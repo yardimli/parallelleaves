@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 	const selectFileBtn = document.getElementById('select-file-btn');
 	const startImportBtn = document.getElementById('start-import-btn');
 	const autoDetectBtn = document.getElementById('auto-detect-btn');
+	const autoSplitBtn = document.getElementById('auto-split-btn'); // MODIFIED: Added auto-split button
 	const prevMarkBtn = document.getElementById('prev-mark-btn');
 	const nextMarkBtn = document.getElementById('next-mark-btn');
 	const titleInput = document.getElementById('title');
@@ -49,10 +50,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 	const autoDetectModal = document.getElementById('auto-detect-modal');
 	const runDetectionBtn = document.getElementById('run-detection-btn');
 	
+	const WORD_LIMIT = 5000; // NEW: Word count limit per chapter
+	
 	let currentFilePath = null;
 	let currentMarkIndex = -1;
 	let targetedParagraph = null;
 	
+	/**
+	 * Counts the words in a given string.
+	 * @param {string} text - The string to count words in.
+	 * @returns {number} The number of words.
+	 */
+	function countWords(text) { // NEW: Helper function for word counting
+		if (!text || typeof text !== 'string') {
+			return 0;
+		}
+		return text.trim().split(/\s+/).filter(Boolean).length;
+	}
 	
 	async function populateLanguages() {
 		const supportedLanguages = await window.api.getSupportedLanguages();
@@ -97,6 +111,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 		const hasContent = currentFilePath !== null;
 		startImportBtn.disabled = !(hasTitle && hasContent);
 		autoDetectBtn.disabled = !hasContent;
+		autoSplitBtn.disabled = !hasContent; // MODIFIED: Enable/disable auto-split button
 	}
 	
 	function showPopover(event) {
@@ -422,6 +437,50 @@ document.addEventListener('DOMContentLoaded', async () => {
 		autoDetectModal.close();
 	});
 	
+	// NEW: Auto-split chapters that are too long
+	autoSplitBtn.addEventListener('click', () => {
+		let currentWordCount = 0;
+		const nodes = Array.from(documentContent.childNodes);
+		
+		for (const node of nodes) {
+			if (node.nodeType !== Node.ELEMENT_NODE) continue;
+			
+			// Reset counter at every existing break marker
+			if (node.classList.contains('act-break-marker') || node.classList.contains('chapter-break-marker')) {
+				currentWordCount = 0;
+				continue;
+			}
+			
+			// Only process paragraph nodes
+			if (node.tagName === 'P') {
+				const paragraphWordCount = countWords(node.textContent);
+				
+				// If adding this paragraph exceeds the limit, and it's not the very first paragraph of a chapter.
+				// The `currentWordCount > 0` check ensures we don't add a break before the very first paragraph of a section.
+				if (currentWordCount > 0 && currentWordCount + paragraphWordCount > WORD_LIMIT) {
+					// Insert a new chapter break *before* the current paragraph
+					const marker = document.createElement('div');
+					marker.className = 'chapter-break-marker not-prose';
+					marker.dataset.title = ''; // Let importer use default naming
+					
+					const titleSpan = document.createElement('span');
+					titleSpan.className = 'break-title';
+					titleSpan.textContent = ''; // No specific title for auto-split
+					marker.appendChild(titleSpan);
+					
+					documentContent.insertBefore(marker, node);
+					
+					// Reset the word count for the new chapter, starting with the current paragraph
+					currentWordCount = paragraphWordCount;
+				} else {
+					// Otherwise, just add to the current chapter's word count
+					currentWordCount += paragraphWordCount;
+				}
+			}
+		}
+		updateStatus();
+	});
+	
 	nextMarkBtn.addEventListener('click', () => {
 		const marks = documentContent.querySelectorAll('.chapter-break-marker, .act-break-marker');
 		if (marks.length === 0) return;
@@ -454,14 +513,75 @@ document.addEventListener('DOMContentLoaded', async () => {
 			return;
 		}
 		
+		// NEW: Word count validation before import
+		const actsForValidation = [];
+		let currentAct = { title: 'Act 1', chapters: [] };
+		let currentChapter = { title: 'Chapter 1', content: [] };
+		
+		const allNodes = documentContent.childNodes;
+		
+		for (const node of allNodes) {
+			if (node.nodeType !== Node.ELEMENT_NODE) continue;
+			
+			const isActBreak = node.classList.contains('act-break-marker');
+			const isChapterBreak = node.classList.contains('chapter-break-marker');
+			
+			if (isActBreak || isChapterBreak) {
+				if (currentChapter.content.length > 0) {
+					currentAct.chapters.push(currentChapter);
+				}
+				
+				if (isActBreak) {
+					if (currentAct.chapters.length > 0) {
+						actsForValidation.push(currentAct);
+					}
+					currentAct = { title: node.dataset.title || `Act ${actsForValidation.length + 2}`, chapters: [] };
+				}
+				
+				currentChapter = { title: node.dataset.title || `Chapter ${currentAct.chapters.length + 1}`, content: [] };
+				
+			} else if (node.tagName === 'P') {
+				currentChapter.content.push(node.textContent.trim());
+			}
+		}
+		
+		if (currentChapter.content.length > 0) {
+			currentAct.chapters.push(currentChapter);
+		}
+		if (currentAct.chapters.length > 0) {
+			actsForValidation.push(currentAct);
+		}
+		
+		if (actsForValidation.length === 0 && allNodes.length > 0) {
+			const allContent = Array.from(allNodes)
+				.filter(node => node.tagName === 'P')
+				.map(p => p.textContent.trim());
+			
+			if (allContent.length > 0) {
+				currentChapter.content = allContent;
+				currentAct.chapters.push(currentChapter);
+				actsForValidation.push(currentAct);
+			}
+		}
+		
+		for (const act of actsForValidation) {
+			for (const chapter of act.chapters) {
+				const wordCount = countWords(chapter.content.join(' '));
+				if (wordCount > WORD_LIMIT) {
+					const fullTitle = act.chapters.length > 1 ? `${act.title} - ${chapter.title}` : chapter.title;
+					window.showAlert(t('import.errorChapterTooLong', { chapterTitle: fullTitle, wordCount: wordCount }), t('common.error'));
+					return; // Stop the import
+				}
+			}
+		}
+		// END: Word count validation
+		
 		importOverlayStatus.textContent = t('import.importingContent');
 		importOverlay.classList.remove('hidden');
 		
 		const acts = [];
-		let currentAct = { title: 'Act 1', chapters: [] };
-		let currentChapter = { title: 'Chapter 1', content: [] }; // Now collects an array of paragraph strings
-		
-		const allNodes = documentContent.childNodes;
+		currentAct = { title: 'Act 1', chapters: [] };
+		currentChapter = { title: 'Chapter 1', content: [] }; // Now collects an array of paragraph strings
 		
 		for (const node of allNodes) {
 			if (node.nodeType !== Node.ELEMENT_NODE) continue;

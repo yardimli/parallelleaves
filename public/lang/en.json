@@ -111,6 +111,7 @@
     "prevMark": "Previous Mark",
     "nextMark": "Next Mark",
     "autoDetect": "Auto-detect Chapters",
+    "autoSplit": "Auto-split Chapters",
     "selectFile": "Select File (.txt, .docx)",
     "projectTitle": "Project Title",
     "sourceLanguage": "Source Language",
@@ -127,6 +128,7 @@
     "alertNoTitle": "Please provide a project title.",
     "alertNoContent": "No content to import.",
     "errorImport": "Error during import: {message}",
+    "errorChapterTooLong": "Import failed: Chapter '{chapterTitle}' is too long ({wordCount} words). Please split chapters to be under 5000 words.",
     "statusSummary": "{actCount} {actLabel} and {chapterCount} {chapterLabel} will be created.",
     "actLabel_one": "Act",
     "actLabel_other": "Acts",
@@ -302,6 +304,14 @@
     }
   },
   "prompt": {
+    "common": {
+      "dictionary": "Dictionary",
+      "dictionaryHelp": "Provide a custom dictionary or glossary for the AI. One entry per line, e.g., 'Character Name = Translated Name'.",
+      "useDictionary": "Use Custom Dictionary",
+      "user": {
+        "dictionaryBlock": "Take into account the following custom dictionary:\n<dictionary>\n{dictionaryContent}\n</dictionary>"
+      }
+    },
     "rephrase": {
       "title": "Rephrase",
       "instructions": "Instructions",
