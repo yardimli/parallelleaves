@@ -1,4 +1,4 @@
-import { openPromptEditor, setupPromptEditor } from '../prompt-editor.js';
+// MODIFIED: Removed imports for AI prompt editor functionality
 import { DOMSerializer, Fragment, DOMParser, Schema } from 'prosemirror-model';
 import { history, undo, redo } from 'prosemirror-history';
 import { toggleMark, setBlockType, wrapIn, baseKeymap } from 'prosemirror-commands';
@@ -64,10 +64,7 @@ export const schema = new Schema({
 		highlight_green: highlightMarkSpec('highlight-green'),
 		highlight_blue: highlightMarkSpec('highlight-blue'),
 		highlight_red: highlightMarkSpec('highlight-red'),
-		ai_suggestion: {
-			parseDOM: [{ tag: 'span.ai-suggestion' }],
-			toDOM: () => ['span', { class: 'ai-suggestion' }, 0]
-		}
+		// MODIFIED: Removed the 'ai_suggestion' mark as it's no longer needed without AI functions.
 	}
 });
 
@@ -102,70 +99,7 @@ const serializeDocToHtml = (view) => {
 	return tempDiv.innerHTML;
 };
 
-// --- Editor Interface for Direct ProseMirror View ---
-const createDirectEditorInterface = (view) => {
-	const { schema } = view.state;
-	
-	return {
-		type: 'direct',
-		getSelectionInfo: (action) => {
-			const { state } = view;
-			if (state.selection.empty) return null;
-			return {
-				from: state.selection.from,
-				to: state.selection.to,
-				originalFragmentJson: state.doc.slice(state.selection.from, state.selection.to).content.toJSON(),
-				selectedText: state.doc.textBetween(state.selection.from, state.selection.to, ' ')
-			};
-		},
-		setEditable: (isEditable) => {
-			view.setProps({ editable: () => isEditable });
-		},
-		cleanupSuggestion: () => {
-			const { tr } = view.state;
-			tr.removeMark(0, view.state.doc.content.size, schema.marks.ai_suggestion);
-			view.dispatch(tr);
-			view.focus();
-		},
-		discardAiSuggestion: (from, to, originalFragmentJson) => {
-			const originalFragment = Fragment.fromJSON(schema, originalFragmentJson);
-			let tr = view.state.tr.replaceWith(from, to, originalFragment);
-			const newTo = from + originalFragment.size;
-			tr = tr.setSelection(TextSelection.create(tr.doc, from, newTo));
-			view.dispatch(tr);
-		},
-		
-		replaceRangeWithSuggestion: (from, to, newContentHtml) => {
-			return new Promise((resolve) => {
-				const { state, dispatch } = view;
-				
-				// 1. Parse the incoming HTML into a ProseMirror Fragment.
-				const tempDiv = document.createElement('div');
-				tempDiv.innerHTML = newContentHtml;
-				const newFragment = DOMParser.fromSchema(schema).parseSlice(tempDiv).content;
-				
-				// 2. Create a transaction that replaces the content.
-				let tr = state.tr.replaceWith(from, to, newFragment);
-				
-				// 3. Calculate the range of the newly inserted content.
-				const insertedRange = {
-					from: from,
-					to: from + newFragment.size
-				};
-				
-				// 4. Add the 'ai_suggestion' mark to that range.
-				const mark = schema.marks.ai_suggestion.create();
-				tr = tr.addMark(insertedRange.from, insertedRange.to, mark);
-				
-				// 5. Dispatch the combined transaction.
-				dispatch(tr);
-				
-				// 6. The final range is the same as the inserted range.
-				resolve(insertedRange);
-			});
-		}
-	};
-};
+// MODIFIED: Removed the createDirectEditorInterface function as it was only for AI integration.
 
 function triggerDebouncedSave (entryId) {
 	const key = `codex-${entryId}`;
@@ -324,10 +258,7 @@ function updateCodexToolbarState (view) {
 	if (currentEditorState) {
 		allBtns.forEach(btn => {
 			const cmd = btn.dataset.command;
-			if (btn.classList.contains('js-ai-action-btn')) {
-				btn.disabled = !currentEditorState.isTextSelected;
-				return;
-			}
+			// MODIFIED: Removed check for AI action buttons
 			
 			switch (cmd) {
 				case 'undo': btn.disabled = !currentEditorState.canUndo; break;
@@ -376,26 +307,7 @@ async function handleToolbarAction (button) {
 	const view = activeEditorView;
 	if (!view) return;
 	
-	if (button.classList.contains('js-ai-action-btn')) {
-		const action = button.dataset.action;
-		const novelId = document.body.dataset.novelId;
-		if (!novelId || !currentEditorState || !currentEditorState.isTextSelected) return;
-		
-		const novelData = await window.api.getOneNovel(novelId);
-		const settings = novelData.rephrase_settings ? JSON.parse(novelData.rephrase_settings) : {};
-		
-		const allCodexEntries = await window.api.getAllCodexEntriesForNovel(novelId);
-		
-		const context = {
-			selectedText: currentEditorState.selectionText,
-			allCodexEntries,
-			languageForPrompt: novelData.target_language || 'English',
-			activeEditorView: view,
-			editorInterface: createDirectEditorInterface(view)
-		};
-		openPromptEditor(context, action, settings);
-		return;
-	}
+	// MODIFIED: Removed the block that handled AI action buttons.
 	
 	const command = button.dataset.command;
 	const schema = view.state.schema;
@@ -708,7 +620,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 		}
 	};
 	
-	setupPromptEditor();
+	// MODIFIED: Removed call to setupPromptEditor()
 	
 	const params = new URLSearchParams(window.location.search);
 	const mode = params.get('mode') || 'edit';
