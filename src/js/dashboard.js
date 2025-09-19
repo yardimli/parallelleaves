@@ -348,11 +348,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                     
                     <div class="card-actions justify-end items-center mt-4">
-                        <!-- MODIFICATION START: Added backup button -->
                         <button class="btn btn-ghost btn-sm js-backup-novel" data-i18n-title="dashboard.card.backupProject">
                             <i class="bi bi-download text-lg"></i>
                         </button>
-                        <!-- MODIFICATION END -->
                         <button class="btn btn-ghost btn-sm js-export-docx" data-i18n-title="outline.exportDocx">
                             <i class="bi bi-file-earmark-word text-lg"></i>
                         </button>
