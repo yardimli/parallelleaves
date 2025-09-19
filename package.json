@@ -1,5 +1,5 @@
 {
-  "name": "parallelleaves-electron",
+  "name": "parallel-leaves",
   "version": "0.1.2",
   "description": "A standalone translation application.",
   "main": "electron-main.js",
