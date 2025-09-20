@@ -14,7 +14,8 @@
     "watch:js:codex-editor": "esbuild src/js/novel-planner/codex-entry-main.js --bundle --outfile=dist/codex-editor-bundle.js --platform=browser --watch",
     "watch:js:editor-iframe": "esbuild src/js/novel-planner/editor-iframe-main.js --bundle --outfile=dist/editor-iframe-bundle.js --platform=browser --watch",
     "watch": "concurrently \"npm:watch:css\" \"npm:watch:js:chapter-editor\" \"npm:watch:js:codex-editor\" \"npm:watch:js:editor-iframe\"",
-    "start": "npm run build && electron .",
+    "dev:set-name": "node set-app-name.js",
+    "start": "npm run build && npm run dev:set-name && electron .",
     "postinstall": "electron-rebuild",
     "rebuild": "electron-rebuild -f -w better-sqlite3",
     "package": "npm run build && electron-builder",
@@ -35,6 +36,7 @@
     "electron-reloader": "^1.2.3",
     "esbuild": "^0.25.9",
     "nodemon": "^3.1.10",
+    "plist": "^3.1.0",
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.4"
   },
