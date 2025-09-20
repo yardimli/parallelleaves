@@ -58,7 +58,7 @@
   "build": {
     "appId": "com.elo.parallelleaves",
     "productName": "Parallel Leaves",
-    "copyright": "Copyright © 2024 Ekim Emre Yardimli",
+    "copyright": "Copyright © 2025 Ekim Emre Yardimli",
     "directories": {
       "output": "release"
     },
