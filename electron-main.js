@@ -13,6 +13,7 @@ if (process.platform === 'darwin' && !app.isPackaged) {
 	const packageJson = require('./package.json');
 	if (packageJson.build && packageJson.build.productName) {
 		app.setName(packageJson.build.productName);
+		console.log(`Set app name to ${packageJson.build.productName} for macOS development`);
 	}
 }
 
