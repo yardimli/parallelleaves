@@ -56,7 +56,7 @@
     "prosemirror-view": "^1.40.1"
   },
   "build": {
-    "appId": "com.locutusdeborg.parallelleaves",
+    "appId": "com.elo.parallelleaves",
     "productName": "Parallel Leaves",
     "copyright": "Copyright © 2024 Ekim Emre Yardimli",
     "directories": {
