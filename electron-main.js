@@ -6,6 +6,16 @@ const sessionManager = require('./src/main/sessionManager.js');
 const windowManager = require('./src/main/windowManager.js');
 const { registerIpcHandlers } = require('./src/main/ipc');
 
+// MODIFIED: Set app name for macOS development
+// This ensures the application name in the menu bar is correct when running
+// in development mode on macOS, instead of showing "Electron".
+if (process.platform === 'darwin' && !app.isPackaged) {
+	const packageJson = require('./package.json');
+	if (packageJson.build && packageJson.build.productName) {
+		app.setName(packageJson.build.productName);
+	}
+}
+
 // --- Portable Mode Configuration ---
 // This logic makes the app truly portable by storing user data next to the executable.
 // It checks for a file or environment variable that indicates a portable build.
