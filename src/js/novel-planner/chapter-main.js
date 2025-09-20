@@ -17,6 +17,7 @@ let activeChapterId = null;
 let isScrollingProgrammatically = false;
 const chapterEditorViews = new Map();
 let currentSourceSelection = { text: '', hasSelection: false, range: null };
+let lastBroadcastedSourceSelectionState = false; // NEW: Track the last broadcasted state
 let allCodexEntriesForNovel = [];
 
 // Globals to manage view initialization and prevent race conditions.
@@ -984,15 +985,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 			// Store the current state, including the range
 			currentSourceSelection = { text: selectedText, hasSelection: hasSourceSelection, range: selectionRange };
 			
-			// Broadcast the selection state to all editor iframes
-			chapterEditorViews.forEach(viewInfo => {
-				if (viewInfo.isReady) {
-					viewInfo.contentWindow.postMessage({
-						type: 'sourceSelectionChanged',
-						payload: { hasSelection: hasSourceSelection }
-					}, window.location.origin);
-				}
-			});
+			// MODIFIED: Only broadcast the selection state to all editor iframes if it has changed.
+			// This prevents a flood of postMessage calls on every keystroke when typing in the modal,
+			// which was the likely cause of the UI sluggishness.
+			if (hasSourceSelection !== lastBroadcastedSourceSelectionState) {
+				lastBroadcastedSourceSelectionState = hasSourceSelection;
+				chapterEditorViews.forEach(viewInfo => {
+					if (viewInfo.isReady) {
+						viewInfo.contentWindow.postMessage({
+							type: 'sourceSelectionChanged',
+							payload: { hasSelection: hasSourceSelection }
+						}, window.location.origin);
+					}
+				});
+			}
 		});
 		
 		sourceContainer.addEventListener('click', async (event) => {

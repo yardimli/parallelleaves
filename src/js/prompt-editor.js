@@ -14,15 +14,20 @@ const promptBuilders = {
 	'translate': buildTranslateJson,
 };
 
+// MODIFIED: Added dictionary fields to the form data extractors.
 const formDataExtractors = {
 	'rephrase': (form) => ({
 		instructions: form.elements.instructions.value.trim(),
 		selectedCodexIds: form.elements.codex_entry ? Array.from(form.elements.codex_entry).filter(cb => cb.checked).map(cb => cb.value) : [],
+		useDictionary: form.elements.use_dictionary.checked,
+		dictionary: form.elements.dictionary.value.trim(),
 	}),
 	'translate': (form) => ({
 		instructions: form.elements.instructions.value.trim(),
 		selectedCodexIds: form.elements.codex_entry ? Array.from(form.elements.codex_entry).filter(cb => cb.checked).map(cb => cb.value) : [],
 		contextPairs: parseInt(form.elements.context_pairs.value, 10) || 0,
+		useDictionary: form.elements.use_dictionary.checked,
+		dictionary: form.elements.dictionary.value.trim(),
 	}),
 };
 

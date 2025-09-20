@@ -333,7 +333,7 @@ export const init = async (container, context) => {
 		renderCodexList(container, fullContext, context.initialState, preselectedIds);
 		
 		const form = container.querySelector('#translate-editor-form');
-		const novelId = context.novelId;
+		const novelId = document.body.dataset.novelId;
 		const dictionaryTextarea = container.querySelector('textarea[name="dictionary"]');
 		const useDictionaryToggle = container.querySelector('.js-use-dictionary-toggle');
 		const dictionaryContainer = container.querySelector('.js-dictionary-container');
@@ -354,13 +354,19 @@ export const init = async (container, context) => {
 			});
 		}
 		
+		// MODIFIED: Debounce the preview update to prevent sluggishness, especially since it involves an async IPC call.
+		const debouncedUpdatePreview = debounce(() => {
+			updatePreview(container, fullContext);
+		}, 500); // A slightly longer delay is better for async operations.
+		
 		if (form) {
-			// MODIFIED: This single listener now controls UI visibility and preview updates.
 			form.addEventListener('input', () => {
+				// Handle UI toggles immediately as it's a cheap operation.
 				if (useDictionaryToggle && dictionaryContainer) {
 					dictionaryContainer.classList.toggle('hidden', !useDictionaryToggle.checked);
 				}
-				updatePreview(container, fullContext);
+				// Debounce the expensive preview update.
+				debouncedUpdatePreview();
 			});
 		}
 		
