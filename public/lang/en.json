@@ -230,6 +230,8 @@
     "chapterTitlePlaceholder": "Chapter Title",
     "search": "Search (Ctrl+F)",
     "openChat": "Open AI Chat",
+    "syncScrollSourceToTarget": "Sync scroll from source to target",
+    "syncScrollTargetToSource": "Sync scroll from target to source",
     "chat": {
       "title": "AI Chat",
       "selectModel": "Select AI Model",

@@ -230,6 +230,8 @@
     "chapterTitlePlaceholder": "Kapitteltittel",
     "search": "Søk (Ctrl+F)",
     "openChat": "Åpne AI-chat",
+    "syncScrollSourceToTarget": "Synkroniser rulling fra kilde til mål",
+    "syncScrollTargetToSource": "Synkroniser rulling fra mål til kilde",
     "chat": {
       "title": "AI-chat",
       "selectModel": "Velg AI-modell",

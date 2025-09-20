@@ -36,6 +36,56 @@ let globalSearchMatches = [];
 let currentMatchIndex = -1;
 let searchResponsesPending = 0;
 
+/**
+ * Synchronizes the scroll position of a chapter between the source and target columns.
+ * @param {string} chapterId - The ID of the chapter to sync.
+ * @param {string} direction - 'source-to-target' or 'target-to-source'.
+ */
+function syncChapterScroll(chapterId, direction) {
+	const sourceChapterEl = document.getElementById(`source-chapter-scroll-target-${chapterId}`);
+	const targetChapterEl = document.getElementById(`target-chapter-scroll-target-${chapterId}`);
+	const sourceContainer = document.getElementById('js-source-column-container');
+	const targetContainer = document.getElementById('js-target-column-container');
+	
+	if (!sourceChapterEl || !targetChapterEl || !sourceContainer || !targetContainer) {
+		console.warn(`Could not find elements for chapter scroll sync: ${chapterId}`);
+		return;
+	}
+	
+	let sourceEl, targetEl, sourceWrapper, targetWrapper;
+	
+	if (direction === 'source-to-target') {
+		sourceEl = sourceContainer;
+		targetEl = targetContainer;
+		sourceWrapper = sourceChapterEl;
+		targetWrapper = targetChapterEl;
+	} else {
+		sourceEl = targetContainer;
+		targetEl = sourceContainer;
+		sourceWrapper = targetChapterEl;
+		targetWrapper = sourceChapterEl;
+	}
+	
+	// Calculate the relative position of the source chapter's top within its container
+	const sourceContainerRect = sourceEl.getBoundingClientRect();
+	const sourceWrapperRect = sourceWrapper.getBoundingClientRect();
+	const relativeTop = sourceWrapperRect.top - sourceContainerRect.top;
+	
+	// Calculate the absolute position of the target chapter's top
+	const targetContainerRect = targetEl.getBoundingClientRect();
+	const targetWrapperRect = targetWrapper.getBoundingClientRect();
+	const targetAbsoluteTop = targetWrapperRect.top;
+	
+	// Calculate the desired scroll position for the target container
+	// We want the target chapter's top to be at the same relative position as the source chapter's top
+	const desiredScrollTop = targetEl.scrollTop + (targetAbsoluteTop - targetContainerRect.top) - relativeTop;
+	
+	targetEl.scrollTo({
+		top: desiredScrollTop,
+		behavior: 'smooth'
+	});
+}
+
 const debouncedContentSave = debounce(async ({ chapterId, field, value }) => {
 	if (field === 'target_content') {
 		const tempDiv = document.createElement('div');
@@ -278,14 +328,21 @@ async function renderManuscript(novelData, allCodexEntries) {
 			
 			const sourceHeader = document.createElement('div');
 			sourceHeader.className = 'flex justify-between items-center border-b pb-1 mb-2';
+			// MODIFICATION START: Add sync button to source header
 			sourceHeader.innerHTML = `
-                <h3 class="!mt-0 text-sm font-semibold uppercase tracking-wider text-base-content/70">${chapter.title} (<span class="js-source-word-count">${chapter.source_word_count.toLocaleString()} ${t('common.words')}</span>)</h3>
+                <div class="flex items-center gap-2">
+                    <h3 class="!mt-0 text-sm font-semibold uppercase tracking-wider text-base-content/70">${chapter.title} (<span class="js-source-word-count">${chapter.source_word_count.toLocaleString()} ${t('common.words')}</span>)</h3>
+                    <button class="js-sync-scroll-btn btn btn-ghost btn-xs btn-square" data-chapter-id="${chapter.id}" data-direction="source-to-target" data-i18n-title="editor.syncScrollSourceToTarget">
+                        <i class="bi bi-arrow-right-circle"></i>
+                    </button>
+                </div>
                 <div class="js-source-actions">
                     <button class="js-edit-source-btn btn btn-ghost btn-xs">${t('common.edit')}</button>
                     <button class="js-save-source-btn btn btn-success btn-xs hidden">${t('common.save')}</button>
                     <button class="js-cancel-source-btn btn btn-ghost btn-xs hidden">${t('common.cancel')}</button>
                 </div>
             `;
+			// MODIFICATION END
 			sourceCol.appendChild(sourceHeader);
 			
 			const sourceContentContainer = document.createElement('div');
@@ -305,7 +362,18 @@ async function renderManuscript(novelData, allCodexEntries) {
 			targetChapterWrapper.dataset.chapterId = chapter.id;
 			
 			const targetCol = document.createElement('div');
-			targetCol.innerHTML = `<h3 class="!mt-0 text-sm font-semibold uppercase tracking-wider text-base-content/70 border-b pb-1 mb-2 pt-4">${chapter.title} (<span class="js-target-word-count">${chapter.target_word_count.toLocaleString()} ${t('common.words')}</span>)</h3>`;
+			// MODIFICATION START: Restructure target header to include sync button
+			targetCol.innerHTML = `
+                <div class="flex justify-between items-center border-b pb-1 mb-2 pt-4">
+                    <div class="flex items-center gap-2">
+                        <h3 class="!mt-0 text-sm font-semibold uppercase tracking-wider text-base-content/70">${chapter.title} (<span class="js-target-word-count">${chapter.target_word_count.toLocaleString()} ${t('common.words')}</span>)</h3>
+                        <button class="js-sync-scroll-btn btn btn-ghost btn-xs btn-square" data-chapter-id="${chapter.id}" data-direction="target-to-source" data-i18n-title="editor.syncScrollTargetToSource">
+                            <i class="bi bi-arrow-left-circle"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+			// MODIFICATION END
 			
 			const iframe = document.createElement('iframe');
 			iframe.className = 'js-target-content-editable w-full border-0 min-h-[300px]';
@@ -802,18 +870,23 @@ function initializeView(novelId, novelData, initialChapterId) {
 	const sourceContainer = document.getElementById('js-source-column-container');
 	const targetContainer = document.getElementById('js-target-column-container');
 	
-	// Try to restore scroll position. If successful, we're done with positioning.
-	const wasRestored = restoreScrollPositions(novelId, sourceContainer, targetContainer);
-	
-	if (!wasRestored) {
-		// If no saved position, fall back to scrolling to the specified or first chapter.
-		const chapterToLoad = initialChapterId || novelData.sections[0]?.chapters[0]?.id;
-		if (chapterToLoad) {
-			document.getElementById('js-chapter-nav-dropdown').value = chapterToLoad;
-			// Use a short timeout to ensure the DOM is fully settled before scrolling.
-			setTimeout(() => scrollToChapter(chapterToLoad), 50);
+	// MODIFIED: Add a delay to allow the DOM to reflow after all iframes have been resized.
+	// This ensures that the scrollHeight of the containers is accurate before we try to set scrollTop,
+	// which is crucial for large documents where the reflow can take a moment.
+	setTimeout(() => {
+		// Try to restore scroll position. If successful, we're done with positioning.
+		const wasRestored = restoreScrollPositions(novelId, sourceContainer, targetContainer);
+		
+		if (!wasRestored) {
+			// If no saved position, fall back to scrolling to the specified or first chapter.
+			const chapterToLoad = initialChapterId || novelData.sections[0]?.chapters[0]?.id;
+			if (chapterToLoad) {
+				document.getElementById('js-chapter-nav-dropdown').value = chapterToLoad;
+				// Use a short timeout to ensure the DOM is fully settled before scrolling.
+				setTimeout(() => scrollToChapter(chapterToLoad), 50);
+			}
 		}
-	}
+	}, 500); // A 500ms delay should be sufficient for the reflow on most systems.
 }
 
 // Main Initialization
@@ -1005,6 +1078,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 		});
 		
 		sourceContainer.addEventListener('click', async (event) => {
+			// MODIFICATION START: Handle sync scroll button
+			const syncBtn = event.target.closest('.js-sync-scroll-btn');
+			if (syncBtn) {
+				event.preventDefault();
+				const chapterId = syncBtn.dataset.chapterId;
+				const direction = syncBtn.dataset.direction;
+				syncChapterScroll(chapterId, direction);
+				return;
+			}
+			// MODIFICATION END
+			
 			const codexLink = event.target.closest('a.codex-link');
 			const markerLink = event.target.closest('a.translation-marker-link');
 			
@@ -1046,6 +1130,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 				}
 			}
 		});
+		
+		// MODIFICATION START: Add event listener for sync buttons in the target column
+		targetContainer.addEventListener('click', (event) => {
+			const syncBtn = event.target.closest('.js-sync-scroll-btn');
+			if (syncBtn) {
+				event.preventDefault();
+				const chapterId = syncBtn.dataset.chapterId;
+				const direction = syncBtn.dataset.direction;
+				syncChapterScroll(chapterId, direction);
+			}
+		});
+		// MODIFICATION END
 		
 		if (window.api && typeof window.api.onManuscriptScrollToChapter === 'function') {
 			window.api.onManuscriptScrollToChapter((event, chapterId) => {

@@ -230,6 +230,8 @@
     "chapterTitlePlaceholder": "Bölüm Başlığı",
     "search": "Ara (Ctrl+F)",
     "openChat": "Yapay Zeka Sohbetini Aç",
+    "syncScrollSourceToTarget": "Kaydırmayı kaynaktan hedefe senkronize et",
+    "syncScrollTargetToSource": "Kaydırmayı hedeften kaynağa senkronize et",
     "chat": {
       "title": "Yapay Zeka Sohbeti",
       "selectModel": "Model Seçin",
