@@ -229,6 +229,18 @@
     "noChaptersInSection": "Denne seksjonen har ingen kapitler ennå.",
     "chapterTitlePlaceholder": "Kapitteltittel",
     "search": "Søk (Ctrl+F)",
+    "openChat": "Åpne AI-chat",
+    "chat": {
+      "title": "AI-chat",
+      "selectModel": "Velg AI-modell",
+      "loadingModels": "Laster modeller...",
+      "sendMessagePlaceholder": "Skriv meldingen din her...",
+      "send": "Send",
+      "copy": "Kopier",
+      "copied": "Kopiert!",
+      "errorLoadModels": "Feil ved lasting av modeller.",
+      "errorSendMessage": "Feil ved sending av melding: {message}"
+    },
     "searchBar": {
       "placeholder": "Finn i dokumentet...",
       "source": "Kilde",

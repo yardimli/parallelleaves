@@ -252,7 +252,7 @@ async function renderManuscript(novelData, allCodexEntries) {
 	for (const section of novelData.sections) {
 		// Create and append section headers to both columns
 		const sectionHeader = document.createElement('div');
-		sectionHeader.className = 'px-8 py-6 sticky top-0 bg-base-100/90 backdrop-blur-sm z-10 border-b border-base-300';
+		sectionHeader.className = 'px-8 py-6 top-0 bg-base-100/90 backdrop-blur-sm z-10 border-b border-base-300';
 		sectionHeader.innerHTML = `<h2 class="text-3xl font-bold text-indigo-500">${section.section_order}. ${section.title}</h2>`;
 		sourceFragment.appendChild(sectionHeader);
 		targetFragment.appendChild(sectionHeader.cloneNode(true));
@@ -409,7 +409,10 @@ function populateNavDropdown(novelData) {
 		optgroup.label = `${section.section_order}. ${section.title}`;
 		if (section.chapters && section.chapters.length > 0) {
 			section.chapters.forEach(chapter => {
-				const option = new Option(`${chapter.chapter_order}. ${chapter.title}`, chapter.id);
+				const option = new Option(
+					chapter.title?.trim() ? ` ${chapter.title}` : `${chapter.chapter_order}. ...`,
+					chapter.id
+				);
 				optgroup.appendChild(option);
 			});
 		}

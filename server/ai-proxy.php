@@ -185,7 +185,7 @@
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($ch, CURLOPT_HTTPHEADER, [
 			'Accept: application/json',
-			'HTTP-Referer: https://github.com/yardimli/paralleleaves', // Recommended by OpenRouter
+			'HTTP-Referer: https://paralleleaves.com', // Recommended by OpenRouter
 			'X-Title: Parallel Leaves', // Recommended by OpenRouter
 		]);
 
@@ -285,6 +285,8 @@
 		curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
 		curl_setopt($ch, CURLOPT_HTTPHEADER, [
 			'Authorization: Bearer ' . $apiKey,
+			'HTTP-Referer: https://paralleleaves.com', // Recommended by OpenRouter
+			'X-Title: Parallel Leaves', // Recommended by OpenRouter
 			'Content-Type: application/json'
 		]);
 
