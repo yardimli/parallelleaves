@@ -171,7 +171,7 @@ function createFloatingToolbar(from, to, model) {
 }
 
 async function startAiAction(params) {
-	const { prompt, model, marker, dictionaryContent } = params;
+	const { prompt, model, openingMarker, closingMarker, dictionaryContent } = params; // Modified: Changed marker to opening/closing markers.
 	
 	isAiActionActive = true;
 	if (currentEditorInterface.type === 'iframe') {
@@ -189,7 +189,10 @@ async function startAiAction(params) {
 			newContentText = newContentText.trim();
 			
 			let newContentHtml;
-			const textWithMarker = marker ? marker + ' ' + newContentText : newContentText;
+			// Modified: Wrap translated text with both opening and closing markers.
+			const textWithMarkers = openingMarker && closingMarker
+				? `${openingMarker} ${newContentText} ${closingMarker}`
+				: newContentText;
 			
 			// Determine if the original selection was inline content.
 			// A simple heuristic: if the first node in the fragment is not a block node,
@@ -202,10 +205,10 @@ async function startAiAction(params) {
 				// For inline replacement, we don't wrap in <p>.
 				// We convert newlines from the AI into <br> tags to preserve them.
 				// The marker (if any) is prepended directly.
-				newContentHtml = textWithMarker.replace(/\n/g, '<br>');
+				newContentHtml = textWithMarkers.replace(/\n/g, '<br>');
 			} else {
 				// For block-level replacement, wrap in <p> tags and handle paragraph breaks.
-				newContentHtml = '<p>' + textWithMarker.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>') + '</p>';
+				newContentHtml = '<p>' + textWithMarkers.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>') + '</p>';
 			}
 			
 			console.log('AI Action Result:', newContentText, newContentHtml);
@@ -235,7 +238,7 @@ async function startAiAction(params) {
 							// The y-coordinate of the content's end, relative to the parent's viewport
 							const contentEndAbsoluteY = iframeRect.top + endCoords.bottom;
 							
-							// The y-coordinate of the content's end, relative to the scroll container
+							// The y-coordinate of a content's end, relative to the scroll container
 							const contentEndRelativeY = contentEndAbsoluteY - containerRect.top;
 							
 							// Calculate the desired scrollTop to bring the new content into view with some padding
@@ -400,28 +403,42 @@ async function handleModalApply() {
 		dictionaryContent = await window.api.getDictionaryContentForAI(novelId); // Fetch dictionary content from backend via IPC
 	}
 	
-	// Calculate and insert the translation marker.
-	let marker = '';
+	// Modified: Calculate and insert opening and closing translation markers.
+	let openingMarker = '';
+	let closingMarker = '';
 	if (action === 'translate') {
 		const allContentResult = await window.api.getAllNovelContent(novelId);
 		
 		let highestNum = 0;
 		if (allContentResult.success) {
-			// The find function can take one argument since it concatenates them anyway.
+			// Find the highest number from both opening [[#...]] and closing {{#...}} markers.
 			highestNum = await window.api.findHighestMarkerNumber(allContentResult.combinedHtml, '');
 		} else {
 			console.error('Could not fetch all novel content for marker generation:', allContentResult.message);
 			window.showAlert('Could not generate a translation marker. The translation will proceed without it.');
 		}
 		
-		marker = `[[#${highestNum + 1}]]`;
+		const newMarkerNum = highestNum + 1;
+		openingMarker = `[[#${newMarkerNum}]]`;
+		closingMarker = `{{#${newMarkerNum}}}`;
 		
-		// Insert the marker into the source text DOM and save it.
+		// Insert both markers into the source text DOM and save it.
 		try {
 			const chapterId = currentContext.chapterId;
 			const sourceContainer = document.querySelector(`#source-chapter-scroll-target-${chapterId} .source-content-readonly`);
-			const markerNode = document.createTextNode(marker + ' ');
-			currentContext.sourceSelectionRange.insertNode(markerNode);
+			
+			const range = currentContext.sourceSelectionRange;
+			const openingMarkerNode = document.createTextNode(openingMarker + ' ');
+			const closingMarkerNode = document.createTextNode(' ' + closingMarker);
+			
+			// Use a clone to insert at the end without invalidating the original range's start.
+			const endRange = range.cloneRange();
+			endRange.collapse(false); // end of selection
+			endRange.insertNode(closingMarkerNode);
+			
+			// Now insert the opening marker at the start of the original selection.
+			range.collapse(true); // start of selection
+			range.insertNode(openingMarkerNode);
 			
 			const plainTextContent = htmlToPlainText(sourceContainer.innerHTML);
 			const paragraphs = plainTextContent.split(/\n+/).filter(p => p.trim() !== '');
@@ -448,15 +465,22 @@ async function handleModalApply() {
 			
 			sourceContainer.innerHTML = processedHtml;
 		} catch (e) {
-			console.error('Could not insert marker into source text:', e);
-			// If this fails, we'll proceed without the marker to not break translation.
-			marker = '';
+			console.error('Could not insert markers into source text:', e);
+			// If this fails, proceed without markers to not break translation.
+			openingMarker = '';
+			closingMarker = '';
 		}
 	}
 	
 	currentAiParams = { prompt, model, action, context: currentContext, formData: formDataObj, dictionaryContent };
 	
-	startAiAction({ prompt: currentAiParams.prompt, model: currentAiParams.model, marker, dictionaryContent });
+	startAiAction({
+		prompt: currentAiParams.prompt,
+		model: currentAiParams.model,
+		openingMarker,
+		closingMarker,
+		dictionaryContent
+	});
 }
 
 /**

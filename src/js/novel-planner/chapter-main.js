@@ -1349,8 +1349,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 							activeEditorView: sourceWindow,
 							editorInterface: createIframeEditorInterface(sourceWindow),
 							chapterId: chapterId,
-							novelId: novelId, // Pass novelId to context for dictionary access in prompt editor // New: Added novelId to the context for the prompt editor
-							insertionPoint: { from, to } // Pass the insertion point
+							novelId: novelId,
+							insertionPoint: { from, to }
 						};
 						openPromptEditor(context, 'translate', settings);
 					})();

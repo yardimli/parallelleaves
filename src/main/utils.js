@@ -59,22 +59,27 @@ function countWordsInHtml(html) {
 }
 
 /**
- * Scans two HTML strings to find all instances of `[[#<number>]]` and returns the highest number found.
+ * Scans two HTML strings to find all instances of `[[#<number>]]` and `{{#<number>}}` and returns the highest number found.
  * @param {string} sourceHtml - The HTML of the source content.
  * @param {string} targetHtml - The HTML of the target content.
  * @returns {number} The highest marker number found, or 0 if none are found.
  */
 function findHighestMarkerNumber(sourceHtml, targetHtml) {
-	const markerRegex = /\[\[#(\d+)\]\]/g;
+	// Modified: Regex now finds numbers in both [[#...]] and {{#...}} style markers.
+	const markerRegex = /\[\[#(\d+)\]\]|\{\{#(\d+)\}\}/g;
 	let highest = 0;
 	
-	const combinedHtml = sourceHtml + targetHtml;
+	const combinedHtml = (sourceHtml || '') + (targetHtml || '');
 	const matches = combinedHtml.matchAll(markerRegex);
 	
 	for (const match of matches) {
-		const num = parseInt(match[1], 10);
-		if (num > highest) {
-			highest = num;
+		// match[1] will be from [[...]], match[2] will be from {{...}}
+		const numStr = match[1] || match[2];
+		if (numStr) {
+			const num = parseInt(numStr, 10);
+			if (num > highest) {
+				highest = num;
+			}
 		}
 	}
 	

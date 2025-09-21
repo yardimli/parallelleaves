@@ -138,7 +138,7 @@ export function processSourceContentForCodexLinks(htmlString, codexCategories) {
 }
 
 /**
- * Finds translation markers ([[#123]]) in an HTML string and wraps them in links.
+ * Finds translation markers ([[#123]] and {{#123}}) in an HTML string and wraps them in links.
  * @param {string} htmlString - The HTML content to process.
  * @returns {string} The HTML string with markers linked.
  */
@@ -146,10 +146,12 @@ export function processSourceContentForMarkers(htmlString) {
 	if (!htmlString) {
 		return htmlString;
 	}
-	// This regex finds the marker and captures the number inside.
-	const markerRegex = /\[\[#(\d+)\]\]/g;
-	// Replace the found marker with an anchor tag.
-	return htmlString.replace(markerRegex, (match, number) => {
+	// Modified: Regex now finds both opening [[#...]] and closing {{#...}} markers.
+	const markerRegex = /(\[\[#(\d+)\]\])|(\{\{#(\d+)\}\})/g;
+	
+	// Replace the found markers with anchor tags.
+	return htmlString.replace(markerRegex, (match, p1, p2, p3, p4) => {
+		const number = p2 || p4; // The captured number will be in either the 2nd or 4th capture group.
 		return `<a href="#" class="translation-marker-link" data-marker-id="${number}">${match}</a>`;
 	});
 }

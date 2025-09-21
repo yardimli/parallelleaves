@@ -22,7 +22,10 @@ const extractMarkerPairsFromHtml = (sourceHtml, targetHtml, selectedText = null)
 			const match = marker.match(/\[\[#(\d+)\]\]/);
 			if (match) {
 				const number = parseInt(match[1], 10);
-				const plainText = htmlToPlainText(content);
+				// Modified: Remove any closing markers from the content segment before processing.
+				// This ensures that `{{#...}}` tags don't get included in the context pairs.
+				const contentWithoutClosingMarkers = content.replace(/\{\{#\d+\}\}/g, '');
+				const plainText = htmlToPlainText(contentWithoutClosingMarkers);
 				
 				if (plainText) {
 					segments.push({ number, text: plainText, isLastSegment: i === parts.length - 2 });

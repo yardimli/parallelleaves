@@ -104,8 +104,7 @@ export const buildPromptJson = (formData, context, dictionaryContent = '') => {
 	const surroundingText = buildSurroundingTextBlock(wordsBefore, wordsAfter);
 	
 	const userParts = [];
-	// New: Add dictionary content to the user prompt if provided.
-	if (formData.useDictionary && dictionaryContent) { // Add dictionary content if enabled and available
+	if (formData.useDictionary && dictionaryContent) {
 		userParts.push(t('prompt.common.user.dictionaryBlock', { dictionaryContent })); // Use common i18n key for dictionary block.
 	}
 	userParts.push(codexBlock); // Add codex block if available
