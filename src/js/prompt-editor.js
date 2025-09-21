@@ -440,30 +440,24 @@ async function handleModalApply() {
 			range.collapse(true); // start of selection
 			range.insertNode(openingMarkerNode);
 			
-			const plainTextContent = htmlToPlainText(sourceContainer.innerHTML);
-			const paragraphs = plainTextContent.split(/\n+/).filter(p => p.trim() !== '');
+			// MODIFICATION START: Corrected non-destructive save logic.
+			// Get the updated HTML directly from the container after DOM manipulation.
+			const updatedHtmlContent = sourceContainer.innerHTML;
 			
-			let newDocumentContent = '';
-			paragraphs.forEach(pText => {
-				newDocumentContent += `<p>${pText.trim()}</p>`;
-			});
-			
-			// Persist the plain text change to the database.
+			// Persist the updated HTML (with markers) to the database.
 			await window.api.updateChapterField({
 				chapterId: chapterId,
 				field: 'source_content',
-				value: newDocumentContent
+				value: updatedHtmlContent
 			});
 			
-			// Re-render the source content in the UI to reflect the change.
+			// Re-render the source content in the UI to add links to the new markers.
 			const allCodexEntries = currentContext.allCodexEntries;
-			// Convert plain text with double newlines into paragraphs for display.
-			const basicHtml = '<p>' + plainTextContent.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>') + '</p>';
-			
-			let processedHtml = processSourceContentForCodexLinks(basicHtml, allCodexEntries);
+			let processedHtml = processSourceContentForCodexLinks(updatedHtmlContent, allCodexEntries);
 			processedHtml = processSourceContentForMarkers(processedHtml);
 			
 			sourceContainer.innerHTML = processedHtml;
+			// MODIFICATION END
 		} catch (e) {
 			console.error('Could not insert markers into source text:', e);
 			// If this fails, proceed without markers to not break translation.

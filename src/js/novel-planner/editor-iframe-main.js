@@ -253,7 +253,8 @@ function createEditorView (mount, config) {
 				// Check if the click is inside a text-containing block.
 				if (parentNode.isTextblock) {
 					const textContent = parentNode.textContent;
-					const markerRegex = /\[\[#(\d+)\]\]/g;
+					// MODIFICATION START: Updated regex to find both marker types.
+					const markerRegex = /\[\[#(\d+)\]\]|\{\{#(\d+)\}\}/g;
 					let match;
 					
 					// Iterate over all markers in the paragraph to find the one that was clicked.
@@ -263,12 +264,14 @@ function createEditorView (mount, config) {
 						
 						// Check if the click's offset is within the bounds of the current marker match.
 						if (offsetInParent >= matchStart && offsetInParent <= matchEnd) {
-							const markerId = match[1];
+							// Correctly get the marker ID from either the first or second capture group.
+							const markerId = match[1] || match[2];
 							// Send a message to the parent window to handle the navigation.
 							postToParent('markerClicked', { markerId });
 							break; // Found the clicked marker, no need to check others.
 						}
 					}
+					// MODIFICATION END
 				}
 				
 				return false; // Let ProseMirror handle the click as well for cursor placement.
