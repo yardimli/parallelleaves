@@ -32,6 +32,7 @@ function registerSystemHandlers(db, sessionManager, windowManager) {
 				throw new Error(`Update server returned status ${response.status}`);
 			}
 			const data = await response.json();
+			console.log('Latest version from server:', data.latest_version, 'Current version:', config.APP_VERSION);
 			return data.latest_version;
 		} catch (error) {
 			console.error('Failed to check for updates:', error);

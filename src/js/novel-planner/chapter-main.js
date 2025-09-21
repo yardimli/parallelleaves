@@ -17,7 +17,7 @@ let activeChapterId = null;
 let isScrollingProgrammatically = false;
 const chapterEditorViews = new Map();
 let currentSourceSelection = { text: '', hasSelection: false, range: null };
-let lastBroadcastedSourceSelectionState = false; // NEW: Track the last broadcasted state
+let lastBroadcastedSourceSelectionState = false;
 let allCodexEntriesForNovel = [];
 
 // Globals to manage view initialization and prevent race conditions.
@@ -328,7 +328,6 @@ async function renderManuscript(novelData, allCodexEntries) {
 			
 			const sourceHeader = document.createElement('div');
 			sourceHeader.className = 'flex justify-between items-center border-b pb-1 mb-2';
-			// MODIFICATION START: Add sync button to source header
 			sourceHeader.innerHTML = `
                 <div class="flex items-center gap-2">
                     <h3 class="!mt-0 text-sm font-semibold uppercase tracking-wider text-base-content/70">${chapter.title} (<span class="js-source-word-count">${chapter.source_word_count.toLocaleString()} ${t('common.words')}</span>)</h3>
@@ -342,11 +341,11 @@ async function renderManuscript(novelData, allCodexEntries) {
                     <button class="js-cancel-source-btn btn btn-ghost btn-xs hidden">${t('common.cancel')}</button>
                 </div>
             `;
-			// MODIFICATION END
 			sourceCol.appendChild(sourceHeader);
 			
 			const sourceContentContainer = document.createElement('div');
 			sourceContentContainer.className = 'source-content-readonly';
+			sourceContentContainer.setAttribute('spellcheck', 'false'); // MODIFIED: Disable spellcheck for source.
 			
 			let processedSourceHtml = processSourceContentForCodexLinks(chapter.source_content || '', allCodexEntries);
 			processedSourceHtml = processSourceContentForMarkers(processedSourceHtml);
@@ -362,7 +361,6 @@ async function renderManuscript(novelData, allCodexEntries) {
 			targetChapterWrapper.dataset.chapterId = chapter.id;
 			
 			const targetCol = document.createElement('div');
-			// MODIFICATION START: Restructure target header to include sync button
 			targetCol.innerHTML = `
                 <div class="flex justify-between items-center border-b pb-1 mb-2 pt-4">
                     <div class="flex items-center gap-2">
@@ -373,7 +371,6 @@ async function renderManuscript(novelData, allCodexEntries) {
                     </div>
                 </div>
             `;
-			// MODIFICATION END
 			
 			const iframe = document.createElement('iframe');
 			iframe.className = 'js-target-content-editable w-full border-0 min-h-[300px]';
@@ -1057,38 +1054,56 @@ document.addEventListener('DOMContentLoaded', async () => {
 			initializeView(novelId, novelData, initialChapterId);
 		}
 		
-		const throttledUpdateToolbar = debounce(() => {
-			updateToolbarState(null); // Pass null to indicate it's not a PM editor state
-		}, 100);
-		
-		document.addEventListener('selectionchange', () => {
-			throttledUpdateToolbar();
-			
+		const debouncedSelectionUiHandler = debounce(() => {
 			const selection = window.getSelection();
-			let hasSourceSelection = false;
-			let selectedText = '';
-			let selectionRange = null; // Variable to hold the Range object
+			let isSourceSelectionHandled = false;
 			
-			// Check if the selection is valid and within a source content area
 			if (selection && !selection.isCollapsed && selection.rangeCount > 0) {
 				const range = selection.getRangeAt(0);
-				let checkNode = range.startContainer.nodeType === Node.TEXT_NODE ? range.startContainer.parentElement : range.startContainer;
-				const sourceContainer = checkNode.closest('.source-content-readonly');
-				if (sourceContainer) {
-					selectedText = selection.toString().trim();
+				const checkNode = range.startContainer.nodeType === Node.TEXT_NODE ? range.startContainer.parentElement : range.startContainer;
+				const sourceContentDiv = checkNode.closest('.source-content-readonly');
+				
+				if (sourceContentDiv) {
+					const selectedText = selection.toString().trim();
 					if (selectedText.length > 0) {
-						hasSourceSelection = true;
-						selectionRange = range.cloneRange(); // Store a copy of the range
+						isSourceSelectionHandled = true;
+						const wordCount = selectedText.split(/\s+/).filter(Boolean).length;
+						const wordCountEl = document.getElementById('js-word-count');
+						if (wordCountEl) {
+							wordCountEl.textContent = t('editor.wordsSelectedSource', { count: wordCount });
+						}
 					}
 				}
 			}
 			
-			// Store the current state, including the range
+			if (!isSourceSelectionHandled) {
+				updateToolbarState(null);
+			}
+		}, 100);
+		
+		document.addEventListener('selectionchange', () => {
+			debouncedSelectionUiHandler();
+			
+			const selection = window.getSelection();
+			let hasSourceSelection = false;
+			let selectedText = '';
+			let selectionRange = null;
+			
+			if (selection && !selection.isCollapsed && selection.rangeCount > 0) {
+				const range = selection.getRangeAt(0);
+				const checkNode = range.startContainer.nodeType === Node.TEXT_NODE ? range.startContainer.parentElement : range.startContainer;
+				const sourceContentDiv = checkNode.closest('.source-content-readonly');
+				if (sourceContentDiv) {
+					selectedText = selection.toString().trim();
+					if (selectedText.length > 0) {
+						hasSourceSelection = true;
+						selectionRange = range.cloneRange();
+					}
+				}
+			}
+			
 			currentSourceSelection = { text: selectedText, hasSelection: hasSourceSelection, range: selectionRange };
 			
-			// MODIFIED: Only broadcast the selection state to all editor iframes if it has changed.
-			// This prevents a flood of postMessage calls on every keystroke when typing in the modal,
-			// which was the likely cause of the UI sluggishness.
 			if (hasSourceSelection !== lastBroadcastedSourceSelectionState) {
 				lastBroadcastedSourceSelectionState = hasSourceSelection;
 				chapterEditorViews.forEach(viewInfo => {
@@ -1103,60 +1118,74 @@ document.addEventListener('DOMContentLoaded', async () => {
 		});
 		
 		sourceContainer.addEventListener('click', async (event) => {
-			// MODIFICATION START: Handle sync scroll button
 			const syncBtn = event.target.closest('.js-sync-scroll-btn');
-			if (syncBtn) {
-				event.preventDefault();
-				const chapterId = syncBtn.dataset.chapterId;
-				const direction = syncBtn.dataset.direction;
-				syncChapterScroll(chapterId, direction);
-				return;
-			}
-			// MODIFICATION END
-			
 			const codexLink = event.target.closest('a.codex-link');
 			const markerLink = event.target.closest('a.translation-marker-link');
-			
-			// Handle edit/save/cancel buttons
 			const editBtn = event.target.closest('.js-edit-source-btn');
 			const saveBtn = event.target.closest('.js-save-source-btn');
 			const cancelBtn = event.target.closest('.js-cancel-source-btn');
-			const chapterItem = event.target.closest('.manuscript-chapter-item');
 			
+			if (syncBtn) {
+				event.preventDefault();
+				syncChapterScroll(syncBtn.dataset.chapterId, syncBtn.dataset.direction);
+				return;
+			}
+			if (codexLink) {
+				event.preventDefault();
+				const entryId = codexLink.dataset.codexEntryId;
+				if (entryId) window.api.openCodexEditor(entryId);
+				return;
+			}
+			if (markerLink) {
+				event.preventDefault();
+				const markerId = markerLink.dataset.markerId;
+				const chapterId = markerLink.closest('.manuscript-chapter-item').dataset.chapterId;
+				if (markerId && chapterId) scrollToTargetMarker(chapterId, markerId);
+				return;
+			}
+			
+			const chapterItem = event.target.closest('.manuscript-chapter-item');
 			if (chapterItem) {
 				const chapterId = chapterItem.dataset.chapterId;
 				if (editBtn) {
 					event.preventDefault();
 					await toggleSourceEditMode(chapterId, true);
-					return; // Prevent other handlers from firing
-				} else if (saveBtn) {
+					return;
+				}
+				if (saveBtn) {
 					event.preventDefault();
 					await saveSourceChanges(chapterId);
 					return;
-				} else if (cancelBtn) {
+				}
+				if (cancelBtn) {
 					event.preventDefault();
-					await toggleSourceEditMode(chapterId, false); // This is the cancel action
+					await toggleSourceEditMode(chapterId, false);
 					return;
 				}
 			}
 			
-			if (codexLink) {
-				event.preventDefault();
-				const entryId = codexLink.dataset.codexEntryId;
-				if (entryId) {
-					window.api.openCodexEditor(entryId);
-				}
-			} else if (markerLink) {
-				event.preventDefault();
-				const markerId = markerLink.dataset.markerId;
-				const chapterId = markerLink.closest('.manuscript-chapter-item').dataset.chapterId;
-				if (markerId && chapterId) {
-					scrollToTargetMarker(chapterId, markerId);
+			const contentDiv = event.target.closest('.source-content-readonly');
+			if (contentDiv) {
+				sourceContainer.querySelectorAll('.source-content-readonly').forEach(div => {
+					if (div !== contentDiv) {
+						div.contentEditable = false;
+					}
+				});
+				contentDiv.contentEditable = true;
+			}
+		});
+		
+		sourceContainer.addEventListener('beforeinput', (event) => {
+			const contentDiv = event.target.closest('.source-content-readonly');
+			if (contentDiv) {
+				const chapterItem = contentDiv.closest('.manuscript-chapter-item');
+				const saveBtn = chapterItem?.querySelector('.js-save-source-btn');
+				if (saveBtn && saveBtn.classList.contains('hidden')) {
+					event.preventDefault();
 				}
 			}
 		});
 		
-		// MODIFICATION START: Add event listener for sync buttons in the target column
 		targetContainer.addEventListener('click', (event) => {
 			const syncBtn = event.target.closest('.js-sync-scroll-btn');
 			if (syncBtn) {
@@ -1166,7 +1195,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 				syncChapterScroll(chapterId, direction);
 			}
 		});
-		// MODIFICATION END
 		
 		if (window.api && typeof window.api.onManuscriptScrollToChapter === 'function') {
 			window.api.onManuscriptScrollToChapter((event, chapterId) => {

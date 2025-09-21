@@ -20,6 +20,25 @@
 	</select>
 </div>
 
+<!-- Chat Management and Chapter Selector - NEW BLOCK -->
+<div class="flex-shrink-0 p-4 border-b border-base-300 bg-base-200 flex flex-wrap items-center gap-4">
+	<!-- Chat Selector -->
+	<div class="dropdown dropdown-hover">
+		<div tabindex="0" role="button" class="btn btn-sm" id="js-current-chat-name" data-i18n="editor.chat.newChat">New Chat</div>
+		<ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52" id="js-chat-list">
+			<!-- Chat history items will be dynamically inserted here -->
+		</ul>
+	</div>
+	<button id="js-new-chat-btn" class="btn btn-sm btn-outline"><i class="bi bi-plus-circle"></i> <span data-i18n="editor.chat.newChat">New Chat</span></button>
+	<button id="js-delete-chat-btn" class="btn btn-sm btn-outline btn-error"><i class="bi bi-trash"></i> <span data-i18n="editor.chat.deleteChat">Delete Chat</span></button>
+	
+	<!-- Chapter Selector -->
+	<select id="js-chapter-select" class="select select-bordered select-sm flex-grow min-w-[150px]">
+		<option value="" disabled selected data-i18n="editor.chat.selectChapter">Select Chapter (Optional)</option>
+		<option value="none" data-i18n="editor.chat.noChapter">No Chapter</option>
+	</select>
+</div>
+
 <!-- Chat History -->
 <div id="js-chat-history" class="flex-grow p-4 overflow-y-auto space-y-4">
 	<!-- Messages will be appended here by JS -->

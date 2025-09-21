@@ -241,7 +241,14 @@
       "copy": "Kopier",
       "copied": "Kopiert!",
       "errorLoadModels": "Feil ved lasting av modeller.",
-      "errorSendMessage": "Feil ved sending av melding: {message}"
+      "errorSendMessage": "Feil ved sending av melding: {message}",
+      "newChat": "Ny chat",
+      "deleteChat": "Slett chat",
+      "selectChapter": "Velg kapittel (valgfritt)",
+      "noChapter": "Ingen kapittel",
+      "chatDeletedConfirm": "Er du sikker på at du vil slette chatten '{chatName}'?",
+      "chatNamePlaceholder": "Ny chat {number}",
+      "currentChatName": "Gjeldende chat: {name}"
     },
     "searchBar": {
       "placeholder": "Finn i dokumentet...",
@@ -264,7 +271,7 @@
       "placeholder": "Skriv inn notatet ditt...",
       "save": "Lagre notat",
       "errorNoEditor": "Kunne ikke finne et aktivt redigeringsprogram for å lagre notatet. Vennligst klikk inne i et redigeringsprogram først.",
-      "errorEmpty": "Notatet kan ikke være tomt."
+      "errorEmpty": "Notatet kan ikke være tom."
     },
     "codexEditor": {
       "deleteEntry": "Slett oppføring",

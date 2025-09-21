@@ -122,7 +122,7 @@ async function populateModels() {
 			modelSelect.innerHTML = '';
 			result.models.forEach(group => {
 				const optgroup = document.createElement('optgroup');
-				optgroup.label = group.provider;
+				optgroup.label = group.group;
 				group.models.forEach(model => {
 					const option = new Option(`${model.name}`, model.id);
 					optgroup.appendChild(option);

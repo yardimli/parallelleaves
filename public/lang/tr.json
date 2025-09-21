@@ -241,7 +241,14 @@
       "copy": "Kopyala",
       "copied": "Kopyalandı!",
       "errorLoadModels": "Modeller yüklenirken hata oluştu.",
-      "errorSendMessage": "Mesaj gönderilirken hata oluştu: {message}"
+      "errorSendMessage": "Mesaj gönderilirken hata oluştu: {message}",
+      "newChat": "Yeni Sohbet",
+      "deleteChat": "Sohbeti Sil",
+      "selectChapter": "Bölüm Seç (İsteğe Bağlı)",
+      "noChapter": "Bölüm Yok",
+      "chatDeletedConfirm": "'{chatName}' sohbetini silmek istediğinizden emin misiniz?",
+      "chatNamePlaceholder": "Yeni Sohbet {number}",
+      "currentChatName": "Mevcut Sohbet: {name}"
     },
     "searchBar": {
       "placeholder": "Belgede bul...",

@@ -241,7 +241,14 @@
       "copy": "Copy",
       "copied": "Copied!",
       "errorLoadModels": "Error loading models.",
-      "errorSendMessage": "Error sending message: {message}"
+      "errorSendMessage": "Error sending message: {message}",
+      "newChat": "New Chat",
+      "deleteChat": "Delete Chat",
+      "selectChapter": "Select Chapter (Optional)",
+      "noChapter": "No Chapter",
+      "chatDeletedConfirm": "Are you sure you want to delete chat '{chatName}'?",
+      "chatNamePlaceholder": "New Chat {number}",
+      "currentChatName": "Current Chat: {name}"
     },
     "searchBar": {
       "placeholder": "Find in document...",
