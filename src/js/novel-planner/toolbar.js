@@ -1,4 +1,3 @@
-// src/js/novel-planner/toolbar.js
 import { openPromptEditor } from '../prompt-editor.js';
 import { t } from '../i18n.js';
 import { openDictionaryModal } from '../dictionary/dictionary-modal.js';
@@ -216,7 +215,8 @@ async function handleToolbarAction(button) {
 			languageForPrompt: novelData.target_language || 'English',
 			activeEditorView: activeContentWindow,
 			editorInterface: editorInterface,
-			chapterId: chapterId
+			chapterId: chapterId,
+			novelId: novelId // Pass novelId to context for dictionary access in prompt editor
 		};
 		openPromptEditor(context, action, settings);
 		return;

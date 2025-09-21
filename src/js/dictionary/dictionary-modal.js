@@ -262,10 +262,9 @@ export function initDictionaryModal(novelId) {
 	
 	// When the modal is closed via the 'X' button or backdrop click, ensure data is reloaded on next open
 	dictionaryModal.addEventListener('close', () => {
-		// If not saved, revert to previous state on next open by clearing local data.
-		// A fresh load will happen on the next 'showModal' event.
-		currentDictionaryData = [];
-		currentSort = { sortBy: null, direction: 'asc' }; // New: Reset sort state on close
+		// Removed: currentDictionaryData = [];
+		// The dictionary content will now be fetched directly via IPC when needed by AI prompts.
+		currentSort = { sortBy: null, direction: 'asc' }; // Reset sort state on close.
 	});
 }
 
@@ -276,8 +275,8 @@ export function initDictionaryModal(novelId) {
  */
 export async function openDictionaryModal(selectedText = '', sourceOrTarget = '') {
 	if (dictionaryModal) {
-		currentDictionaryData = [];
-		currentSort = { sortBy: null, direction: 'asc' }; // New: Reset sort state before loading
+		currentDictionaryData = []; // Clear local data before loading to ensure fresh state for modal.
+		currentSort = { sortBy: null, direction: 'asc' }; // Reset sort state before loading.
 		await loadDictionary(); // Load existing data from file.
 		
 		if (selectedText) { // If text is selected, add a pre-filled row.
@@ -290,12 +289,4 @@ export async function openDictionaryModal(selectedText = '', sourceOrTarget = ''
 		
 		dictionaryModal.showModal();
 	}
-}
-
-/**
- * Gets the current dictionary content as a plain text string (key = value format).
- * @returns {string} The dictionary content formatted for AI prompt.
- */
-export function getDictionaryContentForAI() {
-	return currentDictionaryData.map(entry => `${entry.source} = ${entry.target}`).join('\n');
 }

@@ -328,7 +328,7 @@
       "useDictionary": "Özel Sözlük Kullan",
       "editDictionary": "Sözlüğü Düzenle",
       "user": {
-        "dictionaryBlock": "Aşağıdaki özel sözlüğü dikkate al:\n<dictionary>\n{dictionaryContent}\n</dictionary>"
+        "dictionaryBlock": "Take into account the following custom dictionary:\n<dictionary>\n{dictionaryContent}\n</dictionary>"
       }
     },
     "rephrase": {
@@ -339,7 +339,7 @@
       "contextInfo": "Bağlam Bilgisi",
       "contextHelp": "En iyi sonuçlar için ilgili bağlam bilgileri yapay zekaya otomatik olarak gönderilir.",
       "loadingCodex": "Kodeks kayıtları yükleniyor...",
-      "useCodex": "Kodeks Kayıtlarını Kullan",
+      "useCodex": "Use Codex Entries",
       "system": {
         "base": "You are an expert prose editor.\n\nWhenever you're given text, rephrase it using the following instructions: <instructions>{instructions}</instructions>\n\nImitiate and keep the current writing style, and leave mannerisms, word choice and sentence structure intact.\nYou are free to remove redundant lines of speech. Keep the same tense and stylistic choices. Use {language} spelling and grammar.\n\nOnly return the rephrased text, nothing else.",
         "defaultInstruction": "Rephrase the given text."

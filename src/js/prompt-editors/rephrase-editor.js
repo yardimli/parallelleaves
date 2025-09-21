@@ -1,6 +1,6 @@
 import { t, applyTranslationsTo } from '../i18n.js';
 import { htmlToPlainText } from '../../utils/html-processing.js';
-import { openDictionaryModal, getDictionaryContentForAI } from '../dictionary/dictionary-modal.js';
+import { openDictionaryModal } from '../dictionary/dictionary-modal.js';
 
 // Add debounce utility
 const debounce = (func, delay) => {
@@ -12,7 +12,7 @@ const debounce = (func, delay) => {
 	};
 };
 
-const defaultState = {
+const defaultState = { // Default state for the rephrase editor form
 	instructions: '',
 	selectedCodexIds: [],
 	useDictionary: false
@@ -24,7 +24,7 @@ const renderCodexList = (container, context, initialState = null) => {
 	
 	const { allCodexEntries } = context;
 	
-	if (!allCodexEntries || allCodexEntries.length === 0) {
+	if (!allCodexEntries || allCodexEntries.length === 0) { // If no codex entries, display loading message
 		codexContainer.innerHTML = `<p class="text-sm text-base-content/60">${t('prompt.rephrase.loadingCodex')}</p>`;
 		return;
 	}
@@ -76,7 +76,7 @@ const buildSurroundingTextBlock = (wordsBefore, wordsAfter) => {
 	return t('prompt.rephrase.user.surroundingTextBlockAfterOnly', { wordsAfter });
 };
 
-export const buildPromptJson = (formData, context) => {
+export const buildPromptJson = (formData, context, dictionaryContent = '') => {
 	const { selectedText, wordCount, allCodexEntries, languageForPrompt, wordsBefore, wordsAfter } = context;
 	
 	const instructions = formData.instructions || t('prompt.rephrase.system.defaultInstruction');
@@ -103,7 +103,12 @@ export const buildPromptJson = (formData, context) => {
 	
 	const surroundingText = buildSurroundingTextBlock(wordsBefore, wordsAfter);
 	
-	const userParts = [codexBlock];
+	const userParts = [];
+	// New: Add dictionary content to the user prompt if provided.
+	if (formData.useDictionary && dictionaryContent) { // Add dictionary content if enabled and available
+		userParts.push(t('prompt.common.dictionaryBlock', { dictionaryContent })); // Use common i18n key for dictionary block.
+	}
+	userParts.push(codexBlock); // Add codex block if available
 	if (surroundingText) {
 		userParts.push(surroundingText);
 	}
@@ -121,7 +126,7 @@ export const buildPromptJson = (formData, context) => {
 	};
 };
 
-const updatePreview = (container, context) => {
+const updatePreview = async (container, context) => {
 	const form = container.querySelector('#rephrase-editor-form');
 	if (!form) return;
 	
@@ -137,8 +142,13 @@ const updatePreview = (container, context) => {
 	
 	if (!systemPreview || !userPreview || !aiPreview) return;
 	
+	let dictionaryContent = '';
+	if (formData.useDictionary) {
+		dictionaryContent = await window.api.getDictionaryContentForAI(context.novelId);
+	}
+	
 	try {
-		const promptJson = buildPromptJson(formData, context);
+		const promptJson = buildPromptJson(formData, context, dictionaryContent);
 		systemPreview.textContent = promptJson.system;
 		userPreview.textContent = promptJson.user;
 		aiPreview.textContent = promptJson.ai || t('prompt.preview.empty');
@@ -179,7 +189,7 @@ export const init = async (container, context) => {
 		// Debounce the preview update to prevent sluggishness on input.
 		const debouncedUpdatePreview = debounce(() => {
 			updatePreview(container, fullContext);
-		}, 500); // 300ms delay
+		}, 500); // 300ms delay.
 		
 		if (form) {
 			form.addEventListener('input', () => {
@@ -188,7 +198,7 @@ export const init = async (container, context) => {
 			});
 		}
 		
-		updatePreview(container, fullContext);
+		await updatePreview(container, fullContext);
 	} catch (error) {
 		container.innerHTML = `<p class="p-4 text-error">${t('prompt.errorLoadForm')}</p>`;
 		console.error(error);

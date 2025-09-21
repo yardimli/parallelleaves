@@ -287,7 +287,7 @@
       "contextInfo": "上下文資訊",
       "contextHelp": "相關的上下文資訊會自動傳送給 AI 以獲得最佳結果。",
       "loadingCodex": "正在載入資料庫條目...",
-      "useCodex": "使用資料庫條目",
+      "useCodex": "Use Codex Entries",
       "system": {
         "base": "You are an expert prose editor.\n\nWhenever you're given text, rephrase it using the following instructions: <instructions>{instructions}</instructions>\n\nImitiate and keep the current writing style, and leave mannerisms, word choice and sentence structure intact.\nYou are free to remove redundant lines of speech. Keep the same tense and stylistic choices. Use {language} spelling and grammar.\n\nOnly return the rephrased text, nothing else.",
         "defaultInstruction": "Rephrase the given text."

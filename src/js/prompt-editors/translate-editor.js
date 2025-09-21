@@ -1,6 +1,6 @@
 import { t, applyTranslationsTo } from '../i18n.js';
 import { htmlToPlainText } from '../../utils/html-processing.js';
-import { openDictionaryModal, getDictionaryContentForAI } from '../dictionary/dictionary-modal.js';
+import { openDictionaryModal } from '../dictionary/dictionary-modal.js';
 
 // Add debounce utility
 const debounce = (func, delay) => {
@@ -12,7 +12,7 @@ const debounce = (func, delay) => {
 	};
 };
 
-const defaultState = {
+const defaultState = { // Default state for the translate editor form
 	instructions: '',
 	selectedCodexIds: [],
 	contextPairs: 4,
@@ -63,7 +63,7 @@ function findCodexIdsInText(text, codexCategories) {
 		termMap.set(term.text.toLowerCase(), term.id);
 	});
 	
-	// 2. Find all matches in the text and collect the corresponding entry IDs.
+	// 2. Find all matches in the text and collect the corresponding entry IDs
 	const foundIds = new Set();
 	const matches = [...text.matchAll(regex)];
 	
@@ -150,7 +150,7 @@ const buildTranslationContextBlock = (translationPairs, languageForPrompt, targe
 	return contextMessages;
 };
 
-export const buildPromptJson = (formData, context) => {
+export const buildPromptJson = (formData, context, dictionaryContent = '') => {
 	const { selectedText, languageForPrompt, targetLanguage, allCodexEntries, translationPairs } = context;
 	
 	const plainTextToTranslate = selectedText;
@@ -189,7 +189,11 @@ export const buildPromptJson = (formData, context) => {
 	
 	const contextMessages = buildTranslationContextBlock(translationPairs, languageForPrompt, targetLanguage);
 	
-	const finalUserPromptParts = [codexBlock];
+	const finalUserPromptParts = [];
+	if (formData.useDictionary && dictionaryContent) {
+		finalUserPromptParts.push(t('prompt.common.dictionaryBlock', { dictionaryContent }));
+	}
+	finalUserPromptParts.push(codexBlock);
 	finalUserPromptParts.push(t('prompt.translate.user.textToTranslate', {
 		sourceLanguage: languageForPrompt,
 		targetLanguage: targetLanguage,
@@ -242,8 +246,13 @@ const updatePreview = async (container, context) => {
 		}
 	}
 	
+	let dictionaryContent = '';
+	if (formData.useDictionary) {
+		dictionaryContent = await window.api.getDictionaryContentForAI(context.novelId);
+	}
+	
 	try {
-		const promptJson = buildPromptJson(formData, previewContext);
+		const promptJson = buildPromptJson(formData, previewContext, dictionaryContent);
 		systemPreview.textContent = promptJson.system;
 		userPreview.textContent = promptJson.user;
 		aiPreview.textContent = promptJson.ai || t('prompt.preview.empty');
@@ -319,10 +328,10 @@ export const init = async (container, context) => {
 			}
 		}
 		
-		// 3. Find matching codex entries in the combined text.
+		// 3. Find matching codex entries in the combined text
 		const preselectedIds = findCodexIdsInText(textToScan, allCodexEntries);
 		
-		const fullContext = { ...context };
+		const fullContext = { ...context }; // Create full context for use in updatePreview and rendering
 		
 		populateForm(container, context.initialState || defaultState);
 		renderCodexList(container, fullContext, context.initialState, preselectedIds);
@@ -334,14 +343,12 @@ export const init = async (container, context) => {
 			editDictionaryBtn.addEventListener('click', openDictionaryModal);
 		}
 		
-		// Debounce the preview update to prevent sluggishness, especially since it involves an async IPC call.
 		const debouncedUpdatePreview = debounce(() => {
 			updatePreview(container, fullContext);
-		}, 500); // A slightly longer delay is better for async operations.
+		}, 500);
 		
 		if (form) {
 			form.addEventListener('input', () => {
-				// Debounce the expensive preview update.
 				debouncedUpdatePreview();
 			});
 		}

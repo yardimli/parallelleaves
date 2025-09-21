@@ -1,4 +1,3 @@
-// src/js/novel-planner/chapter-main.js
 import { setupTopToolbar, setActiveContentWindow, updateToolbarState, createIframeEditorInterface } from './toolbar.js';
 import { setupPromptEditor, openPromptEditor } from '../prompt-editor.js';
 import { setupTypographySettings, getTypographySettings, generateTypographyStyleProperties } from './typography-settings.js';
@@ -1350,6 +1349,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 							activeEditorView: sourceWindow,
 							editorInterface: createIframeEditorInterface(sourceWindow),
 							chapterId: chapterId,
+							novelId: novelId, // Pass novelId to context for dictionary access in prompt editor // New: Added novelId to the context for the prompt editor
 							insertionPoint: { from, to } // Pass the insertion point
 						};
 						openPromptEditor(context, 'translate', settings);

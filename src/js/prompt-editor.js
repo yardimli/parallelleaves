@@ -3,7 +3,7 @@ import { init as initTranslateEditor, buildPromptJson as buildTranslateJson } fr
 import { updateToolbarState as updateChapterToolbarState } from './novel-planner/toolbar.js';
 import { t } from './i18n.js';
 import { htmlToPlainText, processSourceContentForCodexLinks, processSourceContentForMarkers } from '../utils/html-processing.js';
-import { getDictionaryContentForAI } from './dictionary/dictionary-modal.js';
+// Removed: import { getDictionaryContentForAI } from './dictionary/dictionary-modal.js';
 
 const editors = {
 	'rephrase': { init: initRephraseEditor },
@@ -397,7 +397,7 @@ async function handleModalApply() {
 	
 	let dictionaryContent = '';
 	if (formDataObj.useDictionary) {
-		dictionaryContent = getDictionaryContentForAI();
+		dictionaryContent = await window.api.getDictionaryContentForAI(novelId); // Fetch dictionary content from backend via IPC
 	}
 	
 	// Calculate and insert the translation marker.
