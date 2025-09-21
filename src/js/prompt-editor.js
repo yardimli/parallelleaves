@@ -54,7 +54,7 @@ const loadPrompt = async (promptId) => {
 	if (!modalEl) return;
 	
 	const toggleBtn = modalEl.querySelector('.js-toggle-preview-btn');
-	if (toggleBtn) toggleBtn.textContent = 'Show Preview';
+	if (toggleBtn) toggleBtn.textContent = t('editor.showPreview');
 	
 	const placeholder = modalEl.querySelector('.js-prompt-placeholder');
 	const customEditorPane = modalEl.querySelector('.js-custom-editor-pane');

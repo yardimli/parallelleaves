@@ -191,7 +191,7 @@ export const buildPromptJson = (formData, context, dictionaryContent = '') => {
 	
 	const finalUserPromptParts = [];
 	if (formData.useDictionary && dictionaryContent) {
-		finalUserPromptParts.push(t('prompt.common.dictionaryBlock', { dictionaryContent }));
+		finalUserPromptParts.push(t('prompt.common.user.dictionaryBlock', { dictionaryContent }));
 	}
 	finalUserPromptParts.push(codexBlock);
 	finalUserPromptParts.push(t('prompt.translate.user.textToTranslate', {
