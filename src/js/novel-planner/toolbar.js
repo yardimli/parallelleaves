@@ -1,6 +1,8 @@
+// src/js/novel-planner/toolbar.js
 import { openPromptEditor } from '../prompt-editor.js';
 import { t } from '../i18n.js';
 import { openDictionaryModal } from '../dictionary/dictionary-modal.js';
+import { handleOpenDictionaryWithSelection } from './chapter-main.js';
 
 let activeContentWindow = null;
 let currentToolbarState = {};
@@ -123,6 +125,16 @@ export const createIframeEditorInterface = (contentWindow) => {
 			// Both actions now just need the current selection state from the editor.
 			post('prepareForRephrase', { isRephrase: action === 'rephrase' });
 		}),
+		getSelectionText: () => new Promise((resolve) => {
+			const listener = (event) => {
+				if (event.source === contentWindow && event.data.type === 'selectionResponse') {
+					window.removeEventListener('message', listener);
+					resolve(event.data.payload.selectedText);
+				}
+			};
+			window.addEventListener('message', listener);
+			post('getSelectionText'); // Send message to iframe to get selection text
+		}),
 		getFullHtml: () => new Promise((resolve) => {
 			const listener = (event) => {
 				if (event.source === contentWindow && event.data.type === 'fullHtmlResponse') {
@@ -152,7 +164,7 @@ export const createIframeEditorInterface = (contentWindow) => {
 
 async function handleToolbarAction(button) {
 	if (button.id === 'js-open-dictionary-btn') {
-		openDictionaryModal();
+		await handleOpenDictionaryWithSelection();
 		return;
 	}
 	

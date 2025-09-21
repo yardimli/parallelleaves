@@ -11,6 +11,26 @@ let currentNovelId;
 let currentDictionaryData = []; // [{source: "term", target: "translation"}]
 
 /**
+ * Updates the currentDictionaryData array with values from the DOM inputs.
+ * This is crucial to capture unsaved edits before re-rendering or saving,
+ * preventing data loss when the table is refreshed (e.g., after adding a row).
+ */
+function updateCurrentDictionaryDataFromDOM() {
+	const updatedData = [];
+	Array.from(dictionaryTableBody.rows).forEach(row => {
+		const sourceInput = row.cells[1].querySelector('input');
+		const targetInput = row.cells[2].querySelector('input');
+		// Always include the row, even if empty, to preserve its position if it's a new, unedited row.
+		// Empty rows will be filtered out during the final saveDictionary() call.
+		updatedData.push({
+			source: sourceInput ? sourceInput.value.trim() : '',
+			target: targetInput ? targetInput.value.trim() : ''
+		});
+	});
+	currentDictionaryData = updatedData;
+}
+
+/**
  * Renders the dictionary table with the current data.
  */
 function renderDictionaryTable() {
@@ -55,9 +75,13 @@ function renderDictionaryTable() {
 
 /**
  * Adds a new empty row to the dictionary table.
+ * When called without arguments (e.g., by clicking the "Add Row" button), it adds a blank row.
+ * @param {string} sourceText - Optional text to pre-fill the source column.
+ * @param {string} targetText - Optional text to pre-fill the target column.
  */
-function addRow() {
-	currentDictionaryData.push({ source: '', target: '' });
+function addRow(sourceText = '', targetText = '') {
+	updateCurrentDictionaryDataFromDOM();
+	currentDictionaryData.push({ source: sourceText, target: targetText });
 	renderDictionaryTable();
 }
 
@@ -65,6 +89,9 @@ function addRow() {
  * Deletes selected rows from the dictionary table.
  */
 function deleteSelectedRows() {
+	// Bug fix: Capture any existing edits before modifying the array
+	updateCurrentDictionaryDataFromDOM();
+	
 	const selectedCheckboxes = Array.from(dictionaryTableBody.querySelectorAll('.row-select-checkbox:checked'));
 	if (selectedCheckboxes.length === 0) return;
 	
@@ -150,7 +177,8 @@ export function initDictionaryModal(novelId) {
 	
 	applyTranslationsTo(dictionaryModal); // Apply translations on init
 	
-	dictionaryAddRowBtn.addEventListener('click', addRow);
+	// Fix: Wrap addRow in an anonymous function to prevent the event object from being passed as sourceText.
+	dictionaryAddRowBtn.addEventListener('click', () => addRow());
 	dictionaryDeleteSelectedBtn.addEventListener('click', deleteSelectedRows);
 	dictionarySaveBtn.addEventListener('click', saveDictionary);
 	
@@ -162,20 +190,34 @@ export function initDictionaryModal(novelId) {
 	});
 	
 	// When the modal is opened, load the dictionary data
+	// The 'showModal' event is custom, triggered by openDictionaryModal
 	dictionaryModal.addEventListener('showModal', loadDictionary);
 	
 	// When the modal is closed via the 'X' button or backdrop click, ensure data is reloaded on next open
 	dictionaryModal.addEventListener('close', () => {
-		// If not saved, revert to previous state on next open
+		// If not saved, revert to previous state on next open by clearing local data.
+		// A fresh load will happen on the next 'showModal' event.
 		currentDictionaryData = [];
 	});
 }
 
 /**
  * Opens the dictionary modal.
+ * @param {string} selectedText - Optional text to pre-fill a new row.
+ * @param {'source'|'target'} sourceOrTarget - Indicates if selectedText is for source or target.
  */
-export function openDictionaryModal() {
+export async function openDictionaryModal(selectedText = '', sourceOrTarget = '') {
 	if (dictionaryModal) {
+		currentDictionaryData = [];
+		await loadDictionary(); // Load existing data from file.
+		
+		if (selectedText) { // If text is selected, add a pre-filled row.
+			if (sourceOrTarget === 'source') {
+				addRow(selectedText, '');
+			} else if (sourceOrTarget === 'target') {
+				addRow('', selectedText);
+			}
+		}
 		dictionaryModal.showModal();
 	}
 }

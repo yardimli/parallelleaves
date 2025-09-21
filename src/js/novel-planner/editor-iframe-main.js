@@ -657,5 +657,15 @@ window.addEventListener('message', (event) => {
 			postToParent('fullHtmlResponse', { html: tempDiv.innerHTML });
 			break;
 		}
+		case 'getSelectionText': {
+			if (!editorView) {
+				postToParent('selectionResponse', { selectedText: '' });
+				return;
+			}
+			const { selection, doc } = editorView.state;
+			const selectedText = selection.empty ? '' : doc.textBetween(selection.from, selection.to, ' ');
+			postToParent('selectionResponse', { selectedText: selectedText.trim() });
+			break;
+		}
 	}
 });

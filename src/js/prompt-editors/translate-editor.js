@@ -206,6 +206,7 @@ export const buildPromptJson = (formData, context) => {
 };
 
 const updatePreview = async (container, context) => {
+	console.log('Updating preview with context:', context);
 	const form = container.querySelector('#translate-editor-form');
 	if (!form) return;
 	

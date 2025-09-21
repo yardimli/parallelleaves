@@ -150,12 +150,12 @@
   },
   "outline": {
     "loading": "Özet Yükleniyor...",
-    "codex": "Sözlük",
+    "codex": "Kodeks",
     "autoGenerate": "Otomatik Oluştur",
     "newEntry": "Yeni Kayıt",
     "autoGenModal": {
-      "title": "Sözlük Kayıtlarını Otomatik Oluştur",
-      "description": "Bu araç, romanınızın kaynak metnini analiz ederek sözlük kayıtlarını otomatik olarak oluşturur. Romanın uzunluğuna bağlı olarak bu işlem birkaç dakika sürebilir ve önemli miktarda yapay zeka kredisi kullanabilir.",
+      "title": "Kodeks Kayıtlarını Otomatik Oluştur",
+      "description": "Bu araç, romanınızın kaynak metnini analiz ederek kodeks kayıtlarını otomatik olarak oluşturur. Romanın uzunluğuna bağlı olarak bu işlem birkaç dakika sürebilir ve önemli miktarda yapay zeka kredisi kullanabilir.",
       "selectModel": "Model Seçin",
       "loadingModels": "Modeller yükleniyor...",
       "progress": "İlerleme",
@@ -168,7 +168,7 @@
     "noSections": "Bu projede henüz hiç bölüm yok.",
     "noChapters": "Bu kısımda henüz hiç bölüm yok.",
     "noSummary": "Özet yok.",
-    "noCodexEntries": "Bu projede henüz hiç sözlük kaydı yok.",
+    "noCodexEntries": "Bu projede henüz hiç kodeks kaydı yok.",
     "noEntriesInCategory": "Bu kategoride henüz hiç kayıt yok.",
     "errorProjectMissing": "Hata: Proje kimliği bulunamadı.",
     "errorLoad": "Hata: Özet verileri yüklenemedi. {message}",
@@ -209,7 +209,7 @@
     "blockquote": "Alıntı",
     "horizontalRule": "Yatay Çizgi",
     "addNote": "Not Ekle",
-    "createCodex": "Sözlük Kaydı Oluştur",
+    "createCodex": "Kodeks Kaydı Oluştur",
     "rephrase": "Yeniden Yaz",
     "translate": "Çevir",
     "noTextSelected": "Seçili metin yok.",
@@ -275,10 +275,10 @@
     },
     "codexEditor": {
       "deleteEntry": "Kaydı Sil",
-      "novelInfo": "{novelTitle} > Sözlük",
-      "createTitle": "Yeni Sözlük Kaydı Oluştur",
-      "editTitle": "Sözlük Düzenleniyor: {entryTitle}",
-      "titlePlaceholder": "Sözlük Kaydı Başlığı",
+      "novelInfo": "{novelTitle} > Kodeks",
+      "createTitle": "Yeni Kodeks Kaydı Oluştur",
+      "editTitle": "Kodeks Düzenleniyor: {entryTitle}",
+      "titlePlaceholder": "Kodeks Kaydı Başlığı",
       "phrases": "Anahtar Kelimeler",
       "phrasesHelp": "Bu kaydı metne bağlamak için kullanılacak kelimeler (virgülle ayırın).",
       "category": "Kategori",
@@ -291,13 +291,13 @@
       "targetPlaceholder": "Çevrilmiş metni buraya girin...",
       "createButton": "Kayıt Oluştur",
       "aiAnalyzing": "Yapay zeka metni analiz ediyor...",
-      "errorLoad": "Hata: Sözlük kaydı verileri yüklenemedi. {message}",
-      "errorMissingId": "Hata: Sözlük kaydı kimliği bulunamadı.",
+      "errorLoad": "Hata: Kodeks kaydı verileri yüklenemedi. {message}",
+      "errorMissingId": "Hata: Kodeks kaydı kimliği bulunamadı.",
       "errorMissingNovelId": "Hata: Yeni kayıt için roman kimliği bulunamadı.",
-      "errorSave": "Sözlük kaydındaki değişiklikler kaydedilemedi.",
+      "errorSave": "Kodeks kaydındaki değişiklikler kaydedilemedi.",
       "deleteConfirm": {
         "title": "Silmeyi Onayla",
-        "message": "Bu sözlük kaydını silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
+        "message": "Bu kodeks kaydını silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
       }
     },
     "toolbar": {
@@ -306,8 +306,8 @@
       "errorNoActiveChapter": "Not eklemek için aktif bir bölüm gerekli."
     },
     "codexWelcomeModal": {
-      "title": "Sözlük ile Tutarlı Çevirilerin Kilidini Açın",
-      "description": "Sözlük, projeniz için bir terimler sözlüğü görevi görür. Karakterler, yerler ve anahtar terimler için kayıtlar oluşturarak yapay zekaya temel bağlam sağlarsınız. Bu, isimlerin ve hikaye unsurlarının her seferinde tutarlı bir şekilde çevrilmesini sağlayarak çevirinizin kalitesini önemli ölçüde artırır.",
+      "title": "Kodeks ile Tutarlı Çevirilerin Kilidini Açın",
+      "description": "Kodeks, projeniz için bir terimler sözlüğü görevi görür. Karakterler, yerler ve anahtar terimler için kayıtlar oluşturarak yapay zekaya temel bağlam sağlarsınız. Bu, isimlerin ve hikaye unsurlarının her seferinde tutarlı bir şekilde çevrilmesini sağlayarak çevirinizin kalitesini önemli ölçüde artırır.",
       "createButton": "İlk Kayıtları Otomatik Oluştur",
       "laterButton": "Daha Sonra Yaparım"
     },
@@ -338,8 +338,8 @@
       "instructionsPlaceholder": "Örn: Daha resmi bir dille yeniden yaz.",
       "contextInfo": "Bağlam Bilgisi",
       "contextHelp": "En iyi sonuçlar için ilgili bağlam bilgileri yapay zekaya otomatik olarak gönderilir.",
-      "loadingCodex": "Sözlük kayıtları yükleniyor...",
-      "useCodex": "Sözlük Kayıtlarını Kullan",
+      "loadingCodex": "Kodeks kayıtları yükleniyor...",
+      "useCodex": "Kodeks Kayıtlarını Kullan",
       "system": {
         "base": "You are an expert prose editor.\n\nWhenever you're given text, rephrase it using the following instructions: <instructions>{instructions}</instructions>\n\nImitiate and keep the current writing style, and leave mannerisms, word choice and sentence structure intact.\nYou are free to remove redundant lines of speech. Keep the same tense and stylistic choices. Use {language} spelling and grammar.\n\nOnly return the rephrased text, nothing else.",
         "defaultInstruction": "Rephrase the given text."
@@ -358,9 +358,9 @@
       "instructionsHelp": "Çeviri için özel talimatlarınızı girin.",
       "instructionsPlaceholder": "Örn: Resmi bir dille çevir. Karakter isimlerini değiştirme.",
       "contextInfo": "Bağlam Bilgisi",
-      "contextHelp": "Daha iyi çeviri için ilgili bağlam bilgileri (sözlük kayıtları gibi) yapay zekaya gönderilebilir.",
-      "loadingCodex": "Sözlük kayıtları yükleniyor...",
-      "useCodex": "Sözlük Kayıtlarını Çeviri Rehberi Olarak Kullan",
+      "contextHelp": "Daha iyi çeviri için ilgili bağlam bilgileri (kodeks kayıtları gibi) yapay zekaya gönderilebilir.",
+      "loadingCodex": "Kodeks kayıtları yükleniyor...",
+      "useCodex": "Kodeks Kayıtlarını Çeviri Rehberi Olarak Kullan",
       "prevPairs": "Önceki Çeviriler",
       "prevPairsHelp": "Yapay zekaya bağlam sağlamak için önceki N çeviri bloğunu dahil et. (Kapatmak için 0 girin).",
       "system": {
@@ -399,7 +399,7 @@
     "noContent": "İçerik yok.",
     "codexGenNoSource": "Analiz edilecek kaynak metin bulunamadı. İşlem tamamlandı.",
     "codexGenNoText": "İşlem sonrası metin bulunamadı. İşlem tamamlandı.",
-    "codexGenComplete": "Sözlük oluşturma tamamlandı! Sayfa şimdi yeniden yüklenecek.",
+    "codexGenComplete": "Kodeks oluşturma tamamlandı! Sayfa şimdi yeniden yüklenecek.",
     "codexGenError": "Bir hata oluştu: {message}"
   },
   "error": {

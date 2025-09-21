@@ -1,3 +1,4 @@
+// src/js/novel-planner/chapter-main.js
 import { setupTopToolbar, setActiveContentWindow, updateToolbarState, createIframeEditorInterface } from './toolbar.js';
 import { setupPromptEditor, openPromptEditor } from '../prompt-editor.js';
 import { setupTypographySettings, getTypographySettings, generateTypographyStyleProperties } from './typography-settings.js';
@@ -26,7 +27,7 @@ let totalIframes = 0;
 let iframesReadyCount = 0;
 let viewInitialized = false;
 
-let activeEditor = null;
+let activeEditor = null; // Stores the contentWindow of the currently focused iframe editor.
 const getActiveEditor = () => activeEditor;
 const setActiveEditor = (editorWindow) => {
 	activeEditor = editorWindow;
@@ -64,7 +65,7 @@ function syncChapterScroll(chapterId, direction) {
 		sourceEl = targetContainer;
 		targetEl = sourceContainer;
 		sourceWrapper = targetChapterEl;
-		targetWrapper = sourceChapterEl;
+		targetWrapper = sourceChapterEl; // Corrected: Should be sourceChapterEl for target-to-source
 	}
 	
 	// Calculate the relative position of the source chapter's top within its container
@@ -875,6 +876,37 @@ function setupSearch() {
 }
 
 /**
+ * Handles opening the dictionary modal, checking for selected text in either
+ * the source or target editor to pre-fill a new dictionary entry.
+ */
+export async function handleOpenDictionaryWithSelection() {
+	let selectedText = '';
+	let sourceOrTarget = '';
+	
+	// Prioritize selection from the active iframe editor if one is focused
+	if (activeEditor) {
+		const editorInterface = createIframeEditorInterface(activeEditor);
+		try {
+			const iframeSelectedText = await editorInterface.getSelectionText();
+			if (iframeSelectedText && iframeSelectedText.length > 0) {
+				selectedText = iframeSelectedText;
+				sourceOrTarget = 'target';
+			}
+		} catch (error) {
+			console.error('Error getting selection from iframe:', error);
+		}
+	}
+	
+	// If no selection from iframe, check for selection in the source column
+	if (!selectedText && currentSourceSelection.hasSelection && currentSourceSelection.text.length > 0) {
+		selectedText = currentSourceSelection.text;
+		sourceOrTarget = 'source';
+	}
+	
+	openDictionaryModal(selectedText, sourceOrTarget);
+}
+
+/**
  * Handles the final step of view initialization.
  * Decides whether to restore scroll position or scroll to a specific chapter.
  * @param {string} novelId - The ID of the current novel.
@@ -1326,7 +1358,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 				}
 			}
 		});
-		document.getElementById('js-open-dictionary-btn').addEventListener('click', openDictionaryModal);
 	} catch (error) {
 		console.error('Failed to load manuscript data:', error);
 		document.body.innerHTML = `<p class="p-8 text-error">${t('editor.errorLoadManuscript', { message: error.message })}</p>`;
