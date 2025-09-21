@@ -59,9 +59,11 @@ function registerSystemHandlers(db, sessionManager, windowManager) {
 		}
 	});
 	
-	ipcMain.on('app:openChatWindow', () => {
+	// MODIFIED: 'app:openChatWindow' now reads the novelId from the sender's URL.
+	ipcMain.on('app:openChatWindow', (event, novelId) => {
+		// Get the novelId directly passed from the renderer process
 		if (windowManager && typeof windowManager.createChatWindow === 'function') {
-			windowManager.createChatWindow();
+			windowManager.createChatWindow(novelId);
 		}
 	});
 	

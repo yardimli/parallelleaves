@@ -3,7 +3,7 @@ const {contextBridge, ipcRenderer} = require('electron');
 contextBridge.exposeInMainWorld('api', {
 	// --- App Level ---
 	openImportWindow: () => ipcRenderer.send('app:open-import-window'),
-	openChatWindow: () => ipcRenderer.send('app:openChatWindow'),
+	openChatWindow: (novelId) => ipcRenderer.send('app:openChatWindow', novelId), // MODIFIED: Added novelId parameter
 	getLangFile: (lang) => ipcRenderer.invoke('i18n:get-lang-file', lang),
 	login: (credentials) => ipcRenderer.invoke('auth:login', credentials),
 	logout: () => ipcRenderer.invoke('auth:logout'),
@@ -18,7 +18,7 @@ contextBridge.exposeInMainWorld('api', {
 	
 	// --- Dashboard/Novel Creation ---
 	getNovelsWithCovers: () => ipcRenderer.invoke('novels:getAllWithCovers'),
-	getOneNovel: (novelId) => ipcRenderer.invoke('novels:getOne', novelId),
+	getOneNovel: (novelId) => ipcRenderer.invoke('novels:getOne', novelId), // MODIFIED: Exposed getOneNovel
 	getFullManuscript: (novelId) => ipcRenderer.invoke('novels:getFullManuscript', novelId),
 	getAllNovelContent: (novelId) => ipcRenderer.invoke('novels:getAllContent', novelId),
 	

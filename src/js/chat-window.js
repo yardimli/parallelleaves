@@ -1,12 +1,204 @@
 import { initI18n, t, applyTranslationsTo } from './i18n.js';
+import { htmlToPlainText } from '../utils/html-processing.js'; // NEW: Import htmlToPlainText
 
-let chatHistory = []; // Array of { role: 'user' | 'assistant', content: '...' }
+let novelId = null; // NEW: Store novelId
+let chatHistories = []; // NEW: Array to store all chat conversations for this novel
+let currentChat = null; // NEW: The currently active chat object
+
+const LOCAL_STORAGE_KEY_PREFIX = 'parallel-leaves-chats-'; // NEW: Prefix for local storage key
 
 const chatHistoryContainer = document.getElementById('js-chat-history');
 const chatForm = document.getElementById('js-chat-form');
 const chatInput = document.getElementById('js-chat-input');
 const sendBtn = document.getElementById('js-send-btn');
 const modelSelect = document.getElementById('js-llm-model-select');
+
+// NEW: Chat management UI elements
+const chatListDropdown = document.getElementById('js-chat-list');
+const newChatBtn = document.getElementById('js-new-chat-btn');
+const deleteChatBtn = document.getElementById('js-delete-chat-btn');
+const currentChatNameEl = document.getElementById('js-current-chat-name');
+const chapterSelect = document.getElementById('js-chapter-select'); // NEW: Chapter selection dropdown
+
+/**
+ * Saves the current chat histories to local storage.
+ * NEW: Function to save all chat histories for the current novel.
+ */
+function saveChats() {
+	if (novelId) {
+		localStorage.setItem(`${LOCAL_STORAGE_KEY_PREFIX}${novelId}`, JSON.stringify(chatHistories));
+	}
+}
+
+/**
+ * Loads chat histories from local storage and initializes the current chat.
+ * NEW: Function to load chat histories.
+ */
+function loadChats() {
+	if (!novelId) return;
+	
+	const storedChats = localStorage.getItem(`${LOCAL_STORAGE_KEY_PREFIX}${novelId}`);
+	if (storedChats) {
+		try {
+			chatHistories = JSON.parse(storedChats);
+		} catch (e) {
+			console.error("Failed to parse chat histories from localStorage:", e);
+			chatHistories = []; // Reset corrupted data
+		}
+	} else {
+		chatHistories = [];
+	}
+	
+	if (chatHistories.length === 0) {
+		addNewChat(); // Start a new chat if none exist
+	} else {
+		selectChat(chatHistories[0].id); // Select the first chat by default
+	}
+	renderChatList();
+}
+
+/**
+ * Generates a unique ID for a new chat.
+ * NEW: Helper to generate unique chat IDs.
+ */
+function generateChatId() {
+	return `chat-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+}
+
+/**
+ * Adds a new chat conversation to the list.
+ * NEW: Function to add a new chat.
+ */
+function addNewChat() {
+	const newChatCount = chatHistories.length + 1;
+	const newChatName = t('editor.chat.chatNamePlaceholder', { number: newChatCount });
+	const newChat = {
+		id: generateChatId(),
+		name: newChatName,
+		messages: [],
+		createdAt: new Date().toISOString(),
+		updatedAt: new Date().toISOString(),
+		selectedChapterId: '' // NEW: Default to no chapter selected
+	};
+	chatHistories.unshift(newChat); // Add to the beginning to show latest first
+	saveChats();
+	selectChat(newChat.id);
+}
+
+/**
+ * Selects and displays a specific chat conversation.
+ * @param {string} chatId - The ID of the chat to select.
+ * NEW: Function to select a chat.
+ */
+function selectChat(chatId) {
+	const selected = chatHistories.find(chat => chat.id === chatId);
+	if (selected) {
+		currentChat = selected;
+		chatHistoryContainer.innerHTML = '';
+		currentChat.messages.forEach(msg => renderMessage(msg.role, msg.content));
+		currentChatNameEl.textContent = t('editor.chat.currentChatName', { name: currentChat.name }); // NEW: Update current chat name display
+		chapterSelect.value = currentChat.selectedChapterId || ''; // NEW: Restore selected chapter
+		autoResizeTextarea();
+		chatHistoryContainer.scrollTop = chatHistoryContainer.scrollHeight;
+	} else {
+		// Fallback if the chat isn't found, maybe it was deleted on another client
+		addNewChat();
+	}
+	renderChatList(); // Re-render to update active state
+}
+
+/**
+ * Deletes the currently active chat.
+ * NEW: Function to delete the current chat.
+ */
+function deleteCurrentChat() {
+	if (!currentChat) return;
+	
+	const confirmDelete = confirm(t('editor.chat.chatDeletedConfirm', { chatName: currentChat.name }));
+	if (confirmDelete) {
+		chatHistories = chatHistories.filter(chat => chat.id !== currentChat.id);
+		saveChats();
+		if (chatHistories.length > 0) {
+			selectChat(chatHistories[0].id);
+		} else {
+			addNewChat(); // If no chats left, create a new one
+		}
+	}
+}
+
+/**
+ * Renders the list of chat histories in the dropdown.
+ * NEW: Function to render the chat list.
+ */
+function renderChatList() {
+	chatListDropdown.innerHTML = ''; // Clear existing list
+	chatHistories.forEach(chat => {
+		const listItem = document.createElement('li');
+		const button = document.createElement('button');
+		button.textContent = chat.name;
+		button.className = `w-full text-left p-2 rounded ${chat.id === currentChat?.id ? 'active bg-base-300' : 'hover:bg-base-200'}`;
+		button.addEventListener('click', () => selectChat(chat.id));
+		listItem.appendChild(button);
+		chatListDropdown.appendChild(listItem);
+	});
+}
+
+/**
+ * Populates the AI model selection dropdown.
+ */
+async function populateModels() {
+	try {
+		const result = await window.api.getModels();
+		if (result.success) {
+			modelSelect.innerHTML = '';
+			result.models.forEach(group => {
+				const optgroup = document.createElement('optgroup');
+				optgroup.label = group.group;
+				group.models.forEach(model => {
+					const option = new Option(`${model.name}`, model.id);
+					optgroup.appendChild(option);
+				});
+				modelSelect.appendChild(optgroup);
+			});
+		} else {
+			throw new Error(result.message);
+		}
+	} catch (error) {
+		console.error('Failed to load models:', error);
+		modelSelect.innerHTML = `<option>${t('editor.chat.errorLoadModels')}</option>`;
+		modelSelect.disabled = true;
+	}
+}
+
+/**
+ * Populates the chapter selection dropdown with chapters from the novel.
+ * NEW: Function to populate chapter selection dropdown.
+ */
+async function populateChapterSelect() {
+	if (!novelId) return;
+	
+	chapterSelect.innerHTML = `<option value="" disabled selected>${t('editor.chat.selectChapter')}</option>`;
+	chapterSelect.add(new Option(t('editor.chat.noChapter'), 'none')); // Option to deselect chapter
+	
+	try {
+		const novelData = await window.api.getOneNovel(novelId);
+		if (novelData && novelData.sections) {
+			novelData.sections.forEach(section => {
+				const optgroup = document.createElement('optgroup');
+				optgroup.label = section.title;
+				section.chapters.forEach(chapter => {
+					const option = new Option(chapter.title, chapter.id);
+					optgroup.appendChild(option);
+				});
+				chapterSelect.appendChild(optgroup);
+			});
+		}
+		chapterSelect.value = currentChat?.selectedChapterId || 'none'; // Set the previously selected chapter or 'none'
+	} catch (error) {
+		console.error('Failed to load novel chapters:', error);
+		chapterSelect.disabled = true;
+	}
+}
 
 /**
  * Renders a message to the chat history container.
@@ -75,7 +267,9 @@ async function handleSendMessage(event) {
 	
 	// Add user message to UI and history
 	renderMessage('user', messageText);
-	chatHistory.push({ role: 'user', content: messageText });
+	currentChat.messages.push({ role: 'user', content: messageText }); // NEW: Add to currentChat
+	currentChat.updatedAt = new Date().toISOString(); // NEW: Update timestamp
+	saveChats(); // NEW: Persist changes
 	chatInput.value = '';
 	chatInput.style.height = 'auto'; // Reset height
 	
@@ -84,9 +278,40 @@ async function handleSendMessage(event) {
 	sendBtn.disabled = true;
 	chatInput.disabled = true;
 	
+	let messagesToSend = [...currentChat.messages]; // NEW: Use currentChat.messages
+	// NEW: Add chapter context if selected
+	const selectedChapterId = chapterSelect.value;
+	if (selectedChapterId && selectedChapterId !== 'none') {
+		try {
+			const novelData = await window.api.getOneNovel(novelId);
+			let selectedChapter = null;
+			novelData.sections.forEach(section => {
+				const chapter = section.chapters.find(c => c.id === parseInt(selectedChapterId));
+				if (chapter) {
+					selectedChapter = chapter;
+				}
+			});
+			
+			if (selectedChapter) {
+				const sourceContent = htmlToPlainText(selectedChapter.source_content || '');
+				const targetContent = htmlToPlainText(selectedChapter.target_content || '');
+				let chapterContext = `User is asking questions about the following chapter:\n`;
+				chapterContext += `Chapter Title: ${selectedChapter.title}\n`;
+				if (sourceContent) chapterContext += `Source Content:\n${sourceContent}\n`;
+				if (targetContent) chapterContext += `Target Content:\n${targetContent}\n`;
+				
+				messagesToSend.unshift({ role: 'system', content: chapterContext });
+			}
+		} catch (error) {
+			console.error('Failed to fetch chapter content for AI chat:', error);
+			renderMessage('assistant', t('editor.chat.errorSendMessage', { message: 'Could not include chapter context.' }));
+		}
+	}
+	
 	try {
 		// Keep only the last 4 messages (2 pairs) for context + the new one
-		const contextMessages = chatHistory.slice(-5);
+		// MODIFIED: This slice now applies *after* potentially adding chapter context
+		const contextMessages = messagesToSend.slice(-5);
 		
 		const result = await window.api.chatSendMessage({
 			model: selectedModel,
@@ -95,7 +320,9 @@ async function handleSendMessage(event) {
 		
 		if (result.success) {
 			const aiResponse = result.data.choices[0].message.content;
-			chatHistory.push({ role: 'assistant', content: aiResponse });
+			currentChat.messages.push({ role: 'assistant', content: aiResponse }); // NEW: Add to currentChat
+			currentChat.updatedAt = new Date().toISOString(); // NEW: Update timestamp
+			saveChats(); // NEW: Persist changes
 			loadingMessage.remove();
 			renderMessage('assistant', aiResponse);
 		} else {
@@ -113,33 +340,6 @@ async function handleSendMessage(event) {
 }
 
 /**
- * Populates the AI model selection dropdown.
- */
-async function populateModels() {
-	try {
-		const result = await window.api.getModels();
-		if (result.success) {
-			modelSelect.innerHTML = '';
-			result.models.forEach(group => {
-				const optgroup = document.createElement('optgroup');
-				optgroup.label = group.group;
-				group.models.forEach(model => {
-					const option = new Option(`${model.name}`, model.id);
-					optgroup.appendChild(option);
-				});
-				modelSelect.appendChild(optgroup);
-			});
-		} else {
-			throw new Error(result.message);
-		}
-	} catch (error) {
-		console.error('Failed to load models:', error);
-		modelSelect.innerHTML = `<option>${t('editor.chat.errorLoadModels')}</option>`;
-		modelSelect.disabled = true;
-	}
-}
-
-/**
  * Adjusts the height of the textarea based on its content.
  */
 function autoResizeTextarea() {
@@ -153,7 +353,33 @@ document.addEventListener('DOMContentLoaded', async () => {
 	applyTranslationsTo(document.body);
 	document.title = t('editor.chat.title');
 	
+	// NEW: Get novelId from URL query parameter
+	const params = new URLSearchParams(window.location.search);
+	novelId = params.get('novelId');
+	
+	if (!novelId) {
+		// Handle case where novelId is missing (e.g., chat opened directly without context)
+		// Maybe close the window or show an error
+		console.error('Novel ID is missing from chat window URL.');
+		alert('Error: This chat window requires a project context. Please open it from the editor.');
+		window.close();
+		return;
+	}
+	
 	populateModels();
+	populateChapterSelect(); // NEW: Populate chapter select on load
+	loadChats(); // NEW: Load chat histories
+	
+	// NEW: Event listeners for chat management
+	newChatBtn.addEventListener('click', addNewChat);
+	deleteChatBtn.addEventListener('click', deleteCurrentChat);
+	chapterSelect.addEventListener('change', () => { // NEW: Save selected chapter when it changes
+		if (currentChat) {
+			currentChat.selectedChapterId = chapterSelect.value === 'none' ? '' : chapterSelect.value;
+			currentChat.updatedAt = new Date().toISOString();
+			saveChats();
+		}
+	});
 	
 	chatForm.addEventListener('submit', handleSendMessage);
 	chatInput.addEventListener('input', autoResizeTextarea);

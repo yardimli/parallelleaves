@@ -271,8 +271,17 @@ function createImportWindow() {
 	});
 }
 
-function createChatWindow() {
-	if (chatWindow) {
+// MODIFIED: createChatWindow now accepts novelId
+function createChatWindow(novelId) {
+	// If chat window already exists, check if novelId is different
+	if (chatWindow && !chatWindow.isDestroyed()) {
+		const currentUrl = new URL(chatWindow.webContents.getURL());
+		const currentNovelId = currentUrl.searchParams.get('novelId');
+		
+		if (currentNovelId !== novelId) {
+			// If novelId is different, reload the chat window with the new context
+			chatWindow.loadFile('public/chat-window.html', { query: { novelId: novelId } });
+		}
 		chatWindow.focus();
 		return;
 	}
@@ -292,7 +301,8 @@ function createChatWindow() {
 	
 	setContentSecurityPolicy(chatWindow);
 	
-	chatWindow.loadFile('public/chat-window.html');
+	// MODIFIED: Pass novelId as a query parameter
+	chatWindow.loadFile('public/chat-window.html', { query: { novelId: novelId } });
 	
 	chatWindow.on('closed', () => {
 		chatWindow = null;

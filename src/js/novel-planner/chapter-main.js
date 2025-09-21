@@ -925,8 +925,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 	
 	const openChatBtn = document.getElementById('js-open-chat-btn');
 	if (openChatBtn) {
+		const params = new URLSearchParams(window.location.search);
+		const novelId = params.get('novelId'); // Get novelId from current window's URL
 		openChatBtn.addEventListener('click', () => {
-			window.api.openChatWindow();
+			// MODIFIED: Pass novelId to openChatWindow
+			window.api.openChatWindow(novelId);
 		});
 	}
 	

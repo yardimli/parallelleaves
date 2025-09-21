@@ -12,14 +12,27 @@ function registerChatHandlers(db, sessionManager) {
 			const token = sessionManager.getSession()?.token || null;
 			const { model, messages } = data; // messages is an array of {role, content}
 			
-			// The last message is the current user prompt. The rest is context.
-			const userMessage = messages[messages.length - 1];
-			const contextMessages = messages.slice(0, -1);
+			// NEW: Find the first system message if it exists (for chapter context)
+			let systemMessageContent = 'You are a helpful assistant for a writer.';
+			const systemMessages = messages.filter(msg => msg.role === 'system');
+			if (systemMessages.length > 0) {
+				// Concatenate all system messages, with the custom one first if it exists
+				systemMessageContent = systemMessages.map(msg => msg.content).join('\n\n');
+			}
+			
+			// The last message is the current user prompt. Filter out any system messages
+			const userMessages = messages.filter(msg => msg.role === 'user' || msg.role === 'assistant');
+			const userPrompt = userMessages[userMessages.length - 1]; // The actual user message
+			const contextPairs = userMessages.slice(0, -1); // Previous user/assistant messages for context
+			
+			if (!userPrompt) {
+				throw new Error('No user message found in chat input.');
+			}
 			
 			const prompt = {
-				system: 'You are a helpful assistant for a writer.',
-				context_pairs: contextMessages,
-				user: userMessage.content
+				system: systemMessageContent, // NEW: Use collected system message
+				context_pairs: contextPairs, // NEW: Use filtered context pairs
+				user: userPrompt.content
 			};
 			
 			const result = await aiService.processLLMText({ prompt, model, token });
