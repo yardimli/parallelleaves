@@ -3,7 +3,7 @@ import { setupPromptEditor, openPromptEditor } from '../prompt-editor.js';
 import { setupTypographySettings, getTypographySettings, generateTypographyStyleProperties } from './typography-settings.js';
 import { initI18n, t } from '../i18n.js';
 import { processSourceContentForCodexLinks, processSourceContentForMarkers } from '../../utils/html-processing.js';
-import { initDictionaryModal, openDictionaryModal } from '../dictionary/dictionary-modal.js'; // NEW: Import dictionary modal functions.
+import { initDictionaryModal, openDictionaryModal } from '../dictionary/dictionary-modal.js';
 
 const debounce = (func, delay) => {
 	let timeout;
@@ -345,7 +345,7 @@ async function renderManuscript(novelData, allCodexEntries) {
 			
 			const sourceContentContainer = document.createElement('div');
 			sourceContentContainer.className = 'source-content-readonly';
-			sourceContentContainer.setAttribute('spellcheck', 'false'); // MODIFIED: Disable spellcheck for source.
+			sourceContentContainer.setAttribute('spellcheck', 'false');
 			
 			let processedSourceHtml = processSourceContentForCodexLinks(chapter.source_content || '', allCodexEntries);
 			processedSourceHtml = processSourceContentForMarkers(processedSourceHtml);
@@ -558,7 +558,6 @@ function scrollToTargetMarker(chapterId, markerId) {
 	}, window.location.origin);
 }
 
-// NEW: Function to scroll the source column to a specific marker.
 /**
  * Finds and scrolls to a specific translation marker in the source column.
  * @param {string} markerId - The numerical ID of the marker to find.
@@ -889,7 +888,7 @@ function initializeView(novelId, novelData, initialChapterId) {
 	const sourceContainer = document.getElementById('js-source-column-container');
 	const targetContainer = document.getElementById('js-target-column-container');
 	
-	// MODIFIED: Add a delay to allow the DOM to reflow after all iframes have been resized.
+	// Add a delay to allow the DOM to reflow after all iframes have been resized.
 	// This ensures that the scrollHeight of the containers is accurate before we try to set scrollTop,
 	// which is crucial for large documents where the reflow can take a moment.
 	setTimeout(() => {
@@ -925,7 +924,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 		const params = new URLSearchParams(window.location.search);
 		const novelId = params.get('novelId'); // Get novelId from current window's URL
 		openChatBtn.addEventListener('click', () => {
-			// MODIFIED: Pass novelId to openChatWindow
 			window.api.openChatWindow(novelId);
 		});
 	}
@@ -1048,8 +1046,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 		});
 		setupIntersectionObserver();
 		setupSpellcheckDropdown();
-		setupSearch(); // Initialize search functionality
-		initDictionaryModal(novelId); // NEW: Initialize dictionary modal
+		setupSearch();
+		initDictionaryModal(novelId);
 		
 		if (totalIframes === 0) {
 			initializeView(novelId, novelData, initialChapterId);
@@ -1286,7 +1284,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 					}
 					break;
 				}
-				// NEW: Handle clicks on markers in the target editor.
 				case 'markerClicked': {
 					scrollToSourceMarker(payload.markerId);
 					break;
@@ -1329,7 +1326,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 				}
 			}
 		});
-		// NEW: Event listener for the dictionary button
 		document.getElementById('js-open-dictionary-btn').addEventListener('click', openDictionaryModal);
 	} catch (error) {
 		console.error('Failed to load manuscript data:', error);

@@ -1,6 +1,6 @@
 import { t, applyTranslationsTo } from '../i18n.js';
 import { htmlToPlainText } from '../../utils/html-processing.js';
-import { openDictionaryModal, getDictionaryContentForAI } from '../dictionary/dictionary-modal.js'; // NEW: Import dictionary functions
+import { openDictionaryModal, getDictionaryContentForAI } from '../dictionary/dictionary-modal.js';
 
 // Add debounce utility
 const debounce = (func, delay) => {
@@ -15,7 +15,7 @@ const debounce = (func, delay) => {
 const defaultState = {
 	instructions: '',
 	selectedCodexIds: [],
-	useDictionary: false // NEW: Default to not using dictionary
+	useDictionary: false
 };
 
 const renderCodexList = (container, context, initialState = null) => {
@@ -85,9 +85,6 @@ export const buildPromptJson = (formData, context) => {
 		language: languageForPrompt || 'English'
 	});
 	
-	// MODIFIED: Dictionary content is now handled by the main prompt-editor, not here.
-	// This function only builds the prompt parts that are specific to rephrase.
-	
 	let codexBlock = '';
 	const allEntriesFlat = allCodexEntries.flatMap(category => category.entries);
 	if (formData.selectedCodexIds && formData.selectedCodexIds.length > 0) {
@@ -106,7 +103,7 @@ export const buildPromptJson = (formData, context) => {
 	
 	const surroundingText = buildSurroundingTextBlock(wordsBefore, wordsAfter);
 	
-	const userParts = [codexBlock]; // MODIFIED: Removed dictionaryBlock
+	const userParts = [codexBlock];
 	if (surroundingText) {
 		userParts.push(surroundingText);
 	}
@@ -131,7 +128,7 @@ const updatePreview = (container, context) => {
 	const formData = {
 		instructions: form.elements.instructions.value.trim(),
 		selectedCodexIds: form.elements.codex_entry ? Array.from(form.elements.codex_entry).filter(cb => cb.checked).map(cb => cb.value) : [],
-		useDictionary: form.elements.use_dictionary.checked // NEW: Get useDictionary state
+		useDictionary: form.elements.use_dictionary.checked
 	};
 	
 	const systemPreview = container.querySelector('.js-preview-system');
@@ -157,7 +154,7 @@ const populateForm = (container, state) => {
 	if (!form) return;
 	
 	form.elements.instructions.value = state.instructions || '';
-	form.elements.use_dictionary.checked = state.useDictionary !== undefined ? state.useDictionary : defaultState.useDictionary; // NEW: Populate useDictionary
+	form.elements.use_dictionary.checked = state.useDictionary !== undefined ? state.useDictionary : defaultState.useDictionary;
 };
 
 export const init = async (container, context) => {
@@ -173,14 +170,13 @@ export const init = async (container, context) => {
 		renderCodexList(container, fullContext, context.initialState);
 		
 		const form = container.querySelector('#rephrase-editor-form');
-		const editDictionaryBtn = container.querySelector('.js-edit-dictionary-btn'); // NEW: Get edit dictionary button
+		const editDictionaryBtn = container.querySelector('.js-edit-dictionary-btn');
 		
-		// NEW: Add event listener for the edit dictionary button
 		if (editDictionaryBtn) {
 			editDictionaryBtn.addEventListener('click', openDictionaryModal);
 		}
 		
-		// MODIFIED: Debounce the preview update to prevent sluggishness on input.
+		// Debounce the preview update to prevent sluggishness on input.
 		const debouncedUpdatePreview = debounce(() => {
 			updatePreview(container, fullContext);
 		}, 500); // 300ms delay

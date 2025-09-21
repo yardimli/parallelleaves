@@ -3,7 +3,7 @@ const {contextBridge, ipcRenderer} = require('electron');
 contextBridge.exposeInMainWorld('api', {
 	// --- App Level ---
 	openImportWindow: () => ipcRenderer.send('app:open-import-window'),
-	openChatWindow: (novelId) => ipcRenderer.send('app:openChatWindow', novelId), // MODIFIED: Added novelId parameter
+	openChatWindow: (novelId) => ipcRenderer.send('app:openChatWindow', novelId),
 	getLangFile: (lang) => ipcRenderer.invoke('i18n:get-lang-file', lang),
 	login: (credentials) => ipcRenderer.invoke('auth:login', credentials),
 	logout: () => ipcRenderer.invoke('auth:logout'),
@@ -18,7 +18,7 @@ contextBridge.exposeInMainWorld('api', {
 	
 	// --- Dashboard/Novel Creation ---
 	getNovelsWithCovers: () => ipcRenderer.invoke('novels:getAllWithCovers'),
-	getOneNovel: (novelId) => ipcRenderer.invoke('novels:getOne', novelId), // MODIFIED: Exposed getOneNovel
+	getOneNovel: (novelId) => ipcRenderer.invoke('novels:getOne', novelId),
 	getFullManuscript: (novelId) => ipcRenderer.invoke('novels:getFullManuscript', novelId),
 	getAllNovelContent: (novelId) => ipcRenderer.invoke('novels:getAllContent', novelId),
 	
@@ -88,10 +88,8 @@ contextBridge.exposeInMainWorld('api', {
 	saveBackupToFile: (defaultFileName, jsonString) => ipcRenderer.invoke('dialog:saveBackup', defaultFileName, jsonString),
 	openBackupFile: () => ipcRenderer.invoke('dialog:openBackup'),
 	
-	// NEW: Dictionary APIs
 	getNovelDictionary: (novelId) => ipcRenderer.invoke('dictionary:get', novelId),
 	saveNovelDictionary: (novelId, data) => ipcRenderer.invoke('dictionary:save', novelId, data),
 	
-	// NEW: Utility for finding highest marker number
 	findHighestMarkerNumber: (sourceHtml, targetHtml) => ipcRenderer.invoke('novels:findHighestMarkerNumber', sourceHtml, targetHtml)
 });

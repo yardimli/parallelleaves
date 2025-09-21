@@ -6,7 +6,7 @@ const sessionManager = require('./src/main/sessionManager.js');
 const windowManager = require('./src/main/windowManager.js');
 const { registerIpcHandlers } = require('./src/main/ipc');
 
-// MODIFIED: Set app name for macOS development
+// Set app name for macOS development
 // This ensures the application name in the menu bar is correct when running
 // in development mode on macOS, instead of showing "Electron".
 if (process.platform === 'darwin' && !app.isPackaged) {

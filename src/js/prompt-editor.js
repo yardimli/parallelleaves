@@ -3,7 +3,7 @@ import { init as initTranslateEditor, buildPromptJson as buildTranslateJson } fr
 import { updateToolbarState as updateChapterToolbarState } from './novel-planner/toolbar.js';
 import { t } from './i18n.js';
 import { htmlToPlainText, processSourceContentForCodexLinks, processSourceContentForMarkers } from '../utils/html-processing.js';
-import { getDictionaryContentForAI } from './dictionary/dictionary-modal.js'; // NEW: Import getDictionaryContentForAI
+import { getDictionaryContentForAI } from './dictionary/dictionary-modal.js';
 
 const editors = {
 	'rephrase': { init: initRephraseEditor },
@@ -15,18 +15,17 @@ const promptBuilders = {
 	'translate': buildTranslateJson
 };
 
-// MODIFIED: Removed dictionary fields from the form data extractors.
 const formDataExtractors = {
 	'rephrase': (form) => ({
 		instructions: form.elements.instructions.value.trim(),
 		selectedCodexIds: form.elements.codex_entry ? Array.from(form.elements.codex_entry).filter(cb => cb.checked).map(cb => cb.value) : [],
-		useDictionary: form.elements.use_dictionary.checked // NEW: Only extract the checkbox state
+		useDictionary: form.elements.use_dictionary.checked
 	}),
 	'translate': (form) => ({
 		instructions: form.elements.instructions.value.trim(),
 		selectedCodexIds: form.elements.codex_entry ? Array.from(form.elements.codex_entry).filter(cb => cb.checked).map(cb => cb.value) : [],
 		contextPairs: parseInt(form.elements.context_pairs.value, 10) || 0,
-		useDictionary: form.elements.use_dictionary.checked // NEW: Only extract the checkbox state
+		useDictionary: form.elements.use_dictionary.checked
 	})
 };
 
@@ -172,7 +171,7 @@ function createFloatingToolbar(from, to, model) {
 }
 
 async function startAiAction(params) {
-	const { prompt, model, marker, dictionaryContent } = params; // MODIFIED: Added dictionaryContent
+	const { prompt, model, marker, dictionaryContent } = params;
 	
 	isAiActionActive = true;
 	if (currentEditorInterface.type === 'iframe') {
@@ -182,7 +181,7 @@ async function startAiAction(params) {
 	showAiSpinner();
 	
 	try {
-		const result = await window.api.processLLMText({ prompt, model, dictionaryContent }); // MODIFIED: Pass dictionaryContent
+		const result = await window.api.processLLMText({ prompt, model, dictionaryContent });
 		hideAiSpinner();
 		
 		if (result.success && result.data.choices && result.data.choices.length > 0) {
@@ -396,7 +395,6 @@ async function handleModalApply() {
 	
 	const prompt = builder(formDataObj, promptContext);
 	
-	// NEW: Get dictionary content if 'useDictionary' is checked
 	let dictionaryContent = '';
 	if (formDataObj.useDictionary) {
 		dictionaryContent = getDictionaryContentForAI();
@@ -410,7 +408,7 @@ async function handleModalApply() {
 		let highestNum = 0;
 		if (allContentResult.success) {
 			// The find function can take one argument since it concatenates them anyway.
-			highestNum = await window.api.findHighestMarkerNumber(allContentResult.combinedHtml, ''); // MODIFIED: Call IPC for utility
+			highestNum = await window.api.findHighestMarkerNumber(allContentResult.combinedHtml, '');
 		} else {
 			console.error('Could not fetch all novel content for marker generation:', allContentResult.message);
 			window.showAlert('Could not generate a translation marker. The translation will proceed without it.');
@@ -456,9 +454,9 @@ async function handleModalApply() {
 		}
 	}
 	
-	currentAiParams = { prompt, model, action, context: currentContext, formData: formDataObj, dictionaryContent }; // MODIFIED: Store dictionaryContent
+	currentAiParams = { prompt, model, action, context: currentContext, formData: formDataObj, dictionaryContent };
 	
-	startAiAction({ prompt: currentAiParams.prompt, model: currentAiParams.model, marker, dictionaryContent }); // MODIFIED: Pass dictionaryContent
+	startAiAction({ prompt: currentAiParams.prompt, model: currentAiParams.model, marker, dictionaryContent });
 }
 
 /**

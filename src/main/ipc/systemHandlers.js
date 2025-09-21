@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const config = require('../../../config.js');
 const { supportedLanguages } = require('../../js/languages.js');
-const { getTemplate, findHighestMarkerNumber } = require('../utils.js'); // MODIFIED: Import findHighestMarkerNumber
+const { getTemplate, findHighestMarkerNumber } = require('../utils.js');
 
 /**
  * Registers IPC handlers for system-level functionality.
@@ -59,7 +59,6 @@ function registerSystemHandlers(db, sessionManager, windowManager) {
 		}
 	});
 	
-	// MODIFIED: 'app:openChatWindow' now reads the novelId from the sender's URL.
 	ipcMain.on('app:openChatWindow', (event, novelId) => {
 		// Get the novelId directly passed from the renderer process
 		if (windowManager && typeof windowManager.createChatWindow === 'function') {
@@ -109,7 +108,6 @@ function registerSystemHandlers(db, sessionManager, windowManager) {
 		return supportedLanguages;
 	});
 	
-	// NEW: IPC handler for finding the highest marker number.
 	ipcMain.handle('novels:findHighestMarkerNumber', (event, sourceHtml, targetHtml) => {
 		return findHighestMarkerNumber(sourceHtml, targetHtml);
 	});

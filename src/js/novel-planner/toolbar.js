@@ -1,6 +1,6 @@
 import { openPromptEditor } from '../prompt-editor.js';
 import { t } from '../i18n.js';
-import { openDictionaryModal } from '../dictionary/dictionary-modal.js'; // NEW: Import openDictionaryModal
+import { openDictionaryModal } from '../dictionary/dictionary-modal.js';
 
 let activeContentWindow = null;
 let currentToolbarState = {};
@@ -151,7 +151,6 @@ export const createIframeEditorInterface = (contentWindow) => {
 };
 
 async function handleToolbarAction(button) {
-	// NEW: Handle dictionary button click
 	if (button.id === 'js-open-dictionary-btn') {
 		openDictionaryModal();
 		return;

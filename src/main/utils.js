@@ -85,5 +85,5 @@ module.exports = {
 	getTemplate,
 	htmlToPlainText,
 	countWordsInHtml,
-	findHighestMarkerNumber // NEW: Export the new utility function.
+	findHighestMarkerNumber
 };

@@ -1,11 +1,11 @@
 import { initI18n, t, applyTranslationsTo } from './i18n.js';
-import { htmlToPlainText } from '../utils/html-processing.js'; // NEW: Import htmlToPlainText
+import { htmlToPlainText } from '../utils/html-processing.js';
 
-let novelId = null; // NEW: Store novelId
-let chatHistories = []; // NEW: Array to store all chat conversations for this novel
-let currentChat = null; // NEW: The currently active chat object
+let novelId = null;
+let chatHistories = [];
+let currentChat = null;
 
-const LOCAL_STORAGE_KEY_PREFIX = 'parallel-leaves-chats-'; // NEW: Prefix for local storage key
+const LOCAL_STORAGE_KEY_PREFIX = 'parallel-leaves-chats-';
 
 const chatHistoryContainer = document.getElementById('js-chat-history');
 const chatForm = document.getElementById('js-chat-form');
@@ -13,16 +13,15 @@ const chatInput = document.getElementById('js-chat-input');
 const sendBtn = document.getElementById('js-send-btn');
 const modelSelect = document.getElementById('js-llm-model-select');
 
-// NEW: Chat management UI elements
+// Chat management UI elements
 const chatListDropdown = document.getElementById('js-chat-list');
 const newChatBtn = document.getElementById('js-new-chat-btn');
 const deleteChatBtn = document.getElementById('js-delete-chat-btn');
 const currentChatNameEl = document.getElementById('js-current-chat-name');
-const chapterSelect = document.getElementById('js-chapter-select'); // NEW: Chapter selection dropdown
+const chapterSelect = document.getElementById('js-chapter-select');
 
 /**
  * Saves the current chat histories to local storage.
- * NEW: Function to save all chat histories for the current novel.
  */
 function saveChats() {
 	if (novelId) {
@@ -32,7 +31,6 @@ function saveChats() {
 
 /**
  * Loads chat histories from local storage and initializes the current chat.
- * NEW: Function to load chat histories.
  */
 function loadChats() {
 	if (!novelId) return;
@@ -59,7 +57,6 @@ function loadChats() {
 
 /**
  * Generates a unique ID for a new chat.
- * NEW: Helper to generate unique chat IDs.
  */
 function generateChatId() {
 	return `chat-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
@@ -67,7 +64,6 @@ function generateChatId() {
 
 /**
  * Adds a new chat conversation to the list.
- * NEW: Function to add a new chat.
  */
 function addNewChat() {
 	const newChatCount = chatHistories.length + 1;
@@ -78,9 +74,9 @@ function addNewChat() {
 		messages: [],
 		createdAt: new Date().toISOString(),
 		updatedAt: new Date().toISOString(),
-		selectedChapterId: '' // NEW: Default to no chapter selected
+		selectedChapterId: ''
 	};
-	chatHistories.unshift(newChat); // Add to the beginning to show latest first
+	chatHistories.unshift(newChat);
 	saveChats();
 	selectChat(newChat.id);
 }
@@ -88,7 +84,6 @@ function addNewChat() {
 /**
  * Selects and displays a specific chat conversation.
  * @param {string} chatId - The ID of the chat to select.
- * NEW: Function to select a chat.
  */
 function selectChat(chatId) {
 	const selected = chatHistories.find(chat => chat.id === chatId);
@@ -96,8 +91,8 @@ function selectChat(chatId) {
 		currentChat = selected;
 		chatHistoryContainer.innerHTML = '';
 		currentChat.messages.forEach(msg => renderMessage(msg.role, msg.content));
-		currentChatNameEl.textContent = t('editor.chat.currentChatName', { name: currentChat.name }); // NEW: Update current chat name display
-		chapterSelect.value = currentChat.selectedChapterId || ''; // NEW: Restore selected chapter
+		currentChatNameEl.textContent = t('editor.chat.currentChatName', { name: currentChat.name });
+		chapterSelect.value = currentChat.selectedChapterId || '';
 		autoResizeTextarea();
 		chatHistoryContainer.scrollTop = chatHistoryContainer.scrollHeight;
 	} else {
@@ -109,7 +104,6 @@ function selectChat(chatId) {
 
 /**
  * Deletes the currently active chat.
- * NEW: Function to delete the current chat.
  */
 function deleteCurrentChat() {
 	if (!currentChat) return;
@@ -128,7 +122,6 @@ function deleteCurrentChat() {
 
 /**
  * Renders the list of chat histories in the dropdown.
- * NEW: Function to render the chat list.
  */
 function renderChatList() {
 	chatListDropdown.innerHTML = ''; // Clear existing list
@@ -172,7 +165,6 @@ async function populateModels() {
 
 /**
  * Populates the chapter selection dropdown with chapters from the novel.
- * NEW: Function to populate chapter selection dropdown.
  */
 async function populateChapterSelect() {
 	if (!novelId) return;
@@ -267,9 +259,9 @@ async function handleSendMessage(event) {
 	
 	// Add user message to UI and history
 	renderMessage('user', messageText);
-	currentChat.messages.push({ role: 'user', content: messageText }); // NEW: Add to currentChat
-	currentChat.updatedAt = new Date().toISOString(); // NEW: Update timestamp
-	saveChats(); // NEW: Persist changes
+	currentChat.messages.push({ role: 'user', content: messageText });
+	currentChat.updatedAt = new Date().toISOString();
+	saveChats();
 	chatInput.value = '';
 	chatInput.style.height = 'auto'; // Reset height
 	
@@ -278,8 +270,7 @@ async function handleSendMessage(event) {
 	sendBtn.disabled = true;
 	chatInput.disabled = true;
 	
-	let messagesToSend = [...currentChat.messages]; // NEW: Use currentChat.messages
-	// NEW: Add chapter context if selected
+	let messagesToSend = [...currentChat.messages];
 	const selectedChapterId = chapterSelect.value;
 	if (selectedChapterId && selectedChapterId !== 'none') {
 		try {
@@ -310,7 +301,7 @@ async function handleSendMessage(event) {
 	
 	try {
 		// Keep only the last 4 messages (2 pairs) for context + the new one
-		// MODIFIED: This slice now applies *after* potentially adding chapter context
+		// This slice now applies *after* potentially adding chapter context
 		const contextMessages = messagesToSend.slice(-5);
 		
 		const result = await window.api.chatSendMessage({
@@ -320,9 +311,9 @@ async function handleSendMessage(event) {
 		
 		if (result.success) {
 			const aiResponse = result.data.choices[0].message.content;
-			currentChat.messages.push({ role: 'assistant', content: aiResponse }); // NEW: Add to currentChat
-			currentChat.updatedAt = new Date().toISOString(); // NEW: Update timestamp
-			saveChats(); // NEW: Persist changes
+			currentChat.messages.push({ role: 'assistant', content: aiResponse });
+			currentChat.updatedAt = new Date().toISOString();
+			saveChats();
 			loadingMessage.remove();
 			renderMessage('assistant', aiResponse);
 		} else {
@@ -353,7 +344,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 	applyTranslationsTo(document.body);
 	document.title = t('editor.chat.title');
 	
-	// NEW: Get novelId from URL query parameter
 	const params = new URLSearchParams(window.location.search);
 	novelId = params.get('novelId');
 	
@@ -367,13 +357,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 	}
 	
 	populateModels();
-	populateChapterSelect(); // NEW: Populate chapter select on load
-	loadChats(); // NEW: Load chat histories
+	populateChapterSelect();
+	loadChats();
 	
-	// NEW: Event listeners for chat management
+	// Event listeners for chat management
 	newChatBtn.addEventListener('click', addNewChat);
 	deleteChatBtn.addEventListener('click', deleteCurrentChat);
-	chapterSelect.addEventListener('change', () => { // NEW: Save selected chapter when it changes
+	chapterSelect.addEventListener('change', () => {
 		if (currentChat) {
 			currentChat.selectedChapterId = chapterSelect.value === 'none' ? '' : chapterSelect.value;
 			currentChat.updatedAt = new Date().toISOString();

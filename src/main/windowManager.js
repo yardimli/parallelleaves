@@ -51,7 +51,6 @@ function createContextMenu(win) {
 			);
 		}
 		
-		// MODIFIED: Show context menu items for both editable and non-editable content.
 		if (params.isEditable) {
 			if (menu.items.length > 0) menu.append(new MenuItem({ type: 'separator' }));
 			menu.append(new MenuItem({ label: 'Cut', role: 'cut', enabled: params.selectionText.trim() !== '' }));
@@ -271,7 +270,6 @@ function createImportWindow() {
 	});
 }
 
-// MODIFIED: createChatWindow now accepts novelId
 function createChatWindow(novelId) {
 	// If chat window already exists, check if novelId is different
 	if (chatWindow && !chatWindow.isDestroyed()) {
@@ -301,7 +299,6 @@ function createChatWindow(novelId) {
 	
 	setContentSecurityPolicy(chatWindow);
 	
-	// MODIFIED: Pass novelId as a query parameter
 	chatWindow.loadFile('public/chat-window.html', { query: { novelId: novelId } });
 	
 	chatWindow.on('closed', () => {

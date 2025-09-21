@@ -1,6 +1,6 @@
 import { t, applyTranslationsTo } from '../i18n.js';
 import { htmlToPlainText } from '../../utils/html-processing.js';
-import { openDictionaryModal, getDictionaryContentForAI } from '../dictionary/dictionary-modal.js'; // NEW: Import dictionary functions
+import { openDictionaryModal, getDictionaryContentForAI } from '../dictionary/dictionary-modal.js';
 
 // Add debounce utility
 const debounce = (func, delay) => {
@@ -16,7 +16,7 @@ const defaultState = {
 	instructions: '',
 	selectedCodexIds: [],
 	contextPairs: 4,
-	useDictionary: false // NEW: Default to not using dictionary
+	useDictionary: false
 };
 
 /**
@@ -165,9 +165,6 @@ export const buildPromptJson = (formData, context) => {
 		instructionsBlock: instructionsBlock
 	}).trim();
 	
-	// MODIFIED: Dictionary content is now handled by the main prompt-editor, not here.
-	// This function only builds the prompt parts that are specific to translation.
-	
 	let codexBlock = '';
 	if (formData.selectedCodexIds && formData.selectedCodexIds.length > 0) {
 		const allEntriesFlat = allCodexEntries.flatMap(category => category.entries);
@@ -192,7 +189,7 @@ export const buildPromptJson = (formData, context) => {
 	
 	const contextMessages = buildTranslationContextBlock(translationPairs, languageForPrompt, targetLanguage);
 	
-	const finalUserPromptParts = [codexBlock]; // MODIFIED: Removed dictionaryBlock
+	const finalUserPromptParts = [codexBlock];
 	finalUserPromptParts.push(t('prompt.translate.user.textToTranslate', {
 		sourceLanguage: languageForPrompt,
 		targetLanguage: targetLanguage,
@@ -216,7 +213,7 @@ const updatePreview = async (container, context) => {
 		instructions: form.elements.instructions.value.trim(),
 		selectedCodexIds: form.elements.codex_entry ? Array.from(form.elements.codex_entry).filter(cb => cb.checked).map(cb => cb.value) : [],
 		contextPairs: parseInt(form.elements.context_pairs.value, 10) || 0,
-		useDictionary: form.elements.use_dictionary.checked // NEW: Get useDictionary state
+		useDictionary: form.elements.use_dictionary.checked
 	};
 	
 	const systemPreview = container.querySelector('.js-preview-system');
@@ -284,7 +281,7 @@ const populateForm = (container, state) => {
 	if (!form) return;
 	form.elements.instructions.value = state.instructions || '';
 	form.elements.context_pairs.value = state.contextPairs !== undefined ? state.contextPairs : 4;
-	form.elements.use_dictionary.checked = state.useDictionary !== undefined ? state.useDictionary : defaultState.useDictionary; // NEW: Populate useDictionary
+	form.elements.use_dictionary.checked = state.useDictionary !== undefined ? state.useDictionary : defaultState.useDictionary;
 };
 
 export const init = async (container, context) => {
@@ -330,14 +327,13 @@ export const init = async (container, context) => {
 		renderCodexList(container, fullContext, context.initialState, preselectedIds);
 		
 		const form = container.querySelector('#translate-editor-form');
-		const editDictionaryBtn = container.querySelector('.js-edit-dictionary-btn'); // NEW: Get edit dictionary button
+		const editDictionaryBtn = container.querySelector('.js-edit-dictionary-btn');
 		
-		// NEW: Add event listener for the edit dictionary button
 		if (editDictionaryBtn) {
 			editDictionaryBtn.addEventListener('click', openDictionaryModal);
 		}
 		
-		// MODIFIED: Debounce the preview update to prevent sluggishness, especially since it involves an async IPC call.
+		// Debounce the preview update to prevent sluggishness, especially since it involves an async IPC call.
 		const debouncedUpdatePreview = debounce(() => {
 			updatePreview(container, fullContext);
 		}, 500); // A slightly longer delay is better for async operations.

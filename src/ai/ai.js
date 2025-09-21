@@ -245,10 +245,10 @@ For example:
  * @param {object} params.prompt - An object with 'system', 'user', and 'ai' properties for the prompt.
  * @param {string} params.model - The LLM model to use.
  * @param {string|null} params.token - The user's session token.
- * @param {string} [params.dictionaryContent=''] - Optional custom dictionary content to include. // MODIFIED: Added dictionaryContent parameter.
+ * @param {string} [params.dictionaryContent=''] - Optional custom dictionary content to include.
  * @returns {Promise<object>} The AI response object.
  */
-async function processLLMText({ prompt, model, token, dictionaryContent = '' }) { // MODIFIED: Added dictionaryContent parameter.
+async function processLLMText({ prompt, model, token, dictionaryContent = '' }) {
 	const messages = [];
 	if (prompt.system) {
 		messages.push({ role: 'system', content: prompt.system });
@@ -257,7 +257,6 @@ async function processLLMText({ prompt, model, token, dictionaryContent = '' }) 
 		messages.push(...prompt.context_pairs);
 	}
 	
-	// NEW: Inject dictionary content into the user prompt if provided.
 	let userContent = prompt.user;
 	if (dictionaryContent) {
 		const dictionaryBlock = `Take into account the following custom dictionary:\n<dictionary>\n${dictionaryContent}\n</dictionary>`;

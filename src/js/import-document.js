@@ -1,6 +1,6 @@
 import { initI18n, t } from './i18n.js';
 
-// NEW: Debounce utility for search input
+// Debounce utility for search input
 const debounce = (func, delay) => {
 	let timeout;
 	return function(...args) {
@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 	const selectFileBtn = document.getElementById('select-file-btn');
 	const startImportBtn = document.getElementById('start-import-btn');
 	const autoDetectBtn = document.getElementById('auto-detect-btn');
-	const autoSplitBtn = document.getElementById('auto-split-btn'); // MODIFIED: Added auto-split button
+	const autoSplitBtn = document.getElementById('auto-split-btn');
 	const prevMarkBtn = document.getElementById('prev-mark-btn');
 	const nextMarkBtn = document.getElementById('next-mark-btn');
 	const titleInput = document.getElementById('title');
@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 	const autoDetectModal = document.getElementById('auto-detect-modal');
 	const runDetectionBtn = document.getElementById('run-detection-btn');
 	
-	const WORD_LIMIT = 5000; // NEW: Word count limit per chapter
+	const WORD_LIMIT = 5000; // Word count limit per chapter
 	
 	let currentFilePath = null;
 	let currentMarkIndex = -1;
@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 	 * @param {string} text - The string to count words in.
 	 * @returns {number} The number of words.
 	 */
-	function countWords(text) { // NEW: Helper function for word counting
+	function countWords(text) {
 		if (!text || typeof text !== 'string') {
 			return 0;
 		}
@@ -111,7 +111,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 		const hasContent = currentFilePath !== null;
 		startImportBtn.disabled = !(hasTitle && hasContent);
 		autoDetectBtn.disabled = !hasContent;
-		autoSplitBtn.disabled = !hasContent; // MODIFIED: Enable/disable auto-split button
+		autoSplitBtn.disabled = !hasContent;
 	}
 	
 	function showPopover(event) {
@@ -126,7 +126,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 		targetedParagraph = null;
 	}
 	
-	// NEW: Search functionality for the import document view
 	function setupSearch() {
 		const searchBtn = document.getElementById('js-search-btn');
 		const searchBar = document.getElementById('js-search-bar');
@@ -437,7 +436,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 		autoDetectModal.close();
 	});
 	
-	// NEW: Auto-split chapters that are too long
 	autoSplitBtn.addEventListener('click', () => {
 		let currentWordCount = 0;
 		const nodes = Array.from(documentContent.childNodes);
@@ -513,7 +511,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			return;
 		}
 		
-		// NEW: Word count validation before import
 		const actsForValidation = [];
 		let currentAct = { title: 'Act 1', chapters: [] };
 		let currentChapter = { title: 'Chapter 1', content: [] };
@@ -664,5 +661,5 @@ document.addEventListener('DOMContentLoaded', async () => {
 	});
 	
 	populateLanguages();
-	setupSearch(); // NEW: Initialize search functionality
+	setupSearch();
 });

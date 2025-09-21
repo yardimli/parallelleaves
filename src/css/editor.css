@@ -99,7 +99,7 @@ i[class^="bi-"], i[class*=" bi-"] {
 }
 
 /* Styles for the Import Document page */
-#document-content-wrapper.prose { /* MODIFIED: Override to make the content area full-width */
+#document-content-wrapper.prose { /* Override to make the content area full-width */
     max-width: none !important;
 }
 
@@ -174,7 +174,7 @@ i[class^="bi-"], i[class*=" bi-"] {
     @apply btn btn-circle btn-sm btn-outline btn-accent z-50 bg-base-100/80 backdrop-blur-sm;
 }
 
-/* NEW: Style for the "active" but read-only source content div */
+/* Style for the "active" but read-only source content div */
 .source-content-readonly[contenteditable="true"] {
     @apply ring-2 ring-accent focus:outline-none rounded-md p-2 -m-2;
 }

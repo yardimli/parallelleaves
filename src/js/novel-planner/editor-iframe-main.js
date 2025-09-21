@@ -243,7 +243,6 @@ function createEditorView (mount, config) {
 					postToParent('editorBlurred', { chapterId });
 				},
 			},
-			// MODIFIED: Detect clicks inside translation markers.
 			handleClick(view, pos, event) {
 				manageFloatingButton(view);
 				

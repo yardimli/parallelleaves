@@ -24,10 +24,9 @@ function compareVersions(v1, v2) {
 document.addEventListener('DOMContentLoaded', async () => {
 	await initI18n(true);
 	
-	// MODIFIED: Retrieve app version and update main window title
 	const { version: appVersion } = await window.api.splashGetInitData();
 	const dashboardTitle = t('dashboard.title');
-	document.title = `${dashboardTitle} - v${appVersion}`; // Set main window title with app version
+	document.title = `${dashboardTitle} - v${appVersion}`;
 	
 	/**
 	 * Displays a custom modal alert to prevent focus issues with native alerts.

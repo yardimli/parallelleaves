@@ -150,8 +150,6 @@ export async function setLanguage(lang) {
  * @param {boolean} [isDashboard=false] - Kept for call compatibility, but no longer used for special logic.
  */
 export async function initI18n(isDashboard = false) {
-	// MODIFIED: Default to 'en' if no language is set in localStorage.
-	// This removes the initial language selection modal on the dashboard.
 	const lang = localStorage.getItem(LANG_KEY) || 'en';
 	
 	localStorage.setItem(LANG_KEY, lang);

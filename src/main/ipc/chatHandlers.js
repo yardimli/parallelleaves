@@ -12,7 +12,7 @@ function registerChatHandlers(db, sessionManager) {
 			const token = sessionManager.getSession()?.token || null;
 			const { model, messages } = data; // messages is an array of {role, content}
 			
-			// NEW: Find the first system message if it exists (for chapter context)
+			// Find the first system message if it exists (for chapter context)
 			let systemMessageContent = 'You are a helpful assistant for a writer.';
 			const systemMessages = messages.filter(msg => msg.role === 'system');
 			if (systemMessages.length > 0) {
@@ -30,8 +30,8 @@ function registerChatHandlers(db, sessionManager) {
 			}
 			
 			const prompt = {
-				system: systemMessageContent, // NEW: Use collected system message
-				context_pairs: contextPairs, // NEW: Use filtered context pairs
+				system: systemMessageContent,
+				context_pairs: contextPairs,
 				user: userPrompt.content
 			};
 			
