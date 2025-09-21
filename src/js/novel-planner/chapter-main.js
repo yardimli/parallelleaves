@@ -562,6 +562,31 @@ function scrollToTargetMarker (chapterId, markerId) {
 	}, window.location.origin);
 }
 
+// NEW: Function to scroll the source column to a specific marker.
+/**
+ * Finds and scrolls to a specific translation marker in the source column.
+ * @param {string} markerId - The numerical ID of the marker to find.
+ */
+function scrollToSourceMarker(markerId) {
+	const sourceContainer = document.getElementById('js-source-column-container');
+	if (!sourceContainer) return;
+	
+	const markerLink = sourceContainer.querySelector(`.translation-marker-link[data-marker-id="${markerId}"]`);
+	
+	if (markerLink) {
+		markerLink.scrollIntoView({ behavior: 'smooth', block: 'center' });
+		
+		// Add a temporary highlight for visual feedback. Uses the same class as active search results.
+		markerLink.classList.add('search-highlight-active');
+		setTimeout(() => {
+			markerLink.classList.remove('search-highlight-active');
+		}, 2000); // Highlight for 2 seconds
+	} else {
+		console.warn(`Source marker with ID ${markerId} not found.`);
+	}
+}
+
+
 /**
  * Populates and configures the spellcheck language dropdown.
  */
@@ -1230,6 +1255,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 					if (typeof window.handleSearchResult === 'function') {
 						window.handleSearchResult(payload);
 					}
+					break;
+				}
+				// NEW: Handle clicks on markers in the target editor.
+				case 'markerClicked': {
+					scrollToSourceMarker(payload.markerId);
 					break;
 				}
 				case 'requestTranslation': {

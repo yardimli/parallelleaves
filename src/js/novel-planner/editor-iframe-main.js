@@ -121,6 +121,7 @@ const sendResize = () => {
 	// Use a small timeout to allow the DOM to render before calculating height
 	setTimeout(() => {
 		const height = document.body.scrollHeight + 200;
+		console.log('Sending resize height:', height);
 		postToParent('resize', { height });
 	}, 50);
 };
@@ -242,9 +243,36 @@ function createEditorView (mount, config) {
 					postToParent('editorBlurred', { chapterId });
 				},
 			},
+			// MODIFIED: Detect clicks inside translation markers.
 			handleClick(view, pos, event) {
 				manageFloatingButton(view);
-				return false; // Let ProseMirror handle the click as well
+				
+				const resolvedPos = view.state.doc.resolve(pos);
+				const parentNode = resolvedPos.parent;
+				const offsetInParent = resolvedPos.parentOffset;
+				
+				// Check if the click is inside a text-containing block.
+				if (parentNode.isTextblock) {
+					const textContent = parentNode.textContent;
+					const markerRegex = /\[\[#(\d+)\]\]/g;
+					let match;
+					
+					// Iterate over all markers in the paragraph to find the one that was clicked.
+					while ((match = markerRegex.exec(textContent)) !== null) {
+						const matchStart = match.index;
+						const matchEnd = matchStart + match[0].length;
+						
+						// Check if the click's offset is within the bounds of the current marker match.
+						if (offsetInParent >= matchStart && offsetInParent <= matchEnd) {
+							const markerId = match[1];
+							// Send a message to the parent window to handle the navigation.
+							postToParent('markerClicked', { markerId });
+							break; // Found the clicked marker, no need to check others.
+						}
+					}
+				}
+				
+				return false; // Let ProseMirror handle the click as well for cursor placement.
 			}
 		},
 	});
