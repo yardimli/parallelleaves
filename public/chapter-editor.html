@@ -197,7 +197,7 @@
 		<select id="js-chapter-nav-dropdown" class="select select-bordered select-sm w-full max-w-xs">
 			<option data-i18n="editor.loadingNav">Loading navigation...</option>
 		</select>
-		<div class="flex-grow"></div> <!-- Spacer -->
+		<div class="flex-grow"></div>
 		<div class="flex items-center gap-2">
 			<label for="js-spellcheck-lang-dropdown" class="text-sm font-medium" data-i18n="editor.spellcheck">Spellcheck:</label>
 			<select id="js-spellcheck-lang-dropdown" class="select select-bordered select-sm">
@@ -223,7 +223,7 @@
 </div>
 
 <div id="bottom-status-bar" class="flex-shrink-0 h-8 bg-base-100 flex items-center px-4 gap-4 z-40 border-t border-base-300 dark:border-base-100/10 text-sm">
-	<div class="flex-grow"></div> <!-- Spacer to push content to the right -->
+	<div class="flex-grow"></div>
 	<div class="flex items-center text-base-content/70">
 		<span id="js-total-word-count" class="mr-4"></span>
 		<span id="js-word-count" data-i18n="editor.noTextSelected">No text selected</span>
@@ -466,6 +466,7 @@
 
 <dialog id="dictionary-modal" class="modal">
 	<div class="modal-box w-11/12 max-w-2xl h-[90vh] flex flex-col p-0">
+		<!-- Header Section -->
 		<div class="flex-shrink-0 p-6 pb-4 border-b border-base-300">
 			<form method="dialog">
 				<button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
@@ -476,14 +477,28 @@
 		
 		<!-- Scrollable Content Area -->
 		<div class="flex-grow overflow-y-auto min-h-0">
-			<div class="p-6"> <!-- Added inner padding for the content -->
+			<div class="p-6">
 				<div class="overflow-x-auto">
 					<table class="table w-full">
 						<thead>
 						<tr>
 							<th class="w-12"></th> <!-- Checkbox column -->
-							<th data-i18n="editor.dictionaryModal.sourceTerm">Source Term</th>
-							<th data-i18n="editor.dictionaryModal.targetTranslation">Target Translation</th>
+							<th data-i18n="editor.dictionaryModal.sourceTerm">
+								<div class="flex items-center gap-1">
+									<span>Source Term</span>
+									<button type="button" class="js-sort-btn btn btn-ghost btn-xs btn-square" data-sort-by="source" data-sort-direction="asc">
+										<i class="bi bi-sort-alpha-down"></i>
+									</button>
+								</div>
+							</th>
+							<th data-i18n="editor.dictionaryModal.targetTranslation">
+								<div class="flex items-center gap-1">
+									<span>Target Translation</span>
+									<button type="button" class="js-sort-btn btn btn-ghost btn-xs btn-square" data-sort-by="target" data-sort-direction="asc">
+										<i class="bi bi-sort-alpha-down"></i>
+									</button>
+								</div>
+							</th>
 						</tr>
 						</thead>
 						<tbody id="dictionary-table-body">

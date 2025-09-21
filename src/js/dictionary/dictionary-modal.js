@@ -1,4 +1,3 @@
-// src/js/dictionary/dictionary-modal.js
 import { t, applyTranslationsTo } from '../i18n.js';
 
 let dictionaryModal;
@@ -9,6 +8,7 @@ let dictionaryDeleteSelectedBtn;
 let dictionarySaveBtn;
 let currentNovelId;
 let currentDictionaryData = []; // [{source: "term", target: "translation"}]
+let currentSort = { sortBy: null, direction: 'asc' };
 
 /**
  * Updates the currentDictionaryData array with values from the DOM inputs.
@@ -71,6 +71,7 @@ function renderDictionaryTable() {
 	});
 	
 	updateDeleteButtonState();
+	updateSortButtonIcons();
 }
 
 /**
@@ -80,6 +81,7 @@ function renderDictionaryTable() {
  * @param {string} targetText - Optional text to pre-fill the target column.
  */
 function addRow(sourceText = '', targetText = '') {
+	console.log('addRow called with:', { sourceText, targetText });
 	updateCurrentDictionaryDataFromDOM();
 	currentDictionaryData.push({ source: sourceText, target: targetText });
 	renderDictionaryTable();
@@ -89,7 +91,6 @@ function addRow(sourceText = '', targetText = '') {
  * Deletes selected rows from the dictionary table.
  */
 function deleteSelectedRows() {
-	// Bug fix: Capture any existing edits before modifying the array
 	updateCurrentDictionaryDataFromDOM();
 	
 	const selectedCheckboxes = Array.from(dictionaryTableBody.querySelectorAll('.row-select-checkbox:checked'));
@@ -123,14 +124,14 @@ async function saveDictionary() {
 	Array.from(dictionaryTableBody.rows).forEach(row => {
 		const sourceInput = row.cells[1].querySelector('input');
 		const targetInput = row.cells[2].querySelector('input');
-		if (sourceInput.value.trim() || targetInput.value.trim()) { // Only save non-empty rows
+		if (sourceInput.value.trim() || targetInput.value.trim()) {
 			updatedData.push({
 				source: sourceInput.value.trim(),
 				target: targetInput.value.trim()
 			});
 		}
 	});
-	currentDictionaryData = updatedData; // Update local state with cleaned data
+	currentDictionaryData = updatedData;
 	
 	try {
 		await window.api.saveNovelDictionary(currentNovelId, currentDictionaryData);
@@ -148,6 +149,9 @@ async function loadDictionary() {
 	try {
 		const data = await window.api.getNovelDictionary(currentNovelId);
 		currentDictionaryData = data || [];
+		if (currentSort.sortBy) {
+			sortDictionary(currentSort.sortBy, currentSort.direction, false);
+		}
 		renderDictionaryTable();
 	} catch (error) {
 		console.error('Failed to load dictionary:', error);
@@ -155,6 +159,56 @@ async function loadDictionary() {
 		currentDictionaryData = [];
 		renderDictionaryTable();
 	}
+}
+
+/**
+ * Sorts the dictionary data by a given key and direction.
+ * @param {string} sortBy - 'source' or 'target'.
+ * @param {'asc'|'desc'} direction - 'asc' for ascending, 'desc' for descending.
+ * @param {boolean} shouldRender - Whether to re-render the table after sorting.
+ */
+function sortDictionary(sortBy, direction, shouldRender = true) {
+	updateCurrentDictionaryDataFromDOM();
+	
+	currentDictionaryData.sort((a, b) => {
+		const valA = a[sortBy].toLowerCase();
+		const valB = b[sortBy].toLowerCase();
+		
+		if (valA < valB) return direction === 'asc' ? -1 : 1;
+		if (valA > valB) return direction === 'asc' ? 1 : -1;
+		return 0;
+	});
+	
+	currentSort = { sortBy, direction };
+	if (shouldRender) {
+		renderDictionaryTable();
+	}
+}
+
+/**
+ * Updates the icons of the sort buttons to reflect the current sort state.
+ */
+function updateSortButtonIcons() {
+	const sortButtons = dictionaryModal.querySelectorAll('.js-sort-btn');
+	sortButtons.forEach(button => {
+		const sortBy = button.dataset.sortBy;
+		const icon = button.querySelector('i');
+		
+		// Reset all icons to default
+		icon.className = 'bi bi-sort-alpha-down'; // Default ascending icon
+		button.dataset.sortDirection = 'asc'; // Reset data attribute
+		
+		if (currentSort.sortBy === sortBy) {
+			// If this column is currently sorted, update its icon and data attribute
+			if (currentSort.direction === 'asc') {
+				icon.className = 'bi bi-sort-alpha-down';
+				button.dataset.sortDirection = 'asc';
+			} else {
+				icon.className = 'bi bi-sort-alpha-up';
+				button.dataset.sortDirection = 'desc';
+			}
+		}
+	});
 }
 
 /**
@@ -177,12 +231,25 @@ export function initDictionaryModal(novelId) {
 	
 	applyTranslationsTo(dictionaryModal); // Apply translations on init
 	
-	// Fix: Wrap addRow in an anonymous function to prevent the event object from being passed as sourceText.
 	dictionaryAddRowBtn.addEventListener('click', () => addRow());
 	dictionaryDeleteSelectedBtn.addEventListener('click', deleteSelectedRows);
 	dictionarySaveBtn.addEventListener('click', saveDictionary);
 	
-	// Event listener for checkbox changes to update delete button state
+	dictionaryModal.querySelectorAll('.js-sort-btn').forEach(button => {
+		button.addEventListener('click', (event) => {
+			const sortBy = event.currentTarget.dataset.sortBy;
+			let direction = event.currentTarget.dataset.sortDirection;
+			
+			if (currentSort.sortBy === sortBy) {
+				direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+			} else {
+				direction = 'asc';
+			}
+			
+			sortDictionary(sortBy, direction);
+		});
+	});
+	
 	dictionaryTableBody.addEventListener('change', (event) => {
 		if (event.target.classList.contains('row-select-checkbox')) {
 			updateDeleteButtonState();
@@ -198,6 +265,7 @@ export function initDictionaryModal(novelId) {
 		// If not saved, revert to previous state on next open by clearing local data.
 		// A fresh load will happen on the next 'showModal' event.
 		currentDictionaryData = [];
+		currentSort = { sortBy: null, direction: 'asc' }; // New: Reset sort state on close
 	});
 }
 
@@ -209,6 +277,7 @@ export function initDictionaryModal(novelId) {
 export async function openDictionaryModal(selectedText = '', sourceOrTarget = '') {
 	if (dictionaryModal) {
 		currentDictionaryData = [];
+		currentSort = { sortBy: null, direction: 'asc' }; // New: Reset sort state before loading
 		await loadDictionary(); // Load existing data from file.
 		
 		if (selectedText) { // If text is selected, add a pre-filled row.
@@ -218,6 +287,7 @@ export async function openDictionaryModal(selectedText = '', sourceOrTarget = ''
 				addRow('', selectedText);
 			}
 		}
+		
 		dictionaryModal.showModal();
 	}
 }
