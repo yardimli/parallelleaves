@@ -238,35 +238,57 @@ async function saveSourceChanges(chapterId) {
 }
 
 /**
- * function to synchronize translation markers on load.
- * Removes markers from the source text if they don't exist in the target text.
+ * Synchronizes translation markers on load.
+ * Removes markers from the source text if no corresponding marker number exists in the target text.
  * @param {string} chapterId - The ID of the chapter being processed.
  * @param {HTMLElement} sourceContainer - The DOM element containing the source HTML.
  * @param {string} targetHtml - The initial HTML content of the target.
  */
 async function synchronizeMarkers(chapterId, sourceContainer, targetHtml) {
-	const markerRegex = /\[\[#(\d+)\]\]/g;
+	// MODIFICATION START: Updated logic to handle both opening and closing markers.
+	// Regex to find both opening [[#...]] and closing {{#...}} markers and capture their numbers.
+	const markerRegex = /(\[\[#(\d+)\]\])|(\{\{#(\d+)\}\})/g;
 	let sourceHtml = sourceContainer.innerHTML;
 	
-	const sourceMarkers = sourceHtml.match(markerRegex) || [];
-	if (sourceMarkers.length === 0) {
+	// Helper function to extract a Set of marker numbers from an HTML string.
+	const getMarkerNumbers = (html) => {
+		const numbers = new Set();
+		if (!html) return numbers;
+		const matches = [...html.matchAll(markerRegex)];
+		matches.forEach(match => {
+			// The number is in capture group 2 (for [[...]]) or 4 (for {{...}}).
+			const numStr = match[2] || match[4];
+			if (numStr) {
+				numbers.add(parseInt(numStr, 10));
+			}
+		});
+		return numbers;
+	};
+	
+	const sourceMarkerNumbers = getMarkerNumbers(sourceHtml);
+	if (sourceMarkerNumbers.size === 0) {
 		return; // No markers in source, nothing to do.
 	}
 	
-	const targetMarkers = new Set(targetHtml.match(markerRegex) || []);
+	const targetMarkerNumbers = getMarkerNumbers(targetHtml);
 	
 	let wasModified = false;
-	const uniqueSourceMarkers = [...new Set(sourceMarkers)]; // Process each unique marker only once
 	
-	uniqueSourceMarkers.forEach(marker => {
-		if (!targetMarkers.has(marker)) {
-			// This marker exists in the source but not the target, so remove it.
-			// Use a regex with the specific marker to replace all instances of it.
-			const escapedMarker = marker.replace(/\[/g, '\\[').replace(/\]/g, '\\]');
-			const removalRegex = new RegExp(escapedMarker + '\\s*', 'g');
-			sourceHtml = sourceHtml.replace(removalRegex, '');
-			wasModified = true;
-			console.log(`[Sync] Removing orphaned marker ${marker} from chapter ${chapterId}`);
+	// Find numbers that are in the source but not in the target.
+	sourceMarkerNumbers.forEach(number => {
+		if (!targetMarkerNumbers.has(number)) {
+			// This marker number is orphaned. Remove both opening and closing markers from the source.
+			const openingMarkerRegex = new RegExp(`\\[\\[#${number}\\]\\]\\s*`, 'g');
+			const closingMarkerRegex = new RegExp(`\\{\\{#${number}\\}\\}\\s*`, 'g');
+			
+			const originalSourceHtml = sourceHtml;
+			sourceHtml = sourceHtml.replace(openingMarkerRegex, '');
+			sourceHtml = sourceHtml.replace(closingMarkerRegex, '');
+			
+			if (sourceHtml !== originalSourceHtml) {
+				wasModified = true;
+				console.log(`[Sync] Removing orphaned markers for number #${number} from chapter ${chapterId}`);
+			}
 		}
 	});
 	
@@ -283,6 +305,7 @@ async function synchronizeMarkers(chapterId, sourceContainer, targetHtml) {
 			console.error(`[Sync] Failed to save updated source content for chapter ${chapterId}:`, error);
 		}
 	}
+	// MODIFICATION END
 }
 
 /**
