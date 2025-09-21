@@ -76,13 +76,12 @@ function renderDictionaryTable() {
 
 /**
  * Adds a new empty row to the dictionary table.
- * When called without arguments (e.g., by clicking the "Add Row" button), it adds a blank row.
+ * This is called by the "Add Row" button and preserves existing edits.
  * @param {string} sourceText - Optional text to pre-fill the source column.
  * @param {string} targetText - Optional text to pre-fill the target column.
  */
 function addRow(sourceText = '', targetText = '') {
-	console.log('addRow called with:', { sourceText, targetText });
-	updateCurrentDictionaryDataFromDOM();
+	updateCurrentDictionaryDataFromDOM(); // Save any unsaved edits before re-rendering
 	currentDictionaryData.push({ source: sourceText, target: targetText });
 	renderDictionaryTable();
 }
@@ -139,25 +138,6 @@ async function saveDictionary() {
 	} catch (error) {
 		console.error('Failed to save dictionary:', error);
 		window.showAlert(t('common.error') + ': ' + error.message);
-	}
-}
-
-/**
- * Loads the dictionary data for the current novel from the main process.
- */
-async function loadDictionary() {
-	try {
-		const data = await window.api.getNovelDictionary(currentNovelId);
-		currentDictionaryData = data || [];
-		if (currentSort.sortBy) {
-			sortDictionary(currentSort.sortBy, currentSort.direction, false);
-		}
-		renderDictionaryTable();
-	} catch (error) {
-		console.error('Failed to load dictionary:', error);
-		window.showAlert(t('common.error') + ': ' + error.message);
-		currentDictionaryData = [];
-		renderDictionaryTable();
 	}
 }
 
@@ -256,37 +236,44 @@ export function initDictionaryModal(novelId) {
 		}
 	});
 	
-	// When the modal is opened, load the dictionary data
-	// The 'showModal' event is custom, triggered by openDictionaryModal
-	dictionaryModal.addEventListener('showModal', loadDictionary);
+	// MODIFIED: Removed the custom 'showModal' event listener which was not being triggered.
 	
-	// When the modal is closed via the 'X' button or backdrop click, ensure data is reloaded on next open
+	// When the modal is closed via the 'X' button or backdrop click, reset the sort state.
 	dictionaryModal.addEventListener('close', () => {
-		// Removed: currentDictionaryData = [];
-		// The dictionary content will now be fetched directly via IPC when needed by AI prompts.
 		currentSort = { sortBy: null, direction: 'asc' }; // Reset sort state on close.
 	});
 }
 
 /**
- * Opens the dictionary modal.
+ * Opens the dictionary modal, loads data, and optionally pre-fills a new row.
  * @param {string} selectedText - Optional text to pre-fill a new row.
  * @param {'source'|'target'} sourceOrTarget - Indicates if selectedText is for source or target.
  */
 export async function openDictionaryModal(selectedText = '', sourceOrTarget = '') {
-	if (dictionaryModal) {
-		currentDictionaryData = []; // Clear local data before loading to ensure fresh state for modal.
+	if (!dictionaryModal) return; // MODIFIED: Added guard clause for safety.
+	
+	try {
+		// MODIFICATION START: Refactored logic for efficiency and clarity.
+		// This new flow fetches data, modifies it in memory, and then renders the table just once.
 		currentSort = { sortBy: null, direction: 'asc' }; // Reset sort state before loading.
-		await loadDictionary(); // Load existing data from file.
 		
-		if (selectedText) { // If text is selected, add a pre-filled row.
+		const data = await window.api.getNovelDictionary(currentNovelId);
+		currentDictionaryData = data || [];
+		
+		// If text is selected, add a pre-filled row directly to the data array.
+		if (selectedText) {
 			if (sourceOrTarget === 'source') {
-				addRow(selectedText, '');
+				currentDictionaryData.push({ source: selectedText, target: '' });
 			} else if (sourceOrTarget === 'target') {
-				addRow('', selectedText);
+				currentDictionaryData.push({ source: '', target: selectedText });
 			}
 		}
 		
+		renderDictionaryTable(); // Render the table once with the final data.
 		dictionaryModal.showModal();
+		// MODIFICATION END
+	} catch (error) {
+		console.error('Failed to open or load dictionary modal:', error);
+		window.showAlert(t('common.error') + ': ' + error.message);
 	}
 }
