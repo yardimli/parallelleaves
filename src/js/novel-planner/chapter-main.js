@@ -37,6 +37,90 @@ let globalSearchMatches = [];
 let currentMatchIndex = -1;
 let searchResponsesPending = 0;
 
+// MODIFICATION START: Generic modal helper functions to replace native dialogs.
+
+/**
+ * Shows a confirmation modal and returns a promise that resolves with true or false.
+ * @param {string} title - The title of the modal.
+ * @param {string} message - The confirmation message.
+ * @returns {Promise<boolean>} - True if confirmed, false otherwise.
+ */
+function showConfirmationModal(title, message) {
+	return new Promise((resolve) => {
+		const modal = document.getElementById('confirmation-modal');
+		const titleEl = document.getElementById('confirmation-modal-title');
+		const contentEl = document.getElementById('confirmation-modal-content');
+		let confirmBtn = document.getElementById('confirmation-modal-confirm-btn');
+		let cancelBtn = document.getElementById('confirmation-modal-cancel-btn');
+		
+		// Clean up old listeners by replacing the button
+		const newConfirmBtn = confirmBtn.cloneNode(true);
+		confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+		confirmBtn = newConfirmBtn;
+		
+		titleEl.textContent = title;
+		contentEl.textContent = message;
+		
+		const handleConfirm = () => {
+			modal.close();
+			resolve(true);
+		};
+		
+		const handleCancel = () => {
+			modal.close();
+			resolve(false);
+		};
+		
+		confirmBtn.addEventListener('click', handleConfirm, { once: true });
+		cancelBtn.addEventListener('click', handleCancel, { once: true });
+		modal.addEventListener('close', () => resolve(false), { once: true });
+		
+		modal.showModal();
+	});
+}
+
+/**
+ * Shows a modal with a text input and returns a promise that resolves with the input value or null.
+ * @param {string} title - The title of the modal.
+ * @param {string} label - The label for the input field.
+ * @param {string} [initialValue=''] - The initial value for the input field.
+ * @returns {Promise<string|null>} - The input value or null if canceled.
+ */
+function showInputModal(title, label, initialValue = '') {
+	return new Promise((resolve) => {
+		const modal = document.getElementById('input-modal');
+		const titleEl = document.getElementById('input-modal-title');
+		const labelEl = document.getElementById('input-modal-label').querySelector('span');
+		const inputEl = document.getElementById('input-modal-input');
+		const form = document.getElementById('input-modal-form');
+		
+		titleEl.textContent = title;
+		labelEl.textContent = label;
+		inputEl.value = initialValue;
+		
+		const handleSubmit = (e) => {
+			e.preventDefault();
+			const value = inputEl.value.trim();
+			modal.close();
+			resolve(value);
+		};
+		
+		const handleClose = () => {
+			form.removeEventListener('submit', handleSubmit);
+			resolve(null);
+		};
+		
+		form.addEventListener('submit', handleSubmit, { once: true });
+		modal.addEventListener('close', handleClose, { once: true });
+		
+		modal.showModal();
+		inputEl.focus();
+		inputEl.select();
+	});
+}
+
+// MODIFICATION END
+
 /**
  * Synchronizes the scroll position of a chapter between the source and target columns.
  * @param {string} chapterId - The ID of the chapter to sync.
@@ -325,8 +409,24 @@ async function renderManuscript(novelData, allCodexEntries) {
 	for (const section of novelData.sections) {
 		// Create and append section headers to both columns
 		const sectionHeader = document.createElement('div');
-		sectionHeader.className = 'px-8 py-6 top-0 bg-base-100/90 backdrop-blur-sm z-10 border-b border-base-300';
-		sectionHeader.innerHTML = `<h2 class="text-3xl font-bold text-indigo-500">${section.section_order}. ${section.title}</h2>`;
+		// MODIFICATION START: Added dropdown menu for section (act) actions.
+		sectionHeader.className = 'px-8 py-6 top-0 bg-base-100/90 backdrop-blur-sm z-10 border-b border-base-300 flex justify-between items-center';
+		sectionHeader.innerHTML = `
+            <h2 class="text-3xl font-bold text-indigo-500">${section.section_order}. ${section.title}</h2>
+            <div class="dropdown dropdown-end">
+                <button tabindex="0" role="button" class="btn btn-ghost btn-sm btn-circle">
+                    <i class="bi bi-three-dots-vertical"></i>
+                </button>
+                <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-200 rounded-box w-52">
+                    <li><button class="js-section-action" data-action="rename" data-section-id="${section.id}">${t('editor.renameAct')}</button></li>
+                    <li><button class="js-section-action" data-action="insert-above" data-section-id="${section.id}">${t('editor.insertActAbove')}</button></li>
+                    <li><button class="js-section-action" data-action="insert-below" data-section-id="${section.id}">${t('editor.insertActBelow')}</button></li>
+                    <div class="divider my-1"></div>
+                    <li><button class="js-section-action text-error" data-action="delete" data-section-id="${section.id}">${t('editor.deleteAct')}</button></li>
+                </ul>
+            </div>
+        `;
+		// MODIFICATION END
 		sourceFragment.appendChild(sectionHeader);
 		targetFragment.appendChild(sectionHeader.cloneNode(true));
 		
@@ -351,6 +451,7 @@ async function renderManuscript(novelData, allCodexEntries) {
 			
 			const sourceHeader = document.createElement('div');
 			sourceHeader.className = 'flex justify-between items-center border-b pb-1 mb-2';
+			// MODIFICATION START: Replaced simple actions with a dropdown menu for more chapter options.
 			sourceHeader.innerHTML = `
                 <div class="flex items-center gap-2">
                     <h3 class="!mt-0 text-sm font-semibold uppercase tracking-wider text-base-content/70">${chapter.title} (<span class="js-source-word-count">${chapter.source_word_count.toLocaleString()} ${t('common.words')}</span>)</h3>
@@ -358,12 +459,25 @@ async function renderManuscript(novelData, allCodexEntries) {
                         <i class="bi bi-arrow-right-circle"></i>
                     </button>
                 </div>
-                <div class="js-source-actions">
+                <div class="js-source-actions flex items-center gap-1">
                     <button class="js-edit-source-btn btn btn-ghost btn-xs">${t('common.edit')}</button>
                     <button class="js-save-source-btn btn btn-success btn-xs hidden">${t('common.save')}</button>
                     <button class="js-cancel-source-btn btn btn-ghost btn-xs hidden">${t('common.cancel')}</button>
+                    <div class="dropdown dropdown-end">
+                        <button tabindex="0" role="button" class="btn btn-ghost btn-xs btn-circle">
+                            <i class="bi bi-three-dots-vertical"></i>
+                        </button>
+                        <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-200 rounded-box w-52">
+                            <li><button class="js-chapter-action" data-action="rename" data-chapter-id="${chapter.id}">${t('editor.renameChapter')}</button></li>
+                            <li><button class="js-chapter-action" data-action="insert-above" data-chapter-id="${chapter.id}">${t('editor.insertChapterAbove')}</button></li>
+                            <li><button class="js-chapter-action" data-action="insert-below" data-chapter-id="${chapter.id}">${t('editor.insertChapterBelow')}</button></li>
+                            <div class="divider my-1"></div>
+                            <li><button class="js-chapter-action text-error" data-action="delete" data-chapter-id="${chapter.id}">${t('editor.deleteChapter')}</button></li>
+                        </ul>
+                    </div>
                 </div>
             `;
+			// MODIFICATION END
 			sourceCol.appendChild(sourceHeader);
 			
 			const sourceContentContainer = document.createElement('div');
@@ -1170,6 +1284,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 			}
 		});
 		
+		// MODIFICATION START: Replaced native dialogs with custom HTML modals.
 		sourceContainer.addEventListener('click', async (event) => {
 			const syncBtn = event.target.closest('.js-sync-scroll-btn');
 			const codexLink = event.target.closest('a.codex-link');
@@ -1217,6 +1332,58 @@ document.addEventListener('DOMContentLoaded', async () => {
 				}
 			}
 			
+			const chapterActionBtn = event.target.closest('.js-chapter-action');
+			if (chapterActionBtn) {
+				event.preventDefault();
+				const action = chapterActionBtn.dataset.action;
+				const chapterId = chapterActionBtn.dataset.chapterId;
+				
+				if (action === 'rename') {
+					const currentTitle = chapterActionBtn.closest('.js-source-actions').parentElement.querySelector('h3').textContent.split('(')[0].trim();
+					const newTitle = await showInputModal(t('editor.renameChapter'), t('editor.promptNewChapterTitle'), currentTitle);
+					if (newTitle) {
+						await window.api.renameChapter({ chapterId, newTitle });
+						window.location.reload();
+					}
+				} else if (action === 'delete') {
+					const confirmed = await showConfirmationModal(t('editor.deleteChapter'), t('editor.confirmDeleteChapter'));
+					if (confirmed) {
+						await window.api.deleteChapter({ chapterId });
+						window.location.reload();
+					}
+				} else if (action === 'insert-above' || action === 'insert-below') {
+					await window.api.insertChapter({ chapterId, direction: action.replace('insert-', '') });
+					window.location.reload();
+				}
+				return;
+			}
+			
+			const sectionActionBtn = event.target.closest('.js-section-action');
+			if (sectionActionBtn) {
+				event.preventDefault();
+				const action = sectionActionBtn.dataset.action;
+				const sectionId = sectionActionBtn.dataset.sectionId;
+				
+				if (action === 'rename') {
+					const currentTitle = sectionActionBtn.closest('.flex.justify-between').querySelector('h2').textContent.split('. ')[1];
+					const newTitle = await showInputModal(t('editor.renameAct'), t('editor.promptNewActTitle'), currentTitle);
+					if (newTitle) {
+						await window.api.renameSection({ sectionId, newTitle });
+						window.location.reload();
+					}
+				} else if (action === 'delete') {
+					const confirmed = await showConfirmationModal(t('editor.deleteAct'), t('editor.confirmDeleteAct'));
+					if (confirmed) {
+						await window.api.deleteSection({ sectionId });
+						window.location.reload();
+					}
+				} else if (action === 'insert-above' || action === 'insert-below') {
+					await window.api.insertSection({ sectionId, direction: action.replace('insert-', '') });
+					window.location.reload();
+				}
+				return;
+			}
+			
 			const contentDiv = event.target.closest('.source-content-readonly');
 			if (contentDiv) {
 				sourceContainer.querySelectorAll('.source-content-readonly').forEach(div => {
@@ -1227,6 +1394,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 				contentDiv.contentEditable = true;
 			}
 		});
+		// MODIFICATION END
 		
 		sourceContainer.addEventListener('beforeinput', (event) => {
 			const contentDiv = event.target.closest('.source-content-readonly');

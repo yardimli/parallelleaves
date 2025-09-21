@@ -6,12 +6,26 @@ const imageHandler = require('../../utils/image-handler.js');
 const { countWordsInHtml, htmlToPlainText } = require('../utils.js');
 const { mapLanguageToIsoCode } = require('../../js/languages.js');
 
+// NEW: Helper function to convert numbers to Roman numerals for default Act titles.
+function toRoman(num) {
+	const roman = { M: 1000, CM: 900, D: 500, CD: 400, C: 100, XC: 90, L: 50, XL: 40, X: 10, IX: 9, V: 5, IV: 4, I: 1 };
+	let str = '';
+	for (let i of Object.keys(roman)) {
+		let q = Math.floor(num / roman[i]);
+		num -= q * roman[i];
+		str += i.repeat(q);
+	}
+	return str;
+}
+
 /**
  * Registers IPC handlers for novel-related functionality.
  * @param {Database.Database} db - The application's database connection.
+ * @param {object} sessionManager - The session manager instance.
  * @param {object} windowManager - The window manager instance.
  */
-function registerNovelHandlers(db, windowManager) {
+// MODIFICATION: Added sessionManager to the function signature.
+function registerNovelHandlers(db, sessionManager, windowManager) {
 	ipcMain.handle('novels:getAllWithCovers', (event) => {
 		const stmt = db.prepare(`
             SELECT
@@ -39,6 +53,44 @@ function registerNovelHandlers(db, windowManager) {
 		}
 		
 		return novels;
+	});
+	
+	// NEW: Handler for creating a blank project with a default structure.
+	ipcMain.handle('novels:createBlank', (event, { title, source_language, target_language }) => {
+		try {
+			// MODIFICATION START: Get user ID from session to satisfy the NOT NULL constraint.
+			const session = sessionManager.getSession();
+			if (!session || !session.user) {
+				return { success: false, message: 'User not authenticated.' };
+			}
+			const userId = session.user.id;
+			
+			const novelResult = db.prepare(
+				'INSERT INTO novels (user_id, title, author, source_language, target_language) VALUES (?, ?, ?, ?, ?)'
+			).run(userId, title, '', source_language, target_language);
+			// MODIFICATION END
+			
+			const novelId = novelResult.lastInsertRowid;
+			
+			const insertSection = db.prepare('INSERT INTO sections (novel_id, title, section_order) VALUES (?, ?, ?)');
+			const insertChapter = db.prepare('INSERT INTO chapters (novel_id, section_id, title, chapter_order, source_content, target_content) VALUES (?, ?, ?, ?, ?, ?)');
+			
+			db.transaction(() => {
+				for (let i = 1; i <= 3; i++) { // 3 Acts
+					const sectionResult = insertSection.run(novelId, `Act ${toRoman(i)}`, i);
+					const sectionId = sectionResult.lastInsertRowid;
+					
+					for (let j = 1; j <= 10; j++) { // 10 Chapters per Act
+						insertChapter.run(novelId, sectionId, `Chapter ${j}`, j, '<p></p>', '<p></p>');
+					}
+				}
+			})();
+			
+			return { success: true, novelId };
+		} catch (error) {
+			console.error('Failed to create blank novel:', error);
+			return { success: false, message: error.message };
+		}
 	});
 	
 	ipcMain.handle('novels:getOne', (event, novelId) => {

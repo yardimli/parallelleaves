@@ -143,6 +143,59 @@ function registerChapterHandlers(db, windowManager) {
 			throw new Error('Failed to retrieve translation context from the database.');
 		}
 	});
+	
+	// NEW: Handler for renaming a chapter.
+	ipcMain.handle('chapters:rename', (event, { chapterId, newTitle }) => {
+		try {
+			db.prepare('UPDATE chapters SET title = ? WHERE id = ?').run(newTitle, chapterId);
+			return { success: true };
+		} catch (error) {
+			console.error(`Failed to rename chapter ${chapterId}:`, error);
+			return { success: false, message: error.message };
+		}
+	});
+	
+	// NEW: Handler for deleting a chapter.
+	ipcMain.handle('chapters:delete', (event, { chapterId }) => {
+		try {
+			const chapter = db.prepare('SELECT section_id, chapter_order FROM chapters WHERE id = ?').get(chapterId);
+			if (!chapter) throw new Error('Chapter not found.');
+			
+			db.transaction(() => {
+				db.prepare('DELETE FROM chapters WHERE id = ?').run(chapterId);
+				db.prepare('UPDATE chapters SET chapter_order = chapter_order - 1 WHERE section_id = ? AND chapter_order > ?')
+					.run(chapter.section_id, chapter.chapter_order);
+			})();
+			
+			return { success: true };
+		} catch (error) {
+			console.error(`Failed to delete chapter ${chapterId}:`, error);
+			return { success: false, message: error.message };
+		}
+	});
+	
+	// NEW: Handler for inserting a new chapter.
+	ipcMain.handle('chapters:insert', (event, { chapterId, direction }) => {
+		try {
+			const refChapter = db.prepare('SELECT novel_id, section_id, chapter_order FROM chapters WHERE id = ?').get(chapterId);
+			if (!refChapter) throw new Error('Reference chapter not found.');
+			
+			const newOrder = direction === 'above' ? refChapter.chapter_order : refChapter.chapter_order + 1;
+			
+			db.transaction(() => {
+				db.prepare('UPDATE chapters SET chapter_order = chapter_order + 1 WHERE section_id = ? AND chapter_order >= ?')
+					.run(refChapter.section_id, newOrder);
+				
+				db.prepare('INSERT INTO chapters (novel_id, section_id, title, chapter_order, source_content, target_content) VALUES (?, ?, ?, ?, ?, ?)')
+					.run(refChapter.novel_id, refChapter.section_id, 'New Chapter', newOrder, '<p></p>', '<p></p>');
+			})();
+			
+			return { success: true };
+		} catch (error) {
+			console.error(`Failed to insert chapter near ${chapterId}:`, error);
+			return { success: false, message: error.message };
+		}
+	});
 }
 
 module.exports = { registerChapterHandlers };

@@ -6,6 +6,7 @@ const { registerChatHandlers } = require('./chatHandlers.js');
 const { registerCodexHandlers } = require('./codexHandlers.js');
 const { registerImportHandlers } = require('./importHandlers.js');
 const { registerNovelHandlers } = require('./novelHandlers.js');
+const { registerSectionHandlers } = require('./sectionHandlers.js');
 const { registerSystemHandlers } = require('./systemHandlers.js');
 const { registerDictionaryHandlers } = require('./dictionaryHandlers.js');
 
@@ -23,7 +24,8 @@ function registerIpcHandlers(db, sessionManager, windowManager) {
 	registerChatHandlers(db, sessionManager);
 	registerCodexHandlers(db, sessionManager, windowManager);
 	registerImportHandlers(db, sessionManager, windowManager);
-	registerNovelHandlers(db, windowManager);
+	registerNovelHandlers(db, sessionManager, windowManager);
+	registerSectionHandlers(db);
 	registerSystemHandlers(db, sessionManager, windowManager);
 	registerDictionaryHandlers();
 }

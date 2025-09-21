@@ -1,4 +1,4 @@
-const {contextBridge, ipcRenderer} = require('electron');
+const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('api', {
 	// --- App Level ---
@@ -37,6 +37,7 @@ contextBridge.exposeInMainWorld('api', {
 	updatePromptSettings: (data) => ipcRenderer.invoke('novels:updatePromptSettings', data),
 	
 	updateNovelMeta: (data) => ipcRenderer.invoke('novels:updateMeta', data),
+	createBlankNovel: (data) => ipcRenderer.invoke('novels:createBlank', data), // NEW
 	updateNovelCover: (data) => ipcRenderer.invoke('novels:updateNovelCover', data),
 	deleteNovel: (novelId) => ipcRenderer.invoke('novels:delete', novelId),
 	
@@ -57,6 +58,13 @@ contextBridge.exposeInMainWorld('api', {
 	onManuscriptScrollToChapter: (callback) => ipcRenderer.on('manuscript:scrollToChapter', callback),
 	
 	updateChapterField: (data) => ipcRenderer.invoke('chapters:updateField', data),
+	renameChapter: (data) => ipcRenderer.invoke('chapters:rename', data), // NEW
+	deleteChapter: (data) => ipcRenderer.invoke('chapters:delete', data), // NEW
+	insertChapter: (data) => ipcRenderer.invoke('chapters:insert', data), // NEW
+	
+	renameSection: (data) => ipcRenderer.invoke('sections:rename', data), // NEW
+	deleteSection: (data) => ipcRenderer.invoke('sections:delete', data), // NEW
+	insertSection: (data) => ipcRenderer.invoke('sections:insert', data), // NEW
 	
 	// Codex Entry Management
 	openNewCodexEditor: (data) => ipcRenderer.send('codex-entries:openNewEditor', data),

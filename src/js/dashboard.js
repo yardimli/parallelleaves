@@ -1,4 +1,4 @@
-import { initI18n, t, applyTranslationsTo, setLanguage, appLanguages} from './i18n.js';
+import { initI18n, t, applyTranslationsTo, setLanguage, appLanguages } from './i18n.js';
 import { exportNovel } from './exporter.js';
 import { backupNovel, restoreNovel } from './backup-restore.js';
 
@@ -50,7 +50,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 	// --- DOM Elements ---
 	const novelList = document.getElementById('novel-list');
 	const loadingMessage = document.getElementById('loading-message');
-	const importDocBtn = document.getElementById('import-doc-btn');
+	const importDocBtnMenu = document.getElementById('import-doc-btn-menu'); // MODIFIED
+	const newProjectBtnMenu = document.getElementById('new-project-btn-menu'); // NEW
+	const newProjectModal = document.getElementById('new-project-modal'); // NEW
+	const newProjectForm = document.getElementById('new-project-form'); // NEW
+	const newProjectSourceLangSelect = document.getElementById('new-project-source-language'); // NEW
+	const newProjectTargetLangSelect = document.getElementById('new-project-target-language'); // NEW
 	const restoreBackupBtn = document.getElementById('restore-backup-btn-menu');
 	const authMenuSection = document.getElementById('auth-menu-section');
 	const loginModal = document.getElementById('login-modal');
@@ -88,15 +93,25 @@ document.addEventListener('DOMContentLoaded', async () => {
 	let stagedCover = null;
 	let isRefreshingData = false;
 	
-	
+	// MODIFICATION START: Updated to populate all language dropdowns, including the new one.
 	async function populateLanguages() {
 		const supportedLanguages = await window.api.getSupportedLanguages();
 		const langNames = Object.values(supportedLanguages).sort((a, b) => a.localeCompare(b));
+		
+		// Clear existing options before populating
+		sourceLangSelect.innerHTML = '';
+		targetLangSelect.innerHTML = '';
+		newProjectSourceLangSelect.innerHTML = '';
+		newProjectTargetLangSelect.innerHTML = '';
+		
 		langNames.forEach(lang => {
 			sourceLangSelect.add(new Option(lang, lang));
 			targetLangSelect.add(new Option(lang, lang));
+			newProjectSourceLangSelect.add(new Option(lang, lang));
+			newProjectTargetLangSelect.add(new Option(lang, lang));
 		});
 	}
+	// MODIFICATION END
 	
 	// --- Authentication Logic ---
 	
@@ -436,11 +451,50 @@ document.addEventListener('DOMContentLoaded', async () => {
 		});
 	}
 	
-	if (importDocBtn) {
-		importDocBtn.addEventListener('click', () => {
+	// MODIFICATION START: Added listeners for new menu items and modal.
+	if (importDocBtnMenu) {
+		importDocBtnMenu.addEventListener('click', () => {
 			window.api.openImportWindow();
 		});
 	}
+	
+	if (newProjectBtnMenu) {
+		newProjectBtnMenu.addEventListener('click', () => {
+			newProjectForm.reset();
+			newProjectModal.showModal();
+		});
+	}
+	
+	if (newProjectForm) {
+		newProjectForm.addEventListener('submit', async (e) => {
+			e.preventDefault();
+			const formData = new FormData(newProjectForm);
+			const data = {
+				title: formData.get('title'),
+				source_language: formData.get('source_language'),
+				target_language: formData.get('target_language'),
+			};
+			
+			if (!data.title.trim()) {
+				showAlert(t('dashboard.newProjectModal.errorNoTitle'));
+				return;
+			}
+			
+			try {
+				const result = await window.api.createBlankNovel(data);
+				if (result.success) {
+					newProjectModal.close();
+					await loadInitialData(); // Refresh the project list
+				} else {
+					throw new Error(result.message || 'Failed to create project.');
+				}
+			} catch (error) {
+				console.error('Failed to create blank project:', error);
+				showAlert(t('dashboard.newProjectModal.errorCreate', { message: error.message }));
+			}
+		});
+	}
+	// MODIFICATION END
 	
 	if (restoreBackupBtn) {
 		restoreBackupBtn.addEventListener('click', () => {

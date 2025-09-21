@@ -24,12 +24,7 @@
 				<i class="bi bi-sun-fill text-2xl"></i>
 			</button>
 			
-			<!-- Import Document Button -->
-			<button id="import-doc-btn" class="btn btn-primary">
-				<i class="bi bi-file-earmark-arrow-up"></i>
-				<span data-i18n="dashboard.importDocument">Import Document</span>
-			</button>
-			
+			<!-- MODIFICATION START: Replaced primary import button with a dropdown menu for all project creation actions -->
 			<!-- Hamburger Menu Dropdown -->
 			<div class="dropdown dropdown-end">
 				<button tabindex="0" role="button" class="btn btn-ghost btn-circle">
@@ -42,7 +37,23 @@
 					<!-- Divider is shown/hidden by JS -->
 					<div class="divider my-1" id="auth-divider"></div>
 					
-					<!-- Menu items that were previously buttons -->
+					<!-- Project Creation -->
+					<li>
+						<a id="new-project-btn-menu">
+							<i class="bi bi-file-earmark-plus"></i>
+							<span data-i18n="dashboard.newProject">New Blank Project</span>
+						</a>
+					</li>
+					<li>
+						<a id="import-doc-btn-menu">
+							<i class="bi bi-file-earmark-arrow-up"></i>
+							<span data-i18n="dashboard.importDocument">Import Document</span>
+						</a>
+					</li>
+					
+					<div class="divider my-1"></div>
+					
+					<!-- Restore Backup -->
 					<li>
 						<a id="restore-backup-btn-menu">
 							<i class="bi bi-upload"></i>
@@ -65,6 +76,7 @@
 					</li>
 				</ul>
 			</div>
+			<!-- MODIFICATION END -->
 		</div>
 	</div>
 	
@@ -177,6 +189,38 @@
 			<form method="dialog" class="flex gap-3">
 				<button class="btn" data-i18n="common.cancel">Cancel</button>
 				<button id="save-meta-settings-btn" class="btn btn-primary" data-i18n="dashboard.metaSettings.saveButton">Save Changes</button>
+			</form>
+		</div>
+	</div>
+</dialog>
+
+<!-- NEW MODAL: For creating a new blank project -->
+<dialog id="new-project-modal" class="modal">
+	<div class="modal-box w-11/12 max-w-lg">
+		<h3 class="font-bold text-lg" data-i18n="dashboard.newProjectModal.title">Create New Blank Project</h3>
+		<p class="py-4 text-sm text-base-content/70" data-i18n="dashboard.newProjectModal.description">Provide a title and languages for your new project. It will be created with a default structure of 3 acts and 10 chapters per act.</p>
+		<form id="new-project-form" class="space-y-4">
+			<div class="form-control">
+				<label for="new-project-title" class="label"><span class="label-text" data-i18n="dashboard.newProjectModal.projectTitle">Project Title</span></label>
+				<input type="text" id="new-project-title" name="title" class="input input-bordered" required>
+			</div>
+			<div class="form-control">
+				<label for="new-project-source-language" class="label"><span class="label-text" data-i18n="dashboard.newProjectModal.sourceLanguage">Source Language</span></label>
+				<select id="new-project-source-language" name="source_language" class="select select-bordered" required>
+					<!-- Options populated by JS -->
+				</select>
+			</div>
+			<div class="form-control">
+				<label for="new-project-target-language" class="label"><span class="label-text" data-i18n="dashboard.newProjectModal.targetLanguage">Target Language</span></label>
+				<select id="new-project-target-language" name="target_language" class="select select-bordered" required>
+					<!-- Options populated by JS -->
+				</select>
+			</div>
+		</form>
+		<div class="modal-action">
+			<form method="dialog" class="flex gap-3 w-full">
+				<button class="btn flex-1" data-i18n="common.cancel">Cancel</button>
+				<button id="create-project-btn" type="submit" form="new-project-form" class="btn btn-primary flex-1" data-i18n="dashboard.newProjectModal.createButton">Create Project</button>
 			</form>
 		</div>
 	</div>
