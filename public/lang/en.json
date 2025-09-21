@@ -310,6 +310,15 @@
       "description": "The Codex acts as a glossary for your project. By creating entries for characters, locations, and key terms, you provide the AI with essential context. This ensures names and lore are translated consistently every time, dramatically improving the quality of your translation.",
       "createButton": "Auto-generate First Entries",
       "laterButton": "I'll Do It Later"
+    },
+    "dictionaryModal": {
+      "title": "Custom Dictionary",
+      "description": "Add custom terms and their translations to guide the AI. These entries will be used when 'Use Custom Dictionary' is enabled in AI prompt settings.",
+      "sourceTerm": "Source Term",
+      "targetTranslation": "Target Translation",
+      "addRow": "Add Row",
+      "deleteSelected": "Delete Selected",
+      "noEntries": "No dictionary entries yet. Click 'Add Row' to start."
     }
   },
   "prompt": {
@@ -317,6 +326,7 @@
       "dictionary": "Dictionary",
       "dictionaryHelp": "Provide a custom dictionary or glossary for the AI. One entry per line, e.g., 'Character Name = Translated Name'.",
       "useDictionary": "Use Custom Dictionary",
+      "editDictionary": "Edit Dictionary",
       "user": {
         "dictionaryBlock": "Take into account the following custom dictionary:\n<dictionary>\n{dictionaryContent}\n</dictionary>"
       }

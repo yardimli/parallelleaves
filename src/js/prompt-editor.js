@@ -3,34 +3,32 @@ import { init as initTranslateEditor, buildPromptJson as buildTranslateJson } fr
 import { updateToolbarState as updateChapterToolbarState } from './novel-planner/toolbar.js';
 import { t } from './i18n.js';
 import { htmlToPlainText, processSourceContentForCodexLinks, processSourceContentForMarkers } from '../utils/html-processing.js';
+import { getDictionaryContentForAI } from './dictionary/dictionary-modal.js'; // NEW: Import getDictionaryContentForAI
 
 const editors = {
 	'rephrase': { init: initRephraseEditor },
-	'translate': { init: initTranslateEditor },
+	'translate': { init: initTranslateEditor }
 };
 
 const promptBuilders = {
 	'rephrase': buildRephraseJson,
-	'translate': buildTranslateJson,
+	'translate': buildTranslateJson
 };
 
-// MODIFIED: Added dictionary fields to the form data extractors.
+// MODIFIED: Removed dictionary fields from the form data extractors.
 const formDataExtractors = {
 	'rephrase': (form) => ({
 		instructions: form.elements.instructions.value.trim(),
 		selectedCodexIds: form.elements.codex_entry ? Array.from(form.elements.codex_entry).filter(cb => cb.checked).map(cb => cb.value) : [],
-		useDictionary: form.elements.use_dictionary.checked,
-		dictionary: form.elements.dictionary.value.trim(),
+		useDictionary: form.elements.use_dictionary.checked // NEW: Only extract the checkbox state
 	}),
 	'translate': (form) => ({
 		instructions: form.elements.instructions.value.trim(),
 		selectedCodexIds: form.elements.codex_entry ? Array.from(form.elements.codex_entry).filter(cb => cb.checked).map(cb => cb.value) : [],
 		contextPairs: parseInt(form.elements.context_pairs.value, 10) || 0,
-		useDictionary: form.elements.use_dictionary.checked,
-		dictionary: form.elements.dictionary.value.trim(),
-	}),
+		useDictionary: form.elements.use_dictionary.checked // NEW: Only extract the checkbox state
+	})
 };
-
 
 let modalEl;
 let currentContext;
@@ -43,37 +41,12 @@ let floatingToolbar = null;
 let currentAiParams = null;
 let currentPromptId = null;
 
-
-/**
- * helper function to find the highest marker number.
- * Scans two HTML strings to find all instances of `[[#<number>]]` and returns the highest number found.
- * @param {string} sourceHtml - The HTML of the source content.
- * @param {string} targetHtml - The HTML of the target content.
- * @returns {number} The highest marker number found, or 0 if none are found.
- */
-function findHighestMarkerNumber(sourceHtml, targetHtml) {
-	const markerRegex = /\[\[#(\d+)\]\]/g;
-	let highest = 0;
-	
-	const combinedHtml = sourceHtml + targetHtml;
-	const matches = combinedHtml.matchAll(markerRegex);
-	
-	for (const match of matches) {
-		const num = parseInt(match[1], 10);
-		if (num > highest) {
-			highest = num;
-		}
-	}
-	
-	return highest;
-}
-
-function showAiSpinner () {
+function showAiSpinner() {
 	const overlay = document.getElementById('ai-action-spinner-overlay');
 	if (overlay) overlay.classList.remove('hidden');
 }
 
-function hideAiSpinner () {
+function hideAiSpinner() {
 	const overlay = document.getElementById('ai-action-spinner-overlay');
 	if (overlay) overlay.classList.add('hidden');
 }
@@ -106,7 +79,7 @@ const loadPrompt = async (promptId) => {
 	await editorConfig.init(customFormContainer, currentContext);
 };
 
-async function cleanupAiAction () {
+async function cleanupAiAction() {
 	if (floatingToolbar) {
 		floatingToolbar.remove();
 		floatingToolbar = null;
@@ -127,19 +100,19 @@ async function cleanupAiAction () {
 	}
 }
 
-async function handleFloatyApply () {
+async function handleFloatyApply() {
 	if (!isAiActionActive || !currentEditorInterface) return;
 	await cleanupAiAction();
 }
 
-async function handleFloatyDiscard () {
+async function handleFloatyDiscard() {
 	if (!isAiActionActive || !currentEditorInterface || !originalFragmentJson) return;
 	
 	await currentEditorInterface.discardAiSuggestion(aiActionRange.from, aiActionRange.to, originalFragmentJson);
 	await cleanupAiAction();
 }
 
-async function handleFloatyRetry () {
+async function handleFloatyRetry() {
 	if (!isAiActionActive || !currentEditorInterface || !currentAiParams) return;
 	
 	const actionToRetry = currentAiParams.action;
@@ -166,7 +139,7 @@ async function handleFloatyRetry () {
 	openPromptEditor(contextForRetry, actionToRetry, previousFormData);
 }
 
-function createFloatingToolbar (from, to, model) {
+function createFloatingToolbar(from, to, model) {
 	if (floatingToolbar) floatingToolbar.remove();
 	
 	const modelName = model.split('/').pop() || model;
@@ -198,8 +171,8 @@ function createFloatingToolbar (from, to, model) {
 	});
 }
 
-async function startAiAction (params) {
-	const { prompt, model, marker } = params;
+async function startAiAction(params) {
+	const { prompt, model, marker, dictionaryContent } = params; // MODIFIED: Added dictionaryContent
 	
 	isAiActionActive = true;
 	if (currentEditorInterface.type === 'iframe') {
@@ -209,7 +182,7 @@ async function startAiAction (params) {
 	showAiSpinner();
 	
 	try {
-		const result = await window.api.processLLMText({ prompt, model });
+		const result = await window.api.processLLMText({ prompt, model, dictionaryContent }); // MODIFIED: Pass dictionaryContent
 		hideAiSpinner();
 		
 		if (result.success && result.data.choices && result.data.choices.length > 0) {
@@ -271,13 +244,13 @@ async function startAiAction (params) {
 							
 							// Only scroll if the content is not already visible
 							if (desiredScrollTop > container.scrollTop) {
-								container.scrollTo({top: desiredScrollTop, behavior: 'smooth'});
+								container.scrollTo({ top: desiredScrollTop, behavior: 'smooth' });
 							}
 						}
 					}, 100);
 				}
 			} else {
-				console.error("Editor did not return a final range after replacement.");
+				console.error('Editor did not return a final range after replacement.');
 				await handleFloatyDiscard();
 			}
 		} else {
@@ -292,7 +265,7 @@ async function startAiAction (params) {
 	}
 }
 
-async function populateModelDropdown (initialState = null) {
+async function populateModelDropdown(initialState = null) {
 	if (!modalEl) return;
 	const select = modalEl.querySelector('.js-llm-model-select');
 	if (!select) return;
@@ -334,7 +307,7 @@ async function populateModelDropdown (initialState = null) {
 	}
 }
 
-async function handleModalApply () {
+async function handleModalApply() {
 	if (!modalEl || isAiActionActive) return;
 	
 	const model = modalEl.querySelector('.js-llm-model-select').value;
@@ -412,7 +385,7 @@ async function handleModalApply () {
 			const pairs = await window.api.getTranslationContext({
 				chapterId: chapterId,
 				pairCount: formDataObj.contextPairs,
-				selectedText: selectionInfo.selectedText,
+				selectedText: selectionInfo.selectedText
 			});
 			promptContext.translationPairs = pairs;
 		} catch (error) {
@@ -423,6 +396,12 @@ async function handleModalApply () {
 	
 	const prompt = builder(formDataObj, promptContext);
 	
+	// NEW: Get dictionary content if 'useDictionary' is checked
+	let dictionaryContent = '';
+	if (formDataObj.useDictionary) {
+		dictionaryContent = getDictionaryContentForAI();
+	}
+	
 	// Calculate and insert the translation marker.
 	let marker = '';
 	if (action === 'translate') {
@@ -431,7 +410,7 @@ async function handleModalApply () {
 		let highestNum = 0;
 		if (allContentResult.success) {
 			// The find function can take one argument since it concatenates them anyway.
-			highestNum = findHighestMarkerNumber(allContentResult.combinedHtml, '');
+			highestNum = await window.api.findHighestMarkerNumber(allContentResult.combinedHtml, ''); // MODIFIED: Call IPC for utility
 		} else {
 			console.error('Could not fetch all novel content for marker generation:', allContentResult.message);
 			window.showAlert('Could not generate a translation marker. The translation will proceed without it.');
@@ -454,7 +433,6 @@ async function handleModalApply () {
 				newDocumentContent += `<p>${pText.trim()}</p>`;
 			});
 			
-			
 			// Persist the plain text change to the database.
 			await window.api.updateChapterField({
 				chapterId: chapterId,
@@ -471,24 +449,22 @@ async function handleModalApply () {
 			processedHtml = processSourceContentForMarkers(processedHtml);
 			
 			sourceContainer.innerHTML = processedHtml;
-			
 		} catch (e) {
-			console.error("Could not insert marker into source text:", e);
+			console.error('Could not insert marker into source text:', e);
 			// If this fails, we'll proceed without the marker to not break translation.
 			marker = '';
 		}
 	}
 	
-	currentAiParams = { prompt, model, action, context: currentContext, formData: formDataObj };
+	currentAiParams = { prompt, model, action, context: currentContext, formData: formDataObj, dictionaryContent }; // MODIFIED: Store dictionaryContent
 	
-	startAiAction({ prompt: currentAiParams.prompt, model: currentAiParams.model, marker });
+	startAiAction({ prompt: currentAiParams.prompt, model: currentAiParams.model, marker, dictionaryContent }); // MODIFIED: Pass dictionaryContent
 }
-
 
 /**
  * Initializes the prompt editor modal logic once, attaching the necessary event listener.
  */
-export function setupPromptEditor () {
+export function setupPromptEditor() {
 	modalEl = document.getElementById('prompt-editor-modal');
 	if (!modalEl) return;
 	
@@ -518,7 +494,7 @@ export function setupPromptEditor () {
  * @param {string} promptId - The ID of the prompt to open.
  * @param {object|null} initialState - The form state to restore from a previous run.
  */
-export async function openPromptEditor (context, promptId, initialState = null) {
+export async function openPromptEditor(context, promptId, initialState = null) {
 	if (!modalEl) {
 		console.error('Prompt editor modal element not found.');
 		return;
@@ -542,10 +518,8 @@ export async function openPromptEditor (context, promptId, initialState = null) 
 		await populateModelDropdown(initialState);
 		await loadPrompt(promptId);
 		modalEl.showModal();
-		
 	} catch (error) {
 		console.error('Error loading prompt editor:', error);
 		modalEl.showModal();
 	}
-	
 }

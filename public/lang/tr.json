@@ -310,6 +310,15 @@
       "description": "Sözlük, projeniz için bir terimler sözlüğü görevi görür. Karakterler, yerler ve anahtar terimler için kayıtlar oluşturarak yapay zekaya temel bağlam sağlarsınız. Bu, isimlerin ve hikaye unsurlarının her seferinde tutarlı bir şekilde çevrilmesini sağlayarak çevirinizin kalitesini önemli ölçüde artırır.",
       "createButton": "İlk Kayıtları Otomatik Oluştur",
       "laterButton": "Daha Sonra Yaparım"
+    },
+    "dictionaryModal": {
+      "title": "Özel Sözlük",
+      "description": "Yapay zekayı yönlendirmek için özel terimler ve çevirilerini ekleyin. Bu girdiler, AI istem ayarlarında 'Özel Sözlük Kullan' etkinleştirildiğinde kullanılacaktır.",
+      "sourceTerm": "Kaynak Terim",
+      "targetTranslation": "Hedef Çeviri",
+      "addRow": "Satır Ekle",
+      "deleteSelected": "Seçilenleri Sil",
+      "noEntries": "Henüz sözlük kaydı yok. Başlamak için 'Satır Ekle'ye tıklayın."
     }
   },
   "prompt": {
@@ -317,6 +326,7 @@
       "dictionary": "Sözlük",
       "dictionaryHelp": "Yapay zeka için özel bir sözlük veya terimler listesi sağlayın. Her satıra bir girdi, örn: 'Karakter Adı = Çevrilmiş Adı'.",
       "useDictionary": "Özel Sözlük Kullan",
+      "editDictionary": "Sözlüğü Düzenle",
       "user": {
         "dictionaryBlock": "Aşağıdaki özel sözlüğü dikkate al:\n<dictionary>\n{dictionaryContent}\n</dictionary>"
       }

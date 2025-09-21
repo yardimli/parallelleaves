@@ -310,6 +310,15 @@
       "description": "Codex fungerer som en ordliste for prosjektet ditt. Ved å opprette oppføringer for karakterer, steder og nøkkelbegreper, gir du AI-en viktig kontekst. Dette sikrer at navn og lore oversettes konsekvent hver gang, noe som dramatisk forbedrer kvaliteten på oversettelsen din.",
       "createButton": "Autogenerer første oppføringer",
       "laterButton": "Jeg gjør det senere"
+    },
+    "dictionaryModal": {
+      "title": "Egendefinert Ordbok",
+      "description": "Legg til egendefinerte termer og deres oversettelser for å veilede AI-en. Disse oppføringene vil bli brukt når 'Bruk Egendefinert Ordbok' er aktivert i AI-promptinnstillingene.",
+      "sourceTerm": "Kildeterm",
+      "targetTranslation": "Måloversettelse",
+      "addRow": "Legg til rad",
+      "deleteSelected": "Slett valgte",
+      "noEntries": "Ingen ordbokoppføringer ennå. Klikk 'Legg til rad' for å starte."
     }
   },
   "prompt": {
@@ -317,6 +326,7 @@
       "dictionary": "Ordbok",
       "dictionaryHelp": "Oppgi en egendefinert ordbok eller ordliste for AI-en. Én oppføring per linje, f.eks. 'Karakternavn = Oversatt Navn'.",
       "useDictionary": "Bruk Egendefinert Ordbok",
+      "editDictionary": "Rediger Ordbok",
       "user": {
         "dictionaryBlock": "Ta hensyn til følgende egendefinerte ordbok:\n<dictionary>\n{dictionaryContent}\n</dictionary>"
       }

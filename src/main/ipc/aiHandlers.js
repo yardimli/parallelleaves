@@ -11,6 +11,7 @@ function registerAiHandlers(db, sessionManager) {
 	ipcMain.handle('llm:process-text', async (event, data) => {
 		try {
 			const token = sessionManager.getSession()?.token || null;
+			// MODIFIED: Pass dictionaryContent to the AI service
 			const result = await aiService.processLLMText({ ...data, token });
 			return { success: true, data: result };
 		} catch (error) {

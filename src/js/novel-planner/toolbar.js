@@ -1,5 +1,6 @@
 import { openPromptEditor } from '../prompt-editor.js';
 import { t } from '../i18n.js';
+import { openDictionaryModal } from '../dictionary/dictionary-modal.js'; // NEW: Import openDictionaryModal
 
 let activeContentWindow = null;
 let currentToolbarState = {};
@@ -140,17 +141,22 @@ export const createIframeEditorInterface = (contentWindow) => {
 			const listener = (event) => {
 				if (event.source === contentWindow && event.data.type === 'replacementComplete') {
 					window.removeEventListener('message', listener);
-					resolve({finalRange:event.data.payload.finalRange, endCoords:event.data.payload.endCoords});
+					resolve({ finalRange: event.data.payload.finalRange, endCoords: event.data.payload.endCoords });
 				}
 			};
 			window.addEventListener('message', listener);
 			post('replaceRange', { from, to, newContentHtml });
-		}),
+		})
 	};
 };
 
-
 async function handleToolbarAction(button) {
+	// NEW: Handle dictionary button click
+	if (button.id === 'js-open-dictionary-btn') {
+		openDictionaryModal();
+		return;
+	}
+	
 	if (button.classList.contains('js-ai-action-btn')) {
 		const action = button.dataset.action;
 		const novelId = document.body.dataset.novelId;
@@ -199,7 +205,7 @@ async function handleToolbarAction(button) {
 			languageForPrompt: novelData.target_language || 'English',
 			activeEditorView: activeContentWindow,
 			editorInterface: editorInterface,
-			chapterId: chapterId,
+			chapterId: chapterId
 		};
 		openPromptEditor(context, action, settings);
 		return;

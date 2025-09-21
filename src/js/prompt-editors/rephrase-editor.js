@@ -1,5 +1,6 @@
 import { t, applyTranslationsTo } from '../i18n.js';
 import { htmlToPlainText } from '../../utils/html-processing.js';
+import { openDictionaryModal, getDictionaryContentForAI } from '../dictionary/dictionary-modal.js'; // NEW: Import dictionary functions
 
 // Add debounce utility
 const debounce = (func, delay) => {
@@ -14,6 +15,7 @@ const debounce = (func, delay) => {
 const defaultState = {
 	instructions: '',
 	selectedCodexIds: [],
+	useDictionary: false // NEW: Default to not using dictionary
 };
 
 const renderCodexList = (container, context, initialState = null) => {
@@ -83,10 +85,8 @@ export const buildPromptJson = (formData, context) => {
 		language: languageForPrompt || 'English'
 	});
 	
-	let dictionaryBlock = '';
-	if (formData.useDictionary && formData.dictionary) {
-		dictionaryBlock = t('prompt.common.user.dictionaryBlock', { dictionaryContent: formData.dictionary });
-	}
+	// MODIFIED: Dictionary content is now handled by the main prompt-editor, not here.
+	// This function only builds the prompt parts that are specific to rephrase.
 	
 	let codexBlock = '';
 	const allEntriesFlat = allCodexEntries.flatMap(category => category.entries);
@@ -106,7 +106,7 @@ export const buildPromptJson = (formData, context) => {
 	
 	const surroundingText = buildSurroundingTextBlock(wordsBefore, wordsAfter);
 	
-	const userParts = [dictionaryBlock, codexBlock];
+	const userParts = [codexBlock]; // MODIFIED: Removed dictionaryBlock
 	if (surroundingText) {
 		userParts.push(surroundingText);
 	}
@@ -120,7 +120,7 @@ export const buildPromptJson = (formData, context) => {
 	return {
 		system: system.replace(/\n\n\n/g, '\n\n'),
 		user: user,
-		ai: '',
+		ai: ''
 	};
 };
 
@@ -131,8 +131,7 @@ const updatePreview = (container, context) => {
 	const formData = {
 		instructions: form.elements.instructions.value.trim(),
 		selectedCodexIds: form.elements.codex_entry ? Array.from(form.elements.codex_entry).filter(cb => cb.checked).map(cb => cb.value) : [],
-		useDictionary: form.elements.use_dictionary.checked,
-		dictionary: form.elements.dictionary.value.trim(),
+		useDictionary: form.elements.use_dictionary.checked // NEW: Get useDictionary state
 	};
 	
 	const systemPreview = container.querySelector('.js-preview-system');
@@ -158,6 +157,7 @@ const populateForm = (container, state) => {
 	if (!form) return;
 	
 	form.elements.instructions.value = state.instructions || '';
+	form.elements.use_dictionary.checked = state.useDictionary !== undefined ? state.useDictionary : defaultState.useDictionary; // NEW: Populate useDictionary
 };
 
 export const init = async (container, context) => {
@@ -173,25 +173,11 @@ export const init = async (container, context) => {
 		renderCodexList(container, fullContext, context.initialState);
 		
 		const form = container.querySelector('#rephrase-editor-form');
-		const novelId = document.body.dataset.novelId;
-		const dictionaryTextarea = container.querySelector('textarea[name="dictionary"]');
-		const useDictionaryToggle = container.querySelector('.js-use-dictionary-toggle');
-		const dictionaryContainer = container.querySelector('.js-dictionary-container');
+		const editDictionaryBtn = container.querySelector('.js-edit-dictionary-btn'); // NEW: Get edit dictionary button
 		
-		if (novelId && dictionaryTextarea) {
-			const storageKey = `customDictionary-${novelId}`;
-			const savedDictionary = localStorage.getItem(storageKey);
-			if (savedDictionary) {
-				dictionaryTextarea.value = savedDictionary;
-			}
-			
-			const debouncedSave = debounce((value) => {
-				localStorage.setItem(storageKey, value);
-			}, 500);
-			
-			dictionaryTextarea.addEventListener('input', () => {
-				debouncedSave(dictionaryTextarea.value);
-			});
+		// NEW: Add event listener for the edit dictionary button
+		if (editDictionaryBtn) {
+			editDictionaryBtn.addEventListener('click', openDictionaryModal);
 		}
 		
 		// MODIFIED: Debounce the preview update to prevent sluggishness on input.
@@ -201,21 +187,12 @@ export const init = async (container, context) => {
 		
 		if (form) {
 			form.addEventListener('input', () => {
-				// Handle UI toggles immediately as it's a cheap operation.
-				if (useDictionaryToggle && dictionaryContainer) {
-					dictionaryContainer.classList.toggle('hidden', !useDictionaryToggle.checked);
-				}
 				// Debounce the expensive preview update.
 				debouncedUpdatePreview();
 			});
 		}
 		
-		// Set initial state
-		if (useDictionaryToggle && dictionaryContainer) {
-			dictionaryContainer.classList.toggle('hidden', !useDictionaryToggle.checked);
-		}
 		updatePreview(container, fullContext);
-		
 	} catch (error) {
 		container.innerHTML = `<p class="p-4 text-error">${t('prompt.errorLoadForm')}</p>`;
 		console.error(error);

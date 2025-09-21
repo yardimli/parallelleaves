@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const config = require('../../../config.js');
 const { supportedLanguages } = require('../../js/languages.js');
-const { getTemplate } = require('../utils.js');
+const { getTemplate, findHighestMarkerNumber } = require('../utils.js'); // MODIFIED: Import findHighestMarkerNumber
 
 /**
  * Registers IPC handlers for system-level functionality.
@@ -107,6 +107,11 @@ function registerSystemHandlers(db, sessionManager, windowManager) {
 	
 	ipcMain.handle('languages:get-supported', () => {
 		return supportedLanguages;
+	});
+	
+	// NEW: IPC handler for finding the highest marker number.
+	ipcMain.handle('novels:findHighestMarkerNumber', (event, sourceHtml, targetHtml) => {
+		return findHighestMarkerNumber(sourceHtml, targetHtml);
 	});
 }
 

@@ -69,7 +69,7 @@ contextBridge.exposeInMainWorld('api', {
 	getAllCodexEntriesForNovel: (novelId) => ipcRenderer.invoke('codex:getAllForNovel', novelId),
 	getCategoriesForNovel: (novelId) => ipcRenderer.invoke('codex-categories:getAllForNovel', novelId),
 	
-	//LLM
+	// LLM
 	processLLMText: (data) => ipcRenderer.invoke('llm:process-text', data),
 	chatSendMessage: (data) => ipcRenderer.invoke('chat:send-message', data),
 	getModels: () => ipcRenderer.invoke('ai:getModels'),
@@ -87,4 +87,11 @@ contextBridge.exposeInMainWorld('api', {
 	restoreNovelFromBackup: (backupData) => ipcRenderer.invoke('novels:restoreFromBackup', backupData),
 	saveBackupToFile: (defaultFileName, jsonString) => ipcRenderer.invoke('dialog:saveBackup', defaultFileName, jsonString),
 	openBackupFile: () => ipcRenderer.invoke('dialog:openBackup'),
+	
+	// NEW: Dictionary APIs
+	getNovelDictionary: (novelId) => ipcRenderer.invoke('dictionary:get', novelId),
+	saveNovelDictionary: (novelId, data) => ipcRenderer.invoke('dictionary:save', novelId, data),
+	
+	// NEW: Utility for finding highest marker number
+	findHighestMarkerNumber: (sourceHtml, targetHtml) => ipcRenderer.invoke('novels:findHighestMarkerNumber', sourceHtml, targetHtml)
 });

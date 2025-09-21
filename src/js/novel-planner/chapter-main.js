@@ -3,6 +3,7 @@ import { setupPromptEditor, openPromptEditor } from '../prompt-editor.js';
 import { setupTypographySettings, getTypographySettings, generateTypographyStyleProperties } from './typography-settings.js';
 import { initI18n, t } from '../i18n.js';
 import { processSourceContentForCodexLinks, processSourceContentForMarkers } from '../../utils/html-processing.js';
+import { initDictionaryModal, openDictionaryModal } from '../dictionary/dictionary-modal.js'; // NEW: Import dictionary modal functions.
 
 const debounce = (func, delay) => {
 	let timeout;
@@ -113,7 +114,7 @@ const debouncedSaveScroll = debounce((novelId, sourceEl, targetEl) => {
 	if (!novelId || !sourceEl || !targetEl || viewInitialized === false) return;
 	const positions = {
 		source: sourceEl.scrollTop,
-		target: targetEl.scrollTop,
+		target: targetEl.scrollTop
 	};
 	localStorage.setItem(`scroll-position-${novelId}`, JSON.stringify(positions));
 }, 500);
@@ -230,7 +231,6 @@ async function saveSourceChanges(chapterId) {
 		
 		// Re-render with the new saved content to apply links
 		await renderSourceChapterContent(chapterId, newContent, allCodexEntriesForNovel);
-		
 	} catch (error) {
 		console.error(`[SAVE] Error saving source content for chapter ${chapterId}:`, error);
 		window.showAlert('Could not save source content changes.');
@@ -392,7 +392,7 @@ async function renderManuscript(novelData, allCodexEntries) {
 				contentWindow: iframe.contentWindow,
 				isReady: false,
 				initialContent: initialTargetContent,
-				initialResizeComplete: false,
+				initialResizeComplete: false
 			};
 			chapterEditorViews.set(chapter.id.toString(), viewInfo);
 			
@@ -432,7 +432,6 @@ async function renderManuscript(novelData, allCodexEntries) {
 	targetContainer.appendChild(targetFragment);
 }
 
-
 /**
  * Sets up the intersection observer to track the active chapter in the source column.
  */
@@ -455,7 +454,7 @@ function setupIntersectionObserver() {
 	}, {
 		root: container,
 		rootMargin: '-40% 0px -60% 0px',
-		threshold: 0,
+		threshold: 0
 	});
 	
 	container.querySelectorAll('.manuscript-chapter-item').forEach(el => observer.observe(el));
@@ -540,7 +539,7 @@ function scrollToChapter(chapterId) {
  * @param {string} chapterId - The ID of the chapter containing the marker.
  * @param {string} markerId - The numerical ID of the marker to find.
  */
-function scrollToTargetMarker (chapterId, markerId) {
+function scrollToTargetMarker(chapterId, markerId) {
 	// 1. Find the target chapter's iframe view info.
 	const viewInfo = chapterEditorViews.get(chapterId.toString());
 	if (!viewInfo || !viewInfo.isReady) {
@@ -582,7 +581,6 @@ function scrollToSourceMarker(markerId) {
 		console.warn(`Source marker with ID ${markerId} not found.`);
 	}
 }
-
 
 /**
  * Populates and configures the spellcheck language dropdown.
@@ -627,7 +625,6 @@ async function setupSpellcheckDropdown() {
 				window.showAlert('Could not set spellcheck language.');
 			}
 		});
-		
 	} catch (error) {
 		console.error('[setupSpellcheckDropdown] Failed to initialize:', error);
 		dropdown.innerHTML = `<option>${t('common.error')}</option>`;
@@ -1022,7 +1019,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 		setupTopToolbar({
 			isChapterEditor: true,
 			getActiveChapterId: () => activeChapterId,
-			getChapterViews: (chapterId) => chapterEditorViews.get(chapterId.toString()),
+			getChapterViews: (chapterId) => chapterEditorViews.get(chapterId.toString())
 		});
 		setupPromptEditor();
 		setupTypographySettings({
@@ -1052,6 +1049,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 		setupIntersectionObserver();
 		setupSpellcheckDropdown();
 		setupSearch(); // Initialize search functionality
+		initDictionaryModal(novelId); // NEW: Initialize dictionary modal
 		
 		if (totalIframes === 0) {
 			initializeView(novelId, novelData, initialChapterId);
@@ -1331,7 +1329,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 				}
 			}
 		});
-		
+		// NEW: Event listener for the dictionary button
+		document.getElementById('js-open-dictionary-btn').addEventListener('click', openDictionaryModal);
 	} catch (error) {
 		console.error('Failed to load manuscript data:', error);
 		document.body.innerHTML = `<p class="p-8 text-error">${t('editor.errorLoadManuscript', { message: error.message })}</p>`;

@@ -7,6 +7,7 @@ const { registerCodexHandlers } = require('./codexHandlers.js');
 const { registerImportHandlers } = require('./importHandlers.js');
 const { registerNovelHandlers } = require('./novelHandlers.js');
 const { registerSystemHandlers } = require('./systemHandlers.js');
+const { registerDictionaryHandlers } = require('./dictionaryHandlers.js'); // NEW: Import dictionary handlers.
 
 /**
  * Registers all IPC handlers for the application.
@@ -24,6 +25,7 @@ function registerIpcHandlers(db, sessionManager, windowManager) {
 	registerImportHandlers(db, sessionManager, windowManager);
 	registerNovelHandlers(db, windowManager);
 	registerSystemHandlers(db, sessionManager, windowManager);
+	registerDictionaryHandlers(); // NEW: Register dictionary handlers.
 }
 
 module.exports = { registerIpcHandlers };

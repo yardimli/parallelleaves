@@ -22,10 +22,8 @@
 					<input type="checkbox" name="use_dictionary" class="js-use-dictionary-toggle checkbox checkbox-sm" checked />
 					<span class="label-text font-semibold" data-i18n="prompt.common.useDictionary">Use Custom Dictionary</span>
 				</label>
-			</div>
-			<div class="js-dictionary-container"> <!-- MODIFIED: Removed 'hidden' class -->
-				<textarea name="dictionary" class="textarea textarea-bordered w-full h-32 font-mono text-sm" data-i18n-placeholder="prompt.common.dictionaryHelp"></textarea>
-				<p class="text-xs text-base-content/60 mt-1" data-i18n="prompt.common.dictionaryHelp"></p>
+				<!-- NEW: Button to open the dictionary modal -->
+				<button type="button" class="js-edit-dictionary-btn btn btn-ghost btn-sm mt-2 w-fit" data-i18n="prompt.common.editDictionary">Edit Dictionary</button>
 			</div>
 			
 			<div>

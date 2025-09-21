@@ -100,7 +100,7 @@ function registerNovelHandlers(db, windowManager) {
 				table: { row: { cantSplit: true } },
 				footer: true,
 				pageNumber: true,
-				lang: langCode,
+				lang: langCode
 			});
 			
 			fs.writeFileSync(filePath, fileBuffer);
@@ -111,7 +111,7 @@ function registerNovelHandlers(db, windowManager) {
 				message: dialogStrings.message,
 				detail: dialogStrings.detail.replace('{filePath}', filePath),
 				buttons: [dialogStrings.openFolder, dialogStrings.ok],
-				defaultId: 1,
+				defaultId: 1
 			});
 			
 			if (response === 0) {
@@ -280,12 +280,12 @@ function registerNovelHandlers(db, windowManager) {
 		}
 		
 		db.transaction(() => {
-			const oldImage = db.prepare("SELECT * FROM images WHERE novel_id = ?").get(novelId);
+			const oldImage = db.prepare('SELECT * FROM images WHERE novel_id = ?').get(novelId);
 			if (oldImage && oldImage.image_local_path) {
 				const oldFullPath = path.join(imageHandler.IMAGES_DIR, oldImage.image_local_path);
 				if (fs.existsSync(oldFullPath)) fs.unlinkSync(oldFullPath);
 			}
-			db.prepare("DELETE FROM images WHERE novel_id = ?").run(novelId);
+			db.prepare('DELETE FROM images WHERE novel_id = ?').run(novelId);
 			
 			db.prepare('INSERT INTO images (user_id, novel_id, image_local_path, thumbnail_local_path, image_type) VALUES (?, ?, ?, ?, ?)')
 				.run(1, novelId, localPath, localPath, imageType);

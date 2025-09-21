@@ -18,9 +18,9 @@ async function callOpenRouter(payload, token) {
 		throw new Error('AI Proxy URL is not configured in config.js.');
 	}
 	
-	if (payload.model.endsWith("--thinking")) {
+	if (payload.model.endsWith('--thinking')) {
 		payload.model = payload.model.slice(0, -10); // Remove '--thinking' to get the real model ID.
-		payload.reasoning = { 'effort' : 'medium'};
+		payload.reasoning = { 'effort': 'medium' };
 	}
 	
 	const headers = {
@@ -55,7 +55,7 @@ async function callOpenRouter(payload, token) {
 		try {
 			return JSON.parse(data.choices[0].message.content);
 		} catch (e) {
-			console.error("Failed to parse nested JSON from AI response:", e);
+			console.error('Failed to parse nested JSON from AI response:', e);
 			return data.choices[0].message.content;
 		}
 	}
@@ -79,7 +79,7 @@ async function generateCoverPrompt({ title, token }) {
 			model: modelId,
 			messages: [{ role: 'user', content: prompt }],
 			response_format: { type: 'json_object' },
-			temperature: 0.7,
+			temperature: 0.7
 		}, token);
 		return content.prompt || null;
 	} catch (error) {
@@ -102,13 +102,13 @@ async function generateCoverImageViaProxy({ prompt, token }) {
 	
 	const payload = {
 		prompt: prompt,
-		auth_token: token,
+		auth_token: token
 	};
 	
 	const response = await fetch(`${AI_PROXY_URL}?action=generate_cover`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify(payload),
+		body: JSON.stringify(payload)
 	});
 	
 	if (!response.ok) {
@@ -158,7 +158,7 @@ Focus on the most prominent elements mentioned in the synopsis and chapter summa
 		model: model,
 		messages: [{ role: 'user', content: prompt }],
 		response_format: { type: 'json_object' },
-		temperature: 0.6,
+		temperature: 0.6
 	}, token);
 }
 
@@ -235,10 +235,9 @@ For example:
 		model: model,
 		messages: [{ role: 'user', content: prompt }],
 		response_format: { type: 'json_object' },
-		temperature: 0.5,
+		temperature: 0.5
 	}, token);
 }
-
 
 /**
  * Processes a text selection using an LLM for actions like rephrasing.
@@ -246,9 +245,10 @@ For example:
  * @param {object} params.prompt - An object with 'system', 'user', and 'ai' properties for the prompt.
  * @param {string} params.model - The LLM model to use.
  * @param {string|null} params.token - The user's session token.
+ * @param {string} [params.dictionaryContent=''] - Optional custom dictionary content to include. // MODIFIED: Added dictionaryContent parameter.
  * @returns {Promise<object>} The AI response object.
  */
-async function processLLMText({ prompt, model, token }) {
+async function processLLMText({ prompt, model, token, dictionaryContent = '' }) { // MODIFIED: Added dictionaryContent parameter.
 	const messages = [];
 	if (prompt.system) {
 		messages.push({ role: 'system', content: prompt.system });
@@ -256,8 +256,16 @@ async function processLLMText({ prompt, model, token }) {
 	if (prompt.context_pairs && Array.isArray(prompt.context_pairs)) {
 		messages.push(...prompt.context_pairs);
 	}
-	if (prompt.user) {
-		messages.push({ role: 'user', content: prompt.user });
+	
+	// NEW: Inject dictionary content into the user prompt if provided.
+	let userContent = prompt.user;
+	if (dictionaryContent) {
+		const dictionaryBlock = `Take into account the following custom dictionary:\n<dictionary>\n${dictionaryContent}\n</dictionary>`;
+		userContent = `${dictionaryBlock}\n\n${userContent}`;
+	}
+	
+	if (userContent) {
+		messages.push({ role: 'user', content: userContent });
 	}
 	if (prompt.ai) {
 		messages.push({ role: 'assistant', content: prompt.ai });
@@ -270,7 +278,7 @@ async function processLLMText({ prompt, model, token }) {
 	return callOpenRouter({
 		model: model,
 		messages: messages,
-		temperature: 0.7,
+		temperature: 0.7
 	}, token);
 }
 
@@ -305,7 +313,7 @@ async function getOpenRouterModels(forceRefresh = false, token) {
 	
 	const headers = {
 		'Accept': 'application/json',
-		'Content-Type': 'application/json',
+		'Content-Type': 'application/json'
 	};
 	
 	const payload = {};
@@ -316,7 +324,7 @@ async function getOpenRouterModels(forceRefresh = false, token) {
 	const response = await fetch(`${AI_PROXY_URL}?action=get_models`, {
 		method: 'POST',
 		headers: headers,
-		body: JSON.stringify(payload),
+		body: JSON.stringify(payload)
 	});
 	
 	if (!response.ok) {
@@ -337,7 +345,6 @@ async function getOpenRouterModels(forceRefresh = false, token) {
 	console.log('Fetched models from AI Proxy API.');
 	return processedModelsData;
 }
-
 
 /**
  * Suggests a title and category for a new codex entry based on selected text.
@@ -375,10 +382,9 @@ Example Response: {"title": "Captain Eva Rostova", "category_name": "Characters"
 		model: model,
 		messages: [{ role: 'user', content: prompt }],
 		response_format: { type: 'json_object' },
-		temperature: 0.5,
+		temperature: 0.5
 	}, token);
 }
-
 
 module.exports = {
 	generateNovelCodex,
@@ -387,5 +393,5 @@ module.exports = {
 	getOpenRouterModels,
 	suggestCodexDetails,
 	generateCoverPrompt,
-	generateCoverImageViaProxy,
+	generateCoverImageViaProxy
 };
