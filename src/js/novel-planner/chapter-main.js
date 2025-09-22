@@ -1065,10 +1065,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 		});
 	}
 	
+	const params = new URLSearchParams(window.location.search);
+	const novelId = params.get('novelId');
+	const initialChapterId = params.get('chapterId');
+	
+	// MODIFIED: Added event listener for the new Codex button.
+	const openCodexBtn = document.getElementById('js-open-codex-btn');
+	if (openCodexBtn && novelId) {
+		openCodexBtn.addEventListener('click', () => {
+			window.api.openCodex(novelId);
+		});
+	}
+	
 	const openChatBtn = document.getElementById('js-open-chat-btn');
 	if (openChatBtn) {
-		const params = new URLSearchParams(window.location.search);
-		const novelId = params.get('novelId'); // Get novelId from current window's URL
 		openChatBtn.addEventListener('click', () => {
 			window.api.openChatWindow(novelId);
 		});
@@ -1086,10 +1096,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			alert(message);
 		}
 	};
-	
-	const params = new URLSearchParams(window.location.search);
-	const novelId = params.get('novelId');
-	const initialChapterId = params.get('chapterId');
 	
 	if (!novelId) {
 		document.body.innerHTML = `<p class="text-error p-8">${t('editor.errorProjectMissing')}</p>`;

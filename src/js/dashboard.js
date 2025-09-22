@@ -331,6 +331,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 				? `<img src="file://${novel.cover_path}?t=${new Date(novel.updated_at).getTime()}" alt="${t('dashboard.metaSettings.altCoverFor', { title: novel.title })}" class="w-full">`
 				: `<img src="./assets/bookcover-placeholder.jpg" alt="${t('dashboard.metaSettings.altNoCover')}" class="w-full h-auto">`;
 			
+			// MODIFIED: Removed the Codex button from the card actions.
 			novelCard.innerHTML = `
                 <figure class="cursor-pointer js-open-editor">${coverHtml}</figure>
                 <div class="card-body flex flex-col flex-grow">
@@ -376,9 +377,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <div class="card-actions start items-center mt-4">
                         <button class="btn btn-ghost btn-sm js-meta-settings" data-i18n-title="common.edit">
                             <i class="bi bi-pencil-square text-lg"></i>
-                        </button>
-                        <button class="btn btn-ghost btn-sm js-open-codex-btn" data-i18n-title="dashboard.card.codex">
-                            <i class="bi bi-journal-richtext text-lg"></i>
                         </button>
                         <button class="btn btn-ghost btn-sm js-prose-settings" data-i18n-title="dashboard.proseSettings.title">
                             <i class="bi bi-translate text-lg"></i>
@@ -430,7 +428,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 			novelCard.querySelectorAll('.js-open-editor').forEach(el => el.addEventListener('click', () => window.api.openEditor(novel.id)));
 			novelCard.querySelector('.js-prose-settings').addEventListener('click', () => openProseSettingsModal(novel));
 			novelCard.querySelector('.js-meta-settings').addEventListener('click', () => openMetaSettingsModal(novel));
-			novelCard.querySelector('.js-open-codex-btn').addEventListener('click', () => window.api.openCodex(novel.id));
+			// MODIFIED: Removed the event listener for the now-deleted Codex button.
 			novelCard.querySelector('.js-export-docx').addEventListener('click', () => exportNovel(novel.id));
 			novelCard.querySelector('.js-backup-novel').addEventListener('click', () => backupNovel(novel.id, novel.title));
 			
