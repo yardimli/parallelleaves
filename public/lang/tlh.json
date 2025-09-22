@@ -171,6 +171,8 @@
     "errorLoad": "Qob: mI' DIch choq DIch pagh. {message}",
     "chapterLabel_one": "mI'",
     "chapterLabel_other": "mI'pu'",
+  },
+  "export" : {
     "exportDocx": "Export to DOCX",
     "exportSuccessTitle": "Export Successful",
     "exportSuccessMessage": "Your novel '{title}' has been successfully exported.",

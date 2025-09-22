@@ -6,7 +6,6 @@ const imageHandler = require('../../utils/image-handler.js');
 const { countWordsInHtml, htmlToPlainText } = require('../utils.js');
 const { mapLanguageToIsoCode } = require('../../js/languages.js');
 
-// NEW: Helper function to convert numbers to Roman numerals for default Act titles.
 function toRoman(num) {
 	const roman = { M: 1000, CM: 900, D: 500, CD: 400, C: 100, XC: 90, L: 50, XL: 40, X: 10, IX: 9, V: 5, IV: 4, I: 1 };
 	let str = '';
@@ -24,7 +23,6 @@ function toRoman(num) {
  * @param {object} sessionManager - The session manager instance.
  * @param {object} windowManager - The window manager instance.
  */
-// MODIFICATION: Added sessionManager to the function signature.
 function registerNovelHandlers(db, sessionManager, windowManager) {
 	ipcMain.handle('novels:getAllWithCovers', (event) => {
 		const stmt = db.prepare(`
@@ -55,10 +53,8 @@ function registerNovelHandlers(db, sessionManager, windowManager) {
 		return novels;
 	});
 	
-	// NEW: Handler for creating a blank project with a default structure.
 	ipcMain.handle('novels:createBlank', (event, { title, source_language, target_language }) => {
 		try {
-			// MODIFICATION START: Get user ID from session to satisfy the NOT NULL constraint.
 			const session = sessionManager.getSession();
 			if (!session || !session.user) {
 				return { success: false, message: 'User not authenticated.' };
@@ -68,7 +64,6 @@ function registerNovelHandlers(db, sessionManager, windowManager) {
 			const novelResult = db.prepare(
 				'INSERT INTO novels (user_id, title, author, source_language, target_language) VALUES (?, ?, ?, ?, ?)'
 			).run(userId, title, '', source_language, target_language);
-			// MODIFICATION END
 			
 			const novelId = novelResult.lastInsertRowid;
 			
@@ -102,17 +97,6 @@ function registerNovelHandlers(db, sessionManager, windowManager) {
 			section.chapters = db.prepare('SELECT * FROM chapters WHERE section_id = ? ORDER BY `chapter_order`').all(section.id);
 		});
 		
-		novel.codexCategories = db.prepare(`
-            SELECT cc.*, COUNT(ce.id) as entries_count FROM codex_categories cc
-            LEFT JOIN codex_entries ce ON ce.codex_category_id = cc.id
-            WHERE cc.novel_id = ? GROUP BY cc.id ORDER BY cc.name
-        `).all(novelId);
-		
-		novel.codexCategories.forEach(category => {
-			category.entries = db.prepare(`
-                SELECT * FROM codex_entries WHERE codex_category_id = ? ORDER BY title
-            `).all(category.id);
-		});
 		return novel;
 	});
 	
@@ -194,75 +178,6 @@ function registerNovelHandlers(db, sessionManager, windowManager) {
 		}
 	});
 	
-	ipcMain.handle('novels:getOutlineData', (event, novelId) => {
-		try {
-			const novel = db.prepare('SELECT title FROM novels WHERE id = ?').get(novelId);
-			if (!novel) throw new Error('Novel not found');
-			
-			const sections = db.prepare('SELECT * FROM sections WHERE novel_id = ? ORDER BY section_order').all(novelId);
-			for (const section of sections) {
-				section.chapters = db.prepare('SELECT id, title, source_content, target_content, chapter_order FROM chapters WHERE section_id = ? ORDER BY chapter_order').all(section.id);
-				
-				section.total_word_count = section.chapters.reduce((sum, ch) => sum + countWordsInHtml(ch.target_content), 0);
-				section.chapter_count = section.chapters.length;
-				
-				for (const chapter of section.chapters) {
-					chapter.word_count = countWordsInHtml(chapter.target_content);
-					const contentToUse = chapter.target_content || chapter.source_content;
-					
-					if (contentToUse) {
-						const textContent = htmlToPlainText(contentToUse);
-						
-						const words = textContent.split(/\s+/);
-						const wordLimitedText = words.slice(0, 200).join(' ');
-						
-						const sentences = textContent.match(/[^.!?]+[.!?]+/g) || [];
-						const sentenceLimitedText = sentences.slice(0, 5).join(' ');
-						
-						let truncatedText;
-						if (wordLimitedText.length > 0 && (sentenceLimitedText.length === 0 || wordLimitedText.length <= sentenceLimitedText.length)) {
-							truncatedText = wordLimitedText;
-							if (words.length > 200) truncatedText += '...';
-						} else if (sentenceLimitedText.length > 0) {
-							truncatedText = sentenceLimitedText;
-							if (sentences.length > 5) truncatedText += '...';
-						} else {
-							truncatedText = textContent;
-						}
-						chapter.summary = `<p>${truncatedText}</p>`;
-					} else {
-						chapter.summary = `<p class="italic text-base-content/60" data-i18n="electron.noContent"></p>`;
-					}
-				}
-			}
-			
-			const codexCategories = db.prepare('SELECT id, name FROM codex_categories WHERE novel_id = ? ORDER BY name').all(novelId);
-			for (const category of codexCategories) {
-				category.entries = db.prepare('SELECT id, title, content, target_content FROM codex_entries WHERE codex_category_id = ? ORDER BY title').all(category.id);
-			}
-			
-			return {
-				novel_title: novel.title,
-				sections: sections,
-				codex_categories: codexCategories
-			};
-		} catch (error) {
-			console.error(`Error in getOutlineData for novelId ${novelId}:`, error);
-			throw error;
-		}
-	});
-	
-	ipcMain.handle('novels:getOutlineState', (event, novelId) => {
-		try {
-			const chapterCount = db.prepare('SELECT COUNT(id) as count FROM chapters WHERE novel_id = ?').get(novelId).count;
-			const codexCount = db.prepare('SELECT COUNT(id) as count FROM codex_entries WHERE novel_id = ?').get(novelId).count;
-			return { success: true, chapterCount, codexCount };
-		} catch (error) {
-			console.error(`Failed to get outline state for novel ${novelId}:`, error);
-			return { success: false, message: 'Failed to get outline state.' };
-		}
-	});
-	
 	ipcMain.handle('novels:getFullManuscript', (event, novelId) => {
 		try {
 			const novel = db.prepare('SELECT * FROM novels WHERE id = ?').get(novelId);
@@ -283,7 +198,7 @@ function registerNovelHandlers(db, sessionManager, windowManager) {
 		}
 	});
 	
-	ipcMain.handle('novels:getAllContent', (event, novelId) => {
+	ipcMain.handle('novels:getAllNovelContent', (event, novelId) => {
 		try {
 			const chapters = db.prepare('SELECT source_content, target_content FROM chapters WHERE novel_id = ?').all(novelId);
 			const combinedContent = chapters.map(c => (c.source_content || '') + (c.target_content || '')).join('');
@@ -376,12 +291,8 @@ function registerNovelHandlers(db, sessionManager, windowManager) {
 		windowManager.createChapterEditorWindow({ novelId, chapterId: null });
 	});
 	
-	ipcMain.on('novels:openOutline', (event, novelId) => {
-		windowManager.createOutlineWindow(novelId);
-	});
-	
-	ipcMain.on('novels:openOutlineAndAutogenCodex', (event, novelId) => {
-		windowManager.createOutlineWindow(novelId, true);
+	ipcMain.on('novels:openCodex', (event, novelId) => {
+		windowManager.createCodexViewerWindow(novelId);
 	});
 }
 

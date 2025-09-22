@@ -50,12 +50,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 	// --- DOM Elements ---
 	const novelList = document.getElementById('novel-list');
 	const loadingMessage = document.getElementById('loading-message');
-	const importDocBtnMenu = document.getElementById('import-doc-btn-menu'); // MODIFIED
-	const newProjectBtnMenu = document.getElementById('new-project-btn-menu'); // NEW
-	const newProjectModal = document.getElementById('new-project-modal'); // NEW
-	const newProjectForm = document.getElementById('new-project-form'); // NEW
-	const newProjectSourceLangSelect = document.getElementById('new-project-source-language'); // NEW
-	const newProjectTargetLangSelect = document.getElementById('new-project-target-language'); // NEW
+	const importDocBtnMenu = document.getElementById('import-doc-btn-menu');
+	const newProjectBtnMenu = document.getElementById('new-project-btn-menu');
+	const newProjectModal = document.getElementById('new-project-modal');
+	const newProjectForm = document.getElementById('new-project-form');
+	const newProjectSourceLangSelect = document.getElementById('new-project-source-language');
+	const newProjectTargetLangSelect = document.getElementById('new-project-target-language');
 	const restoreBackupBtn = document.getElementById('restore-backup-btn-menu');
 	const authMenuSection = document.getElementById('auth-menu-section');
 	const loginModal = document.getElementById('login-modal');
@@ -93,7 +93,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 	let stagedCover = null;
 	let isRefreshingData = false;
 	
-	// MODIFICATION START: Updated to populate all language dropdowns, including the new one.
 	async function populateLanguages() {
 		const supportedLanguages = await window.api.getSupportedLanguages();
 		const langNames = Object.values(supportedLanguages).sort((a, b) => a.localeCompare(b));
@@ -111,7 +110,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			newProjectTargetLangSelect.add(new Option(lang, lang));
 		});
 	}
-	// MODIFICATION END
 	
 	// --- Authentication Logic ---
 	
@@ -379,13 +377,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <button class="btn btn-ghost btn-sm js-meta-settings" data-i18n-title="common.edit">
                             <i class="bi bi-pencil-square text-lg"></i>
                         </button>
-                        <button class="btn btn-ghost btn-sm js-open-outline-btn" data-i18n-title="outline.codex">
+                        <button class="btn btn-ghost btn-sm js-open-codex-btn" data-i18n-title="dashboard.card.codex">
                             <i class="bi bi-journal-richtext text-lg"></i>
                         </button>
                         <button class="btn btn-ghost btn-sm js-prose-settings" data-i18n-title="dashboard.proseSettings.title">
                             <i class="bi bi-translate text-lg"></i>
                         </button>
-                        <button class="btn btn-ghost btn-sm js-export-docx" data-i18n-title="outline.exportDocx">
+                        <button class="btn btn-ghost btn-sm js-export-docx" data-i18n-title="export.exportDocx">
                             <i class="bi bi-file-earmark-word text-lg"></i>
                         </button>
                         <button class="btn btn-ghost btn-sm js-backup-novel" data-i18n-title="dashboard.card.backupProject">
@@ -432,7 +430,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 			novelCard.querySelectorAll('.js-open-editor').forEach(el => el.addEventListener('click', () => window.api.openEditor(novel.id)));
 			novelCard.querySelector('.js-prose-settings').addEventListener('click', () => openProseSettingsModal(novel));
 			novelCard.querySelector('.js-meta-settings').addEventListener('click', () => openMetaSettingsModal(novel));
-			novelCard.querySelector('.js-open-outline-btn').addEventListener('click', () => window.api.openOutline(novel.id));
+			novelCard.querySelector('.js-open-codex-btn').addEventListener('click', () => window.api.openCodex(novel.id));
 			novelCard.querySelector('.js-export-docx').addEventListener('click', () => exportNovel(novel.id));
 			novelCard.querySelector('.js-backup-novel').addEventListener('click', () => backupNovel(novel.id, novel.title));
 			
@@ -451,7 +449,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 		});
 	}
 	
-	// MODIFICATION START: Added listeners for new menu items and modal.
 	if (importDocBtnMenu) {
 		importDocBtnMenu.addEventListener('click', () => {
 			window.api.openImportWindow();
@@ -494,7 +491,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			}
 		});
 	}
-	// MODIFICATION END
 	
 	if (restoreBackupBtn) {
 		restoreBackupBtn.addEventListener('click', () => {

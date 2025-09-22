@@ -20,24 +20,24 @@ contextBridge.exposeInMainWorld('api', {
 	getNovelsWithCovers: () => ipcRenderer.invoke('novels:getAllWithCovers'),
 	getOneNovel: (novelId) => ipcRenderer.invoke('novels:getOne', novelId),
 	getFullManuscript: (novelId) => ipcRenderer.invoke('novels:getFullManuscript', novelId),
-	getAllNovelContent: (novelId) => ipcRenderer.invoke('novels:getAllContent', novelId),
+	getAllNovelContent: (novelId) => ipcRenderer.invoke('novels:getAllNovelContent', novelId),
 	
 	getNovelForExport: (novelId) => ipcRenderer.invoke('novels:getForExport', novelId),
 	exportNovelToDocx: (data) => ipcRenderer.invoke('novels:exportToDocx', data),
 	
 	openEditor: (novelId) => ipcRenderer.send('novels:openEditor', novelId),
-	openOutline: (novelId) => ipcRenderer.send('novels:openOutline', novelId),
-	openOutlineAndAutogenCodex: (novelId) => ipcRenderer.send('novels:openOutlineAndAutogenCodex', novelId),
-	getOutlineData: (novelId) => ipcRenderer.invoke('novels:getOutlineData', novelId),
-	getOutlineState: (novelId) => ipcRenderer.invoke('novels:getOutlineState', novelId),
+	openCodex: (novelId) => ipcRenderer.send('novels:openCodex', novelId),
 	startCodexAutogen: (data) => ipcRenderer.send('autogen:start-codex-generation', data),
 	onCodexAutogenUpdate: (callback) => ipcRenderer.on('autogen:progress-update', callback),
-	onCodexAutogenTrigger: (callback) => ipcRenderer.on('outline:trigger-autogen', callback),
+	codex: {
+		get: (novelId) => ipcRenderer.invoke('codex:get', novelId),
+		save: (data) => ipcRenderer.invoke('codex:save', data),
+	},
 	updateProseSettings: (data) => ipcRenderer.invoke('novels:updateProseSettings', data),
 	updatePromptSettings: (data) => ipcRenderer.invoke('novels:updatePromptSettings', data),
 	
 	updateNovelMeta: (data) => ipcRenderer.invoke('novels:updateMeta', data),
-	createBlankNovel: (data) => ipcRenderer.invoke('novels:createBlank', data), // NEW
+	createBlankNovel: (data) => ipcRenderer.invoke('novels:createBlank', data),
 	updateNovelCover: (data) => ipcRenderer.invoke('novels:updateNovelCover', data),
 	deleteNovel: (novelId) => ipcRenderer.invoke('novels:delete', novelId),
 	
@@ -58,24 +58,13 @@ contextBridge.exposeInMainWorld('api', {
 	onManuscriptScrollToChapter: (callback) => ipcRenderer.on('manuscript:scrollToChapter', callback),
 	
 	updateChapterField: (data) => ipcRenderer.invoke('chapters:updateField', data),
-	renameChapter: (data) => ipcRenderer.invoke('chapters:rename', data), // NEW
-	deleteChapter: (data) => ipcRenderer.invoke('chapters:delete', data), // NEW
-	insertChapter: (data) => ipcRenderer.invoke('chapters:insert', data), // NEW
+	renameChapter: (data) => ipcRenderer.invoke('chapters:rename', data),
+	deleteChapter: (data) => ipcRenderer.invoke('chapters:delete', data),
+	insertChapter: (data) => ipcRenderer.invoke('chapters:insert', data),
 	
-	renameSection: (data) => ipcRenderer.invoke('sections:rename', data), // NEW
-	deleteSection: (data) => ipcRenderer.invoke('sections:delete', data), // NEW
-	insertSection: (data) => ipcRenderer.invoke('sections:insert', data), // NEW
-	
-	// Codex Entry Management
-	openNewCodexEditor: (data) => ipcRenderer.send('codex-entries:openNewEditor', data),
-	openCodexEditor: (entryId) => ipcRenderer.send('codex-entries:openEditor', entryId),
-	getOneCodexForEditor: (entryId) => ipcRenderer.invoke('codex-entries:getOneForEditor', entryId),
-	createCodexEntry: (novelId, formData) => ipcRenderer.invoke('codex-entries:store', novelId, formData),
-	suggestCodexDetails: (novelId, text) => ipcRenderer.invoke('codex-entries:suggest-details', { novelId, text }),
-	updateCodexEntry: (entryId, data) => ipcRenderer.invoke('codex-entries:update', entryId, data),
-	deleteCodexEntry: (entryId) => ipcRenderer.invoke('codex-entries:delete', entryId),
-	getAllCodexEntriesForNovel: (novelId) => ipcRenderer.invoke('codex:getAllForNovel', novelId),
-	getCategoriesForNovel: (novelId) => ipcRenderer.invoke('codex-categories:getAllForNovel', novelId),
+	renameSection: (data) => ipcRenderer.invoke('sections:rename', data),
+	deleteSection: (data) => ipcRenderer.invoke('sections:delete', data),
+	insertSection: (data) => ipcRenderer.invoke('sections:insert', data),
 	
 	// LLM
 	processLLMText: (data) => ipcRenderer.invoke('llm:process-text', data),

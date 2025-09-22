@@ -109,7 +109,8 @@
       "chapters": "Kapitler",
       "created": "Opprettet:",
       "updated": "Oppdatert:",
-      "backupProject": "Sikkerhetskopier prosjekt"
+      "backupProject": "Sikkerhetskopier prosjekt",
+      "codex": "Codex"
     },
     "update": {
       "title": "Oppdatering tilgjengelig",
@@ -159,32 +160,33 @@
       "results": "{count} kapitler og akter oppdaget."
     }
   },
-  "outline": {
-    "loading": "Laster disposisjon...",
-    "codex": "Codex",
-    "autoGenerate": "Autogenerer",
-    "newEntry": "Ny oppføring",
-    "autoGenModal": {
-      "title": "Autogenerer Codex-oppføringer",
-      "description": "Dette verktøyet vil skanne hele romanens kildetekst for å automatisk opprette og oppdatere codex-oppføringer. Denne prosessen kan ta flere minutter og kan bruke en betydelig mengde AI-kreditter, avhengig av lengden på romanen din.",
-      "selectModel": "Velg AI-modell",
-      "loadingModels": "Laster modeller...",
-      "progress": "Fremdrift",
-      "initializing": "Initialiserer...",
-      "start": "Start generering",
-      "errorLoadModels": "Feil ved lasting av modeller",
-      "errorLoadTool": "Kunne ikke laste verktøyet. {message}",
-      "alertSelectModel": "Vennligst velg en AI-modell."
-    },
-    "noSections": "Ingen seksjoner i dette prosjektet ennå.",
-    "noChapters": "Ingen kapitler i denne seksjonen ennå.",
-    "noSummary": "Ingen sammendrag.",
-    "noCodexEntries": "Ingen codex-oppføringer i dette prosjektet ennå.",
-    "noEntriesInCategory": "Ingen oppføringer i denne kategorien ennå.",
-    "errorProjectMissing": "Feil: Prosjekt-ID mangler.",
-    "errorLoad": "Feil: Kunne ikke laste disposisjonsdata. {message}",
-    "chapterLabel_one": "kapittel",
-    "chapterLabel_other": "kapitler",
+  "codex": {
+    "viewer": {
+      "title": "Codex: {novelTitle}",
+      "loadingTitle": "Parallel Leaves - Codex",
+      "loading": "Laster Codex...",
+      "codex": "Codex",
+      "autoGenerate": "Autogenerer",
+      "saved": "Lagret",
+      "saving": "Lagrer...",
+      "saveError": "Lagringsfeil",
+      "errorProjectMissing": "Feil: Prosjekt-ID mangler.",
+      "errorLoad": "Feil: Kunne ikke laste codex-data. {message}",
+      "autoGenModal": {
+        "title": "Autogenerer Codex-oppføringer",
+        "description": "Dette verktøyet vil skanne hele romanens kildetekst for å automatisk opprette og oppdatere codex-oppføringer. Denne prosessen kan ta flere minutter og kan bruke en betydelig mengde AI-kreditter, avhengig av lengden på romanen din.",
+        "selectModel": "Velg AI-modell",
+        "loadingModels": "Laster modeller...",
+        "progress": "Fremdrift",
+        "initializing": "Initialiserer...",
+        "start": "Start generering",
+        "errorLoadModels": "Feil ved lasting av modeller",
+        "errorLoadTool": "Kunne ikke laste verktøyet. {message}",
+        "alertSelectModel": "Vennligst velg en AI-modell."
+      }
+    }
+  },
+  "export": {
     "exportDocx": "Eksporter til DOCX",
     "exportSuccessTitle": "Eksportering vellykket",
     "exportSuccessMessage": "Romanen din '{title}' ble eksportert.",
@@ -350,6 +352,7 @@
       "dictionaryHelp": "Oppgi en egendefinert ordbok eller ordliste for AI-en. Én oppføring per linje, f.eks. 'Karakternavn = Oversatt Navn'.",
       "useDictionary": "Bruk Egendefinert Ordbok",
       "editDictionary": "Rediger Ordbok",
+      "useCodex": "Bruk Codex-oppføringer",
       "user": {
         "dictionaryBlock": "Take into account the following custom dictionary:\n<dictionary>\n{dictionaryContent}\n</dictionary>"
       }
@@ -362,7 +365,6 @@
       "contextInfo": "Kontekstuell informasjon",
       "contextHelp": "Relevant kontekstuell informasjon sendes automatisk til AI-en for best resultat.",
       "loadingCodex": "Laster codex-oppføringer...",
-      "useCodex": "Use Codex Entries",
       "system": {
         "base": "You are an expert prose editor.\n\nWhenever you're given text, rephrase it using the following instructions: <instructions>{instructions}</instructions>\n\nImitiate and keep the current writing style, and leave mannerisms, word choice and sentence structure intact.\nYou are free to remove redundant lines of speech. Keep the same tense and stylistic choices. Use {language} spelling and grammar.\n\nOnly return the rephrased text, nothing else.",
         "defaultInstruction": "Rephrase the given text."
@@ -383,7 +385,6 @@
       "contextInfo": "Kontekstuell informasjon",
       "contextHelp": "Relevant kontekstuell informasjon (som ordlisteoppføringer) kan sendes til AI-en for bedre oversettelser.",
       "loadingCodex": "Laster codex-oppføringer...",
-      "useCodex": "Bruk Codex-oppføringer som ordliste",
       "prevPairs": "Forrige oversettelsespar",
       "prevPairsHelp": "Inkluder N forrige oversettelsesblokker som kontekst for AI-en. (0 for å deaktivere)",
       "system": {

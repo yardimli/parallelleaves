@@ -172,6 +172,8 @@
     "errorLoad": "錯誤：無法載入大綱資料。{message}",
     "chapterLabel_one": "章",
     "chapterLabel_other": "章",
+  },
+  "export": {
     "exportDocx": "匯出為 DOCX",
     "exportSuccessTitle": "匯出成功",
     "exportSuccessMessage": "您的小說 '{title}' 已成功匯出。",

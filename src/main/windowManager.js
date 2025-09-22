@@ -5,8 +5,7 @@ let mainWindow = null;
 let splashWindow = null;
 let importWindow = null;
 let chapterEditorWindows = new Map();
-let outlineWindows = new Map();
-let codexEditorWindows = new Map();
+let codexViewerWindows = new Map();
 let chatWindow = null;
 let isMainWindowReady = false;
 
@@ -161,62 +160,20 @@ function createChapterEditorWindow({ novelId, chapterId }) {
 	createContextMenu(win);
 }
 
-function createOutlineWindow(novelId, triggerAutogen = false) {
-	if (outlineWindows.has(novelId)) {
-		const existingWin = outlineWindows.get(novelId);
+function createCodexViewerWindow(novelId) {
+	if (codexViewerWindows.has(novelId)) {
+		const existingWin = codexViewerWindows.get(novelId);
 		if (existingWin) {
 			existingWin.focus();
-			// If the window already exists, we can still trigger the autogen modal
-			if (triggerAutogen) {
-				existingWin.webContents.send('outline:trigger-autogen');
-			}
 			return;
 		}
 	}
 	
 	const win = new BrowserWindow({
-		width: 1800,
-		height: 1000,
-		icon: path.join(__dirname, '..', '..', 'public/assets/icon.png'),
-		title: 'Parallel Leaves - Outline Viewer',
-		autoHideMenuBar: true,
-		webPreferences: {
-			preload: path.join(__dirname, '..', '..', 'preload.js'),
-			contextIsolation: true,
-			nodeIntegration: false,
-		},
-	});
-	
-	setContentSecurityPolicy(win);
-	
-	win.loadFile('public/outline-viewer.html', { query: { novelId: novelId } });
-	outlineWindows.set(novelId, win);
-	
-	// If the trigger is set, wait for the window to finish loading then send the event
-	if (triggerAutogen) {
-		win.webContents.once('did-finish-load', () => {
-			win.webContents.send('outline:trigger-autogen');
-		});
-	}
-	
-	win.on('closed', () => {
-		outlineWindows.delete(novelId);
-	});
-}
-
-function createCodexEditorWindow(options) {
-	const { mode, entryId, novelId, selectedText } = options;
-	const windowKey = mode === 'edit' ? `edit-${entryId}` : `new-${novelId}`;
-	if (codexEditorWindows.has(windowKey)) {
-		codexEditorWindows.get(windowKey).focus();
-		return;
-	}
-	
-	const win = new BrowserWindow({
 		width: 1200,
-		height: 800,
+		height: 900,
 		icon: path.join(__dirname, '..', '..', 'public/assets/icon.png'),
-		title: 'Parallel Leaves - Codex Editor',
+		title: 'Parallel Leaves - Codex Viewer',
 		autoHideMenuBar: true,
 		webPreferences: {
 			preload: path.join(__dirname, '..', '..', 'preload.js'),
@@ -227,18 +184,11 @@ function createCodexEditorWindow(options) {
 	
 	setContentSecurityPolicy(win);
 	
-	const query = { mode };
-	if (mode === 'edit') query.entryId = entryId;
-	else {
-		query.novelId = novelId;
-		query.selectedText = encodeURIComponent(selectedText || '');
-	}
-	
-	win.loadFile('public/codex-entry-editor.html', { query });
-	codexEditorWindows.set(windowKey, win);
+	win.loadFile('public/codex-viewer.html', { query: { novelId: novelId } });
+	codexViewerWindows.set(novelId, win);
 	
 	win.on('closed', () => {
-		codexEditorWindows.delete(windowKey);
+		codexViewerWindows.delete(novelId);
 	});
 	
 	createContextMenu(win);
@@ -329,8 +279,7 @@ module.exports = {
 	createSplashWindow,
 	createMainWindow,
 	createChapterEditorWindow,
-	createOutlineWindow,
-	createCodexEditorWindow,
+	createCodexViewerWindow,
 	createImportWindow,
 	createChatWindow,
 	closeSplashAndShowMain,

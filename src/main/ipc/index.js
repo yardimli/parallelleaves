@@ -22,7 +22,7 @@ function registerIpcHandlers(db, sessionManager, windowManager) {
 	registerBackupRestoreHandlers(db, sessionManager);
 	registerChapterHandlers(db, windowManager);
 	registerChatHandlers(db, sessionManager);
-	registerCodexHandlers(db, sessionManager, windowManager);
+	registerCodexHandlers(db, sessionManager);
 	registerImportHandlers(db, sessionManager, windowManager);
 	registerNovelHandlers(db, sessionManager, windowManager);
 	registerSectionHandlers(db);

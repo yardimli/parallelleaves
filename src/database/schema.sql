@@ -60,30 +60,8 @@ CREATE TABLE IF NOT EXISTS chapters (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS codex_categories (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    novel_id INTEGER NOT NULL,
-    name TEXT NOT NULL,
-    description TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS codex_entries (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    novel_id INTEGER NOT NULL,
-    codex_category_id INTEGER NOT NULL,
-    title TEXT NOT NULL,
-    content TEXT,
-    target_content TEXT,
-    document_phrases TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
--- ALTER statements for existing databases:
--- ALTER TABLE codex_entries ADD COLUMN target_content TEXT;
--- ALTER TABLE codex_entries ADD COLUMN document_phrases TEXT;
+-- MODIFICATION START: Removed codex_categories and codex_entries tables.
+-- MODIFICATION END
 
 CREATE TABLE IF NOT EXISTS images (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -172,31 +150,5 @@ BEGIN
     WHERE id = OLD.novel_id;
 END;
 
--- When a codex entry is changed
-CREATE TRIGGER IF NOT EXISTS update_novel_on_codex_entry_update
-    AFTER UPDATE ON codex_entries
-    FOR EACH ROW
-BEGIN
-    UPDATE novels
-    SET updated_at = CURRENT_TIMESTAMP
-    WHERE id = NEW.novel_id;
-END;
-
-CREATE TRIGGER IF NOT EXISTS update_novel_on_codex_entry_insert
-    AFTER INSERT ON codex_entries
-    FOR EACH ROW
-BEGIN
-    UPDATE novels
-    SET updated_at = CURRENT_TIMESTAMP
-    WHERE id = NEW.novel_id;
-END;
-
-CREATE TRIGGER IF NOT EXISTS update_novel_on_codex_entry_delete
-    AFTER DELETE ON codex_entries
-    FOR EACH ROW
-BEGIN
-    UPDATE novels
-    SET updated_at = CURRENT_TIMESTAMP
-    WHERE id = OLD.novel_id;
-END;
+-- MODIFICATION START: Removed triggers related to codex_entries.
 -- MODIFICATION END

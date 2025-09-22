@@ -14,52 +14,8 @@ const debounce = (func, delay) => {
 
 const defaultState = { // Default state for the rephrase editor form
 	instructions: '',
-	selectedCodexIds: [],
+	useCodex: true,
 	useDictionary: false
-};
-
-const renderCodexList = (container, context, initialState = null) => {
-	const codexContainer = container.querySelector('.js-codex-selection-container');
-	if (!codexContainer) return;
-	
-	const { allCodexEntries } = context;
-	
-	if (!allCodexEntries || allCodexEntries.length === 0) { // If no codex entries, display loading message
-		codexContainer.innerHTML = `<p class="text-sm text-base-content/60">${t('prompt.rephrase.loadingCodex')}</p>`;
-		return;
-	}
-	
-	const categoriesHtml = allCodexEntries.map(category => {
-		if (!category.entries || category.entries.length === 0) {
-			return '';
-		}
-		
-		const entriesHtml = category.entries.map(entry => {
-			const isChecked = false; // Rephrase editor doesn't pre-select.
-			return `
-                <label class="inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap">
-                    <input type="checkbox" name="codex_entry" value="${entry.id}" ${isChecked ? 'checked' : ''} class="checkbox checkbox-xs" />
-                    <span class="label-text text-sm">${entry.title}</span>
-                </label>
-            `;
-		}).join('');
-		
-		return `
-            <div class="py-1">
-                <div class="label-text font-semibold text-base-content/80 mr-2">${category.name}:</div>
-                <div class="inline-flex flex-wrap items-center gap-x-4 gap-y-1">
-                    ${entriesHtml}
-                </div>
-            </div>
-        `;
-	}).join('');
-	
-	codexContainer.innerHTML = `
-        <h4 class="label-text font-semibold mb-2">${t('prompt.rephrase.useCodex')}</h4>
-        <div class="max-h-72 overflow-y-auto pr-2 space-y-1">
-            ${categoriesHtml}
-        </div>
-    `;
 };
 
 const buildSurroundingTextBlock = (wordsBefore, wordsAfter) => {
@@ -77,7 +33,7 @@ const buildSurroundingTextBlock = (wordsBefore, wordsAfter) => {
 };
 
 export const buildPromptJson = (formData, context, dictionaryContent = '') => {
-	const { selectedText, wordCount, allCodexEntries, languageForPrompt, wordsBefore, wordsAfter } = context;
+	const { selectedText, wordCount, languageForPrompt, wordsBefore, wordsAfter } = context;
 	
 	const instructions = formData.instructions || t('prompt.rephrase.system.defaultInstruction');
 	const system = t('prompt.rephrase.system.base', {
@@ -86,16 +42,10 @@ export const buildPromptJson = (formData, context, dictionaryContent = '') => {
 	});
 	
 	let codexBlock = '';
-	const allEntriesFlat = allCodexEntries.flatMap(category => category.entries);
-	if (formData.selectedCodexIds && formData.selectedCodexIds.length > 0) {
-		const selectedEntries = allEntriesFlat.filter(entry => formData.selectedCodexIds.includes(String(entry.id)));
-		if (selectedEntries.length > 0) {
-			const codexContent = selectedEntries.map(entry => {
-				const plainContent = htmlToPlainText(entry.content || '');
-				return `Title: ${entry.title}\nContent: ${plainContent.trim()}`;
-			}).join('\n\n');
-			
-			codexBlock = t('prompt.rephrase.user.codexBlock', { codexContent });
+	if (formData.useCodex && context.codexContent) {
+		const plainCodex = htmlToPlainText(context.codexContent);
+		if (plainCodex) {
+			codexBlock = t('prompt.rephrase.user.codexBlock', { codexContent: plainCodex });
 		}
 	}
 	
@@ -131,7 +81,7 @@ const updatePreview = async (container, context) => {
 	
 	const formData = {
 		instructions: form.elements.instructions.value.trim(),
-		selectedCodexIds: form.elements.codex_entry ? Array.from(form.elements.codex_entry).filter(cb => cb.checked).map(cb => cb.value) : [],
+		useCodex: form.elements.use_codex.checked,
 		useDictionary: form.elements.use_dictionary.checked
 	};
 	
@@ -146,8 +96,13 @@ const updatePreview = async (container, context) => {
 		dictionaryContent = await window.api.getDictionaryContentForAI(context.novelId);
 	}
 	
+	const previewContext = { ...context };
+	if (formData.useCodex) {
+		previewContext.codexContent = await window.api.codex.get(context.novelId);
+	}
+	
 	try {
-		const promptJson = buildPromptJson(formData, context, dictionaryContent);
+		const promptJson = buildPromptJson(formData, previewContext, dictionaryContent);
 		systemPreview.textContent = promptJson.system;
 		userPreview.textContent = promptJson.user;
 		aiPreview.textContent = promptJson.ai || t('prompt.preview.empty');
@@ -163,6 +118,7 @@ const populateForm = (container, state) => {
 	if (!form) return;
 	
 	form.elements.instructions.value = state.instructions || '';
+	form.elements.use_codex.checked = state.useCodex !== undefined ? state.useCodex : defaultState.useCodex;
 	form.elements.use_dictionary.checked = state.useDictionary !== undefined ? state.useDictionary : defaultState.useDictionary;
 };
 
@@ -176,7 +132,6 @@ export const init = async (container, context) => {
 		const fullContext = { ...context, wordCount };
 		
 		populateForm(container, context.initialState || defaultState);
-		renderCodexList(container, fullContext, context.initialState);
 		
 		const form = container.querySelector('#rephrase-editor-form');
 		const editDictionaryBtn = container.querySelector('.js-edit-dictionary-btn');

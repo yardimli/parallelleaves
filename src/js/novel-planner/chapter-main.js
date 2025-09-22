@@ -2,7 +2,7 @@ import { setupTopToolbar, setActiveContentWindow, updateToolbarState, createIfra
 import { setupPromptEditor, openPromptEditor } from '../prompt-editor.js';
 import { setupTypographySettings, getTypographySettings, generateTypographyStyleProperties } from './typography-settings.js';
 import { initI18n, t } from '../i18n.js';
-import { processSourceContentForCodexLinks, processSourceContentForMarkers } from '../../utils/html-processing.js';
+import { processSourceContentForMarkers } from '../../utils/html-processing.js';
 import { initDictionaryModal, openDictionaryModal } from '../dictionary/dictionary-modal.js';
 
 const debounce = (func, delay) => {
@@ -19,7 +19,6 @@ let isScrollingProgrammatically = false;
 const chapterEditorViews = new Map();
 let currentSourceSelection = { text: '', hasSelection: false, range: null };
 let lastBroadcastedSourceSelectionState = false;
-let allCodexEntriesForNovel = [];
 
 // Globals to manage view initialization and prevent race conditions.
 let totalIframes = 0;
@@ -36,8 +35,6 @@ const setActiveEditor = (editorWindow) => {
 let globalSearchMatches = [];
 let currentMatchIndex = -1;
 let searchResponsesPending = 0;
-
-// MODIFICATION START: Generic modal helper functions to replace native dialogs.
 
 /**
  * Shows a confirmation modal and returns a promise that resolves with true or false.
@@ -118,8 +115,6 @@ function showInputModal(title, label, initialValue = '') {
 		inputEl.select();
 	});
 }
-
-// MODIFICATION END
 
 /**
  * Synchronizes the scroll position of a chapter between the source and target columns.
@@ -231,20 +226,18 @@ function restoreScrollPositions(novelId, sourceEl, targetEl) {
 }
 
 /**
- * Re-renders a single chapter's source content with codex and marker links.
+ * Re-renders a single chapter's source content with marker links.
  * @param {string} chapterId - The ID of the chapter to render.
  * @param {string} rawHtml - The raw HTML content to process and render.
- * @param {Array<object>} allCodexEntries - All codex entries for the novel.
  */
-async function renderSourceChapterContent(chapterId, rawHtml, allCodexEntries) {
+async function renderSourceChapterContent(chapterId, rawHtml) {
 	const chapterItem = document.getElementById(`source-chapter-scroll-target-${chapterId}`);
 	if (!chapterItem) return;
 	
 	const contentContainer = chapterItem.querySelector('.source-content-readonly');
 	if (!contentContainer) return;
 	
-	let processedSourceHtml = processSourceContentForCodexLinks(rawHtml || '', allCodexEntries);
-	processedSourceHtml = processSourceContentForMarkers(processedSourceHtml);
+	const processedSourceHtml = processSourceContentForMarkers(rawHtml || '');
 	contentContainer.innerHTML = processedSourceHtml;
 }
 
@@ -277,7 +270,7 @@ async function toggleSourceEditMode(chapterId, isEditing) {
 	} else { // This is the "cancel" case, reverting to original content
 		contentContainer.contentEditable = false;
 		const rawContent = await window.api.getRawChapterContent({ chapterId, field: 'source_content' });
-		await renderSourceChapterContent(chapterId, rawContent, allCodexEntriesForNovel);
+		await renderSourceChapterContent(chapterId, rawContent);
 	}
 }
 
@@ -314,7 +307,7 @@ async function saveSourceChanges(chapterId) {
 		actionsContainer.querySelector('.js-cancel-source-btn').classList.add('hidden');
 		
 		// Re-render with the new saved content to apply links
-		await renderSourceChapterContent(chapterId, newContent, allCodexEntriesForNovel);
+		await renderSourceChapterContent(chapterId, newContent);
 	} catch (error) {
 		console.error(`[SAVE] Error saving source content for chapter ${chapterId}:`, error);
 		window.showAlert('Could not save source content changes.');
@@ -329,18 +322,14 @@ async function saveSourceChanges(chapterId) {
  * @param {string} targetHtml - The initial HTML content of the target.
  */
 async function synchronizeMarkers(chapterId, sourceContainer, targetHtml) {
-	// MODIFICATION START: Updated logic to handle both opening and closing markers.
-	// Regex to find both opening [[#...]] and closing {{#...}} markers and capture their numbers.
 	const markerRegex = /(\[\[#(\d+)\]\])|(\{\{#(\d+)\}\})/g;
 	let sourceHtml = sourceContainer.innerHTML;
 	
-	// Helper function to extract a Set of marker numbers from an HTML string.
 	const getMarkerNumbers = (html) => {
 		const numbers = new Set();
 		if (!html) return numbers;
 		const matches = [...html.matchAll(markerRegex)];
 		matches.forEach(match => {
-			// The number is in capture group 2 (for [[...]]) or 4 (for {{...}}).
 			const numStr = match[2] || match[4];
 			if (numStr) {
 				numbers.add(parseInt(numStr, 10));
@@ -358,10 +347,8 @@ async function synchronizeMarkers(chapterId, sourceContainer, targetHtml) {
 	
 	let wasModified = false;
 	
-	// Find numbers that are in the source but not in the target.
 	sourceMarkerNumbers.forEach(number => {
 		if (!targetMarkerNumbers.has(number)) {
-			// This marker number is orphaned. Remove both opening and closing markers from the source.
 			const openingMarkerRegex = new RegExp(`\\[\\[#${number}\\]\\]\\s*`, 'g');
 			const closingMarkerRegex = new RegExp(`\\{\\{#${number}\\}\\}\\s*`, 'g');
 			
@@ -378,7 +365,6 @@ async function synchronizeMarkers(chapterId, sourceContainer, targetHtml) {
 	
 	if (wasModified) {
 		sourceContainer.innerHTML = sourceHtml;
-		// Persist the cleaned-up source content to the database.
 		try {
 			await window.api.updateChapterField({
 				chapterId: chapterId,
@@ -389,15 +375,13 @@ async function synchronizeMarkers(chapterId, sourceContainer, targetHtml) {
 			console.error(`[Sync] Failed to save updated source content for chapter ${chapterId}:`, error);
 		}
 	}
-	// MODIFICATION END
 }
 
 /**
  * Renders the manuscript into two separate, independently scrolling columns.
  * @param {object} novelData - The full novel data.
- * @param {Array<object>} allCodexEntries - All codex entries for the novel.
  */
-async function renderManuscript(novelData, allCodexEntries) {
+async function renderManuscript(novelData) {
 	const sourceContainer = document.getElementById('js-source-column-container');
 	const targetContainer = document.getElementById('js-target-column-container');
 	
@@ -407,9 +391,7 @@ async function renderManuscript(novelData, allCodexEntries) {
 	totalIframes = 0;
 	
 	for (const section of novelData.sections) {
-		// Create and append section headers to both columns
 		const sectionHeader = document.createElement('div');
-		// MODIFICATION START: Added dropdown menu for section (act) actions.
 		sectionHeader.className = 'px-8 py-6 top-0 bg-base-100/90 backdrop-blur-sm z-10 border-b border-base-300 flex justify-between items-center';
 		sectionHeader.innerHTML = `
             <h2 class="text-3xl font-bold text-indigo-500">${section.section_order}. ${section.title}</h2>
@@ -426,7 +408,6 @@ async function renderManuscript(novelData, allCodexEntries) {
                 </ul>
             </div>
         `;
-		// MODIFICATION END
 		sourceFragment.appendChild(sectionHeader);
 		targetFragment.appendChild(sectionHeader.cloneNode(true));
 		
@@ -451,7 +432,6 @@ async function renderManuscript(novelData, allCodexEntries) {
 			
 			const sourceHeader = document.createElement('div');
 			sourceHeader.className = 'flex justify-between items-center border-b pb-1 mb-2';
-			// MODIFICATION START: Replaced simple actions with a dropdown menu for more chapter options.
 			sourceHeader.innerHTML = `
                 <div class="flex items-center gap-2">
                     <h3 class="!mt-0 text-sm font-semibold uppercase tracking-wider text-base-content/70">${chapter.title} (<span class="js-source-word-count">${chapter.source_word_count.toLocaleString()} ${t('common.words')}</span>)</h3>
@@ -477,15 +457,13 @@ async function renderManuscript(novelData, allCodexEntries) {
                     </div>
                 </div>
             `;
-			// MODIFICATION END
 			sourceCol.appendChild(sourceHeader);
 			
 			const sourceContentContainer = document.createElement('div');
 			sourceContentContainer.className = 'source-content-readonly';
 			sourceContentContainer.setAttribute('spellcheck', 'false');
 			
-			let processedSourceHtml = processSourceContentForCodexLinks(chapter.source_content || '', allCodexEntries);
-			processedSourceHtml = processSourceContentForMarkers(processedSourceHtml);
+			const processedSourceHtml = processSourceContentForMarkers(chapter.source_content || '');
 			sourceContentContainer.innerHTML = processedSourceHtml;
 			sourceCol.appendChild(sourceContentContainer);
 			sourceChapterWrapper.appendChild(sourceCol);
@@ -1126,23 +1104,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			throw new Error('Failed to load project data from the database.');
 		}
 		
-		allCodexEntriesForNovel = await window.api.getAllCodexEntriesForNovel(novelId);
-		
-		// Check if codex is empty and show the welcome modal
-		if (!allCodexEntriesForNovel || allCodexEntriesForNovel.length === 0) {
-			const codexModal = document.getElementById('codex-welcome-modal');
-			if (codexModal) {
-				codexModal.showModal();
-				
-				const createBtn = document.getElementById('codex-welcome-create-btn');
-				
-				createBtn.addEventListener('click', () => {
-					window.api.openOutlineAndAutogenCodex(novelId);
-					codexModal.close();
-				}, { once: true }); // Use once to avoid multiple listeners
-			}
-		}
-		
 		document.title = t('editor.translating', { title: novelData.title });
 		document.getElementById('js-novel-title').textContent = novelData.title;
 		
@@ -1172,7 +1133,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 			return;
 		}
 		
-		await renderManuscript(novelData, allCodexEntriesForNovel);
+		await renderManuscript(novelData);
 		populateNavDropdown(novelData);
 		
 		sourceContainer.addEventListener('scroll', () => {
@@ -1284,10 +1245,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 			}
 		});
 		
-		// MODIFICATION START: Replaced native dialogs with custom HTML modals.
 		sourceContainer.addEventListener('click', async (event) => {
 			const syncBtn = event.target.closest('.js-sync-scroll-btn');
-			const codexLink = event.target.closest('a.codex-link');
 			const markerLink = event.target.closest('a.translation-marker-link');
 			const editBtn = event.target.closest('.js-edit-source-btn');
 			const saveBtn = event.target.closest('.js-save-source-btn');
@@ -1296,12 +1255,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			if (syncBtn) {
 				event.preventDefault();
 				syncChapterScroll(syncBtn.dataset.chapterId, syncBtn.dataset.direction);
-				return;
-			}
-			if (codexLink) {
-				event.preventDefault();
-				const entryId = codexLink.dataset.codexEntryId;
-				if (entryId) window.api.openCodexEditor(entryId);
 				return;
 			}
 			if (markerLink) {
@@ -1394,7 +1347,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 				contentDiv.contentEditable = true;
 			}
 		});
-		// MODIFICATION END
 		
 		sourceContainer.addEventListener('beforeinput', (event) => {
 			const contentDiv = event.target.closest('.source-content-readonly');
@@ -1520,7 +1472,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 					// Use an async IIFE to handle async operations
 					(async () => {
 						const novelData = await window.api.getOneNovel(novelId);
-						const allCodexEntries = await window.api.getAllCodexEntriesForNovel(novelId);
 						let settings = {};
 						if (novelData.translate_settings) {
 							try {
@@ -1534,7 +1485,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 						const context = {
 							selectedText: currentSourceSelection.text,
 							sourceSelectionRange: currentSourceSelection.range,
-							allCodexEntries,
+							// MODIFIED: Removed the allCodexEntries key as it's no longer used this way.
 							languageForPrompt: novelData.source_language || 'English',
 							targetLanguage: novelData.target_language || 'English',
 							activeEditorView: sourceWindow,

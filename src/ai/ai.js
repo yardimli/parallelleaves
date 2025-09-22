@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { app } = require('electron');
 const config = require('../../config.js');
+const { htmlToPlainText } = require('../main/utils.js');
 
 const AI_PROXY_URL = config.AI_PROXY_URL;
 
@@ -127,116 +128,54 @@ async function generateCoverImageViaProxy({ prompt, token }) {
 }
 
 /**
- * Generates codex entries based on a novel outline.
- * @param {object} params - The parameters for generation.
- * @param {string} params.outlineJson - The novel outline as a JSON string.
- * @param {string} params.language - The output language.
- * @param {string} params.model - The LLM model to use.
- * @param {string|null} params.token - The user's session token.
- * @returns {Promise<object>} The parsed JSON codex data.
- */
-async function generateNovelCodex({ outlineJson, language, model, token }) {
-	const prompt = `
-You are a world-building assistant. Based on the provided novel outline, your task is to identify and create encyclopedia-style entries (a codex) for the key characters and locations.
-
-**Novel Outline (JSON):**
-${outlineJson}
-
-**Language for Output:** "${language}"
-
-From the outline, extract the most important characters and locations. Generate a JSON object with the following structure:
-- \`characters\`: An array of objects for the main characters. Each object must have:
-  - \`name\`: The full name of the character.
-  - \`content\`: A detailed paragraph describing their personality, motivations, and background.
-- \`locations\`: An array of objects for the key settings. Each object must have:
-  - \`name\`: The name of the location.
-  - \`content\`: A detailed paragraph describing the location's atmosphere, appearance, and history.
-
-Focus on the most prominent elements mentioned in the synopsis and chapter summaries. Provide at least 3 characters and 2 locations if possible. Ensure the entire output is a single, valid JSON object. Do not include any text or markdown formatting before or after the JSON.`;
-	
-	return callOpenRouter({
-		model: model,
-		messages: [{ role: 'user', content: prompt }],
-		response_format: { type: 'json_object' },
-		temperature: 0.6
-	}, token);
-}
-
-/**
- * Analyzes a text chunk to create or update codex entries.
+ * Analyzes a text chunk to create codex entries as an HTML string.
  * @param {object} params - The parameters for generation.
  * @param {string} params.textChunk - A chunk of the novel text.
- * @param {string} params.existingCodexJson - A JSON string of existing codex entries.
+ * @param {string} params.existingCodexHtml - The HTML content of the existing codex file.
  * @param {string} params.language - The language of the novel.
- * @param {string} params.targetLanguage - The target language for translation.
  * @param {string} params.model - The LLM model to use.
  * @param {string|null} params.token - The user's session token.
- * @returns {Promise<object>} The parsed JSON response with new and updated entries.
+ * @returns {Promise<string>} An HTML string containing new codex entries.
  */
-async function generateCodexFromTextChunk({ textChunk, existingCodexJson, language, targetLanguage, model, token }) {
-	// The prompt has been updated to be more explicit and provide a clear example.
+async function generateCodexFromTextChunk({ textChunk, existingCodexHtml, language, model, token }) {
+	const existingCodexText = htmlToPlainText(existingCodexHtml); // Convert existing HTML to text for context
 	const prompt = `
-You are a meticulous world-building assistant for a novelist. Your task is to analyze a chunk of text from a novel and identify entities that should be in a codex (an encyclopedia of the world). These entities are typically People, Locations, or Objects/Lore.
+You are a meticulous world-building assistant for a novelist. Your task is to analyze a chunk of text from a novel and identify entities that should be in a codex (an encyclopedia of the world).
 
 **Instructions:**
 1.  Read the provided **Text Chunk**.
-2.  Review the **Existing Codex Entries** to understand what is already documented.
-3.  Identify new characters, locations, or significant objects/lore within the text chunk that are not in the codex.
-4.  If you find new information about an entity that is ALREADY in the codex, update its description. The new description should integrate the old and new information seamlessly.
-5.  For each new or updated entry, provide the following fields:
-    - **For NEW entries only**, assign a 'category': "People", "Locations", or "Objects/Lore".
-    - A concise 'title' (the name of the entity).
-    - A descriptive paragraph for the 'content' field in the source language (**${language}**).
-    - A translation of the 'content' into the 'target_content' field in the target language (**${targetLanguage}**).
-    - A comma-separated list of exact phrases from the **Text Chunk** that refer to this entity for the 'document_phrases' field.
+2.  Review the **Existing Codex Content** to avoid creating duplicate entries.
+3.  Identify new characters, locations, or significant objects/lore within the text chunk.
+4.  For each new entity you identify, write a brief, encyclopedia-style entry.
+5.  Format your entire output as a single block of simple HTML. Use \`<h3>\` for each entity's title and \`<p>\` for its description.
+6.  If you find no new entities worth adding, return an empty string.
+7.  All content should be in the source language: **${language}**.
 
-**Existing Codex Entries (JSON):**
-${existingCodexJson}
+**Existing Codex Content (for context, do not repeat):**
+<codex>
+${existingCodexText.substring(0, 4000)}
+</codex>
 
 **Text Chunk to Analyze:**
 <text>
 ${textChunk}
 </text>
 
-**Output Format:**
-Respond with a single, valid JSON object. Do not include any text or markdown before or after the JSON. The JSON object must have two keys: \`new_entries\` and \`updated_entries\`.
-For example:
-\`\`\`json
-{
-  "new_entries": [
-    {
-      "category": "People",
-      "title": "Elaria",
-      "content": "A skilled archer from the Whisperwood, known for her silent movements and keen eye. She assisted Lord Kael during the siege.",
-      "target_content": "Una hábil arquera del Bosque Susurrante, conocida por sus movimientos silenciosos y su vista aguda. Ayudó a Lord Kael durante el asedio.",
-      "document_phrases": "Elaria, the archer from Whisperwood"
-    },
-    {
-      "category": "Locations",
-      "title": "Shadowfang Keep",
-      "content": "An ancient fortress located in the northern mountains, now serving as Lord Kael's stronghold. It is known for its imposing black stone walls.",
-      "target_content": "Una antigua fortaleza ubicada en las montañas del norte, que ahora sirve como el bastión de Lord Kael. Es conocida por sus imponentes muros de piedra negra.",
-      "document_phrases": "Shadowfang Keep, the northern mountains, his stronghold"
-    }
-  ],
-  "updated_entries": [
-    {
-      "title": "Lord Kael",
-      "content": "The stern ruler of the Northern Reaches. He is a formidable warrior who wields a black-bladed sword and commands the garrison at Shadowfang Keep.",
-      "target_content": "El severo gobernante de los Confines del Norte. Es un guerrero formidable que empuña una espada de hoja negra y comanda la guarnición en la Fortaleza Colmillo de Sombra.",
-      "document_phrases": "Lord Kael, wields a black-bladed sword"
-    }
-  ]
-}
-\`\`\`
+**Example HTML Output:**
+<h3>Elaria</h3>
+<p>A skilled archer from the Whisperwood, known for her silent movements and keen eye. She assisted Lord Kael during the siege.</p>
+<h3>Shadowfang Keep</h3>
+<p>An ancient fortress located in the northern mountains, now serving as Lord Kael's stronghold. It is known for its imposing black stone walls.</p>
 `;
 	
-	return callOpenRouter({
+	const response = await callOpenRouter({
 		model: model,
 		messages: [{ role: 'user', content: prompt }],
-		response_format: { type: 'json_object' },
 		temperature: 0.5
 	}, token);
+	
+	// The response is not JSON, so we directly access the content.
+	return response.choices?.[0]?.message?.content || '';
 }
 
 /**
@@ -345,52 +284,10 @@ async function getOpenRouterModels(forceRefresh = false, token) {
 	return processedModelsData;
 }
 
-/**
- * Suggests a title and category for a new codex entry based on selected text.
- * @param {object} params - The parameters for generation.
- * @param {string} params.text - The selected text to analyze.
- * @param {Array<string>} params.categories - A list of existing category names to choose from.
- * @param {string} params.model - The LLM model to use.
- * @param {string|null} params.token - The user's session token.
- * @returns {Promise<object>} The parsed JSON response with 'title' and 'category_name'.
- */
-async function suggestCodexDetails({ text, categories, model, token }) {
-	const categoryList = categories.join(', ');
-	const prompt = `
-You are an intelligent assistant helping a writer organize their world-building codex.
-Analyze the following text selection from their novel.
-
-**Text Selection:**
-"${text}"
-
-**Task:**
-1.  Based on the text, create a concise and appropriate title for a new codex entry. The title should be the name of the person, place, or thing being described.
-2.  From the following list of existing categories, choose the one that best fits this new entry.
-
-**Existing Categories:**
-[${categoryList}]
-
-Provide your response as a single, valid JSON object with two keys:
-- \`title\`: The suggested title for the codex entry.
-- \`category_name\`: The name of the best-fitting category from the provided list.
-
-Example Response: {"title": "Captain Eva Rostova", "category_name": "Characters"}
-`;
-	
-	return callOpenRouter({
-		model: model,
-		messages: [{ role: 'user', content: prompt }],
-		response_format: { type: 'json_object' },
-		temperature: 0.5
-	}, token);
-}
-
 module.exports = {
-	generateNovelCodex,
 	generateCodexFromTextChunk,
 	processLLMText,
 	getOpenRouterModels,
-	suggestCodexDetails,
 	generateCoverPrompt,
 	generateCoverImageViaProxy
 };

@@ -65,7 +65,7 @@ function countWordsInHtml(html) {
  * @returns {number} The highest marker number found, or 0 if none are found.
  */
 function findHighestMarkerNumber(sourceHtml, targetHtml) {
-	// Modified: Regex now finds numbers in both [[#...]] and {{#...}} style markers.
+	// Regex now finds numbers in both [[#...]] and {{#...}} style markers.
 	const markerRegex = /\[\[#(\d+)\]\]|\{\{#(\d+)\}\}/g;
 	let highest = 0;
 	

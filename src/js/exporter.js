@@ -38,11 +38,11 @@ export async function exportNovel(novelId) {
 			htmlContent: htmlContent,
 			targetLanguage: novel.target_language,
 			dialogStrings: {
-				title: t('outline.exportDialogTitle'),
-				message: t('outline.exportDialogMessage', { title: novel.title }),
-				detail: t('outline.exportDialogDetail'), // {filePath} is a placeholder for the main process
-				openFolder: t('outline.exportDialogOpenFolder'),
-				ok: t('outline.exportDialogOK'),
+				title: t('export.exportDialogTitle'),
+				message: t('export.exportDialogMessage', { title: novel.title }),
+				detail: t('export.exportDialogDetail'), // {filePath} is a placeholder for the main process
+				openFolder: t('export.exportDialogOpenFolder'),
+				ok: t('export.exportDialogOK'),
 			},
 		});
 		
@@ -55,8 +55,8 @@ export async function exportNovel(novelId) {
 	} catch (error) {
 		console.error('Export failed:', error);
 		window.showAlert(
-			t('outline.exportErrorMessage', { message: error.message }),
-			t('outline.exportErrorTitle')
+			t('export.exportErrorMessage', { message: error.message }),
+			t('export.exportErrorTitle')
 		);
 	}
 }

@@ -22,7 +22,7 @@ const extractMarkerPairsFromHtml = (sourceHtml, targetHtml, selectedText = null)
 			const match = marker.match(/\[\[#(\d+)\]\]/);
 			if (match) {
 				const number = parseInt(match[1], 10);
-				// Modified: Remove any closing markers from the content segment before processing.
+				// Remove any closing markers from the content segment before processing.
 				// This ensures that `{{#...}}` tags don't get included in the context pairs.
 				const contentWithoutClosingMarkers = content.replace(/\{\{#\d+\}\}/g, '');
 				const plainText = htmlToPlainText(contentWithoutClosingMarkers);
@@ -144,7 +144,6 @@ function registerChapterHandlers(db, windowManager) {
 		}
 	});
 	
-	// NEW: Handler for renaming a chapter.
 	ipcMain.handle('chapters:rename', (event, { chapterId, newTitle }) => {
 		try {
 			db.prepare('UPDATE chapters SET title = ? WHERE id = ?').run(newTitle, chapterId);
@@ -155,7 +154,6 @@ function registerChapterHandlers(db, windowManager) {
 		}
 	});
 	
-	// NEW: Handler for deleting a chapter.
 	ipcMain.handle('chapters:delete', (event, { chapterId }) => {
 		try {
 			const chapter = db.prepare('SELECT section_id, chapter_order FROM chapters WHERE id = ?').get(chapterId);
@@ -174,7 +172,6 @@ function registerChapterHandlers(db, windowManager) {
 		}
 	});
 	
-	// NEW: Handler for inserting a new chapter.
 	ipcMain.handle('chapters:insert', (event, { chapterId, direction }) => {
 		try {
 			const refChapter = db.prepare('SELECT novel_id, section_id, chapter_order FROM chapters WHERE id = ?').get(chapterId);

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+	<meta charset="UTF-8"/>
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
+	<meta http-equiv="Content-Security-Policy"
+	      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' file: data: https:;">
+	<title data-i18n="codex.viewer.loadingTitle">Parallel Leaves - Codex</title>
+	<link rel="stylesheet" href="../node_modules/bootstrap-icons/font/bootstrap-icons.css">
+	<link rel="stylesheet" href="../dist/styles.css">
+</head>
+<body class="h-full bg-base-100 text-base-content overflow-hidden flex flex-col">
+<div id="top-toolbar"
+     class="flex-shrink-0 h-12 bg-base-100/80 dark:bg-base-300/80 backdrop-blur-sm flex items-center px-4 gap-2 z-50 border-b border-base-300 dark:border-base-100/10">
+	<!-- Novel Info -->
+	<h1 class="text-xl font-bold truncate">
+		<span id="js-novel-title" data-i18n="codex.viewer.loading">Loading...</span>
+		<span class="font-normal text-base-content/70"> &gt; </span>
+		<span data-i18n="codex.viewer.codex">Codex</span>
+	</h1>
+	<div class="divider divider-horizontal mx-0"></div>
+	<!-- History Section -->
+	<div class="flex items-center gap-1">
+		<button type="button" class="js-toolbar-btn btn btn-ghost btn-sm btn-square" data-command="undo"
+		        data-i18n-title="editor.undo" disabled>
+			<i class="bi bi-arrow-counterclockwise text-lg"></i>
+		</button>
+		<button type="button" class="js-toolbar-btn btn btn-ghost btn-sm btn-square" data-command="redo"
+		        data-i18n-title="editor.redo" disabled>
+			<i class="bi bi-arrow-clockwise text-lg"></i>
+		</button>
+	</div>
+	<div class="divider divider-horizontal mx-0"></div>
+	<!-- Heading Dropdown -->
+	<div class="dropdown js-dropdown-container">
+		<button type="button" tabindex="0" role="button"
+		        class="js-toolbar-btn js-heading-btn btn btn-ghost btn-sm w-28 justify-start" disabled data-i18n="editor.paragraph">Paragraph
+		</button>
+		<div tabindex="0" class="js-dropdown dropdown-content z-[1] menu p-1 shadow bg-base-100 rounded-box w-40">
+			<button class="js-heading-option p-2 rounded w-full text-left text-sm hover:bg-base-200" data-level="0" data-i18n="editor.paragraph">
+				Paragraph
+			</button>
+			<button class="js-heading-option p-2 rounded w-full text-left text-xl font-bold hover:bg-base-200"
+			        data-level="1" data-i18n="editor.heading1">
+				Heading 1
+			</button>
+			<button class="js-heading-option p-2 rounded w-full text-left text-lg font-bold hover:bg-base-200"
+			        data-level="2" data-i18n="editor.heading2">
+				Heading 2
+			</button>
+			<button class="js-heading-option p-2 rounded w-full text-left text-base font-bold hover:bg-base-200"
+			        data-level="3" data-i18n="editor.heading3">Heading 3
+			</button>
+		</div>
+	</div>
+	<div class="divider divider-horizontal mx-0"></div>
+	<!-- Formatting Section -->
+	<div class="flex items-center gap-1">
+		<button type="button" class="js-toolbar-btn btn btn-ghost btn-sm btn-square font-bold" data-command="bold"
+		        data-i18n-title="editor.bold" disabled>B
+		</button>
+		<button type="button" class="js-toolbar-btn btn btn-ghost btn-sm btn-square italic" data-command="italic"
+		        data-i18n-title="editor.italic" disabled>I
+		</button>
+		<button type="button" class="js-toolbar-btn btn btn-ghost btn-sm btn-square underline"
+		        data-command="underline"
+		        data-i18n-title="editor.underline" disabled>U
+		</button>
+		<button type="button" class="js-toolbar-btn btn btn-ghost btn-sm btn-square line-through"
+		        data-command="strike"
+		        data-i18n-title="editor.strikethrough" disabled>S
+		</button>
+	</div>
+	<div class="divider divider-horizontal mx-0"></div>
+	<!-- Block Formatting Section -->
+	<div class="flex items-center gap-1">
+		<button type="button" class="js-toolbar-btn btn btn-ghost btn-sm btn-square" data-command="bullet_list"
+		        data-i18n-title="editor.bulletList" disabled><i class="bi bi-list-ul text-lg"></i></button>
+		<button type="button" class="js-toolbar-btn btn btn-ghost btn-sm btn-square" data-command="ordered_list"
+		        data-i18n-title="editor.orderedList" disabled><i class="bi bi-list-ol text-lg"></i></button>
+		<button type="button" class="js-toolbar-btn btn btn-ghost btn-sm btn-square" data-command="blockquote"
+		        data-i18n-title="editor.blockquote" disabled><i class="bi bi-quote text-lg"></i></button>
+	</div>
+	<div class="flex-grow"></div>
+	<!-- Right-side Actions -->
+	<div class="flex items-center gap-2">
+		<button id="js-autogen-codex" class="btn btn-sm btn-ghost">
+			<i class="bi bi-magic"></i> <span data-i18n="codex.viewer.autoGenerate">Auto-generate</span>
+		</button>
+		<div class="divider divider-horizontal mx-0"></div>
+		<div class="flex items-center text-sm text-base-content/70">
+			<span id="js-word-count" data-i18n="editor.noTextSelected">No text selected</span>
+		</div>
+		<button id="theme-toggle" class="btn btn-ghost btn-circle" data-i18n-title="common.changeTheme">
+			<i class="bi text-xl"></i> <!-- Icon is set by src/js/theme.js -->
+		</button>
+	</div>
+</div>
+
+<!-- Main Content Area -->
+<div class="flex-grow flex flex-col p-4 overflow-hidden">
+	<div class="w-full h-full flex flex-col min-w-0 border border-base-300 rounded-md overflow-hidden">
+		<div class="js-pm-container flex-grow p-4 overflow-y-auto prose dark:prose-invert max-w-none">
+			<div class="js-editable"></div>
+		</div>
+	</div>
+</div>
+
+<!-- Bottom Status Bar -->
+<div id="bottom-status-bar" class="flex-shrink-0 h-8 bg-base-100 flex items-center px-4 gap-4 z-40 border-t border-base-300 text-sm">
+	<div class="flex-grow"></div>
+	<div id="js-total-word-count" class="text-base-content/70">0 words</div>
+	<div id="js-save-status" class="text-base-content/70" data-i18n="codex.viewer.saved">Saved</div>
+</div>
+
+<dialog id="autogen-codex-modal" class="modal">
+	<div class="modal-box">
+		<h3 class="font-bold text-lg" data-i18n="codex.viewer.autoGenModal.title">Auto-generate Codex Entries</h3>
+		<div id="js-autogen-codex-modal-content" class="py-4 space-y-4">
+			<!-- Content will be loaded from template -->
+		</div>
+		<div class="modal-action">
+			<form method="dialog">
+				<button class="js-autogen-cancel-btn btn" data-i18n="common.cancel">Cancel</button>
+			</form>
+		</div>
+	</div>
+</dialog>
+
+<script src="../src/js/theme.js"></script>
+<script type="module" src="../dist/codex-viewer-bundle.js"></script>
+</body>
+</html>

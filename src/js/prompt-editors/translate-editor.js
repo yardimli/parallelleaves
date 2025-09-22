@@ -14,112 +14,11 @@ const debounce = (func, delay) => {
 
 const defaultState = { // Default state for the translate editor form
 	instructions: '',
-	selectedCodexIds: [],
+	useCodex: true,
 	contextPairs: 4,
 	useDictionary: false
 };
 
-/**
- * Finds codex entry IDs within a given text by matching titles and document phrases.
- * @param {string} text - The plain text to scan.
- * @param {Array<object>} codexCategories - The array of codex categories containing entries.
- * @returns {Set<string>} A set of found codex entry IDs.
- */
-function findCodexIdsInText(text, codexCategories) {
-	if (!codexCategories || codexCategories.length === 0 || !text) {
-		return new Set();
-	}
-	
-	// 1. Create a flat list of terms to search for (titles and document phrases).
-	const terms = [];
-	codexCategories.forEach(category => {
-		(category.entries || []).forEach(entry => {
-			if (entry.title) {
-				terms.push({ text: entry.title, id: entry.id });
-			}
-			if (entry.document_phrases) {
-				const phrases = entry.document_phrases.split(',').map(p => p.trim()).filter(Boolean);
-				phrases.forEach(phrase => {
-					terms.push({ text: phrase, id: entry.id });
-				});
-			}
-		});
-	});
-	
-	if (terms.length === 0) {
-		return new Set();
-	}
-	
-	// Sort by length descending to match longer phrases first (e.g., "King Arthur" before "King").
-	terms.sort((a, b) => b.text.length - a.text.length);
-	
-	const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-	// Create a regex that matches any of the terms as whole words.
-	const regex = new RegExp(`\\b(${terms.map(term => escapeRegex(term.text)).join('|')})\\b`, 'gi');
-	
-	// Map lower-cased phrases back to their entry IDs for case-insensitive matching.
-	const termMap = new Map();
-	terms.forEach(term => {
-		termMap.set(term.text.toLowerCase(), term.id);
-	});
-	
-	// 2. Find all matches in the text and collect the corresponding entry IDs
-	const foundIds = new Set();
-	const matches = [...text.matchAll(regex)];
-	
-	matches.forEach(match => {
-		const matchedText = match[0];
-		const entryId = termMap.get(matchedText.toLowerCase());
-		if (entryId) {
-			foundIds.add(entryId.toString());
-		}
-	});
-	
-	return foundIds;
-}
-const renderCodexList = (container, context, initialState = null, preselectedIds = new Set()) => {
-	const codexContainer = container.querySelector('.js-codex-selection-container');
-	if (!codexContainer) return;
-	
-	const { allCodexEntries } = context;
-	
-	if (!allCodexEntries || allCodexEntries.length === 0) {
-		codexContainer.innerHTML = `<p class="text-sm text-base-content/60">${t('prompt.translate.loadingCodex')}</p>`;
-		return;
-	}
-	
-	const categoriesHtml = allCodexEntries.map(category => {
-		if (!category.entries || category.entries.length === 0) {
-			return '';
-		}
-		
-		const entriesHtml = category.entries.map(entry => {
-			const isChecked = preselectedIds.has(entry.id.toString());
-			return `
-                <label class="inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap">
-                    <input type="checkbox" name="codex_entry" value="${entry.id}" ${isChecked ? 'checked' : ''} class="checkbox checkbox-xs" />
-                    <span class="label-text text-sm">${entry.title}</span>
-                </label>
-            `;
-		}).join('');
-		
-		return `
-            <div class="py-1">
-                <div class="label-text font-semibold text-base-content/80 mr-2">${category.name}:</div>
-                <div class="inline-flex flex-wrap items-center gap-x-4 gap-y-1">
-                    ${entriesHtml}
-                </div>
-            </div>
-        `;
-	}).join('');
-	
-	codexContainer.innerHTML = `
-        <h4 class="label-text font-semibold mb-2">${t('prompt.translate.useCodex')}</h4>
-        <div class="max-h-72 overflow-y-auto pr-2 space-y-1">
-            ${categoriesHtml}
-        </div>
-    `;
-};
 
 const buildTranslationContextBlock = (translationPairs, languageForPrompt, targetLanguage) => {
 	if (!translationPairs || translationPairs.length === 0) {
@@ -151,7 +50,7 @@ const buildTranslationContextBlock = (translationPairs, languageForPrompt, targe
 };
 
 export const buildPromptJson = (formData, context, dictionaryContent = '') => {
-	const { selectedText, languageForPrompt, targetLanguage, allCodexEntries, translationPairs } = context;
+	const { selectedText, languageForPrompt, targetLanguage, translationPairs } = context;
 	
 	const plainTextToTranslate = selectedText;
 	
@@ -166,24 +65,10 @@ export const buildPromptJson = (formData, context, dictionaryContent = '') => {
 	}).trim();
 	
 	let codexBlock = '';
-	if (formData.selectedCodexIds && formData.selectedCodexIds.length > 0) {
-		const allEntriesFlat = allCodexEntries.flatMap(category => category.entries);
-		const selectedEntries = allEntriesFlat.filter(entry => formData.selectedCodexIds.includes(String(entry.id)));
-		if (selectedEntries.length > 0) {
-			const codexContent = selectedEntries.map(entry => {
-				const plainContent = htmlToPlainText(entry.content || '');
-				const plainTranslationHint = htmlToPlainText(entry.target_content || '');
-				
-				return t('prompt.translate.user.codexEntry', {
-					sourceLanguage: languageForPrompt,
-					title: entry.title,
-					content: plainContent.trim(),
-					targetLanguage: targetLanguage,
-					translation: plainTranslationHint.trim() || t('prompt.translate.user.codexEntryNoTranslation')
-				});
-			}).join('\n\n');
-			
-			codexBlock = t('prompt.translate.user.codexBlock', { codexContent });
+	if (formData.useCodex && context.codexContent) {
+		const plainCodex = htmlToPlainText(context.codexContent);
+		if (plainCodex) {
+			codexBlock = t('prompt.translate.user.codexBlockSimple', { codexContent: plainCodex });
 		}
 	}
 	
@@ -216,7 +101,7 @@ const updatePreview = async (container, context) => {
 	
 	const formData = {
 		instructions: form.elements.instructions.value.trim(),
-		selectedCodexIds: form.elements.codex_entry ? Array.from(form.elements.codex_entry).filter(cb => cb.checked).map(cb => cb.value) : [],
+		useCodex: form.elements.use_codex.checked,
 		contextPairs: parseInt(form.elements.context_pairs.value, 10) || 0,
 		useDictionary: form.elements.use_dictionary.checked
 	};
@@ -249,6 +134,10 @@ const updatePreview = async (container, context) => {
 	let dictionaryContent = '';
 	if (formData.useDictionary) {
 		dictionaryContent = await window.api.getDictionaryContentForAI(context.novelId);
+	}
+	
+	if (formData.useCodex) {
+		previewContext.codexContent = await window.api.codex.get(context.novelId);
 	}
 	
 	try {
@@ -291,6 +180,7 @@ const populateForm = (container, state) => {
 	if (!form) return;
 	form.elements.instructions.value = state.instructions || '';
 	form.elements.context_pairs.value = state.contextPairs !== undefined ? state.contextPairs : 4;
+	form.elements.use_codex.checked = state.useCodex !== undefined ? state.useCodex : defaultState.useCodex;
 	form.elements.use_dictionary.checked = state.useDictionary !== undefined ? state.useDictionary : defaultState.useDictionary;
 };
 
@@ -300,41 +190,9 @@ export const init = async (container, context) => {
 		container.innerHTML = templateHtml;
 		applyTranslationsTo(container);
 		
-		const { selectedText, allCodexEntries, chapterId } = context;
-		
-		// 1. Get text from current selection.
-		let textToScan = selectedText;
-		
-		// 2. Get text from historical pairs (from the previous chapter).
-		const formForDefaults = container.querySelector('#translate-editor-form');
-		const contextPairCount = formForDefaults ? parseInt(formForDefaults.elements.context_pairs.value, 10) : (context.initialState?.contextPairs || defaultState.contextPairs);
-		
-		if (contextPairCount > 0 && chapterId) {
-			try {
-				const pairs = await window.api.getTranslationContext({
-					chapterId: chapterId,
-					pairCount: contextPairCount,
-					selectedText: selectedText
-				});
-				
-				const historyText = pairs.map(p => {
-					const sourceText = htmlToPlainText(p.source || '');
-					const targetText = htmlToPlainText(p.target || '');
-					return sourceText + ' ' + targetText;
-				}).join(' ');
-				textToScan += ' ' + historyText;
-			} catch (error) {
-				console.error('Failed to fetch translation context for codex matching:', error);
-			}
-		}
-		
-		// 3. Find matching codex entries in the combined text
-		const preselectedIds = findCodexIdsInText(textToScan, allCodexEntries);
-		
 		const fullContext = { ...context }; // Create full context for use in updatePreview and rendering
 		
 		populateForm(container, context.initialState || defaultState);
-		renderCodexList(container, fullContext, context.initialState, preselectedIds);
 		
 		const form = container.querySelector('#translate-editor-form');
 		const editDictionaryBtn = container.querySelector('.js-edit-dictionary-btn');

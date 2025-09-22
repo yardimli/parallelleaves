@@ -236,8 +236,6 @@ export function initDictionaryModal(novelId) {
 		}
 	});
 	
-	// MODIFIED: Removed the custom 'showModal' event listener which was not being triggered.
-	
 	// When the modal is closed via the 'X' button or backdrop click, reset the sort state.
 	dictionaryModal.addEventListener('close', () => {
 		currentSort = { sortBy: null, direction: 'asc' }; // Reset sort state on close.
@@ -250,10 +248,9 @@ export function initDictionaryModal(novelId) {
  * @param {'source'|'target'} sourceOrTarget - Indicates if selectedText is for source or target.
  */
 export async function openDictionaryModal(selectedText = '', sourceOrTarget = '') {
-	if (!dictionaryModal) return; // MODIFIED: Added guard clause for safety.
+	if (!dictionaryModal) return;
 	
 	try {
-		// MODIFICATION START: Refactored logic for efficiency and clarity.
 		// This new flow fetches data, modifies it in memory, and then renders the table just once.
 		currentSort = { sortBy: null, direction: 'asc' }; // Reset sort state before loading.
 		
@@ -271,7 +268,6 @@ export async function openDictionaryModal(selectedText = '', sourceOrTarget = ''
 		
 		renderDictionaryTable(); // Render the table once with the final data.
 		dictionaryModal.showModal();
-		// MODIFICATION END
 	} catch (error) {
 		console.error('Failed to open or load dictionary modal:', error);
 		window.showAlert(t('common.error') + ': ' + error.message);

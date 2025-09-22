@@ -2,8 +2,8 @@ import { init as initRephraseEditor, buildPromptJson as buildRephraseJson } from
 import { init as initTranslateEditor, buildPromptJson as buildTranslateJson } from './prompt-editors/translate-editor.js';
 import { updateToolbarState as updateChapterToolbarState } from './novel-planner/toolbar.js';
 import { t } from './i18n.js';
-import { htmlToPlainText, processSourceContentForCodexLinks, processSourceContentForMarkers } from '../utils/html-processing.js';
-// Removed: import { getDictionaryContentForAI } from './dictionary/dictionary-modal.js';
+// MODIFIED: Imported utility function to process codex HTML.
+import { htmlToPlainText, processSourceContentForMarkers } from '../utils/html-processing.js';
 
 const editors = {
 	'rephrase': { init: initRephraseEditor },
@@ -15,15 +15,17 @@ const promptBuilders = {
 	'translate': buildTranslateJson
 };
 
+// MODIFIED: The form data extractor now correctly gets the state of the 'use_codex' checkbox
+// instead of looking for a list of selected codex entry IDs, which no longer exists.
 const formDataExtractors = {
 	'rephrase': (form) => ({
 		instructions: form.elements.instructions.value.trim(),
-		selectedCodexIds: form.elements.codex_entry ? Array.from(form.elements.codex_entry).filter(cb => cb.checked).map(cb => cb.value) : [],
+		useCodex: form.elements.use_codex.checked,
 		useDictionary: form.elements.use_dictionary.checked
 	}),
 	'translate': (form) => ({
 		instructions: form.elements.instructions.value.trim(),
-		selectedCodexIds: form.elements.codex_entry ? Array.from(form.elements.codex_entry).filter(cb => cb.checked).map(cb => cb.value) : [],
+		useCodex: form.elements.use_codex.checked,
 		contextPairs: parseInt(form.elements.context_pairs.value, 10) || 0,
 		useDictionary: form.elements.use_dictionary.checked
 	})
@@ -171,7 +173,7 @@ function createFloatingToolbar(from, to, model) {
 }
 
 async function startAiAction(params) {
-	const { prompt, model, openingMarker, closingMarker, dictionaryContent } = params; // Modified: Changed marker to opening/closing markers.
+	const { prompt, model, openingMarker, closingMarker, dictionaryContent } = params;
 	
 	isAiActionActive = true;
 	if (currentEditorInterface.type === 'iframe') {
@@ -189,7 +191,6 @@ async function startAiAction(params) {
 			newContentText = newContentText.trim();
 			
 			let newContentHtml;
-			// Modified: Wrap translated text with both opening and closing markers.
 			const textWithMarkers = openingMarker && closingMarker
 				? `${openingMarker} ${newContentText} ${closingMarker}`
 				: newContentText;
@@ -381,6 +382,20 @@ async function handleModalApply() {
 		wordsAfter: selectionInfo.wordsAfter
 	};
 	
+	// MODIFIED: If 'useCodex' is checked, fetch the codex content and add it to the prompt context.
+	if (formDataObj.useCodex) {
+		const novelId = currentContext.novelId;
+		if (novelId) {
+			try {
+				const codexHtml = await window.api.codex.get(novelId);
+				promptContext.codexContent = htmlToPlainText(codexHtml);
+			} catch (error) {
+				console.error('Failed to fetch codex content for prompt:', error);
+				// Proceed without codex content if it fails
+			}
+		}
+	}
+	
 	if (action === 'translate' && formDataObj.contextPairs > 0) {
 		try {
 			const chapterId = currentContext.chapterId;
@@ -403,7 +418,6 @@ async function handleModalApply() {
 		dictionaryContent = await window.api.getDictionaryContentForAI(novelId); // Fetch dictionary content from backend via IPC
 	}
 	
-	// Modified: Calculate and insert opening and closing translation markers.
 	let openingMarker = '';
 	let closingMarker = '';
 	if (action === 'translate') {
@@ -411,7 +425,6 @@ async function handleModalApply() {
 		
 		let highestNum = 0;
 		if (allContentResult.success) {
-			// Find the highest number from both opening [[#...]] and closing {{#...}} markers.
 			highestNum = await window.api.findHighestMarkerNumber(allContentResult.combinedHtml, '');
 		} else {
 			console.error('Could not fetch all novel content for marker generation:', allContentResult.message);
@@ -422,7 +435,6 @@ async function handleModalApply() {
 		openingMarker = `[[#${newMarkerNum}]]`;
 		closingMarker = `{{#${newMarkerNum}}}`;
 		
-		// Insert both markers into the source text DOM and save it.
 		try {
 			const chapterId = currentContext.chapterId;
 			const sourceContainer = document.querySelector(`#source-chapter-scroll-target-${chapterId} .source-content-readonly`);
@@ -431,36 +443,26 @@ async function handleModalApply() {
 			const openingMarkerNode = document.createTextNode(openingMarker + ' ');
 			const closingMarkerNode = document.createTextNode(' ' + closingMarker);
 			
-			// Use a clone to insert at the end without invalidating the original range's start.
 			const endRange = range.cloneRange();
 			endRange.collapse(false); // end of selection
 			endRange.insertNode(closingMarkerNode);
 			
-			// Now insert the opening marker at the start of the original selection.
 			range.collapse(true); // start of selection
 			range.insertNode(openingMarkerNode);
 			
-			// MODIFICATION START: Corrected non-destructive save logic.
-			// Get the updated HTML directly from the container after DOM manipulation.
 			const updatedHtmlContent = sourceContainer.innerHTML;
 			
-			// Persist the updated HTML (with markers) to the database.
 			await window.api.updateChapterField({
 				chapterId: chapterId,
 				field: 'source_content',
 				value: updatedHtmlContent
 			});
 			
-			// Re-render the source content in the UI to add links to the new markers.
-			const allCodexEntries = currentContext.allCodexEntries;
-			let processedHtml = processSourceContentForCodexLinks(updatedHtmlContent, allCodexEntries);
-			processedHtml = processSourceContentForMarkers(processedHtml);
+			const processedHtml = processSourceContentForMarkers(updatedHtmlContent);
 			
 			sourceContainer.innerHTML = processedHtml;
-			// MODIFICATION END
 		} catch (e) {
 			console.error('Could not insert markers into source text:', e);
-			// If this fails, proceed without markers to not break translation.
 			openingMarker = '';
 			closingMarker = '';
 		}

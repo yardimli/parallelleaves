@@ -253,7 +253,6 @@ function createEditorView (mount, config) {
 				// Check if the click is inside a text-containing block.
 				if (parentNode.isTextblock) {
 					const textContent = parentNode.textContent;
-					// MODIFICATION START: Updated regex to find both marker types.
 					const markerRegex = /\[\[#(\d+)\]\]|\{\{#(\d+)\}\}/g;
 					let match;
 					
@@ -271,7 +270,6 @@ function createEditorView (mount, config) {
 							break; // Found the clicked marker, no need to check others.
 						}
 					}
-					// MODIFICATION END
 				}
 				
 				return false; // Let ProseMirror handle the click as well for cursor placement.

@@ -42,9 +42,6 @@ export function updateToolbarState(newState) {
 				case 'redo':
 					btn.disabled = !newState.canRedo;
 					break;
-				case 'create_codex':
-					btn.disabled = !newState.isTextSelected;
-					break;
 				case 'bold':
 					btn.classList.toggle('active', newState.activeMarks.includes('strong'));
 					break;
@@ -61,10 +58,10 @@ export function updateToolbarState(newState) {
 					btn.classList.toggle('active', newState.activeNodes.includes('blockquote'));
 					break;
 				case 'bullet_list':
-					btn.classList.toggle('active', newState.activeNodes.includes('bullet_list'));
+					btn.classList.toggle('active', newState.activeMarks.includes('bullet_list'));
 					break;
 				case 'ordered_list':
-					btn.classList.toggle('active', newState.activeNodes.includes('ordered_list'));
+					btn.classList.toggle('active', newState.activeMarks.includes('ordered_list'));
 					break;
 			}
 			if (btn.closest('.js-dropdown-container')) {
@@ -205,13 +202,11 @@ async function handleToolbarAction(button) {
 		
 		const chapterId = toolbarConfig.getActiveChapterId ? toolbarConfig.getActiveChapterId() : null;
 		
-		const allCodexEntries = await window.api.getAllCodexEntriesForNovel(novelId);
-		
 		const context = {
 			selectedText: selectionInfo.selectedText,
 			wordsBefore: selectionInfo.wordsBefore,
 			wordsAfter: selectionInfo.wordsAfter,
-			allCodexEntries,
+			// MODIFIED: Removed the allCodexEntries key as it's no longer used this way.
 			languageForPrompt: novelData.target_language || 'English',
 			activeEditorView: activeContentWindow,
 			editorInterface: editorInterface,
@@ -229,15 +224,7 @@ async function handleToolbarAction(button) {
 	const command = button.dataset.command;
 	
 	if (command) {
-		if (command === 'create_codex') {
-			if (!currentToolbarState.isTextSelected) return;
-			const novelId = document.body.dataset.novelId;
-			if (novelId && currentToolbarState.selectionText) {
-				window.api.openNewCodexEditor({ novelId, selectedText: currentToolbarState.selectionText });
-			}
-		} else {
-			applyCommand(command);
-		}
+		applyCommand(command);
 	} else if (button.classList.contains('js-highlight-option')) {
 		applyHighlight(button.dataset.bg.replace('highlight-', ''));
 		if (document.activeElement) document.activeElement.blur();

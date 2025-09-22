@@ -158,12 +158,6 @@ i[class^="bi-"], i[class*=" bi-"] {
 }
 */
 
-.codex-link {
-    @apply text-teal-600 dark:text-teal-400 font-semibold border-b border-dotted border-teal-600/50 dark:border-teal-400/50 hover:bg-teal-500/10;
-    text-decoration: none !important; /* Override prose styles */
-    cursor: pointer;
-}
-
 .translation-marker-link {
     @apply text-purple-600 dark:text-purple-400 font-mono border-b border-dotted border-purple-600/50 dark:border-purple-400/50 hover:bg-purple-500/10;
     text-decoration: none !important; /* Override prose styles */

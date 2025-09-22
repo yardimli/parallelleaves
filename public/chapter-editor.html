@@ -116,10 +116,6 @@
 	</div>
 	<div class="divider divider-horizontal mx-0"></div>
 	<div class="flex items-center gap-1">
-		<button type="button" class="js-toolbar-btn btn btn-ghost btn-sm btn-square" data-command="create_codex"
-		        data-i18n-title="editor.createCodex" disabled>
-			<i class="bi bi-journal-plus text-lg"></i>
-		</button>
 		<button type="button" id="js-open-dictionary-btn" class="btn btn-ghost btn-sm btn-square" data-i18n-title="prompt.common.dictionary">
 			<i class="bi bi-book text-lg"></i>
 		</button>
@@ -254,7 +250,8 @@
 			<div class="flex items-center gap-4">
 				<button type="button" class="js-toggle-preview-btn btn btn-ghost" data-i18n="editor.showPreview">Show Preview</button>
 				<select class="js-llm-model-select select select-bordered select-sm w-full max-w-xs">
-					<option disabled selected data-i18n="outline.autoGenModal.loadingModels">Loading models...</option>
+					<!-- MODIFIED: Changed i18n key from outline to a more generic one -->
+					<option disabled selected data-i18n="editor.chat.loadingModels">Loading models...</option>
 				</select>
 				<button type="button" class="js-prompt-apply-btn btn btn-accent" data-i18n="editor.applyChanges">Apply Changes</button>
 			</div>
@@ -451,19 +448,6 @@
 	</div>
 </dialog>
 
-<dialog id="codex-welcome-modal" class="modal">
-	<div class="modal-box w-11/12 max-w-lg">
-		<h3 class="font-bold text-lg" data-i18n="editor.codexWelcomeModal.title"></h3>
-		<p class="py-4" data-i18n="editor.codexWelcomeModal.description"></p>
-		<div class="modal-action">
-			<form method="dialog" class="flex gap-3 w-full">
-				<button class="btn flex-1" data-i18n="editor.codexWelcomeModal.laterButton"></button>
-				<button id="codex-welcome-create-btn" type="button" class="btn btn-primary flex-1" data-i18n="editor.codexWelcomeModal.createButton"></button>
-			</form>
-		</div>
-	</div>
-</dialog>
-
 <dialog id="dictionary-modal" class="modal">
 	<div class="modal-box w-11/12 max-w-2xl h-[90vh] flex flex-col p-0">
 		<!-- Header Section -->
@@ -528,7 +512,6 @@
 	</div>
 </dialog>
 
-<!-- MODIFICATION START: Added generic modals for confirmation and text input -->
 <dialog id="confirmation-modal" class="modal">
 	<div class="modal-box w-11/12 max-w-md">
 		<h3 id="confirmation-modal-title" class="font-bold text-lg"></h3>
@@ -561,7 +544,6 @@
 		</div>
 	</div>
 </dialog>
-<!-- MODIFICATION END -->
 
 <script src="../src/js/theme.js"></script>
 <script type="module" src="../dist/chapter-editor-bundle.js"></script>

@@ -109,7 +109,8 @@
       "chapters": "Chapters",
       "created": "Created:",
       "updated": "Updated:",
-      "backupProject": "Backup Project"
+      "backupProject": "Backup Project",
+      "codex": "Codex"
     },
     "update": {
       "title": "Update Available",
@@ -159,32 +160,33 @@
       "results": "{count} chapters and acts detected."
     }
   },
-  "outline": {
-    "loading": "Loading Outline...",
-    "codex": "Codex",
-    "autoGenerate": "Auto-generate",
-    "newEntry": "New Entry",
-    "autoGenModal": {
-      "title": "Auto-generate Codex Entries",
-      "description": "This tool will scan your entire novel's source text to automatically create and update codex entries. This process can take several minutes and may consume a significant amount of AI credits, depending on the length of your novel.",
-      "selectModel": "Select AI Model",
-      "loadingModels": "Loading models...",
-      "progress": "Progress",
-      "initializing": "Initializing...",
-      "start": "Start Generation",
-      "errorLoadModels": "Error loading models",
-      "errorLoadTool": "Could not load the tool. {message}",
-      "alertSelectModel": "Please select an AI model."
-    },
-    "noSections": "No sections in this project yet.",
-    "noChapters": "No chapters in this section yet.",
-    "noSummary": "No summary.",
-    "noCodexEntries": "No codex entries in this project yet.",
-    "noEntriesInCategory": "No entries in this category yet.",
-    "errorProjectMissing": "Error: Project ID is missing.",
-    "errorLoad": "Error: Could not load outline data. {message}",
-    "chapterLabel_one": "chapter",
-    "chapterLabel_other": "chapters",
+  "codex": {
+    "viewer": {
+      "title": "Codex: {novelTitle}",
+      "loadingTitle": "Parallel Leaves - Codex",
+      "loading": "Loading Codex...",
+      "codex": "Codex",
+      "autoGenerate": "Auto-generate",
+      "saved": "Saved",
+      "saving": "Saving...",
+      "saveError": "Save Error",
+      "errorProjectMissing": "Error: Project ID is missing.",
+      "errorLoad": "Error: Could not load codex data. {message}",
+      "autoGenModal": {
+        "title": "Auto-generate Codex Entries",
+        "description": "This tool will scan your entire novel's source text to automatically create and update codex entries. This process can take several minutes and may consume a significant amount of AI credits, depending on the length of your novel.",
+        "selectModel": "Select AI Model",
+        "loadingModels": "Loading models...",
+        "progress": "Progress",
+        "initializing": "Initializing...",
+        "start": "Start Generation",
+        "errorLoadModels": "Error loading models",
+        "errorLoadTool": "Could not load the tool. {message}",
+        "alertSelectModel": "Please select an AI model."
+      }
+    }
+  },
+  "export": {
     "exportDocx": "Export to DOCX",
     "exportSuccessTitle": "Export Successful",
     "exportSuccessMessage": "Your novel '{title}' has been successfully exported.",
@@ -350,6 +352,7 @@
       "dictionaryHelp": "Provide a custom dictionary or glossary for the AI. One entry per line, e.g., 'Character Name = Translated Name'.",
       "useDictionary": "Use Custom Dictionary",
       "editDictionary": "Edit Dictionary",
+      "useCodex": "Use Codex Entries",
       "user": {
         "dictionaryBlock": "Take into account the following custom dictionary:\n<dictionary>\n{dictionaryContent}\n</dictionary>"
       }
@@ -362,7 +365,6 @@
       "contextInfo": "Contextual Information",
       "contextHelp": "Relevant contextual information is automatically sent to the AI for the best results.",
       "loadingCodex": "Loading codex entries...",
-      "useCodex": "Use Codex Entries",
       "system": {
         "base": "You are an expert prose editor.\n\nWhenever you're given text, rephrase it using the following instructions: <instructions>{instructions}</instructions>\n\nImitiate and keep the current writing style, and leave mannerisms, word choice and sentence structure intact.\nYou are free to remove redundant lines of speech. Keep the same tense and stylistic choices. Use {language} spelling and grammar.\n\nOnly return the rephrased text, nothing else.",
         "defaultInstruction": "Rephrase the given text."
@@ -383,7 +385,6 @@
       "contextInfo": "Contextual Information",
       "contextHelp": "Relevant contextual information (like glossary entries) can be sent to the AI for better translations.",
       "loadingCodex": "Loading codex entries...",
-      "useCodex": "Use Codex Entries as Glossary",
       "prevPairs": "Previous Translation Pairs",
       "prevPairsHelp": "Include N previous translation blocks as context for the AI. (0 to disable)",
       "system": {

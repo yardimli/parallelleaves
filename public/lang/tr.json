@@ -109,7 +109,8 @@
       "chapters": "Bölümler",
       "created": "Oluşturuldu:",
       "updated": "Güncellendi:",
-      "backupProject": "Projeyi Yedekle"
+      "backupProject": "Projeyi Yedekle",
+      "codex": "Kodeks"
     },
     "update": {
       "title": "Güncelleme Mevcut",
@@ -159,32 +160,33 @@
       "results": "{count} bölüm ve perde algılandı."
     }
   },
-  "outline": {
-    "loading": "Özet Yükleniyor...",
-    "codex": "Kodeks",
-    "autoGenerate": "Otomatik Oluştur",
-    "newEntry": "Yeni Kayıt",
-    "autoGenModal": {
-      "title": "Kodeks Kayıtlarını Otomatik Oluştur",
-      "description": "Bu araç, romanınızın kaynak metnini analiz ederek kodeks kayıtlarını otomatik olarak oluşturur. Romanın uzunluğuna bağlı olarak bu işlem birkaç dakika sürebilir ve önemli miktarda yapay zeka kredisi kullanabilir.",
-      "selectModel": "Model Seçin",
-      "loadingModels": "Modeller yükleniyor...",
-      "progress": "İlerleme",
-      "initializing": "Başlatılıyor...",
-      "start": "Oluşturmayı Başlat",
-      "errorLoadModels": "Modeller yüklenirken bir hata oluştu.",
-      "errorLoadTool": "Araç yüklenemedi. {message}",
-      "alertSelectModel": "Lütfen bir model seçin."
-    },
-    "noSections": "Bu projede henüz hiç bölüm yok.",
-    "noChapters": "Bu kısımda henüz hiç bölüm yok.",
-    "noSummary": "Özet yok.",
-    "noCodexEntries": "Bu projede henüz hiç kodeks kaydı yok.",
-    "noEntriesInCategory": "Bu kategoride henüz hiç kayıt yok.",
-    "errorProjectMissing": "Hata: Proje kimliği bulunamadı.",
-    "errorLoad": "Hata: Özet verileri yüklenemedi. {message}",
-    "chapterLabel_one": "bölüm",
-    "chapterLabel_other": "bölüm",
+  "codex": {
+    "viewer": {
+      "title": "Kodeks: {novelTitle}",
+      "loadingTitle": "Parallel Leaves - Kodeks",
+      "loading": "Kodeks Yükleniyor...",
+      "codex": "Kodeks",
+      "autoGenerate": "Otomatik Oluştur",
+      "saved": "Kaydedildi",
+      "saving": "Kaydediliyor...",
+      "saveError": "Kayıt Hatası",
+      "errorProjectMissing": "Hata: Proje kimliği bulunamadı.",
+      "errorLoad": "Hata: Kodeks verileri yüklenemedi. {message}",
+      "autoGenModal": {
+        "title": "Kodeks Kayıtlarını Otomatik Oluştur",
+        "description": "Bu araç, romanınızın kaynak metnini analiz ederek kodeks kayıtlarını otomatik olarak oluşturur. Romanın uzunluğuna bağlı olarak bu işlem birkaç dakika sürebilir ve önemli miktarda yapay zeka kredisi kullanabilir.",
+        "selectModel": "Model Seçin",
+        "loadingModels": "Modeller yükleniyor...",
+        "progress": "İlerleme",
+        "initializing": "Başlatılıyor...",
+        "start": "Oluşturmayı Başlat",
+        "errorLoadModels": "Modeller yüklenirken bir hata oluştu.",
+        "errorLoadTool": "Araç yüklenemedi. {message}",
+        "alertSelectModel": "Lütfen bir model seçin."
+      }
+    }
+  },
+  "export": {
     "exportDocx": "DOCX Olarak Dışa Aktar",
     "exportSuccessTitle": "Dışa Aktarma Başarılı",
     "exportSuccessMessage": "'{title}' adlı romanınız başarıyla dışa aktarıldı.",
@@ -350,6 +352,7 @@
       "dictionaryHelp": "Yapay zeka için özel bir sözlük veya terimler listesi sağlayın. Her satıra bir girdi, örn: 'Karakter Adı = Çevrilmiş Adı'.",
       "useDictionary": "Özel Sözlük Kullan",
       "editDictionary": "Sözlüğü Düzenle",
+      "useCodex": "Kodeks Kayıtlarını Kullan",
       "user": {
         "dictionaryBlock": "Take into account the following custom dictionary:\n<dictionary>\n{dictionaryContent}\n</dictionary>"
       }
@@ -362,7 +365,6 @@
       "contextInfo": "Bağlam Bilgisi",
       "contextHelp": "En iyi sonuçlar için ilgili bağlam bilgileri yapay zekaya otomatik olarak gönderilir.",
       "loadingCodex": "Kodeks kayıtları yükleniyor...",
-      "useCodex": "Use Codex Entries",
       "system": {
         "base": "You are an expert prose editor.\n\nWhenever you're given text, rephrase it using the following instructions: <instructions>{instructions}</instructions>\n\nImitiate and keep the current writing style, and leave mannerisms, word choice and sentence structure intact.\nYou are free to remove redundant lines of speech. Keep the same tense and stylistic choices. Use {language} spelling and grammar.\n\nOnly return the rephrased text, nothing else.",
         "defaultInstruction": "Rephrase the given text."
@@ -383,7 +385,6 @@
       "contextInfo": "Bağlam Bilgisi",
       "contextHelp": "Daha iyi çeviri için ilgili bağlam bilgileri (kodeks kayıtları gibi) yapay zekaya gönderilebilir.",
       "loadingCodex": "Kodeks kayıtları yükleniyor...",
-      "useCodex": "Kodeks Kayıtlarını Çeviri Rehberi Olarak Kullan",
       "prevPairs": "Önceki Çeviriler",
       "prevPairsHelp": "Yapay zekaya bağlam sağlamak için önceki N çeviri bloğunu dahil et. (Kapatmak için 0 girin).",
       "system": {
