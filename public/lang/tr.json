@@ -355,6 +355,9 @@
       "useDictionary": "Özel Sözlük Kullan",
       "editDictionary": "Sözlüğü Düzenle",
       "useCodex": "Kodeks Kayıtlarını Kullan",
+      "tense": "Zaman",
+      "past": "Geçmiş",
+      "present": "Şimdiki",
       "user": {
         "dictionaryBlock": "Take into account the following custom dictionary:\n<dictionary>\n{dictionaryContent}\n</dictionary>"
       }
@@ -368,8 +371,9 @@
       "contextHelp": "En iyi sonuçlar için ilgili bağlam bilgileri yapay zekaya otomatik olarak gönderilir.",
       "loadingCodex": "Kodeks kayıtları yükleniyor...",
       "system": {
-        "base": "You are an expert prose editor.\n\nWhenever you're given text, rephrase it using the following instructions: <instructions>{instructions}</instructions>\n\nImitiate and keep the current writing style, and leave mannerisms, word choice and sentence structure intact.\nYou are free to remove redundant lines of speech. Keep the same tense and stylistic choices. Use {language} spelling and grammar.\n\nOnly return the rephrased text, nothing else.",
-        "defaultInstruction": "Rephrase the given text."
+        "base": "You are an expert prose editor.\n\nWhenever you're given text, rephrase it using the following instructions: <instructions>{instructions}</instructions>\n\n{tenseBlock}\nImitate and keep the current writing style, and leave mannerisms, word choice and sentence structure intact.\nYou are free to remove redundant lines of speech. Use {language} spelling and grammar.\n\nOnly return the rephrased text, nothing else.",
+        "defaultInstruction": "Rephrase the given text.",
+        "tenseInstruction": "Write in the {tense} tense. "
       },
       "user": {
         "codexBlock": "Take into account the following glossary of characters/locations/items/lore... when writing your response:\n<codex>\n{codexContent}\n</codex>",
@@ -390,8 +394,9 @@
       "prevPairs": "Önceki Çeviriler",
       "prevPairsHelp": "Yapay zekaya bağlam sağlamak için önceki N çeviri bloğunu dahil et. (Kapatmak için 0 girin).",
       "system": {
-        "base": "You are an expert literary translator. Your task is to translate a text from {sourceLanguage} to {targetLanguage}.\nPreserve the original tone, style, and literary devices as much as possible. Maintain the original paragraph breaks.\n\n{instructionsBlock}\n\nOnly return the translated text, nothing else.",
-        "instructionsBlock": "Follow these specific instructions: <instructions>{instructions}</instructions>"
+        "base": "You are an expert literary translator. Your task is to translate a text from {sourceLanguage} to {targetLanguage}.\n{tenseBlock}\nPreserve the original tone, style, and literary devices as much as possible. Maintain the original paragraph breaks.\n\n{instructionsBlock}\n\nOnly return the translated text, nothing else.",
+        "instructionsBlock": "Follow these specific instructions: <instructions>{instructions}</instructions>",
+        "tenseInstruction": "Translate in the {tense} tense. "
       },
       "user": {
         "codexBlock": "Use the following glossary for consistent translation of key terms. Do not translate the terms literally if the glossary provides a specific translation or context.\n<glossary>\n{codexContent}\n</glossary>",

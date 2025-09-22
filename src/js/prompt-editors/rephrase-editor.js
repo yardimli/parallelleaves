@@ -14,6 +14,7 @@ const debounce = (func, delay) => {
 
 const defaultState = { // Default state for the rephrase editor form
 	instructions: '',
+	tense: 'past', // New: Default tense
 	useCodex: true,
 	useDictionary: false
 };
@@ -36,8 +37,13 @@ export const buildPromptJson = (formData, context, dictionaryContent = '') => {
 	const { selectedText, wordCount, languageForPrompt, wordsBefore, wordsAfter } = context;
 	
 	const instructions = formData.instructions || t('prompt.rephrase.system.defaultInstruction');
+	
+	// New: Build the tense instruction block
+	const tenseBlock = t('prompt.rephrase.system.tenseInstruction', { tense: formData.tense });
+	
 	const system = t('prompt.rephrase.system.base', {
 		instructions: instructions,
+		tenseBlock: tenseBlock, // New: Insert tense block
 		language: languageForPrompt || 'English'
 	});
 	
@@ -81,6 +87,7 @@ const updatePreview = async (container, context) => {
 	
 	const formData = {
 		instructions: form.elements.instructions.value.trim(),
+		tense: form.elements.tense.value, // New: Get tense from hidden input
 		useCodex: form.elements.use_codex.checked,
 		useDictionary: form.elements.use_dictionary.checked
 	};
@@ -113,13 +120,26 @@ const updatePreview = async (container, context) => {
 	}
 };
 
-const populateForm = (container, state) => {
+const populateForm = (container, state, novelId) => {
 	const form = container.querySelector('#rephrase-editor-form');
 	if (!form) return;
+	
+	// New: Get tense preference from localStorage
+	const storageKey = `tense-preference-${novelId}-rephrase`;
+	const savedTense = localStorage.getItem(storageKey);
+	
+	const tense = state.tense || savedTense || defaultState.tense;
 	
 	form.elements.instructions.value = state.instructions || '';
 	form.elements.use_codex.checked = state.useCodex !== undefined ? state.useCodex : defaultState.useCodex;
 	form.elements.use_dictionary.checked = state.useDictionary !== undefined ? state.useDictionary : defaultState.useDictionary;
+	
+	// New: Set tense UI
+	form.elements.tense.value = tense;
+	const tenseButtons = form.querySelectorAll('.js-tense-btn');
+	tenseButtons.forEach(btn => {
+		btn.classList.toggle('btn-active', btn.dataset.tense === tense);
+	});
 };
 
 export const init = async (container, context) => {
@@ -131,13 +151,13 @@ export const init = async (container, context) => {
 		const wordCount = context.selectedText ? context.selectedText.trim().split(/\s+/).filter(Boolean).length : 0;
 		const fullContext = { ...context, wordCount };
 		
-		populateForm(container, context.initialState || defaultState);
+		populateForm(container, context.initialState || defaultState, context.novelId);
 		
 		const form = container.querySelector('#rephrase-editor-form');
 		const editDictionaryBtn = container.querySelector('.js-edit-dictionary-btn');
 		
 		if (editDictionaryBtn) {
-			editDictionaryBtn.addEventListener('click', openDictionaryModal);
+			editDictionaryBtn.addEventListener('click', () => openDictionaryModal(context.novelId));
 		}
 		
 		// Debounce the preview update to prevent sluggishness on input.
@@ -150,6 +170,31 @@ export const init = async (container, context) => {
 				// Debounce the expensive preview update.
 				debouncedUpdatePreview();
 			});
+			
+			// New: Add event listener for tense buttons
+			const tenseGroup = form.querySelector('.js-tense-group');
+			if (tenseGroup) {
+				tenseGroup.addEventListener('click', (e) => {
+					const button = e.target.closest('.js-tense-btn');
+					if (!button) return;
+					
+					const newTense = button.dataset.tense;
+					
+					// Update UI
+					tenseGroup.querySelectorAll('.js-tense-btn').forEach(btn => btn.classList.remove('btn-active'));
+					button.classList.add('btn-active');
+					
+					// Update hidden input
+					form.elements.tense.value = newTense;
+					
+					// Save preference to localStorage
+					const storageKey = `tense-preference-${context.novelId}-rephrase`;
+					localStorage.setItem(storageKey, newTense);
+					
+					// Trigger preview update
+					debouncedUpdatePreview();
+				});
+			}
 		}
 		
 		await updatePreview(container, fullContext);
