@@ -510,7 +510,7 @@ async function renderManuscript(novelData, allCodexEntries) {
             `;
 			
 			const iframe = document.createElement('iframe');
-			iframe.className = 'js-target-content-editable w-full border-0 min-h-[300px]';
+			iframe.className = 'js-target-content-editable w-full border-0 min-h-[100px]';
 			iframe.src = 'editor-iframe.html';
 			iframe.dataset.chapterId = chapter.id;
 			targetCol.appendChild(iframe);

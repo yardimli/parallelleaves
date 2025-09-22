@@ -120,7 +120,7 @@ const postToParent = (type, payload) => {
 const sendResize = () => {
 	// Use a small timeout to allow the DOM to render before calculating height
 	setTimeout(() => {
-		const height = document.body.scrollHeight + 200;
+		const height = document.body.scrollHeight + 75;
 		console.log('Sending resize height:', height);
 		postToParent('resize', { height });
 	}, 50);
