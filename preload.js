@@ -28,7 +28,9 @@ contextBridge.exposeInMainWorld('api', {
 	openEditor: (novelId) => ipcRenderer.send('novels:openEditor', novelId),
 	openCodex: (novelId) => ipcRenderer.send('novels:openCodex', novelId),
 	startCodexAutogen: (data) => ipcRenderer.send('autogen:start-codex-generation', data),
+	stopCodexAutogen: () => ipcRenderer.send('autogen:stop-codex-generation'),
 	onCodexAutogenUpdate: (callback) => ipcRenderer.on('autogen:progress-update', callback),
+	onCodexAutogenFinished: (callback) => ipcRenderer.on('autogen:process-finished', callback),
 	codex: {
 		get: (novelId) => ipcRenderer.invoke('codex:get', novelId),
 		save: (data) => ipcRenderer.invoke('codex:save', data),

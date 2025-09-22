@@ -206,7 +206,6 @@ async function handleToolbarAction(button) {
 			selectedText: selectionInfo.selectedText,
 			wordsBefore: selectionInfo.wordsBefore,
 			wordsAfter: selectionInfo.wordsAfter,
-			// MODIFIED: Removed the allCodexEntries key as it's no longer used this way.
 			languageForPrompt: novelData.target_language || 'English',
 			activeEditorView: activeContentWindow,
 			editorInterface: editorInterface,

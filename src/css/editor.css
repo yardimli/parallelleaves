@@ -99,7 +99,7 @@ i[class^="bi-"], i[class*=" bi-"] {
 }
 
 /* Styles for the Import Document page */
-#document-content-wrapper.prose { /* Override to make the content area full-width */
+#document-content-wrapper.prose, .js-pm-container.prose { /* Override to make the content area full-width */
     max-width: none !important;
 }
 

@@ -59,6 +59,36 @@ const debouncedSave = debounce(async () => {
 	}
 }, 1500);
 
+/**
+ * NEW: Fetches the latest codex content and updates the editor without a full page reload.
+ */
+async function reloadCodexContent() {
+	if (!editorView || !novelId) return;
+	
+	try {
+		const newHtmlContent = await window.api.codex.get(novelId);
+		const newDoc = DOMParser.fromSchema(codexSchema).parse(document.createRange().createContextualFragment(newHtmlContent));
+		
+		// Create a new state with the new document but preserve plugins
+		const newState = EditorState.create({
+			doc: newDoc,
+			plugins: editorView.state.plugins
+		});
+		
+		// Update the view with the new state
+		editorView.updateState(newState);
+		
+		// Also update the word count
+		updateTotalWordCount();
+		
+		const statusEl = document.getElementById('js-save-status');
+		if (statusEl) statusEl.textContent = t('codex.viewer.saved');
+	} catch (error) {
+		console.error('Failed to reload codex content:', error);
+		window.showAlert(t('codex.viewer.errorLoad', { message: error.message }));
+	}
+}
+
 function updateTotalWordCount() {
 	if (!editorView) return;
 	const text = editorView.state.doc.textContent;
@@ -233,7 +263,7 @@ function setupEditor(mount, initialContent) {
 		dispatchTransaction(transaction) {
 			const newState = this.state.apply(transaction);
 			this.updateState(newState);
-
+			
 			updateToolbarState(this);
 			if (transaction.docChanged) {
 				debouncedSave();
@@ -294,6 +324,15 @@ async function setupAutogenCodex(novelId) {
 		if (actionButtons) actionButtons.classList.add('hidden');
 		if (progressSection) progressSection.classList.remove('hidden');
 		
+		const stopBtn = form.querySelector('#js-autogen-stop-btn');
+		if (stopBtn) {
+			stopBtn.addEventListener('click', () => {
+				window.api.stopCodexAutogen();
+				stopBtn.disabled = true;
+				stopBtn.textContent = t('stopping...'); // Visual feedback
+			}, { once: true });
+		}
+		
 		window.api.startCodexAutogen({ novelId, model });
 	});
 	
@@ -303,14 +342,18 @@ async function setupAutogenCodex(novelId) {
 		
 		if (progressBar) progressBar.value = progress;
 		if (statusText) statusText.textContent = statusKey ? t(statusKey) : status;
+	});
+	
+	window.api.onCodexAutogenFinished((event, { status }) => {
+		if (modal.open) {
+			modal.close();
+		}
 		
-		if (progress >= 100) {
+		// Reload the codex content in the editor if the process was not an error.
+		if (status === 'complete' || status === 'cancelled') {
 			setTimeout(() => {
-				if (modal.open) modal.close();
-				if (!status.toLowerCase().includes('error')) {
-					window.location.reload();
-				}
-			}, 2000);
+				reloadCodexContent();
+			}, 500); // A small delay to ensure the file system has caught up.
 		}
 	});
 }
@@ -329,7 +372,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 	try {
 		const novel = await window.api.getOneNovel(novelId);
 		document.title = t('codex.viewer.title', { novelTitle: novel.title });
-		document.getElementById('js-novel-title').textContent = novel.title;
 		
 		const initialContent = await window.api.codex.get(novelId);
 		const editorMount = document.querySelector('.js-editable');

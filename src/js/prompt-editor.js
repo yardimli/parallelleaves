@@ -2,7 +2,6 @@ import { init as initRephraseEditor, buildPromptJson as buildRephraseJson } from
 import { init as initTranslateEditor, buildPromptJson as buildTranslateJson } from './prompt-editors/translate-editor.js';
 import { updateToolbarState as updateChapterToolbarState } from './novel-planner/toolbar.js';
 import { t } from './i18n.js';
-// MODIFIED: Imported utility function to process codex HTML.
 import { htmlToPlainText, processSourceContentForMarkers } from '../utils/html-processing.js';
 
 const editors = {
@@ -15,8 +14,6 @@ const promptBuilders = {
 	'translate': buildTranslateJson
 };
 
-// MODIFIED: The form data extractor now correctly gets the state of the 'use_codex' checkbox
-// instead of looking for a list of selected codex entry IDs, which no longer exists.
 const formDataExtractors = {
 	'rephrase': (form) => ({
 		instructions: form.elements.instructions.value.trim(),
@@ -382,7 +379,6 @@ async function handleModalApply() {
 		wordsAfter: selectionInfo.wordsAfter
 	};
 	
-	// MODIFIED: If 'useCodex' is checked, fetch the codex content and add it to the prompt context.
 	if (formDataObj.useCodex) {
 		const novelId = currentContext.novelId;
 		if (novelId) {

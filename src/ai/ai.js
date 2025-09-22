@@ -128,44 +128,48 @@ async function generateCoverImageViaProxy({ prompt, token }) {
 }
 
 /**
- * Analyzes a text chunk to create codex entries as an HTML string.
+ * Analyzes a text chunk to create or update codex entries as an HTML string.
  * @param {object} params - The parameters for generation.
  * @param {string} params.textChunk - A chunk of the novel text.
  * @param {string} params.existingCodexHtml - The HTML content of the existing codex file.
- * @param {string} params.language - The language of the novel.
+ * @param {string} params.sourceLanguage - The language of the novel text chunk.
+ * @param {string} params.targetLanguage - The language for the output codex entries.
  * @param {string} params.model - The LLM model to use.
  * @param {string|null} params.token - The user's session token.
- * @returns {Promise<string>} An HTML string containing new codex entries.
+ * @returns {Promise<string>} An HTML string containing new or updated codex entries.
  */
-async function generateCodexFromTextChunk({ textChunk, existingCodexHtml, language, model, token }) {
-	const existingCodexText = htmlToPlainText(existingCodexHtml); // Convert existing HTML to text for context
+async function generateCodexFromTextChunk({ textChunk, existingCodexHtml, sourceLanguage, targetLanguage, model, token }) {
+	const existingCodexText = htmlToPlainText(existingCodexHtml);
 	const prompt = `
-You are a meticulous world-building assistant for a novelist. Your task is to analyze a chunk of text from a novel and identify entities that should be in a codex (an encyclopedia of the world).
+You are a meticulous world-building assistant for a novelist. Your task is to analyze a chunk of text from a novel and update a codex (an encyclopedia of the world).
 
 **Instructions:**
-1.  Read the provided **Text Chunk**.
-2.  Review the **Existing Codex Content** to avoid creating duplicate entries.
+1.  Read the provided **Text Chunk** (written in ${sourceLanguage}).
+2.  Review the **Existing Codex Content** to understand what is already documented.
 3.  Identify new characters, locations, or significant objects/lore within the text chunk.
-4.  For each new entity you identify, write a brief, encyclopedia-style entry.
-5.  Format your entire output as a single block of simple HTML. Use \`<h3>\` for each entity's title and \`<p>\` for its description.
-6.  If you find no new entities worth adding, return an empty string.
-7.  All content should be in the source language: **${language}**.
+4.  Identify if the text chunk provides new information or details about entities that *already exist* in the codex.
+5.  For each new or updated entity, write a brief, encyclopedia-style entry.
+6.  **IMPORTANT:** All your output must be written in **${targetLanguage}**.
+7.  Format your entire output as a single block of simple HTML. Use \`<h3>\` for each entity's title and \`<p>\` for its description.
+8.  If you are updating an existing entry, your new entry should be a complete replacement, incorporating both old and new information.
+9.  Return **only the HTML for the new or updated entries**. Do not repeat entries from the existing codex that were not changed by the new text chunk.
+10. If you find no new or updated entities worth adding, return an empty string.
 
-**Existing Codex Content (for context, do not repeat):**
+**Existing Codex Content (for context):**
 <codex>
-${existingCodexText.substring(0, 4000)}
+${existingCodexText.substring(0, 8000)}
 </codex>
 
-**Text Chunk to Analyze:**
+**Text Chunk to Analyze (in ${sourceLanguage}):**
 <text>
 ${textChunk}
 </text>
 
-**Example HTML Output:**
+**Example HTML Output (in ${targetLanguage}):**
 <h3>Elaria</h3>
 <p>A skilled archer from the Whisperwood, known for her silent movements and keen eye. She assisted Lord Kael during the siege.</p>
 <h3>Shadowfang Keep</h3>
-<p>An ancient fortress located in the northern mountains, now serving as Lord Kael's stronghold. It is known for its imposing black stone walls.</p>
+<p>An ancient fortress located in the northern mountains, now serving as Lord Kael's stronghold. It is known for its imposing black stone walls and a newly discovered secret passage in the east wing.</p>
 `;
 	
 	const response = await callOpenRouter({

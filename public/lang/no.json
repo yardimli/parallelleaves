@@ -27,7 +27,9 @@
     "words": "ord",
     "source": "Kilde",
     "target": "Mål",
-    "unknownAuthor": "Ukjent forfatter"
+    "unknownAuthor": "Ukjent forfatter",
+    "stop": "Stopp",
+    "stopping..." : "Stopper...",
   },
   "dashboard": {
     "title": "Mine oversettelsesprosjekter",
@@ -174,7 +176,7 @@
       "errorLoad": "Feil: Kunne ikke laste codex-data. {message}",
       "autoGenModal": {
         "title": "Autogenerer Codex-oppføringer",
-        "description": "Dette verktøyet vil skanne hele romanens kildetekst for å automatisk opprette og oppdatere codex-oppføringer. Denne prosessen kan ta flere minutter og kan bruke en betydelig mengde AI-kreditter, avhengig av lengden på romanen din.",
+        "description": "Dette verktøyet vil skanne romanens kildetekst for å automatisk opprette og oppdatere codex-oppføringer på prosjektets målspråk. Det analyserer teksten i biter og forbedrer codexen for hvert trinn. Denne prosessen kan ta flere minutter og kan bruke en betydelig mengde AI-kreditter.",
         "selectModel": "Velg AI-modell",
         "loadingModels": "Laster modeller...",
         "progress": "Fremdrift",

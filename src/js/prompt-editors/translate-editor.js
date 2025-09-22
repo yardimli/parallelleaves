@@ -68,7 +68,7 @@ export const buildPromptJson = (formData, context, dictionaryContent = '') => {
 	if (formData.useCodex && context.codexContent) {
 		const plainCodex = htmlToPlainText(context.codexContent);
 		if (plainCodex) {
-			codexBlock = t('prompt.translate.user.codexBlockSimple', { codexContent: plainCodex });
+			codexBlock = t('prompt.translate.user.codexBlock', { codexContent: plainCodex });
 		}
 	}
 	

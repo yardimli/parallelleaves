@@ -331,7 +331,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 				? `<img src="file://${novel.cover_path}?t=${new Date(novel.updated_at).getTime()}" alt="${t('dashboard.metaSettings.altCoverFor', { title: novel.title })}" class="w-full">`
 				: `<img src="./assets/bookcover-placeholder.jpg" alt="${t('dashboard.metaSettings.altNoCover')}" class="w-full h-auto">`;
 			
-			// MODIFIED: Removed the Codex button from the card actions.
 			novelCard.innerHTML = `
                 <figure class="cursor-pointer js-open-editor">${coverHtml}</figure>
                 <div class="card-body flex flex-col flex-grow">
@@ -428,7 +427,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			novelCard.querySelectorAll('.js-open-editor').forEach(el => el.addEventListener('click', () => window.api.openEditor(novel.id)));
 			novelCard.querySelector('.js-prose-settings').addEventListener('click', () => openProseSettingsModal(novel));
 			novelCard.querySelector('.js-meta-settings').addEventListener('click', () => openMetaSettingsModal(novel));
-			// MODIFIED: Removed the event listener for the now-deleted Codex button.
 			novelCard.querySelector('.js-export-docx').addEventListener('click', () => exportNovel(novel.id));
 			novelCard.querySelector('.js-backup-novel').addEventListener('click', () => backupNovel(novel.id, novel.title));
 			

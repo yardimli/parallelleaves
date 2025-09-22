@@ -1069,7 +1069,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 	const novelId = params.get('novelId');
 	const initialChapterId = params.get('chapterId');
 	
-	// MODIFIED: Added event listener for the new Codex button.
 	const openCodexBtn = document.getElementById('js-open-codex-btn');
 	if (openCodexBtn && novelId) {
 		openCodexBtn.addEventListener('click', () => {
@@ -1491,7 +1490,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 						const context = {
 							selectedText: currentSourceSelection.text,
 							sourceSelectionRange: currentSourceSelection.range,
-							// MODIFIED: Removed the allCodexEntries key as it's no longer used this way.
 							languageForPrompt: novelData.source_language || 'English',
 							targetLanguage: novelData.target_language || 'English',
 							activeEditorView: sourceWindow,

@@ -27,7 +27,9 @@
     "words": "sözcük",
     "source": "Kaynak",
     "target": "Hedef",
-    "unknownAuthor": "Yazar Bilinmiyor"
+    "unknownAuthor": "Yazar Bilinmiyor",
+    "stop": "Durdur",
+    "stoping...": "Durduruluyor..."
   },
   "dashboard": {
     "title": "Çeviri Projelerim",
@@ -174,7 +176,7 @@
       "errorLoad": "Hata: Kodeks verileri yüklenemedi. {message}",
       "autoGenModal": {
         "title": "Kodeks Kayıtlarını Otomatik Oluştur",
-        "description": "Bu araç, romanınızın kaynak metnini analiz ederek kodeks kayıtlarını otomatik olarak oluşturur. Romanın uzunluğuna bağlı olarak bu işlem birkaç dakika sürebilir ve önemli miktarda yapay zeka kredisi kullanabilir.",
+        "description": "Bu araç, romanınızın kaynak metnini tarayarak projenizin hedef dilinde kodeks kayıtlarını otomatik olarak oluşturur ve günceller. Metni parçalar halinde analiz eder ve her adımda kodeksi geliştirir. Bu işlem birkaç dakika sürebilir ve önemli miktarda yapay zeka kredisi kullanabilir.",
         "selectModel": "Model Seçin",
         "loadingModels": "Modeller yükleniyor...",
         "progress": "İlerleme",
