@@ -1,7 +1,7 @@
 import { init as initRephraseEditor, buildPromptJson as buildRephraseJson } from './prompt-editors/rephrase-editor.js';
 import { init as initTranslateEditor, buildPromptJson as buildTranslateJson } from './prompt-editors/translate-editor.js';
 import { updateToolbarState as updateChapterToolbarState } from './novel-planner/toolbar.js';
-import { t, applyTranslationsTo } from './i18n.js'; // Modified: Added applyTranslationsTo
+import { t, applyTranslationsTo } from './i18n.js';
 import { htmlToPlainText, processSourceContentForMarkers } from '../utils/html-processing.js';
 
 const editors = {
@@ -40,6 +40,16 @@ let aiActionRange = null;
 let floatingToolbar = null;
 let currentAiParams = null;
 let currentPromptId = null;
+let currentActionMarkers = null; // New: Stores markers for the current AI action.
+
+/**
+ * Escapes special characters in a string for use in a regular expression.
+ * @param {string} str - The string to escape.
+ * @returns {string} The escaped string.
+ */
+function escapeRegex(str) {
+	return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
 function showAiSpinner() {
 	const overlay = document.getElementById('ai-action-spinner-overlay');
@@ -94,6 +104,7 @@ async function cleanupAiAction() {
 	originalFragmentJson = null;
 	aiActionRange = null;
 	currentAiParams = null;
+	currentActionMarkers = null; // Modified: Reset markers on cleanup.
 	
 	if (currentEditorInterface.type === 'iframe') {
 		updateChapterToolbarState(null);
@@ -107,6 +118,40 @@ async function handleFloatyApply() {
 
 async function handleFloatyDiscard() {
 	if (!isAiActionActive || !currentEditorInterface || !originalFragmentJson) return;
+	
+	// New: Logic to remove translation markers from the source text on discard.
+	if (currentActionMarkers && currentActionMarkers.opening) {
+		try {
+			const chapterId = currentContext.chapterId;
+			const sourceContainer = document.querySelector(`#source-chapter-scroll-target-${chapterId} .source-content-readonly`);
+			if (sourceContainer) {
+				let sourceHtml = sourceContainer.innerHTML;
+				
+				// Use regex to robustly remove markers and their surrounding whitespace.
+				// This handles cases where markers might be wrapped in links by processSourceContentForMarkers.
+				const openingMarkerPattern = `(<a[^>]*>\\s*)?${escapeRegex(currentActionMarkers.opening)}(\\s*<\\/a>)?\\s*`;
+				const closingMarkerPattern = `\\s*(<a[^>]*>\\s*)?${escapeRegex(currentActionMarkers.closing)}(\\s*<\\/a>)?`;
+				
+				const openingRegex = new RegExp(openingMarkerPattern, 'g');
+				const closingRegex = new RegExp(closingMarkerPattern, 'g');
+				
+				sourceHtml = sourceHtml.replace(openingRegex, '').replace(closingRegex, '');
+				
+				// Save the cleaned HTML to the database.
+				await window.api.updateChapterField({
+					chapterId: chapterId,
+					field: 'source_content',
+					value: sourceHtml
+				});
+				
+				// Re-render the source content to ensure all links are correctly processed.
+				sourceContainer.innerHTML = processSourceContentForMarkers(sourceHtml);
+			}
+		} catch (error) {
+			console.error('Failed to remove translation markers from source on discard:', error);
+			// Do not block the rest of the discard flow, but log the error.
+		}
+	}
 	
 	await currentEditorInterface.discardAiSuggestion(aiActionRange.from, aiActionRange.to, originalFragmentJson);
 	await cleanupAiAction();
@@ -124,18 +169,10 @@ async function handleFloatyRetry() {
 		floatingToolbar = null;
 	}
 	
-	await currentEditorInterface.discardAiSuggestion(aiActionRange.from, aiActionRange.to, originalFragmentJson);
-	await currentEditorInterface.setEditable(true);
+	// Modified: Call the discard logic which now also handles marker removal.
+	await handleFloatyDiscard();
 	
-	isAiActionActive = false;
-	originalFragmentJson = null;
-	aiActionRange = null;
-	currentAiParams = null;
-	
-	if (currentEditorInterface.type === 'iframe') {
-		updateChapterToolbarState(null);
-	}
-	
+	// Re-open the prompt editor for the user to try again.
 	openPromptEditor(contextForRetry, actionToRetry, previousFormData);
 }
 
@@ -146,11 +183,10 @@ function createFloatingToolbar(from, to, model) {
 	
 	const toolbarEl = document.createElement('div');
 	toolbarEl.id = 'ai-floating-toolbar';
-	// Modified: Added data-i18n and data-i18n-title attributes for translation.
 	toolbarEl.innerHTML = `
-        <button data-action="apply" data-i18n-title="editor.aiToolbar.applyTitle" data-i18n="editor.aiToolbar.apply">Apply</button>
-        <button data-action="retry" data-i18n-title="editor.aiToolbar.retryTitle" data-i18n="editor.aiToolbar.retry">Retry</button>
-        <button data-action="discard" data-i18n-title="editor.aiToolbar.discardTitle" data-i18n="editor.aiToolbar.discard">Discard</button>
+        <button data-action="apply" data-i18n-title="editor.aiToolbar.applyTitle"><i class="bi bi-check-lg"></i> <span data-i18n="editor.aiToolbar.apply">Apply</span></button>
+        <button data-action="retry" data-i18n-title="editor.aiToolbar.retryTitle"><i class="bi bi-arrow-repeat"></i> <span data-i18n="editor.aiToolbar.retry">Retry</span></button>
+        <button data-action="discard" data-i18n-title="editor.aiToolbar.discardTitle"><i class="bi bi-x-lg"></i> <span data-i18n="editor.aiToolbar.discard">Discard</span></button>
         <div class="divider-vertical"></div>
         <span class="text-gray-400">${modelName}</span>
     `;
@@ -158,7 +194,7 @@ function createFloatingToolbar(from, to, model) {
 	document.body.appendChild(toolbarEl);
 	floatingToolbar = toolbarEl;
 	
-	applyTranslationsTo(toolbarEl); // New: Apply translations to the newly created toolbar.
+	applyTranslationsTo(toolbarEl);
 	
 	toolbarEl.style.left = `40%`;
 	toolbarEl.style.top = `20%`;
@@ -197,26 +233,18 @@ async function startAiAction(params) {
 				? `${openingMarker} ${newContentText} ${closingMarker}`
 				: newContentText;
 			
-			// Determine if the original selection was inline content.
-			// A simple heuristic: if the first node in the fragment is not a block node,
-			// it's likely an inline selection from within a paragraph.
 			const isInlineSelection = originalFragmentJson &&
 				originalFragmentJson.length > 0 &&
 				!['paragraph', 'heading', 'blockquote', 'list_item', 'ordered_list', 'bullet_list', 'horizontal_rule', 'code_block'].includes(originalFragmentJson[0].type);
 			
 			if (isInlineSelection) {
-				// For inline replacement, we don't wrap in <p>.
-				// We convert newlines from the AI into <br> tags to preserve them.
-				// The marker (if any) is prepended directly.
 				newContentHtml = textWithMarkers.replace(/\n/g, '<br>');
 			} else {
-				// For block-level replacement, wrap in <p> tags and handle paragraph breaks.
 				newContentHtml = '<p>' + textWithMarkers.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>') + '</p>';
 			}
 			
 			console.log('AI Action Result:', newContentText, newContentHtml);
 			
-			// Use the editor interface to replace the content
 			const replacementData = await currentEditorInterface.replaceRangeWithSuggestion(
 				aiActionRange.from,
 				aiActionRange.to,
@@ -228,7 +256,6 @@ async function startAiAction(params) {
 				createFloatingToolbar(aiActionRange.from, aiActionRange.to, model);
 				
 				if (replacementData.finalRange) {
-					// Use a short timeout to allow the iframe to resize itself via its postMessage mechanism before we calculate scroll.
 					setTimeout(() => {
 						const iframeEl = currentContext.activeEditorView.frameElement;
 						const container = document.getElementById('js-target-column-container');
@@ -237,17 +264,10 @@ async function startAiAction(params) {
 						if (iframeEl && container && endCoords) {
 							const iframeRect = iframeEl.getBoundingClientRect();
 							const containerRect = container.getBoundingClientRect();
-							
-							// The y-coordinate of the content's end, relative to the parent's viewport
 							const contentEndAbsoluteY = iframeRect.top + endCoords.bottom;
-							
-							// The y-coordinate of a content's end, relative to the scroll container
 							const contentEndRelativeY = contentEndAbsoluteY - containerRect.top;
+							const desiredScrollTop = container.scrollTop + contentEndRelativeY - container.clientHeight + 50;
 							
-							// Calculate the desired scrollTop to bring the new content into view with some padding
-							const desiredScrollTop = container.scrollTop + contentEndRelativeY - container.clientHeight + 50; // 50px padding from bottom
-							
-							// Only scroll if the content is not already visible
 							if (desiredScrollTop > container.scrollTop) {
 								container.scrollTo({ top: desiredScrollTop, behavior: 'smooth' });
 							}
@@ -281,8 +301,8 @@ async function populateModelDropdown(initialState = null) {
 			throw new Error(result.message || 'No models returned from API.');
 		}
 		
-		const modelGroups = result.models; // The data is now an array of groups
-		const popularDefaultModel = 'openai/gpt-4o'; // A sensible default from the new list
+		const modelGroups = result.models;
+		const popularDefaultModel = 'openai/gpt-4o';
 		
 		select.innerHTML = '';
 		
@@ -304,7 +324,7 @@ async function populateModelDropdown(initialState = null) {
 		} else if (allModels.some(m => m.id === popularDefaultModel)) {
 			select.value = popularDefaultModel;
 		} else if (allModels.length > 0) {
-			select.value = allModels[0].id; // Fallback to the very first model
+			select.value = allModels[0].id;
 		}
 	} catch (error) {
 		console.error('Failed to populate AI model dropdowns:', error);
@@ -356,15 +376,13 @@ async function handleModalApply() {
 			window.showAlert(t('prompt.errorNoInsertionPoint'));
 			return;
 		}
-		// For translation, we construct a "selection" object based on the insertion point
 		selectionInfo = {
 			from: currentContext.insertionPoint.from,
 			to: currentContext.insertionPoint.to,
-			originalFragmentJson: [], // It's an insertion, so the original fragment is empty
+			originalFragmentJson: [],
 			selectedText: currentContext.selectedText
 		};
 	} else {
-		// For other actions like rephrase, get the selection from the editor
 		selectionInfo = await currentEditorInterface.getSelectionInfo(action);
 		if (!selectionInfo) {
 			window.showAlert(t('prompt.errorNoSelection'));
@@ -392,7 +410,6 @@ async function handleModalApply() {
 				promptContext.codexContent = htmlToPlainText(codexHtml);
 			} catch (error) {
 				console.error('Failed to fetch codex content for prompt:', error);
-				// Proceed without codex content if it fails
 			}
 		}
 	}
@@ -416,7 +433,7 @@ async function handleModalApply() {
 	
 	let dictionaryContent = '';
 	if (formDataObj.useDictionary) {
-		dictionaryContent = await window.api.getDictionaryContentForAI(novelId); // Fetch dictionary content from backend via IPC
+		dictionaryContent = await window.api.getDictionaryContentForAI(novelId);
 	}
 	
 	let openingMarker = '';
@@ -436,6 +453,9 @@ async function handleModalApply() {
 		openingMarker = `[[#${newMarkerNum}]]`;
 		closingMarker = `{{#${newMarkerNum}}}`;
 		
+		// New: Store markers so they can be removed if the action is discarded.
+		currentActionMarkers = { opening: openingMarker, closing: closingMarker };
+		
 		try {
 			const chapterId = currentContext.chapterId;
 			const sourceContainer = document.querySelector(`#source-chapter-scroll-target-${chapterId} .source-content-readonly`);
@@ -445,10 +465,10 @@ async function handleModalApply() {
 			const closingMarkerNode = document.createTextNode(' ' + closingMarker);
 			
 			const endRange = range.cloneRange();
-			endRange.collapse(false); // end of selection
+			endRange.collapse(false);
 			endRange.insertNode(closingMarkerNode);
 			
-			range.collapse(true); // start of selection
+			range.collapse(true);
 			range.insertNode(openingMarkerNode);
 			
 			const updatedHtmlContent = sourceContainer.innerHTML;
@@ -466,6 +486,7 @@ async function handleModalApply() {
 			console.error('Could not insert markers into source text:', e);
 			openingMarker = '';
 			closingMarker = '';
+			currentActionMarkers = null; // New: Reset markers if the insertion fails.
 		}
 	}
 	
@@ -480,9 +501,6 @@ async function handleModalApply() {
 	});
 }
 
-/**
- * Initializes the prompt editor modal logic once, attaching the necessary event listener.
- */
 export function setupPromptEditor() {
 	modalEl = document.getElementById('prompt-editor-modal');
 	if (!modalEl) return;
@@ -506,13 +524,11 @@ export function setupPromptEditor() {
 		});
 	}
 	
-	// New: Add a global keydown listener for floating toolbar shortcuts.
 	window.addEventListener('keydown', (e) => {
 		if (!isAiActionActive) {
-			return; // Do nothing if the AI action/toolbar is not active.
+			return;
 		}
 		
-		// Check for shortcuts when the AI suggestion is active.
 		if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'enter') {
 			e.preventDefault();
 			handleFloatyApply();
@@ -526,12 +542,6 @@ export function setupPromptEditor() {
 	});
 }
 
-/**
- * Opens the prompt editor modal with fresh context.
- * @param {object} context - The context for the prompt, including the `editorInterface`.
- * @param {string} promptId - The ID of the prompt to open.
- * @param {object|null} initialState - The form state to restore from a previous run.
- */
 export async function openPromptEditor(context, promptId, initialState = null) {
 	if (!modalEl) {
 		console.error('Prompt editor modal element not found.');
