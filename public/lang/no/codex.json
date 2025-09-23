@@ -15,6 +15,7 @@
       "description": "Dette verktøyet vil skanne romanens kildetekst for å automatisk opprette og oppdatere codex-oppføringer på prosjektets målspråk. Det analyserer teksten i biter og forbedrer codexen for hvert trinn. Denne prosessen kan ta flere minutter og kan bruke en betydelig mengde AI-kreditter.",
       "selectModel": "Velg AI-modell",
       "loadingModels": "Laster modeller...",
+      "temperature": "Temperatur",
       "progress": "Fremdrift",
       "initializing": "Initialiserer...",
       "start": "Start generering",

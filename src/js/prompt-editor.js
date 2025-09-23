@@ -4,6 +4,12 @@ import { updateToolbarState as updateChapterToolbarState } from './novel-planner
 import { t, applyTranslationsTo } from './i18n.js';
 import { htmlToPlainText, processSourceContentForMarkers } from '../utils/html-processing.js';
 
+// New: Constants for shared AI settings stored in localStorage
+const AI_SETTINGS_KEYS = {
+	MODEL: 'parallel-leaves-ai-model',
+	TEMPERATURE: 'parallel-leaves-ai-temperature'
+};
+
 const editors = {
 	'rephrase': { init: initRephraseEditor },
 	'translate': { init: initTranslateEditor }
@@ -217,8 +223,9 @@ function createFloatingToolbar(from, to, model) {
 	});
 }
 
+// Modified: Function signature and body updated to accept and pass temperature
 async function startAiAction(params) {
-	const { prompt, model, openingMarker, closingMarker, dictionaryContent } = params;
+	const { prompt, model, temperature, openingMarker, closingMarker, dictionaryContent } = params;
 	
 	isAiActionActive = true;
 	if (currentEditorInterface.type === 'iframe') {
@@ -228,7 +235,8 @@ async function startAiAction(params) {
 	showAiSpinner();
 	
 	try {
-		const result = await window.api.processLLMText({ prompt, model, dictionaryContent });
+		// Modified: Pass temperature to the API call
+		const result = await window.api.processLLMText({ prompt, model, temperature, dictionaryContent });
 		hideAiSpinner();
 		
 		if (result.success && result.data.choices && result.data.choices.length > 0) {
@@ -297,7 +305,8 @@ async function startAiAction(params) {
 	}
 }
 
-async function populateModelDropdown(initialState = null) {
+// Modified: This function now uses global localStorage settings instead of per-prompt initial state.
+async function populateModelDropdown() {
 	if (!modalEl) return;
 	const select = modalEl.querySelector('.js-llm-model-select');
 	if (!select) return;
@@ -323,16 +332,20 @@ async function populateModelDropdown(initialState = null) {
 			select.appendChild(optgroup);
 		});
 		
-		const savedModel = initialState?.model;
+		const lastUsedModel = localStorage.getItem(AI_SETTINGS_KEYS.MODEL);
 		const allModels = modelGroups.flatMap(g => g.models);
 		
-		if (savedModel && allModels.some(m => m.id === savedModel)) {
-			select.value = savedModel;
+		if (lastUsedModel && allModels.some(m => m.id === lastUsedModel)) {
+			select.value = lastUsedModel;
 		} else if (allModels.some(m => m.id === popularDefaultModel)) {
 			select.value = popularDefaultModel;
 		} else if (allModels.length > 0) {
 			select.value = allModels[0].id;
 		}
+		
+		// Ensure the setting is saved, even if it's a fallback.
+		localStorage.setItem(AI_SETTINGS_KEYS.MODEL, select.value);
+		
 	} catch (error) {
 		console.error('Failed to populate AI model dropdowns:', error);
 		select.innerHTML = '<option value="" disabled selected>Error loading</option>';
@@ -342,7 +355,9 @@ async function populateModelDropdown(initialState = null) {
 async function handleModalApply() {
 	if (!modalEl || isAiActionActive) return;
 	
+	// Modified: Read model and temperature from the modal's shared controls
 	const model = modalEl.querySelector('.js-llm-model-select').value;
+	const temperature = parseFloat(modalEl.querySelector('.js-ai-temperature-slider').value);
 	const action = currentPromptId;
 	const form = modalEl.querySelector('.js-custom-editor-pane form');
 	
@@ -370,12 +385,13 @@ async function handleModalApply() {
 	
 	const novelId = document.body.dataset.novelId;
 	if (novelId) {
-		const settingsToSave = { model, ...formDataObj };
+		// Modified: Only save prompt-specific settings, not the global model/temp.
+		const settingsToSave = { ...formDataObj };
 		window.api.updatePromptSettings({ novelId, promptType: action, settings: settingsToSave })
 			.catch(err => console.error('Failed to save prompt settings:', err));
 	}
 	
-	console.log('AI Action Params:', { model, action, formData: formDataObj });
+	console.log('AI Action Params:', { model, temperature, action, formData: formDataObj });
 	
 	let selectionInfo;
 	if (action === 'translate') {
@@ -503,11 +519,13 @@ async function handleModalApply() {
 		}
 	}
 	
-	currentAiParams = { prompt, model, action, context: currentContext, formData: formDataObj, dictionaryContent };
+	// Modified: Add temperature to the parameters object
+	currentAiParams = { prompt, model, temperature, action, context: currentContext, formData: formDataObj, dictionaryContent };
 	
 	startAiAction({
 		prompt: currentAiParams.prompt,
 		model: currentAiParams.model,
+		temperature: currentAiParams.temperature,
 		openingMarker,
 		closingMarker,
 		dictionaryContent
@@ -534,6 +552,30 @@ export function setupPromptEditor() {
 			
 			const isHidden = previewSection.classList.toggle('hidden');
 			toggleBtn.textContent = isHidden ? t('editor.showPreview') : t('editor.hidePreview');
+		});
+	}
+	
+	// New: Setup listeners for global AI settings controls
+	const modelSelect = modalEl.querySelector('.js-llm-model-select');
+	const tempSlider = modalEl.querySelector('.js-ai-temperature-slider');
+	const tempValue = modalEl.querySelector('.js-ai-temperature-value');
+	
+	if (modelSelect) {
+		modelSelect.addEventListener('change', () => {
+			localStorage.setItem(AI_SETTINGS_KEYS.MODEL, modelSelect.value);
+		});
+	}
+	
+	if (tempSlider && tempValue) {
+		const lastTemp = localStorage.getItem(AI_SETTINGS_KEYS.TEMPERATURE) || '0.7';
+		tempSlider.value = lastTemp;
+		tempValue.textContent = parseFloat(lastTemp).toFixed(1);
+		
+		tempSlider.addEventListener('input', () => {
+			tempValue.textContent = parseFloat(tempSlider.value).toFixed(1);
+		});
+		tempSlider.addEventListener('change', () => {
+			localStorage.setItem(AI_SETTINGS_KEYS.TEMPERATURE, tempSlider.value);
 		});
 	}
 	
@@ -576,7 +618,8 @@ export async function openPromptEditor(context, promptId, initialState = null) {
 	customEditorPane.classList.remove('hidden');
 	
 	try {
-		await populateModelDropdown(initialState);
+		// Modified: No longer passes initialState, as model is now global
+		await populateModelDropdown();
 		await loadPrompt(promptId);
 		modalEl.showModal();
 	} catch (error) {

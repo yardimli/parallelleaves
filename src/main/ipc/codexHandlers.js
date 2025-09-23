@@ -80,7 +80,8 @@ function registerCodexHandlers(db, sessionManager) {
 		isCodexGenCancelled = true;
 	});
 	
-	ipcMain.on('autogen:start-codex-generation', async (event, { novelId, model }) => {
+	// Modified: Added temperature to the received data
+	ipcMain.on('autogen:start-codex-generation', async (event, { novelId, model, temperature }) => {
 		isCodexGenCancelled = false; // Reset cancellation flag at the start.
 		const sender = event.sender;
 		const sendProgress = (progress, status, statusKey = null, statusParams = {}) => {
@@ -140,6 +141,7 @@ function registerCodexHandlers(db, sessionManager) {
 				}
 				
 				const token = sessionManager.getSession()?.token || null;
+				// Modified: Pass temperature to the AI service call
 				const resultHtml = await aiService.generateCodexFromTextChunk({
 					textChunk: chunk,
 					existingCodexHtml: currentCodexContent,
@@ -147,6 +149,7 @@ function registerCodexHandlers(db, sessionManager) {
 					targetLanguage: targetLanguage,
 					model,
 					token,
+					temperature,
 				});
 				
 				if (resultHtml && resultHtml.trim() !== '') {

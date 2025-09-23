@@ -136,9 +136,10 @@ async function generateCoverImageViaProxy({ prompt, token }) {
  * @param {string} params.targetLanguage - The language for the output codex entries.
  * @param {string} params.model - The LLM model to use.
  * @param {string|null} params.token - The user's session token.
+ * @param {number} [params.temperature=0.5] - The temperature for the AI model.
  * @returns {Promise<string>} An HTML string containing new or updated codex entries.
  */
-async function generateCodexFromTextChunk({ textChunk, existingCodexHtml, sourceLanguage, targetLanguage, model, token }) {
+async function generateCodexFromTextChunk({ textChunk, existingCodexHtml, sourceLanguage, targetLanguage, model, token, temperature = 0.5 }) {
 	const existingCodexText = htmlToPlainText(existingCodexHtml);
 	const prompt = `
 You are a meticulous world-building assistant for a novelist. Your task is to analyze a chunk of text from a novel and update a codex (an encyclopedia of the world).
@@ -175,7 +176,7 @@ ${textChunk}
 	const response = await callOpenRouter({
 		model: model,
 		messages: [{ role: 'user', content: prompt }],
-		temperature: 0.5
+		temperature: temperature // Modified: Pass temperature
 	}, token);
 	
 	// The response is not JSON, so we directly access the content.
@@ -189,9 +190,10 @@ ${textChunk}
  * @param {string} params.model - The LLM model to use.
  * @param {string|null} params.token - The user's session token.
  * @param {string} [params.dictionaryContent=''] - Optional custom dictionary content to include.
+ * @param {number} [params.temperature=0.7] - The temperature for the AI model.
  * @returns {Promise<object>} The AI response object.
  */
-async function processLLMText({ prompt, model, token, dictionaryContent = '' }) {
+async function processLLMText({ prompt, model, token, dictionaryContent = '', temperature = 0.7 }) {
 	const messages = [];
 	if (prompt.system) {
 		messages.push({ role: 'system', content: prompt.system });
@@ -220,7 +222,7 @@ async function processLLMText({ prompt, model, token, dictionaryContent = '' }) 
 	return callOpenRouter({
 		model: model,
 		messages: messages,
-		temperature: 0.7
+		temperature: temperature // Modified: Pass temperature
 	}, token);
 }
 

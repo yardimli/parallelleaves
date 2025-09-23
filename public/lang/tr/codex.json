@@ -15,6 +15,7 @@
       "description": "Bu araç, romanınızın kaynak metnini tarayarak projenizin hedef dilinde kodeks kayıtlarını otomatik olarak oluşturur ve günceller. Metni parçalar halinde analiz eder ve her adımda kodeksi geliştirir. Bu işlem birkaç dakika sürebilir ve önemli miktarda yapay zeka kredisi kullanabilir.",
       "selectModel": "Model Seçin",
       "loadingModels": "Modeller yükleniyor...",
+      "temperature": "Derece",
       "progress": "İlerleme",
       "initializing": "Başlatılıyor...",
       "start": "Oluşturmayı Başlat",

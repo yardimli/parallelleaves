@@ -6,12 +6,20 @@ let chatHistories = [];
 let currentChat = null;
 
 const LOCAL_STORAGE_KEY_PREFIX = 'parallel-leaves-chats-';
+// New: Constants for shared AI settings
+const AI_SETTINGS_KEYS = {
+	MODEL: 'parallel-leaves-ai-model',
+	TEMPERATURE: 'parallel-leaves-ai-temperature'
+};
 
 const chatHistoryContainer = document.getElementById('js-chat-history');
 const chatForm = document.getElementById('js-chat-form');
 const chatInput = document.getElementById('js-chat-input');
 const sendBtn = document.getElementById('js-send-btn');
 const modelSelect = document.getElementById('js-llm-model-select');
+// New: Temperature slider elements
+const tempSlider = document.getElementById('js-ai-temperature-slider');
+const tempValue = document.getElementById('js-ai-temperature-value');
 
 // Chat management UI elements
 const chatListDropdown = document.getElementById('js-chat-list');
@@ -153,6 +161,15 @@ async function populateModels() {
 				});
 				modelSelect.appendChild(optgroup);
 			});
+			// Modified: Set the last used model from localStorage
+			const lastModel = localStorage.getItem(AI_SETTINGS_KEYS.MODEL);
+			if (lastModel && modelSelect.querySelector(`option[value="${lastModel}"]`)) {
+				modelSelect.value = lastModel;
+			} else if (modelSelect.options.length > 0) {
+				// Fallback to the first available model
+				modelSelect.selectedIndex = 0;
+				localStorage.setItem(AI_SETTINGS_KEYS.MODEL, modelSelect.value);
+			}
 		} else {
 			throw new Error(result.message);
 		}
@@ -304,9 +321,12 @@ async function handleSendMessage(event) {
 		// This slice now applies *after* potentially adding chapter context
 		const contextMessages = messagesToSend.slice(-5);
 		
+		// Modified: Get temperature and send it with the message
+		const temperature = parseFloat(tempSlider.value);
 		const result = await window.api.chatSendMessage({
 			model: selectedModel,
 			messages: contextMessages,
+			temperature: temperature
 		});
 		
 		if (result.success) {
@@ -355,6 +375,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 		window.close();
 		return;
 	}
+	
+	// New: Setup AI settings controls
+	const lastTemp = localStorage.getItem(AI_SETTINGS_KEYS.TEMPERATURE) || '0.7';
+	tempSlider.value = lastTemp;
+	tempValue.textContent = parseFloat(lastTemp).toFixed(1);
+	
+	tempSlider.addEventListener('input', () => {
+		tempValue.textContent = parseFloat(tempSlider.value).toFixed(1);
+	});
+	tempSlider.addEventListener('change', () => {
+		localStorage.setItem(AI_SETTINGS_KEYS.TEMPERATURE, tempSlider.value);
+	});
+	modelSelect.addEventListener('change', () => {
+		localStorage.setItem(AI_SETTINGS_KEYS.MODEL, modelSelect.value);
+	});
 	
 	populateModels();
 	populateChapterSelect();

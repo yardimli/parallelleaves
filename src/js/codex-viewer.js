@@ -18,6 +18,12 @@ const debounce = (func, delay) => {
 	};
 };
 
+// New: Constants for shared AI settings
+const AI_SETTINGS_KEYS = {
+	MODEL: 'parallel-leaves-ai-model',
+	TEMPERATURE: 'parallel-leaves-ai-temperature'
+};
+
 const codexSchema = new Schema({
 	nodes: addListNodes(basicSchema.spec.nodes, 'paragraph block*', 'block'),
 	marks: {
@@ -283,7 +289,41 @@ async function setupAutogenCodex(novelId) {
 		try {
 			modalContent.innerHTML = await window.api.getTemplate('codex/autogen-codex-modal');
 			applyTranslationsTo(modalContent);
+			
 			const select = modalContent.querySelector('.js-llm-model-select');
+			
+			// New: Inject temperature slider after the model select's parent element
+			const sliderHtml = `
+                <div class="form-control mt-4">
+                    <label class="label">
+                        <span class="label-text" data-i18n="codex.viewer.autoGenModal.temperature">Temperature</span>
+                    </label>
+                    <div class="flex items-center gap-2">
+                        <input type="range" min="0" max="2" value="0.7" step="0.1" class="js-ai-temperature-slider range range-xs flex-grow" />
+                        <span class="js-ai-temperature-value text-sm font-mono w-8 text-center">0.7</span>
+                    </div>
+                </div>`;
+			if (select && select.parentElement) {
+				select.parentElement.insertAdjacentHTML('afterend', sliderHtml);
+				applyTranslationsTo(select.parentElement.nextElementSibling);
+			}
+			
+			// New: Setup temperature slider controls
+			const tempSlider = modalContent.querySelector('.js-ai-temperature-slider');
+			const tempValue = modalContent.querySelector('.js-ai-temperature-value');
+			if (tempSlider && tempValue) {
+				const lastTemp = localStorage.getItem(AI_SETTINGS_KEYS.TEMPERATURE) || '0.7';
+				tempSlider.value = lastTemp;
+				tempValue.textContent = parseFloat(lastTemp).toFixed(1);
+				
+				tempSlider.addEventListener('input', () => {
+					tempValue.textContent = parseFloat(tempSlider.value).toFixed(1);
+				});
+				tempSlider.addEventListener('change', () => {
+					localStorage.setItem(AI_SETTINGS_KEYS.TEMPERATURE, tempSlider.value);
+				});
+			}
+			
 			const result = await window.api.getModels();
 			if (result.success && result.models.length > 0) {
 				select.innerHTML = '';
@@ -296,7 +336,16 @@ async function setupAutogenCodex(novelId) {
 					});
 					select.appendChild(optgroup);
 				});
-				select.value = 'openai/gpt-4o';
+				// New: Set last used model and add listener
+				const lastModel = localStorage.getItem(AI_SETTINGS_KEYS.MODEL);
+				if (lastModel && select.querySelector(`option[value="${lastModel}"]`)) {
+					select.value = lastModel;
+				} else {
+					select.value = 'openai/gpt-4o'; // Default
+				}
+				select.addEventListener('change', () => {
+					localStorage.setItem(AI_SETTINGS_KEYS.MODEL, select.value);
+				});
 			} else {
 				select.innerHTML = `<option>${t('codex.viewer.autoGenModal.errorLoadModels')}</option>`;
 			}
@@ -319,6 +368,10 @@ async function setupAutogenCodex(novelId) {
 			return;
 		}
 		
+		// New: Get temperature value
+		const temperatureSlider = form.querySelector('.js-ai-temperature-slider');
+		const temperature = temperatureSlider ? parseFloat(temperatureSlider.value) : 0.7;
+		
 		const actionButtons = form.querySelector('#js-autogen-action-buttons');
 		const progressSection = form.querySelector('#js-autogen-progress-section');
 		if (actionButtons) actionButtons.classList.add('hidden');
@@ -333,7 +386,8 @@ async function setupAutogenCodex(novelId) {
 			}, { once: true });
 		}
 		
-		window.api.startCodexAutogen({ novelId, model });
+		// New: Pass temperature to the main process
+		window.api.startCodexAutogen({ novelId, model, temperature });
 	});
 	
 	window.api.onCodexAutogenUpdate((event, { progress, status, statusKey }) => {

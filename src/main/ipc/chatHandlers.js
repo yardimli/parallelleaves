@@ -10,7 +10,7 @@ function registerChatHandlers(db, sessionManager) {
 	ipcMain.handle('chat:send-message', async (event, data) => {
 		try {
 			const token = sessionManager.getSession()?.token || null;
-			const { model, messages } = data; // messages is an array of {role, content}
+			const { model, messages, temperature } = data; // Modified: Destructure temperature
 			
 			// Find the first system message if it exists (for chapter context)
 			let systemMessageContent = 'You are a helpful assistant for a writer.';
@@ -35,7 +35,8 @@ function registerChatHandlers(db, sessionManager) {
 				user: userPrompt.content
 			};
 			
-			const result = await aiService.processLLMText({ prompt, model, token });
+			// Modified: Pass temperature to the AI service call
+			const result = await aiService.processLLMText({ prompt, model, token, temperature });
 			return { success: true, data: result };
 		} catch (error) {
 			console.error('AI Chat Error in main process:', error);

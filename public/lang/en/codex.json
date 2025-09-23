@@ -15,6 +15,7 @@
       "description": "This tool will scan your novel's source text to automatically create and update codex entries in your project's target language. It analyzes the text in chunks, refining the codex with each step. This process can take several minutes and may consume a significant amount of AI credits.",
       "selectModel": "Select AI Model",
       "loadingModels": "Loading models...",
+      "temperature": "Temperature",
       "progress": "Progress",
       "initializing": "Initializing...",
       "start": "Start Generation",
