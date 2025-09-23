@@ -68,10 +68,20 @@ function renderDictionaryTable() {
 		targetInput.value = entry.target;
 		targetInput.placeholder = t('editor.dictionaryModal.targetTranslation');
 		targetCell.appendChild(targetInput);
+		
+		// New: Add actions cell with a "Find and Replace" button
+		const actionsCell = row.insertCell();
+		actionsCell.className = 'w-12'; // Set a fixed width for the actions cell
+		const findReplaceBtn = document.createElement('button');
+		findReplaceBtn.className = 'js-dictionary-find-replace-btn btn btn-ghost btn-xs btn-square';
+		findReplaceBtn.setAttribute('data-i18n-title', 'editor.dictionaryModal.findAndReplace');
+		findReplaceBtn.innerHTML = '<i class="bi bi-tools"></i>';
+		actionsCell.appendChild(findReplaceBtn);
 	});
 	
 	updateDeleteButtonState();
 	updateSortButtonIcons();
+	applyTranslationsTo(dictionaryTableBody); // Apply translations to newly created elements like tooltips
 }
 
 /**
@@ -233,6 +243,32 @@ export function initDictionaryModal(novelId) {
 	dictionaryTableBody.addEventListener('change', (event) => {
 		if (event.target.classList.contains('row-select-checkbox')) {
 			updateDeleteButtonState();
+		}
+	});
+	
+	// New: Add event listener for the "Find and Replace" button using event delegation.
+	dictionaryTableBody.addEventListener('click', (event) => {
+		const findReplaceBtn = event.target.closest('.js-dictionary-find-replace-btn');
+		if (findReplaceBtn) {
+			const row = findReplaceBtn.closest('tr');
+			// Get the current values from the input fields in the same row.
+			const sourceInput = row.querySelector('td:nth-child(2) input');
+			const targetInput = row.querySelector('td:nth-child(3) input');
+			
+			const sourceTerm = sourceInput.value.trim();
+			const targetTerm = targetInput.value.trim();
+			
+			// Dispatch a custom event for the chapter editor to listen for.
+			// This allows us to communicate with the editor without a direct dependency.
+			if (sourceTerm) { // Only dispatch if there's a term to find.
+				document.body.dispatchEvent(new CustomEvent('dictionary:find-replace', {
+					detail: {
+						find: sourceTerm,
+						replace: targetTerm
+					}
+				}));
+				dictionaryModal.close(); // Close the modal after triggering the action.
+			}
 		}
 	});
 	

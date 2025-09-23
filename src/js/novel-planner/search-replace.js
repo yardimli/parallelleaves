@@ -43,6 +43,19 @@ function toggleSearchBar(show) {
 	}
 }
 
+/**
+ * New: Function to programmatically open the search/replace bar with pre-filled values.
+ * This can be called from other modules.
+ * @param {string} findValue - The text to search for.
+ * @param {string} replaceValue - The text to replace with.
+ */
+function openSearchAndReplaceWithValues(findValue, replaceValue) {
+	toggleSearchBar(true);
+	searchInput.value = findValue || '';
+	replaceInput.value = replaceValue || '';
+	startSearch();
+}
+
 function clearSearch() {
 	chapterEditorViews.forEach(view => {
 		if (view.isReady) {
@@ -254,4 +267,9 @@ export function setupSearchAndReplace(views, registerHandler) {
 			}
 		}
 	});
+	
+	// New: Return an API object for external control
+	return {
+		openWithValues: openSearchAndReplaceWithValues
+	};
 }

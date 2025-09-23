@@ -360,7 +360,9 @@
       "targetTranslation": "Hedef Çeviri",
       "addRow": "Satır Ekle",
       "deleteSelected": "Seçilenleri Sil",
-      "noEntries": "Henüz sözlük kaydı yok. Başlamak için 'Satır Ekle'ye tıklayın."
+      "noEntries": "Henüz sözlük kaydı yok. Başlamak için 'Satır Ekle'ye tıklayın.",
+      "actions": "Eylemler",
+      "findAndReplace": "Belgede Bul ve Değiştir"
     }
   },
   "prompt": {

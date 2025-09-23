@@ -360,7 +360,9 @@
       "targetTranslation": "Måloversettelse",
       "addRow": "Legg til rad",
       "deleteSelected": "Slett valgte",
-      "noEntries": "Ingen ordbokoppføringer ennå. Klikk 'Legg til rad' for å starte."
+      "noEntries": "Ingen ordbokoppføringer ennå. Klikk 'Legg til rad' for å starte.",
+      "actions": "Handlinger",
+      "findAndReplace": "Finn og erstatt i dokumentet"
     }
   },
   "prompt": {

@@ -8,7 +8,7 @@ import { loadModals } from '../../utils/modal-loader.js';
 import { showConfirmationModal, showInputModal } from './modals.js';
 import { syncChapterScroll, scrollToChapter, scrollToTargetMarker, scrollToSourceMarker, setupIntersectionObserver } from './scroll-sync.js';
 import { setupSearch } from './search.js';
-import { setupSearchAndReplace } from './search-replace.js'; // New: Import search and replace module
+import { setupSearchAndReplace } from './search-replace.js';
 import { setupSpellcheckDropdown } from './spellcheck.js';
 import { handleOpenDictionaryWithSelection } from './dictionary-handler.js';
 import { createIframeEditorInterface } from './editor-interface.js';
@@ -410,9 +410,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 		setupIntersectionObserver(setActiveChapterId);
 		setupSpellcheckDropdown();
 		setupSearch(chapterEditorViews, (handler) => { searchResultHandler = handler; });
-		// New: Initialize the search and replace module
-		setupSearchAndReplace(chapterEditorViews, (handler) => { searchReplaceResultHandler = handler; });
+		// Modified: Initialize search and replace and store its returned API
+		const searchReplaceAPI = setupSearchAndReplace(chapterEditorViews, (handler) => { searchReplaceResultHandler = handler; });
 		initDictionaryModal(novelId);
+		
+		// New: Add listener for custom event from dictionary modal
+		document.body.addEventListener('dictionary:find-replace', (event) => {
+			const { find, replace } = event.detail;
+			if (searchReplaceAPI && searchReplaceAPI.openWithValues) {
+				searchReplaceAPI.openWithValues(find, replace);
+			}
+		});
 		
 		if (totalIframes === 0) {
 			initializeView(novelId, novelData, initialChapterId);

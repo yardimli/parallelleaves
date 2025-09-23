@@ -359,7 +359,9 @@
       "targetTranslation": "Target Translation",
       "addRow": "Add Row",
       "deleteSelected": "Delete Selected",
-      "noEntries": "No dictionary entries yet. Click 'Add Row' to start."
+      "noEntries": "No dictionary entries yet. Click 'Add Row' to start.",
+      "actions": "Actions",
+      "findAndReplace": "Find and Replace in Document"
     }
   },
   "prompt": {
