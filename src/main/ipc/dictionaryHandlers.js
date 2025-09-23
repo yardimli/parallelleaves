@@ -32,16 +32,26 @@ function registerDictionaryHandlers() {
 		}
 	});
 	
-	// IPC handler to get dictionary content formatted for AI prompts.
-	ipcMain.handle('dictionary:getContentForAI', async (event, novelId) => {
+	// Modified: This handler now accepts an optional 'type' to filter the dictionary for the AI.
+	ipcMain.handle('dictionary:getContentForAI', async (event, novelId, type) => {
 		ensureDictionariesDir();
 		const filePath = path.join(DICTIONARIES_DIR, `${novelId}.json`);
 		try {
 			if (fs.existsSync(filePath)) {
 				const data = fs.readFileSync(filePath, 'utf8');
-				const dictionaryEntries = JSON.parse(data);
+				let dictionaryEntries = JSON.parse(data) || [];
+				
+				// New: Filter entries based on the provided type if it exists.
+				if (type) {
+					dictionaryEntries = dictionaryEntries.filter(entry => {
+						// If an entry has no type (from older versions), default it to 'translation' for filtering.
+						const entryType = entry.type || 'translation';
+						return entryType === type;
+					});
+				}
+				
 				// Format as "source = target" per line for AI prompt.
-				return (dictionaryEntries || []).map(entry => `${entry.source} = ${entry.target}`).join('\n');
+				return dictionaryEntries.map(entry => `${entry.source} = ${entry.target}`).join('\n');
 			}
 			return '';
 		} catch (error) {

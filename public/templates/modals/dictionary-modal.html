@@ -1,5 +1,6 @@
 <dialog id="dictionary-modal" class="modal">
-	<div class="modal-box w-11/12 max-w-2xl h-[90vh] flex flex-col p-0">
+	<!-- Modified: Increased modal width from max-w-2xl to max-w-4xl -->
+	<div class="modal-box w-11/12 max-w-4xl h-[90vh] flex flex-col p-0">
 		<!-- Header Section -->
 		<div class="flex-shrink-0 p-6 pb-4 border-b border-base-300">
 			<form method="dialog">
@@ -29,6 +30,15 @@
 								<div class="flex items-center gap-1">
 									<span>Target Translation</span>
 									<button type="button" class="js-sort-btn btn btn-ghost btn-xs btn-square" data-sort-by="target" data-sort-direction="asc">
+										<i class="bi bi-sort-alpha-down"></i>
+									</button>
+								</div>
+							</th>
+							<!-- New: Type column header with sorting button -->
+							<th data-i18n="dictionary.type">
+								<div class="flex items-center gap-1">
+									<span>Type</span>
+									<button type="button" class="js-sort-btn btn btn-ghost btn-xs btn-square" data-sort-by="type" data-sort-direction="asc">
 										<i class="bi bi-sort-alpha-down"></i>
 									</button>
 								</div>

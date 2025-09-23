@@ -88,7 +88,7 @@ contextBridge.exposeInMainWorld('api', {
 	openBackupFile: () => ipcRenderer.invoke('dialog:openBackup'),
 	
 	getNovelDictionary: (novelId) => ipcRenderer.invoke('dictionary:get', novelId),
-	getDictionaryContentForAI: (novelId) => ipcRenderer.invoke('dictionary:getContentForAI', novelId), // Exposed new IPC call for AI dictionary content
+	getDictionaryContentForAI: (novelId, type) => ipcRenderer.invoke('dictionary:getContentForAI', novelId, type),
 	saveNovelDictionary: (novelId, data) => ipcRenderer.invoke('dictionary:save', novelId, data),
 	
 	findHighestMarkerNumber: (sourceHtml, targetHtml) => ipcRenderer.invoke('novels:findHighestMarkerNumber', sourceHtml, targetHtml)

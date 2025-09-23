@@ -7,7 +7,7 @@ let dictionaryAddRowBtn;
 let dictionaryDeleteSelectedBtn;
 let dictionarySaveBtn;
 let currentNovelId;
-let currentDictionaryData = []; // [{source: "term", target: "translation"}]
+let currentDictionaryData = []; // [{source: "term", target: "translation", type: "translation"}]
 let currentSort = { sortBy: null, direction: 'asc' };
 
 /**
@@ -20,11 +20,13 @@ function updateCurrentDictionaryDataFromDOM() {
 	Array.from(dictionaryTableBody.rows).forEach(row => {
 		const sourceInput = row.cells[1].querySelector('input');
 		const targetInput = row.cells[2].querySelector('input');
+		const typeSelect = row.cells[3].querySelector('select'); // Modified: Get type select element
 		// Always include the row, even if empty, to preserve its position if it's a new, unedited row.
 		// Empty rows will be filtered out during the final saveDictionary() call.
 		updatedData.push({
 			source: sourceInput ? sourceInput.value.trim() : '',
-			target: targetInput ? targetInput.value.trim() : ''
+			target: targetInput ? targetInput.value.trim() : '',
+			type: typeSelect ? typeSelect.value : 'translation' // Modified: Get type value, default to translation
 		});
 	});
 	currentDictionaryData = updatedData;
@@ -69,7 +71,26 @@ function renderDictionaryTable() {
 		targetInput.placeholder = t('dictionary.targetTranslation');
 		targetCell.appendChild(targetInput);
 		
-		// New: Add actions cell with a "Find and Replace" button
+		// New: Add type cell with a select dropdown
+		const typeCell = row.insertCell();
+		const typeSelect = document.createElement('select');
+		typeSelect.className = 'select select-ghost select-sm w-full max-w-xs';
+		
+		const optionTranslation = document.createElement('option');
+		optionTranslation.value = 'translation';
+		optionTranslation.setAttribute('data-i18n', 'dictionary.typeTranslation');
+		
+		const optionRephrasing = document.createElement('option');
+		optionRephrasing.value = 'rephrasing';
+		optionRephrasing.setAttribute('data-i18n', 'dictionary.typeRephrasing');
+		
+		typeSelect.appendChild(optionTranslation);
+		typeSelect.appendChild(optionRephrasing);
+		
+		// Set the selected option. Default to 'translation' if type is missing for backward compatibility.
+		typeSelect.value = entry.type || 'translation';
+		typeCell.appendChild(typeSelect);
+		
 		const actionsCell = row.insertCell();
 		actionsCell.className = 'w-12'; // Set a fixed width for the actions cell
 		const findReplaceBtn = document.createElement('button');
@@ -81,7 +102,7 @@ function renderDictionaryTable() {
 	
 	updateDeleteButtonState();
 	updateSortButtonIcons();
-	applyTranslationsTo(dictionaryTableBody); // Apply translations to newly created elements like tooltips
+	applyTranslationsTo(dictionaryTableBody); // Apply translations to newly created elements like tooltips and options
 }
 
 /**
@@ -92,7 +113,8 @@ function renderDictionaryTable() {
  */
 function addRow(sourceText = '', targetText = '') {
 	updateCurrentDictionaryDataFromDOM(); // Save any unsaved edits before re-rendering
-	currentDictionaryData.push({ source: sourceText, target: targetText });
+	// Modified: Add 'type' field to new row object, defaulting to 'translation'.
+	currentDictionaryData.push({ source: sourceText, target: targetText, type: 'translation' });
 	renderDictionaryTable();
 }
 
@@ -133,10 +155,14 @@ async function saveDictionary() {
 	Array.from(dictionaryTableBody.rows).forEach(row => {
 		const sourceInput = row.cells[1].querySelector('input');
 		const targetInput = row.cells[2].querySelector('input');
+		const typeSelect = row.cells[3].querySelector('select'); // Modified: Get type select element
+		
 		if (sourceInput.value.trim() || targetInput.value.trim()) {
 			updatedData.push({
 				source: sourceInput.value.trim(),
-				target: targetInput.value.trim()
+				target: targetInput.value.trim(),
+				// Modified: Save type, defaulting to 'translation' if it's somehow missing.
+				type: typeSelect ? typeSelect.value : 'translation'
 			});
 		}
 	});
@@ -153,7 +179,7 @@ async function saveDictionary() {
 
 /**
  * Sorts the dictionary data by a given key and direction.
- * @param {string} sortBy - 'source' or 'target'.
+ * @param {string} sortBy - 'source', 'target', or 'type'.
  * @param {'asc'|'desc'} direction - 'asc' for ascending, 'desc' for descending.
  * @param {boolean} shouldRender - Whether to re-render the table after sorting.
  */
@@ -161,8 +187,9 @@ function sortDictionary(sortBy, direction, shouldRender = true) {
 	updateCurrentDictionaryDataFromDOM();
 	
 	currentDictionaryData.sort((a, b) => {
-		const valA = a[sortBy].toLowerCase();
-		const valB = b[sortBy].toLowerCase();
+		// Modified: Default type to 'translation' for sorting if it's missing from an old entry.
+		const valA = (a[sortBy] || (sortBy === 'type' ? 'translation' : '')).toLowerCase();
+		const valB = (b[sortBy] || (sortBy === 'type' ? 'translation' : '')).toLowerCase();
 		
 		if (valA < valB) return direction === 'asc' ? -1 : 1;
 		if (valA > valB) return direction === 'asc' ? 1 : -1;
@@ -246,7 +273,6 @@ export function initDictionaryModal(novelId) {
 		}
 	});
 	
-	// New: Add event listener for the "Find and Replace" button using event delegation.
 	dictionaryTableBody.addEventListener('click', (event) => {
 		const findReplaceBtn = event.target.closest('.js-dictionary-find-replace-btn');
 		if (findReplaceBtn) {
@@ -295,10 +321,11 @@ export async function openDictionaryModal(selectedText = '', sourceOrTarget = ''
 		
 		// If text is selected, add a pre-filled row directly to the data array.
 		if (selectedText) {
+			// Modified: Add 'type' field to new row object.
 			if (sourceOrTarget === 'source') {
-				currentDictionaryData.push({ source: selectedText, target: '' });
+				currentDictionaryData.push({ source: selectedText, target: '', type: 'translation' });
 			} else if (sourceOrTarget === 'target') {
-				currentDictionaryData.push({ source: '', target: selectedText });
+				currentDictionaryData.push({ source: '', target: selectedText, type: 'translation' });
 			}
 		}
 		

@@ -49,9 +49,7 @@
       "tenseInstruction": "Translate in the {tense} tense. "
     },
     "user": {
-      "codexBlock": "Use the following glossary for consistent translation of key terms. Do not translate the terms literally if the glossary provides a specific translation or context.\n<glossary>\n{codexContent}\n</glossary>",
-      "codexEntry": "Term ({sourceLanguage}): {title}\nDescription/Translation Hint: {content}\n\nTranslation in {targetLanguage}: {translation}",
-      "codexEntryNoTranslation": "(No specific translation provided)",
+      "codexBlock": "Use the following glossary for consistent translation.\n<glossary>\n{codexContent}\n</glossary>",
       "textToTranslate": "Translate the following text from {sourceLanguage} to {targetLanguage}:\n\n<text>\n{text}\n</text>"
     }
   },
