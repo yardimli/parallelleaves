@@ -7,7 +7,7 @@ let searchResponsesPending = 0;
 let resultHandlerCallback;
 
 // UI Elements
-let searchReplaceBar, searchInput, replaceInput, prevBtn, nextBtn, replaceBtn, replaceAllBtn, resultsCount, closeBtn, caseSensitiveCheckbox;
+let searchReplaceBar, searchInput, replaceInput, prevBtn, nextBtn, replaceBtn, replaceAllBtn, resultsCount, closeBtn, caseSensitiveBtn;
 
 const debounce = (func, delay) => {
 	let timeout;
@@ -28,7 +28,7 @@ function initializeUI() {
 	replaceAllBtn = document.getElementById('js-replace-all-btn');
 	resultsCount = document.getElementById('js-search-replace-results-count');
 	closeBtn = document.getElementById('js-search-replace-close-btn');
-	caseSensitiveCheckbox = document.getElementById('js-case-sensitive-checkbox');
+	caseSensitiveBtn = document.getElementById('js-case-sensitive-btn'); // Modified: Get button instead of checkbox
 }
 
 function toggleSearchBar(show) {
@@ -101,7 +101,7 @@ const startSearch = debounce(() => {
 		return;
 	}
 	
-	const caseSensitive = caseSensitiveCheckbox.checked;
+	const caseSensitive = caseSensitiveBtn.classList.contains('active'); // Modified: Check for active class
 	searchResponsesPending = 0;
 	
 	chapterEditorViews.forEach(view => {
@@ -133,7 +133,7 @@ function handleReplaceAll() {
 	if (query.length < 1) return;
 	
 	const replaceText = replaceInput.value;
-	const caseSensitive = caseSensitiveCheckbox.checked;
+	const caseSensitive = caseSensitiveBtn.classList.contains('active'); // Modified: Check for active class
 	
 	searchResponsesPending = 0;
 	let totalReplaced = 0;
@@ -188,11 +188,7 @@ function handleIframeResponse(type, payload) {
 		}
 		case 'search-replace:replaced': {
 			// A single replacement was made, so we need to re-run the search to get updated positions.
-			// The current match index will be preserved to try and navigate to the "next" item logically.
-			const oldIndex = currentMatchIndex;
 			startSearch();
-			// We could try to be smart and set currentMatchIndex to oldIndex, but startSearch is async.
-			// For now, it will just restart the search from the beginning.
 			break;
 		}
 		case 'search-replace:replacedAll': {
@@ -215,7 +211,12 @@ export function setupSearchAndReplace(views, registerHandler) {
 	closeBtn.addEventListener('click', () => toggleSearchBar(false));
 	
 	searchInput.addEventListener('input', startSearch);
-	caseSensitiveCheckbox.addEventListener('change', startSearch);
+	
+	// Modified: Add click listener for the new button
+	caseSensitiveBtn.addEventListener('click', () => {
+		caseSensitiveBtn.classList.toggle('active');
+		startSearch();
+	});
 	
 	nextBtn.addEventListener('click', () => navigateToMatch((currentMatchIndex + 1) % globalMatches.length));
 	prevBtn.addEventListener('click', () => navigateToMatch((currentMatchIndex - 1 + globalMatches.length) % globalMatches.length));
@@ -240,6 +241,16 @@ export function setupSearchAndReplace(views, registerHandler) {
 				if (!prevBtn.disabled) prevBtn.click();
 			} else {
 				if (!nextBtn.disabled) nextBtn.click();
+			}
+		}
+	});
+	
+	// New: Add keydown listener to replace input for 'Enter' key
+	replaceInput.addEventListener('keydown', (e) => {
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			if (!replaceBtn.disabled) {
+				handleReplace();
 			}
 		}
 	});

@@ -70,6 +70,11 @@ i[class^="bi-"], i[class*=" bi-"] {
     @apply bg-amber-500 text-white dark:text-black;
 }
 
+/* New: Style for the active case-sensitive button */
+#js-search-replace-bar #js-case-sensitive-btn.active {
+    @apply bg-primary/20 text-primary;
+}
+
 
 .ProseMirror {
     @apply min-h-full focus:outline-none;

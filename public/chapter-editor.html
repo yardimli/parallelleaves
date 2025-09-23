@@ -193,13 +193,22 @@
 	</button>
 </div>
 
-<!-- New: Search and Replace Bar -->
-<div id="js-search-replace-bar" class="hidden flex-shrink-0 h-auto bg-base-200 flex flex-col p-2 gap-2 z-40 border-b border-base-300">
-	<div class="flex items-center gap-4">
-		<div class="flex flex-col gap-1 flex-grow">
-			<input type="text" id="js-search-replace-input" class="input input-sm input-bordered w-full" data-i18n-placeholder="editor.searchReplace.findPlaceholder">
-			<input type="text" id="js-replace-input" class="input input-sm input-bordered w-full" data-i18n-placeholder="editor.searchReplace.replacePlaceholder">
+<!-- Modified: Search and Replace Bar -->
+<div id="js-search-replace-bar" class="hidden flex-shrink-0 h-auto bg-base-200 flex flex-col p-2 gap-1 z-40 border-b border-base-300">
+	<!-- Find Row -->
+	<div class="flex items-center gap-2">
+		<!-- Input container with 50% width -->
+		<div class="relative w-1/2">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-base-content/50 pointer-events-none">
+                <i class="bi bi-search"></i>
+            </span>
+			<input type="text" id="js-search-replace-input" class="input input-sm input-bordered w-full pl-10 pr-12" data-i18n-placeholder="editor.searchReplace.findPlaceholder">
+			<button id="js-case-sensitive-btn" class="absolute inset-y-0 right-0 flex items-center px-2 btn btn-ghost btn-sm font-mono" data-i18n-title="editor.searchReplace.caseSensitive">
+				Aa
+			</button>
 		</div>
+		<!-- Buttons and info aligned left -->
+		<span id="js-search-replace-results-count" class="text-sm text-base-content/70 w-20 text-center"></span>
 		<div class="flex items-center gap-1">
 			<button id="js-search-replace-prev-btn" class="btn btn-ghost btn-sm btn-square" data-i18n-title="editor.searchReplace.previous" disabled>
 				<i class="bi bi-chevron-up"></i>
@@ -208,26 +217,29 @@
 				<i class="bi bi-chevron-down"></i>
 			</button>
 		</div>
-		<div class="flex flex-col gap-1">
-			<button id="js-replace-btn" class="btn btn-sm btn-outline" data-i18n="editor.searchReplace.replace" disabled>Replace</button>
-			<button id="js-replace-all-btn" class="btn btn-sm btn-outline" data-i18n="editor.searchReplace.replaceAll" disabled>Replace All</button>
-		</div>
-		<div class="flex-grow-0">
-			<span id="js-search-replace-results-count" class="text-sm text-base-content/70 w-24 text-center"></span>
-		</div>
-		<button id="js-search-replace-close-btn" class="btn btn-ghost btn-sm btn-square self-start" data-i18n-title="editor.searchReplace.close">
+		<!-- Spacer to push close button to the right -->
+		<div class="flex-grow"></div>
+		<button id="js-search-replace-close-btn" class="btn btn-ghost btn-sm btn-square" data-i18n-title="editor.searchReplace.close">
 			<i class="bi bi-x-lg"></i>
 		</button>
 	</div>
-	<div class="flex items-center gap-4 px-1">
-		<div class="form-control">
-			<label class="label cursor-pointer gap-2 p-0">
-				<span class="label-text text-xs" data-i18n="editor.searchReplace.caseSensitive">Case Sensitive</span>
-				<input type="checkbox" id="js-case-sensitive-checkbox" class="checkbox checkbox-sm" />
-			</label>
+	<!-- Replace Row -->
+	<div class="flex items-center gap-2">
+		<!-- Input container with 50% width -->
+		<div class="relative w-1/2">
+             <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-base-content/50 pointer-events-none">
+                <i class="bi bi-arrow-left-right"></i>
+            </span>
+			<input type="text" id="js-replace-input" class="input input-sm input-bordered w-full pl-10" data-i18n-placeholder="editor.searchReplace.replacePlaceholder">
+		</div>
+		<!-- Buttons aligned left -->
+		<div class="flex items-center gap-1">
+			<button id="js-replace-btn" class="btn btn-sm btn-outline" data-i18n="editor.searchReplace.replace" disabled>Replace</button>
+			<button id="js-replace-all-btn" class="btn btn-sm btn-outline" data-i18n="editor.searchReplace.replaceAll" disabled>Replace All</button>
 		</div>
 	</div>
 </div>
+
 
 <!-- Main Content Area -->
 <div class="flex-grow flex flex-col overflow-hidden">
