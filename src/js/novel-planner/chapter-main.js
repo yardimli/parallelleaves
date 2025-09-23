@@ -2,16 +2,18 @@ import { setupTopToolbar, setActiveContentWindow, updateToolbarState } from './t
 import { setupPromptEditor, openPromptEditor } from '../prompt-editor.js';
 import { setupTypographySettings, getTypographySettings, generateTypographyStyleProperties } from './typography-settings.js';
 import { initI18n, t } from '../i18n.js';
-import { processSourceContentForMarkers } from '../../utils/html-processing.js';
+import { processSourceContentForMarkers, removeObsoleteCodexLinks } from '../../utils/html-processing.js';
 import { initDictionaryModal } from '../dictionary/dictionary-modal.js';
 import { loadModals } from '../../utils/modal-loader.js';
 import { showConfirmationModal, showInputModal } from './modals.js';
+// Corrected: The scrollToTargetMarker function in the module is fine, the issue is how we call it.
 import { syncChapterScroll, scrollToChapter, scrollToTargetMarker, scrollToSourceMarker, setupIntersectionObserver } from './scroll-sync.js';
 import { setupSearch } from './search.js';
 import { setupSpellcheckDropdown } from './spellcheck.js';
 import { handleOpenDictionaryWithSelection } from './dictionary-handler.js';
 import { createIframeEditorInterface } from './editor-interface.js';
 
+// ... (debounce and state management code remains the same) ...
 const debounce = (func, delay) => {
 	let timeout;
 	return function (...args) {
@@ -42,7 +44,7 @@ const setActiveChapterId = (chapterId, callback) => {
 	}
 };
 
-// --- Debounced Savers ---
+// ... (debounced savers, restoreScrollPositions, source content editing, and marker sync remain the same) ...
 const debouncedContentSave = debounce(async ({ chapterId, field, value }) => {
 	if (field === 'target_content') {
 		const tempDiv = document.createElement('div');
@@ -74,13 +76,6 @@ const debouncedSaveScroll = debounce((novelId, sourceEl, targetEl) => {
 	localStorage.setItem(`scroll-position-${novelId}`, JSON.stringify(positions));
 }, 500);
 
-/**
- * Restores scroll positions from localStorage.
- * @param {string} novelId - The ID of the current novel.
- * @param {HTMLElement} sourceEl - The source column container element.
- * @param {HTMLElement} targetEl - The target column container element.
- * @returns {boolean} - True if positions were found and restored, false otherwise.
- */
 function restoreScrollPositions (novelId, sourceEl, targetEl) {
 	const saved = localStorage.getItem(`scroll-position-${novelId}`);
 	if (saved) {
@@ -97,7 +92,6 @@ function restoreScrollPositions (novelId, sourceEl, targetEl) {
 	return false;
 }
 
-// --- Source Content Editing ---
 async function renderSourceChapterContent (chapterId, rawHtml) {
 	const chapterItem = document.getElementById(`source-chapter-scroll-target-${chapterId}`);
 	if (!chapterItem) return;
@@ -160,7 +154,6 @@ async function saveSourceChanges (chapterId) {
 	}
 }
 
-// --- Marker Synchronization ---
 async function synchronizeMarkers (chapterId, sourceContainer, targetHtml) {
 	const markerRegex = /(\[\[#(\d+)\]\])|(\{\{#(\d+)\}\})/g;
 	let sourceHtml = sourceContainer.innerHTML;
@@ -195,11 +188,6 @@ async function synchronizeMarkers (chapterId, sourceContainer, targetHtml) {
 	}
 }
 
-// --- DOM Rendering ---
-/**
- * Renders the manuscript into two columns using HTML templates.
- * @param {object} novelData - The full novel data.
- */
 async function renderManuscript (novelData) {
 	const sourceContainer = document.getElementById('js-source-column-container');
 	const targetContainer = document.getElementById('js-target-column-container');
@@ -207,7 +195,6 @@ async function renderManuscript (novelData) {
 	const targetFragment = document.createDocumentFragment();
 	totalIframes = 0;
 	
-	// New: Fetch all required templates at once for efficiency.
 	const [
 		sectionHeaderTpl,
 		sourceChapterTpl,
@@ -221,7 +208,6 @@ async function renderManuscript (novelData) {
 	const tempDiv = document.createElement('div');
 	
 	for (const section of novelData.sections) {
-		// New: Populate and append section header from template.
 		const sectionHtml = sectionHeaderTpl
 			.replace(/{{id}}/g, section.id)
 			.replace(/{{title}}/g, section.title)
@@ -242,18 +228,21 @@ async function renderManuscript (novelData) {
 		}
 		
 		for (const chapter of section.chapters) {
-			// New: Populate source chapter from template.
+			// Modified: Chain the cleanup and processing functions for source content.
+			const rawSourceContent = chapter.source_content || '';
+			const cleanedSourceContent = removeObsoleteCodexLinks(rawSourceContent);
+			const finalSourceContent = processSourceContentForMarkers(cleanedSourceContent);
+			
 			const sourceHtml = sourceChapterTpl
 				.replace(/{{id}}/g, chapter.id)
 				.replace(/{{title}}/g, chapter.title)
 				.replace(/{{source_word_count}}/g, chapter.source_word_count.toLocaleString())
-				.replace('{{source_content}}', processSourceContentForMarkers(chapter.source_content || ''));
+				.replace('{{source_content}}', finalSourceContent); // Use the fully processed content
 			
 			tempDiv.innerHTML = sourceHtml.trim();
 			const sourceChapterWrapper = tempDiv.firstChild;
 			sourceFragment.appendChild(sourceChapterWrapper);
 			
-			// New: Populate target chapter from template.
 			const targetHtml = targetChapterTpl
 				.replace(/{{id}}/g, chapter.id)
 				.replace(/{{title}}/g, chapter.title)
@@ -393,7 +382,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 		await renderManuscript(novelData);
 		populateNavDropdown(novelData);
 		
-		// --- Initialize Modules ---
 		setupTopToolbar({
 			isChapterEditor: true,
 			getActiveChapterId: () => activeChapterId,
@@ -425,7 +413,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			initializeView(novelId, novelData, initialChapterId);
 		}
 		
-		// --- Event Listeners ---
 		document.getElementById('js-open-codex-btn')?.addEventListener('click', () => window.api.openCodex(novelId));
 		document.getElementById('js-open-chat-btn')?.addEventListener('click', () => window.api.openChatWindow(novelId));
 		
@@ -494,7 +481,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 			if (markerLink) {
 				event.preventDefault();
 				const chapterId = markerLink.closest('.manuscript-chapter-item').dataset.chapterId;
-				scrollToTargetMarker(chapterId, markerLink.dataset.markerId, chapterEditorViews);
+				const markerId = markerLink.dataset.markerId;
+				const markerType = markerLink.dataset.markerType;
+				if (markerId && chapterId && markerType) {
+					// Corrected: Pass the chapterEditorViews map to the function.
+					scrollToTargetMarker(chapterId, markerId, markerType, chapterEditorViews);
+				}
 				return;
 			}
 			
@@ -642,9 +634,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 				case 'search:results':
 					if (searchResultHandler) searchResultHandler(payload);
 					break;
-				case 'markerClicked':
-					scrollToSourceMarker(payload.markerId);
+				case 'markerClicked': {
+					const { markerId, markerType } = payload;
+					scrollToSourceMarker(markerId, markerType);
 					break;
+				}
 				case 'requestTranslation': {
 					const viewInfo = Array.from(chapterEditorViews.values()).find(v => v.contentWindow === sourceWindow);
 					if (!viewInfo || !currentSourceSelection.hasSelection) return;

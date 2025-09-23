@@ -49,8 +49,23 @@ export function processSourceContentForMarkers(htmlString) {
 	// Replace the found markers with anchor tags, now including a data-marker-type.
 	return htmlString.replace(markerRegex, (match, p1, p2, p3, p4) => {
 		const number = p2 || p4; // The captured number will be in either the 2nd or 4th capture group.
-		// New: Determine if the marker is an opening or closing type.
 		const type = p1 ? 'opening' : 'closing';
 		return `<a href="#" class="translation-marker-link" data-marker-id="${number}" data-marker-type="${type}">${match}</a>`;
 	});
+}
+
+/**
+ * New: Removes obsolete <a class="codex-link"> tags from HTML, keeping the inner text.
+ * This is a cleanup utility for legacy content.
+ * @param {string} htmlString - The HTML content to process.
+ * @returns {string} The HTML string with codex links removed.
+ */
+export function removeObsoleteCodexLinks(htmlString) {
+	if (!htmlString) {
+		return htmlString;
+	}
+	// Regex to find the <a> tag with class "codex-link" and capture its content.
+	const codexLinkRegex = /<a[^>]*class="codex-link"[^>]*>(.*?)<\/a>/gi;
+	// Replace the entire tag with only its inner content (captured group $1).
+	return htmlString.replace(codexLinkRegex, '$1');
 }

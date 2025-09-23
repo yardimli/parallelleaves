@@ -97,8 +97,8 @@ export function scrollToTargetMarker (chapterId, markerId, markerType, chapterEd
 		return;
 	}
 	
-	// New: Determine the opposite marker text to search for.
-	const searchText = markerType === 'opening' ? `{{#${markerId}}}` : `[[#${markerId}]]`;
+	// Corrected: Determine the SAME marker text to search for.
+	const searchText = markerType === 'opening' ? `[[#${markerId}]]` : `{{#${markerId}}}`;
 	
 	viewInfo.contentWindow.postMessage({
 		type: 'findAndScrollToText',
@@ -115,9 +115,8 @@ export function scrollToSourceMarker (markerId, markerType) {
 	const sourceContainer = document.getElementById('js-source-column-container');
 	if (!sourceContainer) return;
 	
-	// New: Determine the opposite marker type to find in the source pane.
-	const oppositeType = markerType === 'opening' ? 'closing' : 'opening';
-	const selector = `.translation-marker-link[data-marker-id="${markerId}"][data-marker-type="${oppositeType}"]`;
+	// Corrected: Search for the SAME marker type in the source pane.
+	const selector = `.translation-marker-link[data-marker-id="${markerId}"][data-marker-type="${markerType}"]`;
 	const markerLink = sourceContainer.querySelector(selector);
 	
 	if (markerLink) {
@@ -127,10 +126,9 @@ export function scrollToSourceMarker (markerId, markerType) {
 			markerLink.classList.remove('search-highlight-active');
 		}, 2000);
 	} else {
-		console.warn(`Source marker with ID ${markerId} and type ${oppositeType} not found.`);
+		console.warn(`Source marker with ID ${markerId} and type ${markerType} not found.`);
 	}
 }
-
 
 /**
  * Sets up the intersection observer to track the active chapter in the source column.
