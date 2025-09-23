@@ -40,7 +40,7 @@ let aiActionRange = null;
 let floatingToolbar = null;
 let currentAiParams = null;
 let currentPromptId = null;
-let currentActionMarkers = null; // New: Stores markers for the current AI action.
+let currentActionMarkers = null;
 
 /**
  * Escapes special characters in a string for use in a regular expression.
@@ -104,7 +104,7 @@ async function cleanupAiAction() {
 	originalFragmentJson = null;
 	aiActionRange = null;
 	currentAiParams = null;
-	currentActionMarkers = null; // Modified: Reset markers on cleanup.
+	currentActionMarkers = null;
 	
 	if (currentEditorInterface.type === 'iframe') {
 		updateChapterToolbarState(null);
@@ -119,7 +119,6 @@ async function handleFloatyApply() {
 async function handleFloatyDiscard() {
 	if (!isAiActionActive || !currentEditorInterface || !originalFragmentJson) return;
 	
-	// New: Logic to remove translation markers from the source text on discard.
 	if (currentActionMarkers && currentActionMarkers.opening) {
 		try {
 			const chapterId = currentContext.chapterId;
@@ -127,8 +126,6 @@ async function handleFloatyDiscard() {
 			if (sourceContainer) {
 				let sourceHtml = sourceContainer.innerHTML;
 				
-				// Use regex to robustly remove markers and their surrounding whitespace.
-				// This handles cases where markers might be wrapped in links by processSourceContentForMarkers.
 				const openingMarkerPattern = `(<a[^>]*>\\s*)?${escapeRegex(currentActionMarkers.opening)}(\\s*<\\/a>)?\\s*`;
 				const closingMarkerPattern = `\\s*(<a[^>]*>\\s*)?${escapeRegex(currentActionMarkers.closing)}(\\s*<\\/a>)?`;
 				
@@ -137,19 +134,16 @@ async function handleFloatyDiscard() {
 				
 				sourceHtml = sourceHtml.replace(openingRegex, '').replace(closingRegex, '');
 				
-				// Save the cleaned HTML to the database.
 				await window.api.updateChapterField({
 					chapterId: chapterId,
 					field: 'source_content',
 					value: sourceHtml
 				});
 				
-				// Re-render the source content to ensure all links are correctly processed.
 				sourceContainer.innerHTML = processSourceContentForMarkers(sourceHtml);
 			}
 		} catch (error) {
 			console.error('Failed to remove translation markers from source on discard:', error);
-			// Do not block the rest of the discard flow, but log the error.
 		}
 	}
 	
@@ -169,10 +163,23 @@ async function handleFloatyRetry() {
 		floatingToolbar = null;
 	}
 	
-	// Modified: Call the discard logic which now also handles marker removal.
-	await handleFloatyDiscard();
+	// Modified: Perform a partial cleanup that reverts the target editor but preserves the source markers.
+	// 1. Revert the suggestion in the target editor.
+	await currentEditorInterface.discardAiSuggestion(aiActionRange.from, aiActionRange.to, originalFragmentJson);
 	
-	// Re-open the prompt editor for the user to try again.
+	// 2. Clean up the state to allow a new action, but preserve `currentActionMarkers`.
+	await currentEditorInterface.setEditable(true);
+	await currentEditorInterface.cleanupSuggestion(); // Removes the highlight mark.
+	isAiActionActive = false;
+	originalFragmentJson = null;
+	aiActionRange = null;
+	// `currentActionMarkers` is intentionally NOT cleared here.
+	
+	if (currentEditorInterface.type === 'iframe') {
+		updateChapterToolbarState(null);
+	}
+	
+	// 3. Re-open the prompt editor for the user to try again.
 	openPromptEditor(contextForRetry, actionToRetry, previousFormData);
 }
 
@@ -439,54 +446,60 @@ async function handleModalApply() {
 	let openingMarker = '';
 	let closingMarker = '';
 	if (action === 'translate') {
-		const allContentResult = await window.api.getAllNovelContent(novelId);
-		
-		let highestNum = 0;
-		if (allContentResult.success) {
-			highestNum = await window.api.findHighestMarkerNumber(allContentResult.combinedHtml, '');
+		// Modified: Check if we are retrying and markers already exist.
+		if (currentActionMarkers) {
+			openingMarker = currentActionMarkers.opening;
+			closingMarker = currentActionMarkers.closing;
 		} else {
-			console.error('Could not fetch all novel content for marker generation:', allContentResult.message);
-			window.showAlert('Could not generate a translation marker. The translation will proceed without it.');
-		}
-		
-		const newMarkerNum = highestNum + 1;
-		openingMarker = `[[#${newMarkerNum}]]`;
-		closingMarker = `{{#${newMarkerNum}}}`;
-		
-		// New: Store markers so they can be removed if the action is discarded.
-		currentActionMarkers = { opening: openingMarker, closing: closingMarker };
-		
-		try {
-			const chapterId = currentContext.chapterId;
-			const sourceContainer = document.querySelector(`#source-chapter-scroll-target-${chapterId} .source-content-readonly`);
+			// This is a new translation, so create and insert new markers.
+			const allContentResult = await window.api.getAllNovelContent(novelId);
 			
-			const range = currentContext.sourceSelectionRange;
-			const openingMarkerNode = document.createTextNode(openingMarker + ' ');
-			const closingMarkerNode = document.createTextNode(' ' + closingMarker);
+			let highestNum = 0;
+			if (allContentResult.success) {
+				highestNum = await window.api.findHighestMarkerNumber(allContentResult.combinedHtml, '');
+			} else {
+				console.error('Could not fetch all novel content for marker generation:', allContentResult.message);
+				window.showAlert('Could not generate a translation marker. The translation will proceed without it.');
+			}
 			
-			const endRange = range.cloneRange();
-			endRange.collapse(false);
-			endRange.insertNode(closingMarkerNode);
+			const newMarkerNum = highestNum + 1;
+			openingMarker = `[[#${newMarkerNum}]]`;
+			closingMarker = `{{#${newMarkerNum}}}`;
 			
-			range.collapse(true);
-			range.insertNode(openingMarkerNode);
+			currentActionMarkers = { opening: openingMarker, closing: closingMarker };
 			
-			const updatedHtmlContent = sourceContainer.innerHTML;
-			
-			await window.api.updateChapterField({
-				chapterId: chapterId,
-				field: 'source_content',
-				value: updatedHtmlContent
-			});
-			
-			const processedHtml = processSourceContentForMarkers(updatedHtmlContent);
-			
-			sourceContainer.innerHTML = processedHtml;
-		} catch (e) {
-			console.error('Could not insert markers into source text:', e);
-			openingMarker = '';
-			closingMarker = '';
-			currentActionMarkers = null; // New: Reset markers if the insertion fails.
+			try {
+				const chapterId = currentContext.chapterId;
+				const sourceContainer = document.querySelector(`#source-chapter-scroll-target-${chapterId} .source-content-readonly`);
+				
+				const range = currentContext.sourceSelectionRange;
+				const openingMarkerNode = document.createTextNode(openingMarker + ' ');
+				const closingMarkerNode = document.createTextNode(' ' + closingMarker);
+				
+				const endRange = range.cloneRange();
+				endRange.collapse(false);
+				endRange.insertNode(closingMarkerNode);
+				
+				range.collapse(true);
+				range.insertNode(openingMarkerNode);
+				
+				const updatedHtmlContent = sourceContainer.innerHTML;
+				
+				await window.api.updateChapterField({
+					chapterId: chapterId,
+					field: 'source_content',
+					value: updatedHtmlContent
+				});
+				
+				const processedHtml = processSourceContentForMarkers(updatedHtmlContent);
+				
+				sourceContainer.innerHTML = processedHtml;
+			} catch (e) {
+				console.error('Could not insert markers into source text:', e);
+				openingMarker = '';
+				closingMarker = '';
+				currentActionMarkers = null;
+			}
 		}
 	}
 	
