@@ -76,6 +76,7 @@ let field;
 let hasSourceSelection = false;
 let floatingTranslateBtn = null;
 let localSearchMatches = []; // State for local search match positions {from, to}
+let localSearchReplaceMatches = []; // New: State for local search & replace match positions
 
 // ProseMirror plugin to manage search result decorations.
 const searchPlugin = new Plugin({
@@ -104,6 +105,31 @@ const searchPlugin = new Plugin({
 	},
 });
 
+// New: ProseMirror plugin to manage search and replace result decorations.
+const searchReplacePlugin = new Plugin({
+	state: {
+		init() {
+			return DecorationSet.empty;
+		},
+		apply(tr, value) {
+			const meta = tr.getMeta('search-replace');
+			if (meta) {
+				return meta.decorations;
+			}
+			if (tr.docChanged) {
+				return value.map(tr.mapping, tr.doc);
+			}
+			return value;
+		},
+	},
+	props: {
+		decorations(state) {
+			return this.getState(state);
+		},
+	},
+});
+
+
 /**
  * Posts a message to the parent window.
  * @param {string} type - The message type.
@@ -121,7 +147,6 @@ const sendResize = () => {
 	// Use a small timeout to allow the DOM to render before calculating height
 	setTimeout(() => {
 		const height = document.body.scrollHeight + 75;
-		console.log('Sending resize height:', height);
 		postToParent('resize', { height });
 	}, 50);
 };
@@ -282,7 +307,7 @@ function createEditorView (mount, config) {
 	editorView = new EditorView(mount, {
 		state: EditorState.create({
 			doc: doc,
-			plugins: [history(), keymap({ 'Mod-z': undo, 'Mod-y': redo }), keymap(baseKeymap), editorPlugin, searchPlugin],
+			plugins: [history(), keymap({ 'Mod-z': undo, 'Mod-y': redo }), keymap(baseKeymap), editorPlugin, searchPlugin, searchReplacePlugin], // New: Added searchReplacePlugin
 		}),
 		
 		dispatchTransaction (transaction) {
@@ -459,6 +484,15 @@ function navigateToSearchMatch(matchIndex, isActive) {
 	}
 }
 
+// New: Helper function to clear search and replace decorations
+function clearSearchReplaceDecorations() {
+	localSearchReplaceMatches = [];
+	if (editorView) {
+		const tr = editorView.state.tr.setMeta('search-replace', { decorations: DecorationSet.empty });
+		editorView.dispatch(tr);
+	}
+}
+
 /**
  * Main message listener for communication from the parent window.
  */
@@ -520,13 +554,10 @@ window.addEventListener('message', (event) => {
 			const $replaceStart = currentState.doc.resolve(from);
 			const nodeBefore = $replaceStart.parent;
 			
-			console.log('Node before replacement start:', nodeBefore, nodeBefore ? nodeBefore.type.name : 'N/A', nodeBefore ? nodeBefore.content.size : 'N/A');
-			
 			if (nodeBefore && nodeBefore.type.name === 'paragraph' && nodeBefore.content.size === 0) {
 				const paraFrom = from - nodeBefore.nodeSize;
 				const paraTo = from;
 				if (paraFrom>=0 && paraTo<=currentState.doc.content.size && paraFrom < paraTo) {
-					console.log('Deleting empty paragraph from', paraFrom, 'to', paraTo);
 					
 					// Create and dispatch a NEW transaction
 					const deleteTr = currentState.tr.delete(paraFrom, paraTo);
@@ -588,6 +619,118 @@ window.addEventListener('message', (event) => {
 		}
 		case 'search:clear': {
 			clearSearchDecorations();
+			break;
+		}
+		
+		// New: Handle search and replace commands
+		case 'search-replace:find': {
+			const { query, caseSensitive } = payload;
+			clearSearchReplaceDecorations();
+			if (!query) {
+				postToParent('search-replace:results', { chapterId, matchCount: 0 });
+				break;
+			}
+			
+			const { doc } = editorView.state;
+			const decorations = [];
+			const flags = caseSensitive ? 'g' : 'gi';
+			const regex = new RegExp(query, flags);
+			
+			doc.descendants((node, pos) => {
+				if (!node.isText) return;
+				let match;
+				while ((match = regex.exec(node.text)) !== null) {
+					const from = pos + match.index;
+					const to = from + match[0].length;
+					localSearchReplaceMatches.push({ from, to });
+					decorations.push(Decoration.inline(from, to, { class: 'search-replace-highlight' }));
+				}
+			});
+			
+			const decorationSet = DecorationSet.create(doc, decorations);
+			const tr = editorView.state.tr.setMeta('search-replace', { decorations: decorationSet });
+			editorView.dispatch(tr);
+			
+			postToParent('search-replace:results', { chapterId, matchCount: localSearchReplaceMatches.length });
+			break;
+		}
+		
+		case 'search-replace:navigateTo': {
+			const { matchIndex, isActive } = payload;
+			if (!editorView) break;
+			
+			const decorations = localSearchReplaceMatches.map((match, i) => {
+				const className = (isActive && i === matchIndex)
+					? 'search-replace-highlight search-replace-highlight-active'
+					: 'search-replace-highlight';
+				return Decoration.inline(match.from, match.to, { class: className });
+			});
+			
+			const decorationSet = DecorationSet.create(editorView.state.doc, decorations);
+			const tr = editorView.state.tr.setMeta('search-replace', { decorations: decorationSet });
+			editorView.dispatch(tr);
+			
+			if (isActive && localSearchReplaceMatches[matchIndex]) {
+				const { from } = localSearchReplaceMatches[matchIndex];
+				editorView.dispatch(editorView.state.tr.scrollIntoView());
+				const coords = editorView.coordsAtPos(from);
+				postToParent('scrollToCoordinates', { top: coords.top });
+			}
+			break;
+		}
+		
+		case 'search-replace:replace': {
+			const { matchIndex, replaceText } = payload;
+			const match = localSearchReplaceMatches[matchIndex];
+			if (!match) break;
+			
+			const { from, to } = match;
+			const tr = editorView.state.tr.replaceWith(from, to, editorView.state.schema.text(replaceText));
+			editorView.dispatch(tr);
+			
+			postToParent('search-replace:replaced', { chapterId });
+			break;
+		}
+		
+		case 'search-replace:replaceAll': {
+			const { query, replaceText, caseSensitive } = payload;
+			let { tr } = editorView.state;
+			let replacementsMade = 0;
+			const flags = caseSensitive ? 'g' : 'gi';
+			const regex = new RegExp(query, flags);
+			
+			editorView.state.doc.descendants((node, pos) => {
+				if (!node.isText) return true;
+				
+				const text = node.text;
+				const matchesInNode = [];
+				let match;
+				while ((match = regex.exec(text)) !== null) {
+					matchesInNode.push({
+						from: pos + match.index,
+						to: pos + match.index + match[0].length,
+					});
+				}
+				
+				for (let i = matchesInNode.length - 1; i >= 0; i--) {
+					const { from, to } = matchesInNode[i];
+					const mapping = tr.mapping;
+					tr.replaceWith(mapping.map(from), mapping.map(to), editorView.state.schema.text(replaceText));
+					replacementsMade++;
+				}
+				return true;
+			});
+			
+			if (replacementsMade > 0) {
+				editorView.dispatch(tr);
+			}
+			
+			postToParent('search-replace:replacedAll', { chapterId, count: replacementsMade });
+			break;
+		}
+		
+		case 'search-replace:clear': {
+			clearSearchReplaceDecorations();
 			break;
 		}
 		

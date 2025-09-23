@@ -288,6 +288,20 @@
       "results": "{current} av {total}",
       "noResults": "Ingen resultater"
     },
+    "searchReplace": {
+      "title": "Finn og erstatt (Ctrl+H)",
+      "findPlaceholder": "Finn i måldokumentet...",
+      "replacePlaceholder": "Erstatt med...",
+      "previous": "Forrige treff",
+      "next": "Neste treff",
+      "close": "Lukk Finn og erstatt",
+      "replace": "Erstatt",
+      "replaceAll": "Erstatt alle",
+      "caseSensitive": "Skill mellom store/små bokstaver",
+      "results": "{current} av {total}",
+      "noResults": "Ingen resultater",
+      "replaceAllResult": "Erstattet {count} forekomst(er)."
+    },
     "note": {
       "editTitle": "Rediger notat",
       "deleteTitle": "Slett notat"

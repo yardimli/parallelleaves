@@ -8,6 +8,7 @@ import { loadModals } from '../../utils/modal-loader.js';
 import { showConfirmationModal, showInputModal } from './modals.js';
 import { syncChapterScroll, scrollToChapter, scrollToTargetMarker, scrollToSourceMarker, setupIntersectionObserver } from './scroll-sync.js';
 import { setupSearch } from './search.js';
+import { setupSearchAndReplace } from './search-replace.js'; // New: Import search and replace module
 import { setupSpellcheckDropdown } from './spellcheck.js';
 import { handleOpenDictionaryWithSelection } from './dictionary-handler.js';
 import { createIframeEditorInterface } from './editor-interface.js';
@@ -32,6 +33,7 @@ let iframesReadyCount = 0;
 let viewInitialized = false;
 let activeEditor = null; // contentWindow of the currently focused iframe editor.
 let searchResultHandler = null; // Callback for search results from iframes.
+let searchReplaceResultHandler = null; // New: Callback for search and replace results.
 
 // --- State Accessors and Mutators ---
 const getActiveEditor = () => activeEditor;
@@ -408,6 +410,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 		setupIntersectionObserver(setActiveChapterId);
 		setupSpellcheckDropdown();
 		setupSearch(chapterEditorViews, (handler) => { searchResultHandler = handler; });
+		// New: Initialize the search and replace module
+		setupSearchAndReplace(chapterEditorViews, (handler) => { searchReplaceResultHandler = handler; });
 		initDictionaryModal(novelId);
 		
 		if (totalIframes === 0) {
@@ -634,6 +638,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 				}
 				case 'search:results':
 					if (searchResultHandler) searchResultHandler(payload);
+					break;
+				// New: Handle search and replace results
+				case 'search-replace:results':
+				case 'search-replace:replaced':
+				case 'search-replace:replacedAll':
+					if (searchReplaceResultHandler) searchReplaceResultHandler(type, payload);
 					break;
 				case 'markerClicked': {
 					const { markerId, markerType } = payload;

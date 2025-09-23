@@ -287,6 +287,20 @@
       "results": "{current} of {total}",
       "noResults": "No results"
     },
+    "searchReplace": {
+      "title": "Find and Replace (Ctrl+H)",
+      "findPlaceholder": "Find in target document...",
+      "replacePlaceholder": "Replace with...",
+      "previous": "Previous Match",
+      "next": "Next Match",
+      "close": "Close Find and Replace",
+      "replace": "Replace",
+      "replaceAll": "Replace All",
+      "caseSensitive": "Case Sensitive",
+      "results": "{current} of {total}",
+      "noResults": "No results",
+      "replaceAllResult": "Replaced {count} occurrence(s)."
+    },
     "note": {
       "editTitle": "Edit Note",
       "deleteTitle": "Delete Note"

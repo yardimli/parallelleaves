@@ -288,6 +288,20 @@
       "results": "{total} sonuçtan {current}",
       "noResults": "Sonuç bulunamadı"
     },
+    "searchReplace": {
+      "title": "Bul ve Değiştir (Ctrl+H)",
+      "findPlaceholder": "Hedef belgede bul...",
+      "replacePlaceholder": "Bununla değiştir...",
+      "previous": "Önceki Eşleşme",
+      "next": "Sonraki Eşleşme",
+      "close": "Bul ve Değiştir'i Kapat",
+      "replace": "Değiştir",
+      "replaceAll": "Tümünü Değiştir",
+      "caseSensitive": "Büyük/Küçük Harf Duyarlı",
+      "results": "{total} sonuçtan {current}",
+      "noResults": "Sonuç bulunamadı",
+      "replaceAllResult": "{count} adet değiştirildi."
+    },
     "note": {
       "editTitle": "Notu Düzenle",
       "deleteTitle": "Notu Sil"

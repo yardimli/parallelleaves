@@ -137,6 +137,10 @@
 		<button type="button" id="js-search-btn" class="btn btn-ghost btn-sm btn-square" data-i18n-title="editor.search">
 			<i class="bi bi-search text-lg"></i>
 		</button>
+		<!-- New: Search and Replace Button -->
+		<button type="button" id="js-search-replace-btn" class="btn btn-ghost btn-sm btn-square" data-i18n-title="editor.searchReplace.title">
+			<i class="bi bi-tools text-lg"></i>
+		</button>
 	</div>
 	<div class="flex-grow"></div>
 	<button id="typography-settings-btn" class="btn btn-ghost btn-circle" data-i18n-title="common.typography">
@@ -187,6 +191,42 @@
 	<button id="js-search-close-btn" class="btn btn-ghost btn-sm btn-square" data-i18n-title="editor.searchBar.close">
 		<i class="bi bi-x-lg"></i>
 	</button>
+</div>
+
+<!-- New: Search and Replace Bar -->
+<div id="js-search-replace-bar" class="hidden flex-shrink-0 h-auto bg-base-200 flex flex-col p-2 gap-2 z-40 border-b border-base-300">
+	<div class="flex items-center gap-4">
+		<div class="flex flex-col gap-1 flex-grow">
+			<input type="text" id="js-search-replace-input" class="input input-sm input-bordered w-full" data-i18n-placeholder="editor.searchReplace.findPlaceholder">
+			<input type="text" id="js-replace-input" class="input input-sm input-bordered w-full" data-i18n-placeholder="editor.searchReplace.replacePlaceholder">
+		</div>
+		<div class="flex items-center gap-1">
+			<button id="js-search-replace-prev-btn" class="btn btn-ghost btn-sm btn-square" data-i18n-title="editor.searchReplace.previous" disabled>
+				<i class="bi bi-chevron-up"></i>
+			</button>
+			<button id="js-search-replace-next-btn" class="btn btn-ghost btn-sm btn-square" data-i18n-title="editor.searchReplace.next" disabled>
+				<i class="bi bi-chevron-down"></i>
+			</button>
+		</div>
+		<div class="flex flex-col gap-1">
+			<button id="js-replace-btn" class="btn btn-sm btn-outline" data-i18n="editor.searchReplace.replace" disabled>Replace</button>
+			<button id="js-replace-all-btn" class="btn btn-sm btn-outline" data-i18n="editor.searchReplace.replaceAll" disabled>Replace All</button>
+		</div>
+		<div class="flex-grow-0">
+			<span id="js-search-replace-results-count" class="text-sm text-base-content/70 w-24 text-center"></span>
+		</div>
+		<button id="js-search-replace-close-btn" class="btn btn-ghost btn-sm btn-square self-start" data-i18n-title="editor.searchReplace.close">
+			<i class="bi bi-x-lg"></i>
+		</button>
+	</div>
+	<div class="flex items-center gap-4 px-1">
+		<div class="form-control">
+			<label class="label cursor-pointer gap-2 p-0">
+				<span class="label-text text-xs" data-i18n="editor.searchReplace.caseSensitive">Case Sensitive</span>
+				<input type="checkbox" id="js-case-sensitive-checkbox" class="checkbox checkbox-sm" />
+			</label>
+		</div>
+	</div>
 </div>
 
 <!-- Main Content Area -->
