@@ -260,6 +260,14 @@
     "confirmModalBtn": "Kabul Et",
     "confirmDeleteChapter": "Bu bölümü silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
     "confirmDeleteAct": "Bu perdeyi ve içindeki tüm bölümleri silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
+    "aiToolbar": {
+      "apply": "Uygula",
+      "retry": "Yeniden Dene",
+      "discard": "Vazgeç",
+      "applyTitle": "Uygula (Ctrl+Enter)",
+      "retryTitle": "Yeniden Dene (Ctrl+R)",
+      "discardTitle": "Vazgeç (Esc)"
+    },
     "chat": {
       "title": "Yapay Zeka Sohbeti",
       "selectModel": "Model Seçin",

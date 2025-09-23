@@ -259,6 +259,14 @@
     "confirmModalBtn": "Confirm Action",
     "confirmDeleteChapter": "Are you sure you want to delete this chapter? This cannot be undone.",
     "confirmDeleteAct": "Are you sure you want to delete this act and all its chapters? This cannot be undone.",
+    "aiToolbar": {
+      "apply": "Apply",
+      "retry": "Retry",
+      "discard": "Discard",
+      "applyTitle": "Apply (Ctrl+Enter)",
+      "retryTitle": "Retry (Ctrl+R)",
+      "discardTitle": "Discard (Esc)"
+    },
     "chat": {
       "title": "AI Chat",
       "selectModel": "Select AI Model",

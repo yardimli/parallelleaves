@@ -1,7 +1,7 @@
 import { init as initRephraseEditor, buildPromptJson as buildRephraseJson } from './prompt-editors/rephrase-editor.js';
 import { init as initTranslateEditor, buildPromptJson as buildTranslateJson } from './prompt-editors/translate-editor.js';
 import { updateToolbarState as updateChapterToolbarState } from './novel-planner/toolbar.js';
-import { t } from './i18n.js';
+import { t, applyTranslationsTo } from './i18n.js'; // Modified: Added applyTranslationsTo
 import { htmlToPlainText, processSourceContentForMarkers } from '../utils/html-processing.js';
 
 const editors = {
@@ -146,16 +146,19 @@ function createFloatingToolbar(from, to, model) {
 	
 	const toolbarEl = document.createElement('div');
 	toolbarEl.id = 'ai-floating-toolbar';
+	// Modified: Added data-i18n and data-i18n-title attributes for translation.
 	toolbarEl.innerHTML = `
-        <button data-action="apply" title="Apply"><i class="bi bi-check-lg"></i> Apply</button>
-        <button data-action="retry" title="Retry"><i class="bi bi-arrow-repeat"></i> Retry</button>
-        <button data-action="discard" title="Discard"><i class="bi bi-x-lg"></i> Discard</button>
+        <button data-action="apply" data-i18n-title="editor.aiToolbar.applyTitle" data-i18n="editor.aiToolbar.apply">Apply</button>
+        <button data-action="retry" data-i18n-title="editor.aiToolbar.retryTitle" data-i18n="editor.aiToolbar.retry">Retry</button>
+        <button data-action="discard" data-i18n-title="editor.aiToolbar.discardTitle" data-i18n="editor.aiToolbar.discard">Discard</button>
         <div class="divider-vertical"></div>
         <span class="text-gray-400">${modelName}</span>
     `;
 	
 	document.body.appendChild(toolbarEl);
 	floatingToolbar = toolbarEl;
+	
+	applyTranslationsTo(toolbarEl); // New: Apply translations to the newly created toolbar.
 	
 	toolbarEl.style.left = `40%`;
 	toolbarEl.style.top = `20%`;
@@ -502,6 +505,25 @@ export function setupPromptEditor() {
 			toggleBtn.textContent = isHidden ? t('editor.showPreview') : t('editor.hidePreview');
 		});
 	}
+	
+	// New: Add a global keydown listener for floating toolbar shortcuts.
+	window.addEventListener('keydown', (e) => {
+		if (!isAiActionActive) {
+			return; // Do nothing if the AI action/toolbar is not active.
+		}
+		
+		// Check for shortcuts when the AI suggestion is active.
+		if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'enter') {
+			e.preventDefault();
+			handleFloatyApply();
+		} else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'r') {
+			e.preventDefault();
+			handleFloatyRetry();
+		} else if (e.key === 'Escape') {
+			e.preventDefault();
+			handleFloatyDiscard();
+		}
+	});
 }
 
 /**

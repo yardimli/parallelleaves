@@ -260,6 +260,14 @@
     "confirmModalBtn": "Bekreft handling",
     "confirmDeleteChapter": "Er du sikker på at du vil slette dette kapittelet? Dette kan ikke angres.",
     "confirmDeleteAct": "Er du sikker på at du vil slette denne akten og alle dens kapitler? Dette kan ikke angres.",
+    "aiToolbar": {
+      "apply": "Godta",
+      "retry": "Prøv igjen",
+      "discard": "Forkast",
+      "applyTitle": "Godta (Ctrl+Enter)",
+      "retryTitle": "Prøv igjen (Ctrl+R)",
+      "discardTitle": "Forkast (Esc)"
+    },
     "chat": {
       "title": "AI-chat",
       "selectModel": "Velg AI-modell",
