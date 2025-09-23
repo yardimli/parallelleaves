@@ -8,6 +8,7 @@ let searchResponsesPending = 0;
  * Encapsulates all search-related functionality.
  * @param {Map} chapterEditorViews - The map of chapter editor views.
  * @param {function} registerSearchResultHandler - A function to register a callback for search results from iframes.
+ * @returns {{toggle: function(boolean): void, isHidden: function(): boolean}} An API to control the search bar.
  */
 export function setupSearch (chapterEditorViews, registerSearchResultHandler) {
 	const searchBtn = document.getElementById('js-search-btn');
@@ -21,6 +22,8 @@ export function setupSearch (chapterEditorViews, registerSearchResultHandler) {
 	
 	const toggleSearchBar = (show) => {
 		if (show) {
+			// Modified: Ensure search & replace bar is hidden when this one opens.
+			document.getElementById('js-search-replace-bar').classList.add('hidden');
 			searchBar.classList.remove('hidden');
 			searchInput.focus();
 			searchInput.select();
@@ -194,15 +197,8 @@ export function setupSearch (chapterEditorViews, registerSearchResultHandler) {
 		}
 	});
 	
-	document.addEventListener('keydown', (e) => {
-		if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
-			e.preventDefault();
-			toggleSearchBar(true);
-		}
-		if (e.key === 'Escape' && !searchBar.classList.contains('hidden')) {
-			toggleSearchBar(false);
-		}
-	});
+	// Removed: The global keydown listener for Ctrl+F and Escape has been moved to chapter-main.js
+	// for centralized shortcut management.
 	
 	registerSearchResultHandler((payload) => {
 		const { chapterId, matchCount } = payload;
@@ -224,4 +220,10 @@ export function setupSearch (chapterEditorViews, registerSearchResultHandler) {
 			updateSearchResultsUI();
 		}
 	});
+	
+	// New: Return an API for external control (e.g., from global shortcut handler).
+	return {
+		toggle: toggleSearchBar,
+		isHidden: () => searchBar.classList.contains('hidden')
+	};
 }

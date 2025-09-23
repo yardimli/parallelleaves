@@ -28,10 +28,10 @@ function initializeUI() {
 	replaceAllBtn = document.getElementById('js-replace-all-btn');
 	resultsCount = document.getElementById('js-search-replace-results-count');
 	closeBtn = document.getElementById('js-search-replace-close-btn');
-	caseSensitiveBtn = document.getElementById('js-case-sensitive-btn'); // Modified: Get button instead of checkbox
+	caseSensitiveBtn = document.getElementById('js-case-sensitive-btn');
 }
 
-function toggleSearchBar(show) {
+function toggleSearchReplaceBar(show) {
 	if (show) {
 		document.getElementById('js-search-bar').classList.add('hidden'); // Hide other search bar
 		searchReplaceBar.classList.remove('hidden');
@@ -43,14 +43,8 @@ function toggleSearchBar(show) {
 	}
 }
 
-/**
- * New: Function to programmatically open the search/replace bar with pre-filled values.
- * This can be called from other modules.
- * @param {string} findValue - The text to search for.
- * @param {string} replaceValue - The text to replace with.
- */
 function openSearchAndReplaceWithValues(findValue, replaceValue) {
-	toggleSearchBar(true);
+	toggleSearchReplaceBar(true);
 	searchInput.value = findValue || '';
 	replaceInput.value = replaceValue || '';
 	startSearch();
@@ -87,7 +81,6 @@ function updateResultsUI() {
 function navigateToMatch(index) {
 	if (index < 0 || index >= globalMatches.length) return;
 	
-	// Deactivate the old match
 	if (currentMatchIndex !== -1) {
 		const oldMatch = globalMatches[currentMatchIndex];
 		const oldView = chapterEditorViews.get(oldMatch.chapterId.toString());
@@ -114,7 +107,7 @@ const startSearch = debounce(() => {
 		return;
 	}
 	
-	const caseSensitive = caseSensitiveBtn.classList.contains('active'); // Modified: Check for active class
+	const caseSensitive = caseSensitiveBtn.classList.contains('active');
 	searchResponsesPending = 0;
 	
 	chapterEditorViews.forEach(view => {
@@ -146,7 +139,7 @@ function handleReplaceAll() {
 	if (query.length < 1) return;
 	
 	const replaceText = replaceInput.value;
-	const caseSensitive = caseSensitiveBtn.classList.contains('active'); // Modified: Check for active class
+	const caseSensitive = caseSensitiveBtn.classList.contains('active');
 	
 	searchResponsesPending = 0;
 	let totalReplaced = 0;
@@ -165,7 +158,7 @@ function handleReplaceAll() {
 			if (searchResponsesPending === 0) {
 				clearSearch();
 				resultsCount.textContent = t('editor.searchReplace.replaceAllResult', { count: totalReplaced });
-				resultHandlerCallback = null; // Unregister self
+				resultHandlerCallback = null;
 			}
 		}
 	};
@@ -200,7 +193,6 @@ function handleIframeResponse(type, payload) {
 			break;
 		}
 		case 'search-replace:replaced': {
-			// A single replacement was made, so we need to re-run the search to get updated positions.
 			startSearch();
 			break;
 		}
@@ -220,12 +212,11 @@ export function setupSearchAndReplace(views, registerHandler) {
 	initializeUI();
 	
 	const searchReplaceBtn = document.getElementById('js-search-replace-btn');
-	searchReplaceBtn.addEventListener('click', () => toggleSearchBar(true));
-	closeBtn.addEventListener('click', () => toggleSearchBar(false));
+	searchReplaceBtn.addEventListener('click', () => toggleSearchReplaceBar(true));
+	closeBtn.addEventListener('click', () => toggleSearchReplaceBar(false));
 	
 	searchInput.addEventListener('input', startSearch);
 	
-	// Modified: Add click listener for the new button
 	caseSensitiveBtn.addEventListener('click', () => {
 		caseSensitiveBtn.classList.toggle('active');
 		startSearch();
@@ -237,15 +228,7 @@ export function setupSearchAndReplace(views, registerHandler) {
 	replaceBtn.addEventListener('click', handleReplace);
 	replaceAllBtn.addEventListener('click', handleReplaceAll);
 	
-	document.addEventListener('keydown', (e) => {
-		if ((e.ctrlKey || e.metaKey) && e.key === 'h') {
-			e.preventDefault();
-			toggleSearchBar(true);
-		}
-		if (e.key === 'Escape' && !searchReplaceBar.classList.contains('hidden')) {
-			toggleSearchBar(false);
-		}
-	});
+	// The global keydown listener has been moved to chapter-main.js for centralized handling.
 	
 	searchInput.addEventListener('keydown', (e) => {
 		if (e.key === 'Enter') {
@@ -256,9 +239,12 @@ export function setupSearchAndReplace(views, registerHandler) {
 				if (!nextBtn.disabled) nextBtn.click();
 			}
 		}
+		
+		if (e.key === 'Escape' && !searchReplaceBar.classList.contains('hidden')) {
+			toggleSearchReplaceBar(false);
+		}
 	});
 	
-	// New: Add keydown listener to replace input for 'Enter' key
 	replaceInput.addEventListener('keydown', (e) => {
 		if (e.key === 'Enter') {
 			e.preventDefault();
@@ -268,8 +254,10 @@ export function setupSearchAndReplace(views, registerHandler) {
 		}
 	});
 	
-	// New: Return an API object for external control
+	// Modified: Added isHidden to the returned API for the global shortcut handler.
 	return {
-		openWithValues: openSearchAndReplaceWithValues
+		openWithValues: openSearchAndReplaceWithValues,
+		toggle: toggleSearchReplaceBar,
+		isHidden: () => searchReplaceBar.classList.contains('hidden')
 	};
 }

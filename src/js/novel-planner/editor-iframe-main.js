@@ -250,6 +250,42 @@ function createEditorView (mount, config) {
 	chapterId = id;
 	field = fieldName;
 	
+	// New: Define keymap for shortcuts that need to communicate with the parent window.
+	const shortcutKeymap = keymap({
+		'Mod-f': () => {
+			postToParent('shortcut:find');
+			return true; // Mark as handled
+		},
+		'Mod-h': () => {
+			postToParent('shortcut:find-replace');
+			return true;
+		},
+		'Mod-1': () => {
+			postToParent('shortcut:focus-source');
+			return true;
+		},
+		'Mod-2': () => {
+			postToParent('shortcut:focus-target');
+			return true;
+		},
+		'Mod-t': (state) => {
+			// This shortcut directly triggers the translation action if the floating button is visible.
+			if (floatingTranslateBtn && document.body.contains(floatingTranslateBtn)) {
+				const { selection } = state;
+				if (selection.empty) {
+					const { $from } = selection;
+					const pos = $from.pos;
+					postToParent('requestTranslation', { from: pos, to: pos });
+					if (floatingTranslateBtn) {
+						floatingTranslateBtn.remove();
+						floatingTranslateBtn = null;
+					}
+				}
+			}
+			return true;
+		}
+	});
+	
 	const editorPlugin = new Plugin({
 		props: {
 			editable: () => isEditable,
@@ -307,7 +343,16 @@ function createEditorView (mount, config) {
 	editorView = new EditorView(mount, {
 		state: EditorState.create({
 			doc: doc,
-			plugins: [history(), keymap({ 'Mod-z': undo, 'Mod-y': redo }), keymap(baseKeymap), editorPlugin, searchPlugin, searchReplacePlugin], // New: Added searchReplacePlugin
+			// Modified: Added the new shortcutKeymap to the plugins array.
+			plugins: [
+				history(),
+				keymap({ 'Mod-z': undo, 'Mod-y': redo }),
+				keymap(baseKeymap),
+				shortcutKeymap, // New keymap for parent communication and other shortcuts
+				editorPlugin,
+				searchPlugin,
+				searchReplacePlugin
+			],
 		}),
 		
 		dispatchTransaction (transaction) {
@@ -733,6 +778,29 @@ window.addEventListener('message', (event) => {
 			clearSearchReplaceDecorations();
 			break;
 		}
+		
+		case 'focusEditor':
+			if (editorView) {
+				editorView.focus();
+			}
+			break;
+		
+		case 'triggerTranslate':
+			if (floatingTranslateBtn && document.body.contains(floatingTranslateBtn)) {
+				const { state } = editorView;
+				const { selection } = state;
+				
+				if (selection.empty) {
+					const { $from } = selection;
+					const pos = $from.pos;
+					
+					postToParent('requestTranslation', { from: pos, to: pos });
+					
+					floatingTranslateBtn.remove();
+					floatingTranslateBtn = null;
+				}
+			}
+			break;
 		
 		case 'setEditable':
 			//editorView.setProps({ editable: () => payload.isEditable });

@@ -34,6 +34,7 @@ let viewInitialized = false;
 let activeEditor = null; // contentWindow of the currently focused iframe editor.
 let searchResultHandler = null; // Callback for search results from iframes.
 let searchReplaceResultHandler = null; // New: Callback for search and replace results.
+let lastFocusedSourceEditor = null; // New: Track the last focused source editor div.
 
 // --- State Accessors and Mutators ---
 const getActiveEditor = () => activeEditor;
@@ -409,12 +410,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 		});
 		setupIntersectionObserver(setActiveChapterId);
 		setupSpellcheckDropdown();
-		setupSearch(chapterEditorViews, (handler) => { searchResultHandler = handler; });
-		// Modified: Initialize search and replace and store its returned API
+		
+		const searchAPI = setupSearch(chapterEditorViews, (handler) => { searchResultHandler = handler; });
 		const searchReplaceAPI = setupSearchAndReplace(chapterEditorViews, (handler) => { searchReplaceResultHandler = handler; });
+		
 		initDictionaryModal(novelId);
 		
-		// New: Add listener for custom event from dictionary modal
 		document.body.addEventListener('dictionary:find-replace', (event) => {
 			const { find, replace } = event.detail;
 			if (searchReplaceAPI && searchReplaceAPI.openWithValues) {
@@ -497,7 +498,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 				const markerId = markerLink.dataset.markerId;
 				const markerType = markerLink.dataset.markerType;
 				if (markerId && chapterId && markerType) {
-					// Corrected: Pass the chapterEditorViews map to the function.
 					scrollToTargetMarker(chapterId, markerId, markerType, chapterEditorViews);
 				}
 				return;
@@ -564,6 +564,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 			}
 		});
 		
+		sourceContainer.addEventListener('focusin', (event) => {
+			const contentDiv = event.target.closest('.source-content-readonly');
+			if (contentDiv) {
+				lastFocusedSourceEditor = contentDiv;
+			}
+		});
+		
 		sourceContainer.addEventListener('beforeinput', (event) => {
 			const contentDiv = event.target.closest('.source-content-readonly');
 			if (contentDiv) {
@@ -580,6 +587,89 @@ document.addEventListener('DOMContentLoaded', async () => {
 			if (syncBtn) {
 				event.preventDefault();
 				syncChapterScroll(syncBtn.dataset.chapterId, syncBtn.dataset.direction);
+			}
+		});
+		
+		window.addEventListener('keydown', (e) => {
+			const activeEl = document.activeElement;
+			const isModalOpen = document.querySelector('.modal[open], .modal-open');
+			
+			if (isModalOpen) {
+				return; // Ignore all shortcuts when a modal is active.
+			}
+			
+			if (e.key === 'Escape') {
+				const isSearchVisible = !searchAPI.isHidden();
+				const isSearchReplaceVisible = !searchReplaceAPI.isHidden();
+				
+				if (isSearchVisible) {
+					searchAPI.toggle(false);
+					e.preventDefault();
+				}
+				if (isSearchReplaceVisible) {
+					searchReplaceAPI.toggle(false);
+					e.preventDefault();
+				}
+				if (isSearchVisible || isSearchReplaceVisible) {
+					return;
+				}
+			}
+			
+			if (e.ctrlKey || e.metaKey) {
+				const isGenericInputFocused = activeEl &&
+					(activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA') &&
+					!activeEl.closest('#js-search-bar') &&
+					!activeEl.closest('#js-search-replace-bar');
+				
+				if (isGenericInputFocused && ['f', 'h', 't'].includes(e.key.toLowerCase())) {
+					return;
+				}
+				
+				switch (e.key.toLowerCase()) {
+					case 'f':
+						e.preventDefault();
+						if (searchReplaceAPI.isHidden()) {
+							searchAPI.toggle(true);
+						}
+						break;
+					case 'h':
+						e.preventDefault();
+						searchReplaceAPI.toggle(true);
+						break;
+					case '1':
+						e.preventDefault();
+						if (lastFocusedSourceEditor) {
+							lastFocusedSourceEditor.focus();
+						} else {
+							const sourceContainer = document.getElementById('js-source-column-container');
+							const firstEditor = sourceContainer.querySelector('.source-content-readonly');
+							if (firstEditor) {
+								firstEditor.focus();
+							} else {
+								sourceContainer.focus({ preventScroll: true });
+							}
+						}
+						break;
+					case '2':
+						e.preventDefault();
+						const editorToFocus = getActiveEditor();
+						if (editorToFocus) {
+							editorToFocus.postMessage({ type: 'focusEditor' }, window.location.origin);
+						} else if (activeChapterId) {
+							const viewInfo = chapterEditorViews.get(activeChapterId.toString());
+							if (viewInfo && viewInfo.isReady) {
+								viewInfo.contentWindow.postMessage({ type: 'focusEditor' }, window.location.origin);
+							}
+						}
+						break;
+					case 't':
+						const activeTargetEditor = getActiveEditor();
+						if (activeTargetEditor) {
+							e.preventDefault();
+							activeTargetEditor.postMessage({ type: 'triggerTranslate' }, window.location.origin);
+						}
+						break;
+				}
 			}
 		});
 		
@@ -647,7 +737,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 				case 'search:results':
 					if (searchResultHandler) searchResultHandler(payload);
 					break;
-				// New: Handle search and replace results
 				case 'search-replace:results':
 				case 'search-replace:replaced':
 				case 'search-replace:replacedAll':
@@ -684,6 +773,32 @@ document.addEventListener('DOMContentLoaded', async () => {
 					})();
 					break;
 				}
+				// New: Handle shortcut messages from the iframe editor to orchestrate actions.
+				case 'shortcut:find':
+					if (searchReplaceAPI.isHidden()) {
+						searchAPI.toggle(true);
+					}
+					break;
+				case 'shortcut:find-replace':
+					searchReplaceAPI.toggle(true);
+					break;
+				case 'shortcut:focus-source':
+					if (lastFocusedSourceEditor) {
+						lastFocusedSourceEditor.focus();
+					} else {
+						const sourceContainer = document.getElementById('js-source-column-container');
+						const firstEditor = sourceContainer.querySelector('.source-content-readonly');
+						if (firstEditor) {
+							firstEditor.focus();
+						} else {
+							sourceContainer.focus({ preventScroll: true });
+						}
+					}
+					break;
+				case 'shortcut:focus-target':
+					// The iframe that sent the message is the one that should be focused.
+					sourceWindow.postMessage({ type: 'focusEditor' }, window.location.origin);
+					break;
 			}
 		});
 	} catch (error) {
