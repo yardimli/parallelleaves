@@ -75,7 +75,7 @@ function renderDictionaryTable() {
 		const findReplaceBtn = document.createElement('button');
 		findReplaceBtn.className = 'js-dictionary-find-replace-btn btn btn-ghost btn-xs btn-square';
 		findReplaceBtn.setAttribute('data-i18n-title', 'editor.dictionaryModal.findAndReplace');
-		findReplaceBtn.innerHTML = '<i class="bi bi-tools"></i>';
+		findReplaceBtn.innerHTML = '<i class="bi bi-search-heart"></i>';
 		actionsCell.appendChild(findReplaceBtn);
 	});
 	
