@@ -1,0 +1,8 @@
+{
+  "addToDictionary": "Add to dictionary",
+  "noContent": "No content.",
+  "codexGenNoSource": "No source content found to analyze. Process finished.",
+  "codexGenNoText": "No text found after cleaning. Process finished.",
+  "codexGenComplete": "Codex generation complete! The page will now reload.",
+  "codexGenError": "An error occurred: {message}"
+}

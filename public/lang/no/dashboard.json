@@ -1,0 +1,88 @@
+{
+  "title": "Mine oversettelsesprosjekter",
+  "importDocument": "Importer dokument",
+  "restoreBackup": "Gjenopprett sikkerhetskopi",
+  "loadingProjects": "Laster prosjekter...",
+  "noProjects": "Du har ikke startet noen oversettelsesprosjekter ennå.",
+  "errorLoading": "Feil ved lasting av prosjekter.",
+  "welcome": "Velkommen, {username}",
+  "signOut": "Logg ut",
+  "signIn": "Logg inn",
+  "signInPrompt": "Vennligst logg inn for å se prosjektene dine.",
+  "backupFailed": "Sikkerhetskopiering mislyktes: {message}",
+  "restoreSuccess": "Prosjektet '{title}' ble gjenopprettet. Siden vil nå lastes på nytt.",
+  "restoreFailed": "Gjenoppretting mislyktes: {message}",
+  "toggleView": "Bytt visning",
+  "newProject": "Nytt tomt prosjekt",
+  "newProjectModal": {
+    "title": "Opprett nytt tomt prosjekt",
+    "description": "Angi en tittel og språk for det nye prosjektet ditt. Det vil bli opprettet med en standardstruktur på 3 akter og 10 kapitler per akt.",
+    "projectTitle": "Prosjekttittel",
+    "sourceLanguage": "Kildespråk",
+    "targetLanguage": "Målspråk",
+    "createButton": "Opprett prosjekt",
+    "errorNoTitle": "Vennligst oppgi en prosjekttittel.",
+    "errorCreate": "Kunne ikke opprette prosjekt: {message}"
+  },
+  "login": {
+    "title": "Logg inn",
+    "username": "Brukernavn",
+    "password": "Passord",
+    "noAccount": "Har du ikke en konto?",
+    "signUp": "Registrer deg",
+    "signIn": "Logg inn",
+    "failed": "Innlogging mislyktes. Vennligst sjekk brukernavn og passord."
+  },
+  "proseSettings": {
+    "title": "Språkinnstillinger",
+    "description": "Disse innstillingene definerer kilde- og målspråk for prosjektet og AI-verktøyene.",
+    "sourceLanguage": "Kildespråk",
+    "sourceLanguageHelp": "Originalspråket til dokumentet.",
+    "targetLanguage": "Målspråk",
+    "targetLanguageHelp": "Språket du vil oversette til. Brukes for stavekontroll og AI-generering.",
+    "saveButton": "Lagre innstillinger"
+  },
+  "metaSettings": {
+    "title": "Rediger prosjektdetaljer",
+    "projectTitle": "Tittel",
+    "author": "Forfatter",
+    "noCover": "Ingen nytt omslag valgt",
+    "generateCover": "Generer AI-omslag",
+    "uploadCover": "Last opp omslag",
+    "dangerZone": "Faresone",
+    "dangerZoneDesc": "Slett dette prosjektet og alt innholdet permanent.",
+    "deleteProject": "Slett prosjekt",
+    "saveButton": "Lagre endringer",
+    "altCoverFor": "Omslag for {title}",
+    "altNoCover": "Ingen omslag",
+    "altStagedCover": "Midlertidig omslag",
+    "altCurrentCover": "Nåværende omslag",
+    "deleteConfirm": "Er du sikker på at du vil slette \"{title}\" permanent?\n\nDenne handlingen kan ikke angres.",
+    "errorDelete": "Feil ved sletting av prosjekt."
+  },
+  "generateCover": {
+    "title": "Generer AI-omslagskunst",
+    "prompt": "Bilde-prompt",
+    "generate": "Generer",
+    "preview": "Forhåndsvisning av bildet vil vises her",
+    "accept": "Godta omslag"
+  },
+  "langSelect": {
+    "title": "Velg et språk",
+    "description": "Vennligst velg ditt foretrukne språk for applikasjonsgrensesnittet."
+  },
+  "card": {
+    "progress": "Fremdrift",
+    "sourceWords": "Kilde",
+    "targetWords": "Mål",
+    "chapters": "Kapitler",
+    "created": "Opprettet:",
+    "updated": "Oppdatert:",
+    "backupProject": "Sikkerhetskopier prosjekt"
+  },
+  "update": {
+    "title": "Oppdatering tilgjengelig",
+    "description": "En ny versjon ({latestVersion}) er tilgjengelig! Du bruker for øyeblikket versjon {currentVersion}.",
+    "updateNow": "Oppdater nå"
+  }
+}

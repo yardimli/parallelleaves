@@ -1,0 +1,88 @@
+{
+  "title": "My Translation Projects",
+  "importDocument": "Import Document",
+  "restoreBackup": "Restore Backup",
+  "loadingProjects": "Loading projects...",
+  "noProjects": "You haven't started any translation projects yet.",
+  "errorLoading": "Error loading projects.",
+  "welcome": "Welcome, {username}",
+  "signOut": "Sign Out",
+  "signIn": "Sign In",
+  "signInPrompt": "Please sign in to view your projects.",
+  "backupFailed": "Backup failed: {message}",
+  "restoreSuccess": "Successfully restored project '{title}'. The page will now reload.",
+  "restoreFailed": "Restore failed: {message}",
+  "toggleView": "Toggle View",
+  "newProject": "New Blank Project",
+  "newProjectModal": {
+    "title": "Create New Blank Project",
+    "description": "Provide a title and languages for your new project. It will be created with a default structure of 3 acts and 10 chapters per act.",
+    "projectTitle": "Project Title",
+    "sourceLanguage": "Source Language",
+    "targetLanguage": "Target Language",
+    "createButton": "Create Project",
+    "errorNoTitle": "Please provide a project title.",
+    "errorCreate": "Failed to create project: {message}"
+  },
+  "login": {
+    "title": "Sign In",
+    "username": "Username",
+    "password": "Password",
+    "noAccount": "Don't have an account?",
+    "signUp": "Sign Up",
+    "signIn": "Sign In",
+    "failed": "Login failed. Please check your credentials."
+  },
+  "proseSettings": {
+    "title": "Language Settings",
+    "description": "These settings define the source and target languages for the project and AI tools.",
+    "sourceLanguage": "Source Language",
+    "sourceLanguageHelp": "The original language of the document.",
+    "targetLanguage": "Target Language",
+    "targetLanguageHelp": "The language to translate into. Used for spell checking and AI generation.",
+    "saveButton": "Save Settings"
+  },
+  "metaSettings": {
+    "title": "Edit Project Details",
+    "projectTitle": "Title",
+    "author": "Author",
+    "noCover": "No new cover selected",
+    "generateCover": "Generate AI Cover",
+    "uploadCover": "Upload Cover",
+    "dangerZone": "Danger Zone",
+    "dangerZoneDesc": "Permanently delete this project and all its content.",
+    "deleteProject": "Delete Project",
+    "saveButton": "Save Changes",
+    "altCoverFor": "Cover for {title}",
+    "altNoCover": "No Cover",
+    "altStagedCover": "Staged cover",
+    "altCurrentCover": "Current cover",
+    "deleteConfirm": "Are you sure you want to permanently delete \"{title}\"?\n\nThis action cannot be undone.",
+    "errorDelete": "Error deleting project."
+  },
+  "generateCover": {
+    "title": "Generate AI Cover Art",
+    "prompt": "Image Prompt",
+    "generate": "Generate",
+    "preview": "Image preview will appear here",
+    "accept": "Accept Cover"
+  },
+  "langSelect": {
+    "title": "Select a Language",
+    "description": "Please choose your preferred language for the application interface."
+  },
+  "card": {
+    "progress": "Progress",
+    "sourceWords": "Source",
+    "targetWords": "Target",
+    "chapters": "Chapters",
+    "created": "Created:",
+    "updated": "Updated:",
+    "backupProject": "Backup Project"
+  },
+  "update": {
+    "title": "Update Available",
+    "description": "A new version ({latestVersion}) is available! You are currently on version {currentVersion}.",
+    "updateNow": "Update Now"
+  }
+}

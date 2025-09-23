@@ -1,0 +1,12 @@
+{
+  "exportDocx": "Eksporter til DOCX",
+  "exportSuccessTitle": "Eksportering vellykket",
+  "exportSuccessMessage": "Romanen din '{title}' ble eksportert.",
+  "exportErrorTitle": "Eksportering mislyktes",
+  "exportErrorMessage": "Det oppstod en feil under eksportering av romanen din: {message}",
+  "exportDialogTitle": "Eksportering vellykket",
+  "exportDialogMessage": "Eksporterte '{title}' vellykket.",
+  "exportDialogDetail": "Filen er lagret på:\n{filePath}",
+  "exportDialogOpenFolder": "Åpne inneholdende mappe",
+  "exportDialogOK": "OK"
+}

@@ -1,0 +1,11 @@
+{
+    "title": "Egendefinert Ordbok",
+    "description": "Legg til egendefinerte termer og deres oversettelser for å veilede AI-en. Disse oppføringene vil bli brukt når 'Bruk Egendefinert Ordbok' er aktivert i AI-promptinnstillingene.",
+    "sourceTerm": "Kildeterm",
+    "targetTranslation": "Måloversettelse",
+    "addRow": "Legg til rad",
+    "deleteSelected": "Slett valgte",
+    "noEntries": "Ingen ordbokoppføringer ennå. Klikk 'Legg til rad' for å starte.",
+    "actions": "Handlinger",
+    "findAndReplace": "Finn og erstatt i dokumentet"
+}

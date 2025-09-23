@@ -1,0 +1,11 @@
+{
+  "title": "Özel Sözlük",
+  "description": "Yapay zekayı yönlendirmek için özel terimler ve çevirilerini ekleyin. Bu girdiler, AI istem ayarlarında 'Özel Sözlük Kullan' etkinleştirildiğinde kullanılacaktır.",
+  "sourceTerm": "Kaynak Terim",
+  "targetTranslation": "Hedef Çeviri",
+  "addRow": "Satır Ekle",
+  "deleteSelected": "Seçilenleri Sil",
+  "noEntries": "Henüz sözlük kaydı yok. Başlamak için 'Satır Ekle'ye tıklayın.",
+  "actions": "Eylemler",
+  "findAndReplace": "Belgede Bul ve Değiştir"
+}

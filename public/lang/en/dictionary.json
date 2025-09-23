@@ -1,0 +1,11 @@
+{
+    "title": "Custom Dictionary",
+    "description": "Add custom terms and their translations to guide the AI. These entries will be used when 'Use Custom Dictionary' is enabled in AI prompt settings.",
+    "sourceTerm": "Source Term",
+    "targetTranslation": "Target Translation",
+    "addRow": "Add Row",
+    "deleteSelected": "Delete Selected",
+    "noEntries": "No dictionary entries yet. Click 'Add Row' to start.",
+    "actions": "Actions",
+    "findAndReplace": "Find and Replace in Document"
+}

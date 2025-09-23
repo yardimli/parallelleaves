@@ -1,0 +1,26 @@
+{
+  "viewer": {
+    "title": "Codex: {novelTitle}",
+    "loadingTitle": "Parallel Leaves - Codex",
+    "loading": "Loading Codex...",
+    "codex": "Codex",
+    "autoGenerate": "Auto-generate",
+    "saved": "Saved",
+    "saving": "Saving...",
+    "saveError": "Save Error",
+    "errorProjectMissing": "Error: Project ID is missing.",
+    "errorLoad": "Error: Could not load codex data. {message}",
+    "autoGenModal": {
+      "title": "Auto-generate Codex Entries",
+      "description": "This tool will scan your novel's source text to automatically create and update codex entries in your project's target language. It analyzes the text in chunks, refining the codex with each step. This process can take several minutes and may consume a significant amount of AI credits.",
+      "selectModel": "Select AI Model",
+      "loadingModels": "Loading models...",
+      "progress": "Progress",
+      "initializing": "Initializing...",
+      "start": "Start Generation",
+      "errorLoadModels": "Error loading models",
+      "errorLoadTool": "Could not load the tool. {message}",
+      "alertSelectModel": "Please select an AI model."
+    }
+  }
+}

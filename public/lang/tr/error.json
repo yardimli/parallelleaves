@@ -1,0 +1,7 @@
+{
+  "credentialsRequired": "Kullanıcı adı ve şifre gerekli.",
+  "invalidCredentials": "Yanlış kullanıcı adı veya şifre.",
+  "dbConnection": "Veritabanı bağlantısı başarısız.",
+  "unexpected": "Beklenmeyen bir hata oluştu.",
+  "methodNotAllowed": "Bu yönteme izin verilmiyor."
+}

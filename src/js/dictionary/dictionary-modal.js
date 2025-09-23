@@ -58,7 +58,7 @@ function renderDictionaryTable() {
 		sourceInput.type = 'text';
 		sourceInput.className = 'input input-ghost input-sm w-full';
 		sourceInput.value = entry.source;
-		sourceInput.placeholder = t('editor.dictionaryModal.sourceTerm');
+		sourceInput.placeholder = t('dictionary.sourceTerm');
 		sourceCell.appendChild(sourceInput);
 		
 		const targetCell = row.insertCell();
@@ -66,7 +66,7 @@ function renderDictionaryTable() {
 		targetInput.type = 'text';
 		targetInput.className = 'input input-ghost input-sm w-full';
 		targetInput.value = entry.target;
-		targetInput.placeholder = t('editor.dictionaryModal.targetTranslation');
+		targetInput.placeholder = t('dictionary.targetTranslation');
 		targetCell.appendChild(targetInput);
 		
 		// New: Add actions cell with a "Find and Replace" button
@@ -74,7 +74,7 @@ function renderDictionaryTable() {
 		actionsCell.className = 'w-12'; // Set a fixed width for the actions cell
 		const findReplaceBtn = document.createElement('button');
 		findReplaceBtn.className = 'js-dictionary-find-replace-btn btn btn-ghost btn-xs btn-square';
-		findReplaceBtn.setAttribute('data-i18n-title', 'editor.dictionaryModal.findAndReplace');
+		findReplaceBtn.setAttribute('data-i18n-title', 'dictionary.findAndReplace');
 		findReplaceBtn.innerHTML = '<i class="bi bi-search-heart"></i>';
 		actionsCell.appendChild(findReplaceBtn);
 	});

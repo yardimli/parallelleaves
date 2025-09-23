@@ -1,0 +1,77 @@
+{
+  "common": {
+    "dictionary": "Sözlük",
+    "dictionaryHelp": "Yapay zeka için özel bir sözlük veya terimler listesi sağlayın. Her satıra bir girdi, örn: 'Karakter Adı = Çevrilmiş Adı'.",
+    "useDictionary": "Özel Sözlük Kullan",
+    "editDictionary": "Sözlüğü Düzenle",
+    "useCodex": "Kodeks Kayıtlarını Kullan",
+    "tense": "Zaman",
+    "past": "Geçmiş",
+    "present": "Şimdiki",
+    "user": {
+      "dictionaryBlock": "Take into account the following custom dictionary:\n<dictionary>\n{dictionaryContent}\n</dictionary>"
+    }
+  },
+  "rephrase": {
+    "title": "Yeniden Yaz",
+    "instructions": "Talimatlar",
+    "instructionsHelp": "Metni nasıl yeniden yazılacağına dair talimatlarınızı girin.",
+    "instructionsPlaceholder": "Örn: Daha resmi bir dille yeniden yaz.",
+    "contextInfo": "Bağlam Bilgisi",
+    "contextHelp": "En iyi sonuçlar için ilgili bağlam bilgileri yapay zekaya otomatik olarak gönderilir.",
+    "loadingCodex": "Kodeks kayıtları yükleniyor...",
+    "system": {
+      "base": "You are an expert prose editor.\n\nWhenever you're given text, rephrase it using the following instructions: <instructions>{instructions}</instructions>\n\n{tenseBlock}\nImitate and keep the current writing style, and leave mannerisms, word choice and sentence structure intact.\nYou are free to remove redundant lines of speech. Use {language} spelling and grammar.\n\nOnly return the rephrased text, nothing else.",
+      "defaultInstruction": "Rephrase the given text.",
+      "tenseInstruction": "Write in the {tense} tense. "
+    },
+    "user": {
+      "codexBlock": "Take into account the following glossary of characters/locations/items/lore... when writing your response:\n<codex>\n{codexContent}\n</codex>",
+      "surroundingTextBlock": "For contextual information, refer to surrounding words in the scene, DO NOT REPEAT THEM:\n<textBefore>\n{wordsBefore}\n</textBefore>\n<textAfter>\n{wordsAfter}\n</textAfter>",
+      "surroundingTextBlockBeforeOnly": "For contextual information, refer to surrounding words in the scene, DO NOT REPEAT THEM:\n<textBefore>\n{wordsBefore}\n</textBefore>",
+      "surroundingTextBlockAfterOnly": "For contextual information, refer to surrounding words in the scene, DO NOT REPEAT THEM:\n<textAfter>\n{wordsAfter}\n</textAfter>",
+      "textToRewrite": "Text to rewrite:\n<text words=\"{wordCount}\">\n{text}\n</text>"
+    }
+  },
+  "translate": {
+    "title": "Çevir",
+    "instructions": "Talimatlar",
+    "instructionsHelp": "Çeviri için özel talimatlarınızı girin.",
+    "instructionsPlaceholder": "Örn: Resmi bir dille çevir. Karakter isimlerini değiştirme.",
+    "contextInfo": "Bağlam Bilgisi",
+    "contextHelp": "Daha iyi çeviri için ilgili bağlam bilgileri (kodeks kayıtları gibi) yapay zekaya gönderilebilir.",
+    "loadingCodex": "Kodeks kayıtları yükleniyor...",
+    "prevPairs": "Önceki Çeviriler",
+    "prevPairsHelp": "Yapay zekaya bağlam sağlamak için önceki N çeviri bloğunu dahil et. (Kapatmak için 0 girin).",
+    "system": {
+      "base": "You are an expert literary translator. Your task is to translate a text from {sourceLanguage} to {targetLanguage}.\n{tenseBlock}\nPreserve the original tone, style, and literary devices as much as possible. Maintain the original paragraph breaks.\n\n{instructionsBlock}\n\nOnly return the translated text, nothing else.",
+      "instructionsBlock": "Follow these specific instructions: <instructions>{instructions}</instructions>",
+      "tenseInstruction": "Translate in the {tense} tense. "
+    },
+    "user": {
+      "codexBlock": "Use the following glossary for consistent translation of key terms. Do not translate the terms literally if the glossary provides a specific translation or context.\n<glossary>\n{codexContent}\n</glossary>",
+      "codexEntry": "Term ({sourceLanguage}): {title}\nDescription/Translation Hint: {content}\n\nTranslation in {targetLanguage}: {translation}",
+      "codexEntryNoTranslation": "(No specific translation provided)",
+      "textToTranslate": "Translate the following text from {sourceLanguage} to {targetLanguage}:\n\n<text>\n{text}\n</text>"
+    }
+  },
+  "preview": {
+    "title": "Canlı Komut Önizlemesi",
+    "description": "Bu, yukarıdaki ayarlara göre yapay zekaya gönderilecek son komuttur.",
+    "system": "Sistem Komutu",
+    "user": "Kullanıcı Komutu",
+    "aiPrefix": "Yapay Zeka Yanıt Öneki",
+    "contextPairs": "Bağlam Çiftleri",
+    "contextUser": "Bağlam Çifti {number} (Kullanıcı)",
+    "contextAssistant": "Bağlam Çifti {number} (Asistan)",
+    "empty": "(Boş)"
+  },
+  "errorLoadForm": "Editör formu yüklenemedi.",
+  "errorNoEditorForPrompt": "Şu komut için editör bulunamadı: {promptId}",
+  "errorApplyAction": "İşlem uygulanamadı. Model, işlem veya form eksik.",
+  "errorNoBuilder": "Şu işlem için komut oluşturucu bulunamadı: {action}",
+  "errorNoActiveEditor": "Değişiklikleri uygulamak için aktif bir metin alanı yok.",
+  "errorNoSelection": "Metin alanından seçim alınamadı. Yeniden yazmak için lütfen metin seçin.",
+  "errorFetchContext": "Bağlam için önceki çeviri blokları alınamadı. {message}",
+  "errorNoInterface": "Yapay zeka editörü açılamıyor: Editör arayüzü kullanılamıyor."
+}

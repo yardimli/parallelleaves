@@ -1,0 +1,7 @@
+{
+  "credentialsRequired": "Username and password are required.",
+  "invalidCredentials": "Invalid username or password.",
+  "dbConnection": "Database connection failed.",
+  "unexpected": "An unexpected error occurred.",
+  "methodNotAllowed": "Method Not Allowed."
+}

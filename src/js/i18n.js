@@ -5,9 +5,8 @@ let enTranslations = {}; // For English fallback translations
 export const appLanguages = {
 	en: 'English',
 	tr: 'Türkçe',
-	tlh: 'Klingon',
 	no: 'Norsk',
-	'zh-TW': '繁體中文'
+	// 'zh-TW': '繁體中文'
 };
 
 /**

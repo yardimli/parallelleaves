@@ -1,0 +1,7 @@
+{
+  "credentialsRequired": "Brukernavn og passord er påkrevd.",
+  "invalidCredentials": "Ugyldig brukernavn eller passord.",
+  "dbConnection": "Tilkobling til databasen mislyktes.",
+  "unexpected": "En uventet feil oppstod.",
+  "methodNotAllowed": "Metode ikke tillatt."
+}

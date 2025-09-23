@@ -18,8 +18,6 @@ function registerBackupRestoreHandlers(db, sessionManager) {
 			
 			const sections = db.prepare('SELECT * FROM sections WHERE novel_id = ? ORDER BY section_order').all(novelId);
 			const chapters = db.prepare('SELECT * FROM chapters WHERE novel_id = ? ORDER BY section_id, chapter_order').all(novelId);
-			const codex_categories = db.prepare('SELECT * FROM codex_categories WHERE novel_id = ? ORDER BY name').all(novelId);
-			const codex_entries = db.prepare('SELECT * FROM codex_entries WHERE novel_id = ? ORDER BY codex_category_id, title').all(novelId);
 			
 			// Handle cover image backup
 			let image = null;
@@ -39,8 +37,6 @@ function registerBackupRestoreHandlers(db, sessionManager) {
 				novel,
 				sections,
 				chapters,
-				codex_categories,
-				codex_entries,
 				image // Add image data to the backup object
 			};
 		} catch (error) {
@@ -55,8 +51,6 @@ function registerBackupRestoreHandlers(db, sessionManager) {
 				novel,
 				sections = [],
 				chapters = [],
-				codex_categories = [],
-				codex_entries = [],
 				image
 			} = backupData;
 			
@@ -84,7 +78,6 @@ function registerBackupRestoreHandlers(db, sessionManager) {
 			
 			// ID mapping tables
 			const sectionIdMap = new Map();
-			const categoryIdMap = new Map();
 			
 			const newSectionStmt = db.prepare(`
                 INSERT INTO sections (novel_id, title, description, section_order)
@@ -93,14 +86,6 @@ function registerBackupRestoreHandlers(db, sessionManager) {
 			const newChapterStmt = db.prepare(`
                 INSERT INTO chapters (novel_id, section_id, title, source_content, target_content, status, chapter_order)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-            `);
-			const newCategoryStmt = db.prepare(`
-                INSERT INTO codex_categories (novel_id, name, description)
-                VALUES (?, ?, ?)
-            `);
-			const newEntryStmt = db.prepare(`
-                INSERT INTO codex_entries (novel_id, codex_category_id, title, content, target_content, document_phrases)
-                VALUES (?, ?, ?, ?, ?, ?)
             `);
 			
 			// 2. Insert sections
@@ -115,21 +100,6 @@ function registerBackupRestoreHandlers(db, sessionManager) {
 				const newSectionId = sectionIdMap.get(chapter.section_id);
 				if (newSectionId) {
 					newChapterStmt.run(newNovelId, newSectionId, chapter.title, chapter.source_content, chapter.target_content, chapter.status, chapter.chapter_order);
-				}
-			}
-			
-			// 4. Insert codex categories
-			for (const category of codex_categories) {
-				const oldCategoryId = category.id;
-				const newCategoryResult = newCategoryStmt.run(newNovelId, category.name, category.description);
-				categoryIdMap.set(oldCategoryId, newCategoryResult.lastInsertRowid);
-			}
-			
-			// 5. Insert codex entries
-			for (const entry of codex_entries) {
-				const newCategoryId = categoryIdMap.get(entry.codex_category_id);
-				if (newCategoryId) {
-					newEntryStmt.run(newNovelId, newCategoryId, entry.title, entry.content, entry.target_content, entry.document_phrases);
 				}
 			}
 			

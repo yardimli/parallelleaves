@@ -1,0 +1,77 @@
+{
+  "common": {
+    "dictionary": "Ordbok",
+    "dictionaryHelp": "Oppgi en egendefinert ordbok eller ordliste for AI-en. Én oppføring per linje, f.eks. 'Karakternavn = Oversatt Navn'.",
+    "useDictionary": "Bruk Egendefinert Ordbok",
+    "editDictionary": "Rediger Ordbok",
+    "useCodex": "Bruk Codex-oppføringer",
+    "tense": "Tempus",
+    "past": "Fortid",
+    "present": "Nåtid",
+    "user": {
+      "dictionaryBlock": "Take into account the following custom dictionary:\n<dictionary>\n{dictionaryContent}\n</dictionary>"
+    }
+  },
+  "rephrase": {
+    "title": "Omformuler",
+    "instructions": "Instruksjoner",
+    "instructionsHelp": "Gi hovedinstruksjonene for omformulering av teksten.",
+    "instructionsPlaceholder": "f.eks. Gjør tonen mer formell.",
+    "contextInfo": "Kontekstuell informasjon",
+    "contextHelp": "Relevant kontekstuell informasjon sendes automatisk til AI-en for best resultat.",
+    "loadingCodex": "Laster codex-oppføringer...",
+    "system": {
+      "base": "You are an expert prose editor.\n\nWhenever you're given text, rephrase it using the following instructions: <instructions>{instructions}</instructions>\n\n{tenseBlock}\nImitate and keep the current writing style, and leave mannerisms, word choice and sentence structure intact.\nYou are free to remove redundant lines of speech. Keep the same tense and stylistic choices. Use {language} spelling and grammar.\n\nOnly return the rephrased text, nothing else.",
+      "defaultInstruction": "Rephrase the given text.",
+      "tenseInstruction": "Write in the {tense} tense. "
+    },
+    "user": {
+      "codexBlock": "Take into account the following glossary of characters/locations/items/lore... when writing your response:\n<codex>\n{codexContent}\n</codex>",
+      "surroundingTextBlock": "For contextual information, refer to surrounding words in the scene, DO NOT REPEAT THEM:\n<textBefore>\n{wordsBefore}\n</textBefore>\n<textAfter>\n{wordsAfter}\n</textAfter>",
+      "surroundingTextBlockBeforeOnly": "For contextual information, refer to surrounding words in the scene, DO NOT REPEAT THEM:\n<textBefore>\n{wordsBefore}\n</textBefore>",
+      "surroundingTextBlockAfterOnly": "For contextual information, refer to surrounding words in the scene, DO NOT REPEAT THEM:\n<textAfter>\n{wordsAfter}\n</textAfter>",
+      "textToRewrite": "Text to rewrite:\n<text words=\"{wordCount}\">\n{text}\n</text>"
+    }
+  },
+  "translate": {
+    "title": "Oversett",
+    "instructions": "Instruksjoner",
+    "instructionsHelp": "Gi eventuelle spesifikke instruksjoner for oversettelse av teksten.",
+    "instructionsPlaceholder": "f.eks. Oversett til en formell tone. Behold karakternavn i sin opprinnelige form.",
+    "contextInfo": "Kontekstuell informasjon",
+    "contextHelp": "Relevant kontekstuell informasjon (som ordlisteoppføringer) kan sendes til AI-en for bedre oversettelser.",
+    "loadingCodex": "Laster codex-oppføringer...",
+    "prevPairs": "Forrige oversettelsespar",
+    "prevPairsHelp": "Inkluder N forrige oversettelsesblokker som kontekst for AI-en. (0 for å deaktivere)",
+    "system": {
+      "base": "You are an expert literary translator. Your task is to translate a text from {sourceLanguage} to {targetLanguage}.\n{tenseBlock}\nPreserve the original tone, style, and literary devices as much as possible. Maintain the original paragraph breaks.\n\n{instructionsBlock}\n\nOnly return the translated text, nothing else.",
+      "instructionsBlock": "Follow these specific instructions: <instructions>{instructions}</instructions>",
+      "tenseInstruction": "Translate in the {tense} tense. "
+    },
+    "user": {
+      "codexBlock": "Use the following glossary for consistent translation of key terms. Do not translate the terms literally if the glossary provides a specific translation or context.\n<glossary>\n{codexContent}\n</glossary>",
+      "codexEntry": "Term ({sourceLanguage}): {title}\nDescription/Translation Hint: {content}\n\nTranslation in {targetLanguage}: {translation}",
+      "codexEntryNoTranslation": "(No specific translation provided)",
+      "textToTranslate": "Translate the following text from {sourceLanguage} to {targetLanguage}:\n\n<text>\n{text}\n</text>"
+    }
+  },
+  "preview": {
+    "title": "Live Prompt-forhåndsvisning",
+    "description": "Dette er den endelige prompten som vil bli sendt til AI-en, basert på innstillingene dine ovenfor.",
+    "system": "System-prompt",
+    "user": "Bruker-prompt",
+    "aiPrefix": "AI-svarprefiks",
+    "contextPairs": "Kontekstpar",
+    "contextUser": "Kontekstpar {number} (Bruker)",
+    "contextAssistant": "Kontekstpar {number} (Assistent)",
+    "empty": "(Tom)"
+  },
+  "errorLoadForm": "Kunne ikke laste redigeringsskjema.",
+  "errorNoEditorForPrompt": "Ingen redigeringsprogram funnet for prompt: {promptId}",
+  "errorApplyAction": "Kunne ikke utføre handling. Mangler modell, handling eller skjema.",
+  "errorNoBuilder": "Ingen prompt-bygger eller skjema-uttrekker funnet for handling: {action}",
+  "errorNoActiveEditor": "Ingen aktivt redigeringsprogram å bruke endringer på.",
+  "errorNoSelection": "Kunne ikke hente utvalg fra redigeringsprogrammet. For omformulering, vennligst velg litt tekst.",
+  "errorFetchContext": "Kunne ikke hente forrige oversettelsesblokker for kontekst. {message}",
+  "errorNoInterface": "Kan ikke åpne AI-redigeringsprogram: Redigeringsgrensesnitt er ikke tilgjengelig."
+}

@@ -1,0 +1,88 @@
+{
+  "title": "Çeviri Projelerim",
+  "importDocument": "Yeni Çeviri Projesi İçin Belge Yükle",
+  "restoreBackup": "Yedekten Geri Yükle",
+  "loadingProjects": "Projeler yükleniyor...",
+  "noProjects": "Henüz hiç çeviri projeniz yok.",
+  "errorLoading": "Projeler yüklenirken bir hata oluştu.",
+  "welcome": "Hoş geldin, {username}",
+  "signOut": "Çıkış Yap",
+  "signIn": "Giriş Yap",
+  "signInPrompt": "Projelerinizi görmek için lütfen giriş yapın.",
+  "backupFailed": "Yedekleme başarısız: {message}",
+  "restoreSuccess": "'{title}' projesi başarıyla geri yüklendi. Sayfa şimdi yeniden yüklenecek.",
+  "restoreFailed": "Geri yükleme başarısız: {message}",
+  "toggleView": "Görünümü Değiştir",
+  "newProject": "Yeni Boş Proje",
+  "newProjectModal": {
+    "title": "Yeni Boş Proje Oluştur",
+    "description": "Yeni projeniz için bir başlık ve diller belirtin. Proje, her perdede 10 bölüm olmak üzere 3 perdelik varsayılan bir yapıyla oluşturulacaktır.",
+    "projectTitle": "Proje Başlığı",
+    "sourceLanguage": "Kaynak Dil",
+    "targetLanguage": "Hedef Dil",
+    "createButton": "Proje Oluştur",
+    "errorNoTitle": "Lütfen bir proje başlığı girin.",
+    "errorCreate": "Proje oluşturulamadı: {message}"
+  },
+  "login": {
+    "title": "Giriş Yap",
+    "username": "Kullanıcı Adı",
+    "password": "Şifre",
+    "noAccount": "Hesabınız yok mu?",
+    "signUp": "Kayıt Ol",
+    "signIn": "Giriş Yap",
+    "failed": "Giriş başarısız. Lütfen bilgilerinizi kontrol edin."
+  },
+  "proseSettings": {
+    "title": "Dil Ayarları",
+    "description": "Bu ayarlar projeniz ve yapay zeka özellikleri için kaynak ve hedef dilleri belirler.",
+    "sourceLanguage": "Kaynak Dil",
+    "sourceLanguageHelp": "Belgenin orijinal dili.",
+    "targetLanguage": "Hedef Dil",
+    "targetLanguageHelp": "Çevirinin yapılacağı dil. Yazım denetimi ve yapay zeka tarafından içerik üretimi için kullanılır.",
+    "saveButton": "Ayarları Kaydet"
+  },
+  "metaSettings": {
+    "title": "Proje Bilgilerini Düzenle",
+    "projectTitle": "Proje Adı",
+    "author": "Yazar",
+    "noCover": "Kapak seçilmedi",
+    "generateCover": "Yapay Zeka ile Kapak Oluştur",
+    "uploadCover": "Kapak Yükle",
+    "dangerZone": "Tehlikeli Alan",
+    "dangerZoneDesc": "Bu projeyi ve içindeki tüm verileri kalıcı olarak sil.",
+    "deleteProject": "Projeyi Sil",
+    "saveButton": "Değişiklikleri Kaydet",
+    "altCoverFor": "{title} için kapak",
+    "altNoCover": "Kapak Yok",
+    "altStagedCover": "Seçilen kapak",
+    "altCurrentCover": "Mevcut kapak",
+    "deleteConfirm": "\"{title}\" projesini kalıcı olarak silmek istediğinizden emin misiniz?\n\nBu işlem geri alınamaz.",
+    "errorDelete": "Proje silinirken bir hata oluştu."
+  },
+  "generateCover": {
+    "title": "Yapay Zeka ile Kapak Resmi Oluştur",
+    "prompt": "Görsel İçin Açıklama",
+    "generate": "Oluştur",
+    "preview": "Görsel önizlemesi burada görünecek",
+    "accept": "Bu Kapağı Kullan"
+  },
+  "langSelect": {
+    "title": "Dil Seçin",
+    "description": "Lütfen uygulama dili için bir seçim yapın."
+  },
+  "card": {
+    "progress": "İlerleme",
+    "sourceWords": "Kaynak",
+    "targetWords": "Hedef",
+    "chapters": "Bölümler",
+    "created": "Oluşturuldu:",
+    "updated": "Güncellendi:",
+    "backupProject": "Projeyi Yedekle"
+  },
+  "update": {
+    "title": "Güncelleme Mevcut",
+    "description": "Yeni bir sürüm ({latestVersion}) mevcut! Şu anki sürümünüz {currentVersion}.",
+    "updateNow": "Şimdi Güncelle"
+  }
+}

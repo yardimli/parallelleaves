@@ -66,13 +66,42 @@ function registerSystemHandlers(db, sessionManager, windowManager) {
 		}
 	});
 	
+	/**
+	 * MODIFIED SECTION: This handler now reads all JSON files from a language-specific
+	 * directory, merges them into a single object, and returns the result. This supports
+	 * the new modular file structure for translations.
+	 */
 	ipcMain.handle('i18n:get-lang-file', (event, lang) => {
-		const langPath = path.join(__dirname, '..', '..', '..', 'public', 'lang', `${lang}.json`);
+		const langDir = path.join(__dirname, '..', '..', '..', 'public', 'lang', lang);
+		const mergedTranslations = {};
+		
 		try {
-			return fs.readFileSync(langPath, 'utf8');
+			// Check if the language directory exists.
+			if (!fs.existsSync(langDir) || !fs.lstatSync(langDir).isDirectory()) {
+				// This error will be caught and handled by the renderer, which will then try the 'en' fallback.
+				throw new Error(`Language directory not found: ${lang}`);
+			}
+			
+			// Read all files in the directory that end with .json.
+			const files = fs.readdirSync(langDir).filter(file => file.endsWith('.json'));
+			
+			// Iterate over each file, parse it, and add it to the merged object.
+			for (const file of files) {
+				const filePath = path.join(langDir, file);
+				const fileContent = fs.readFileSync(filePath, 'utf8');
+				const jsonData = JSON.parse(fileContent);
+				
+				// The filename (without extension) becomes the top-level key.
+				const key = path.basename(file, '.json'); // e.g., 'common' from 'common.json'
+				mergedTranslations[key] = jsonData;
+			}
+			
+			// Return the complete, merged language object as a JSON string.
+			return JSON.stringify(mergedTranslations);
 		} catch (error) {
-			console.error(`Failed to read language file: ${lang}`, error);
-			throw new Error(`Could not load language file: ${lang}.json`);
+			console.error(`Failed to read language files for: ${lang}`, error);
+			// Propagate the error to the renderer process.
+			throw new Error(`Could not load language files for: ${lang}`);
 		}
 	});
 	
