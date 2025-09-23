@@ -256,6 +256,7 @@
     "deleteChapter": "Delete Chapter",
     "promptNewChapterTitle": "Enter the new chapter title:",
     "promptNewActTitle": "Enter the new act title:",
+    "confirmModalBtn": "Confirm Action",
     "confirmDeleteChapter": "Are you sure you want to delete this chapter? This cannot be undone.",
     "confirmDeleteAct": "Are you sure you want to delete this act and all its chapters? This cannot be undone.",
     "chat": {

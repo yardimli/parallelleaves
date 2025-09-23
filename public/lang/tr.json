@@ -257,6 +257,7 @@
     "deleteChapter": "Bölümü Sil",
     "promptNewChapterTitle": "Yeni bölüm başlığını girin:",
     "promptNewActTitle": "Yeni perde başlığını girin:",
+    "confirmModalBtn": "Kabul Et",
     "confirmDeleteChapter": "Bu bölümü silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
     "confirmDeleteAct": "Bu perdeyi ve içindeki tüm bölümleri silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
     "chat": {

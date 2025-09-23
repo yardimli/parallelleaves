@@ -257,6 +257,7 @@
     "deleteChapter": "Slett kapittel",
     "promptNewChapterTitle": "Skriv inn den nye kapitteltittelen:",
     "promptNewActTitle": "Skriv inn den nye akttittelen:",
+    "confirmModalBtn": "Bekreft handling",
     "confirmDeleteChapter": "Er du sikker på at du vil slette dette kapittelet? Dette kan ikke angres.",
     "confirmDeleteAct": "Er du sikker på at du vil slette denne akten og alle dens kapitler? Dette kan ikke angres.",
     "chat": {
