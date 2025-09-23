@@ -14,7 +14,7 @@ const debounce = (func, delay) => {
 
 const defaultState = { // Default state for the rephrase editor form
 	instructions: '',
-	tense: 'past', // New: Default tense
+	tense: 'past',
 	useCodex: true,
 	useDictionary: false
 };
@@ -38,12 +38,11 @@ export const buildPromptJson = (formData, context, dictionaryContent = '') => {
 	
 	const instructions = formData.instructions || t('prompt.rephrase.system.defaultInstruction');
 	
-	// New: Build the tense instruction block
 	const tenseBlock = t('prompt.rephrase.system.tenseInstruction', { tense: formData.tense });
 	
 	const system = t('prompt.rephrase.system.base', {
 		instructions: instructions,
-		tenseBlock: tenseBlock, // New: Insert tense block
+		tenseBlock: tenseBlock,
 		language: languageForPrompt || 'English'
 	});
 	
@@ -87,7 +86,7 @@ const updatePreview = async (container, context) => {
 	
 	const formData = {
 		instructions: form.elements.instructions.value.trim(),
-		tense: form.elements.tense.value, // New: Get tense from hidden input
+		tense: form.elements.tense.value,
 		useCodex: form.elements.use_codex.checked,
 		useDictionary: form.elements.use_dictionary.checked
 	};
@@ -124,7 +123,6 @@ const populateForm = (container, state, novelId) => {
 	const form = container.querySelector('#rephrase-editor-form');
 	if (!form) return;
 	
-	// New: Get tense preference from localStorage
 	const storageKey = `tense-preference-${novelId}-rephrase`;
 	const savedTense = localStorage.getItem(storageKey);
 	
@@ -134,7 +132,6 @@ const populateForm = (container, state, novelId) => {
 	form.elements.use_codex.checked = state.useCodex !== undefined ? state.useCodex : defaultState.useCodex;
 	form.elements.use_dictionary.checked = state.useDictionary !== undefined ? state.useDictionary : defaultState.useDictionary;
 	
-	// New: Set tense UI
 	form.elements.tense.value = tense;
 	const tenseButtons = form.querySelectorAll('.js-tense-btn');
 	tenseButtons.forEach(btn => {
@@ -171,7 +168,6 @@ export const init = async (container, context) => {
 				debouncedUpdatePreview();
 			});
 			
-			// New: Add event listener for tense buttons
 			const tenseGroup = form.querySelector('.js-tense-group');
 			if (tenseGroup) {
 				tenseGroup.addEventListener('click', (e) => {

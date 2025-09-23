@@ -17,13 +17,13 @@ const promptBuilders = {
 const formDataExtractors = {
 	'rephrase': (form) => ({
 		instructions: form.elements.instructions.value.trim(),
-		tense: form.elements.tense.value, // New: Get tense from hidden input
+		tense: form.elements.tense.value,
 		useCodex: form.elements.use_codex.checked,
 		useDictionary: form.elements.use_dictionary.checked
 	}),
 	'translate': (form) => ({
 		instructions: form.elements.instructions.value.trim(),
-		tense: form.elements.tense.value, // New: Get tense from hidden input
+		tense: form.elements.tense.value,
 		useCodex: form.elements.use_codex.checked,
 		contextPairs: parseInt(form.elements.context_pairs.value, 10) || 0,
 		useDictionary: form.elements.use_dictionary.checked

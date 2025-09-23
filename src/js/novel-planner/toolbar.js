@@ -104,7 +104,6 @@ function applyHighlight (color) {
 
 async function handleToolbarAction (button) {
 	if (button.id === 'js-open-dictionary-btn') {
-		// Modified: Use the callback passed during setup
 		if (typeof toolbarConfig.onOpenDictionary === 'function') {
 			await toolbarConfig.onOpenDictionary();
 		}

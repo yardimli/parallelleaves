@@ -1,12 +1,11 @@
 import { setupTopToolbar, setActiveContentWindow, updateToolbarState } from './toolbar.js';
 import { setupPromptEditor, openPromptEditor } from '../prompt-editor.js';
 import { setupTypographySettings, getTypographySettings, generateTypographyStyleProperties } from './typography-settings.js';
-import { initI18n, t } from '../i18n.js';
+import { initI18n, t, applyTranslationsTo } from '../i18n.js';
 import { processSourceContentForMarkers, removeObsoleteCodexLinks } from '../../utils/html-processing.js';
 import { initDictionaryModal } from '../dictionary/dictionary-modal.js';
 import { loadModals } from '../../utils/modal-loader.js';
 import { showConfirmationModal, showInputModal } from './modals.js';
-// Corrected: The scrollToTargetMarker function in the module is fine, the issue is how we call it.
 import { syncChapterScroll, scrollToChapter, scrollToTargetMarker, scrollToSourceMarker, setupIntersectionObserver } from './scroll-sync.js';
 import { setupSearch } from './search.js';
 import { setupSpellcheckDropdown } from './spellcheck.js';
@@ -228,7 +227,6 @@ async function renderManuscript (novelData) {
 		}
 		
 		for (const chapter of section.chapters) {
-			// Modified: Chain the cleanup and processing functions for source content.
 			const rawSourceContent = chapter.source_content || '';
 			const cleanedSourceContent = removeObsoleteCodexLinks(rawSourceContent);
 			const finalSourceContent = processSourceContentForMarkers(cleanedSourceContent);
@@ -286,6 +284,9 @@ async function renderManuscript (novelData) {
 	targetContainer.innerHTML = '';
 	sourceContainer.appendChild(sourceFragment);
 	targetContainer.appendChild(targetFragment);
+	
+	applyTranslationsTo(sourceContainer);
+	applyTranslationsTo(targetContainer);
 }
 
 function populateNavDropdown (novelData) {

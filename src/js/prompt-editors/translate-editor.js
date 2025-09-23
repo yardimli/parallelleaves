@@ -14,7 +14,7 @@ const debounce = (func, delay) => {
 
 const defaultState = { // Default state for the translate editor form
 	instructions: '',
-	tense: 'past', // New: Default tense
+	tense: 'past',
 	useCodex: true,
 	contextPairs: 4,
 	useDictionary: false
@@ -59,13 +59,12 @@ export const buildPromptJson = (formData, context, dictionaryContent = '') => {
 		? t('prompt.translate.system.instructionsBlock', { instructions: formData.instructions })
 		: '';
 	
-	// New: Build the tense instruction block
 	const tenseBlock = t('prompt.translate.system.tenseInstruction', { tense: formData.tense });
 	
 	const system = t('prompt.translate.system.base', {
 		sourceLanguage: languageForPrompt,
 		targetLanguage: targetLanguage,
-		tenseBlock: tenseBlock, // New: Insert tense block
+		tenseBlock: tenseBlock,
 		instructionsBlock: instructionsBlock
 	}).trim();
 	
@@ -106,7 +105,7 @@ const updatePreview = async (container, context) => {
 	
 	const formData = {
 		instructions: form.elements.instructions.value.trim(),
-		tense: form.elements.tense.value, // New: Get tense from hidden input
+		tense: form.elements.tense.value,
 		useCodex: form.elements.use_codex.checked,
 		contextPairs: parseInt(form.elements.context_pairs.value, 10) || 0,
 		useDictionary: form.elements.use_dictionary.checked
@@ -185,7 +184,6 @@ const populateForm = (container, state, novelId) => {
 	const form = container.querySelector('#translate-editor-form');
 	if (!form) return;
 	
-	// New: Get tense preference from localStorage
 	const storageKey = `tense-preference-${novelId}-translate`;
 	const savedTense = localStorage.getItem(storageKey);
 	
@@ -196,7 +194,6 @@ const populateForm = (container, state, novelId) => {
 	form.elements.use_codex.checked = state.useCodex !== undefined ? state.useCodex : defaultState.useCodex;
 	form.elements.use_dictionary.checked = state.useDictionary !== undefined ? state.useDictionary : defaultState.useDictionary;
 	
-	// New: Set tense UI
 	form.elements.tense.value = tense;
 	const tenseButtons = form.querySelectorAll('.js-tense-btn');
 	tenseButtons.forEach(btn => {
@@ -230,7 +227,6 @@ export const init = async (container, context) => {
 				debouncedUpdatePreview();
 			});
 			
-			// New: Add event listener for tense buttons
 			const tenseGroup = form.querySelector('.js-tense-group');
 			if (tenseGroup) {
 				tenseGroup.addEventListener('click', (e) => {
