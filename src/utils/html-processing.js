@@ -46,9 +46,11 @@ export function processSourceContentForMarkers(htmlString) {
 	// Regex now finds both opening [[#...]] and closing {{#...}} markers.
 	const markerRegex = /(\[\[#(\d+)\]\])|(\{\{#(\d+)\}\})/g;
 	
-	// Replace the found markers with anchor tags.
+	// Replace the found markers with anchor tags, now including a data-marker-type.
 	return htmlString.replace(markerRegex, (match, p1, p2, p3, p4) => {
 		const number = p2 || p4; // The captured number will be in either the 2nd or 4th capture group.
-		return `<a href="#" class="translation-marker-link" data-marker-id="${number}">${match}</a>`;
+		// New: Determine if the marker is an opening or closing type.
+		const type = p1 ? 'opening' : 'closing';
+		return `<a href="#" class="translation-marker-link" data-marker-id="${number}" data-marker-type="${type}">${match}</a>`;
 	});
 }

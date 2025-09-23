@@ -1,7 +1,6 @@
 import { openPromptEditor } from '../prompt-editor.js';
 import { t } from '../i18n.js';
-import { openDictionaryModal } from '../dictionary/dictionary-modal.js';
-import { handleOpenDictionaryWithSelection } from './chapter-main.js';
+import { createIframeEditorInterface } from './editor-interface.js';
 
 let activeContentWindow = null;
 let currentToolbarState = {};
@@ -9,11 +8,11 @@ const toolbar = document.getElementById('top-toolbar');
 const wordCountEl = document.getElementById('js-word-count');
 let toolbarConfig = {};
 
-export function setActiveContentWindow(contentWindow) {
+export function setActiveContentWindow (contentWindow) {
 	activeContentWindow = contentWindow;
 }
 
-export function updateToolbarState(newState) {
+export function updateToolbarState (newState) {
 	currentToolbarState = newState || {};
 	const allBtns = toolbar.querySelectorAll('.js-toolbar-btn, .js-ai-action-btn');
 	
@@ -87,7 +86,7 @@ export function updateToolbarState(newState) {
 	}
 }
 
-function applyCommand(command, attrs = {}) {
+function applyCommand (command, attrs = {}) {
 	if (!activeContentWindow) return;
 	activeContentWindow.postMessage({
 		type: 'command',
@@ -95,7 +94,7 @@ function applyCommand(command, attrs = {}) {
 	}, window.location.origin);
 }
 
-function applyHighlight(color) {
+function applyHighlight (color) {
 	if (!activeContentWindow) return;
 	activeContentWindow.postMessage({
 		type: 'command',
@@ -103,64 +102,12 @@ function applyHighlight(color) {
 	}, window.location.origin);
 }
 
-export const createIframeEditorInterface = (contentWindow) => {
-	const post = (type, payload) => contentWindow.postMessage({ type, payload }, window.location.origin);
-	
-	return {
-		type: 'iframe',
-		// getting the current selection from the target editor to use as an insertion point.
-		getSelectionInfo: (action) => new Promise((resolve) => {
-			const listener = (event) => {
-				if (event.source === contentWindow && event.data.type === 'selectionResponse') {
-					window.removeEventListener('message', listener);
-					resolve(event.data.payload);
-				}
-			};
-			window.addEventListener('message', listener);
-			
-			// Both actions now just need the current selection state from the editor.
-			post('prepareForRephrase', { isRephrase: action === 'rephrase' });
-		}),
-		getSelectionText: () => new Promise((resolve) => {
-			const listener = (event) => {
-				if (event.source === contentWindow && event.data.type === 'selectionResponse') {
-					window.removeEventListener('message', listener);
-					resolve(event.data.payload.selectedText);
-				}
-			};
-			window.addEventListener('message', listener);
-			post('getSelectionText'); // Send message to iframe to get selection text
-		}),
-		getFullHtml: () => new Promise((resolve) => {
-			const listener = (event) => {
-				if (event.source === contentWindow && event.data.type === 'fullHtmlResponse') {
-					window.removeEventListener('message', listener);
-					resolve(event.data.payload.html);
-				}
-			};
-			window.addEventListener('message', listener);
-			post('prepareForGetFullHtml');
-		}),
-		setEditable: (isEditable) => post('setEditable', { isEditable }),
-		cleanupSuggestion: () => post('cleanupAiSuggestion'),
-		discardAiSuggestion: (from, to, originalFragmentJson) => post('discardAiSuggestion', { from, to, originalFragmentJson }),
-		
-		replaceRangeWithSuggestion: (from, to, newContentHtml) => new Promise((resolve) => {
-			const listener = (event) => {
-				if (event.source === contentWindow && event.data.type === 'replacementComplete') {
-					window.removeEventListener('message', listener);
-					resolve({ finalRange: event.data.payload.finalRange, endCoords: event.data.payload.endCoords });
-				}
-			};
-			window.addEventListener('message', listener);
-			post('replaceRange', { from, to, newContentHtml });
-		})
-	};
-};
-
-async function handleToolbarAction(button) {
+async function handleToolbarAction (button) {
 	if (button.id === 'js-open-dictionary-btn') {
-		await handleOpenDictionaryWithSelection();
+		// Modified: Use the callback passed during setup
+		if (typeof toolbarConfig.onOpenDictionary === 'function') {
+			await toolbarConfig.onOpenDictionary();
+		}
 		return;
 	}
 	
@@ -189,7 +136,6 @@ async function handleToolbarAction(button) {
 			}
 		}
 		
-		// This is for the 'rephrase' action in the chapter editor.
 		if (!activeContentWindow) return;
 		
 		const editorInterface = createIframeEditorInterface(activeContentWindow);
@@ -210,7 +156,7 @@ async function handleToolbarAction(button) {
 			activeEditorView: activeContentWindow,
 			editorInterface: editorInterface,
 			chapterId: chapterId,
-			novelId: novelId // Pass novelId to context for dictionary access in prompt editor
+			novelId: novelId
 		};
 		openPromptEditor(context, action, settings);
 		return;
@@ -234,7 +180,7 @@ async function handleToolbarAction(button) {
 	}
 }
 
-export function setupTopToolbar(config = {}) {
+export function setupTopToolbar (config = {}) {
 	toolbarConfig = config;
 	if (!toolbar) return;
 	

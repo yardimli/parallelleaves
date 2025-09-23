@@ -1,0 +1,63 @@
+<dialog id="dictionary-modal" class="modal">
+	<div class="modal-box w-11/12 max-w-2xl h-[90vh] flex flex-col p-0">
+		<!-- Header Section -->
+		<div class="flex-shrink-0 p-6 pb-4 border-b border-base-300">
+			<form method="dialog">
+				<button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+			</form>
+			<h3 class="font-bold text-lg mb-2" data-i18n="editor.dictionaryModal.title">Custom Dictionary</h3>
+			<p class="text-sm text-base-content/70" data-i18n="editor.dictionaryModal.description">Add custom terms and their translations to guide the AI. These entries will be used when 'Use Custom Dictionary' is enabled in AI prompt settings.</p>
+		</div>
+		
+		<!-- Scrollable Content Area -->
+		<div class="flex-grow overflow-y-auto min-h-0">
+			<div class="p-6">
+				<div class="overflow-x-auto">
+					<table class="table w-full">
+						<thead>
+						<tr>
+							<th class="w-12"></th> <!-- Checkbox column -->
+							<th data-i18n="editor.dictionaryModal.sourceTerm">
+								<div class="flex items-center gap-1">
+									<span>Source Term</span>
+									<button type="button" class="js-sort-btn btn btn-ghost btn-xs btn-square" data-sort-by="source" data-sort-direction="asc">
+										<i class="bi bi-sort-alpha-down"></i>
+									</button>
+								</div>
+							</th>
+							<th data-i18n="editor.dictionaryModal.targetTranslation">
+								<div class="flex items-center gap-1">
+									<span>Target Translation</span>
+									<button type="button" class="js-sort-btn btn btn-ghost btn-xs btn-square" data-sort-by="target" data-sort-direction="asc">
+										<i class="bi bi-sort-alpha-down"></i>
+									</button>
+								</div>
+							</th>
+						</tr>
+						</thead>
+						<tbody id="dictionary-table-body">
+						<!-- Dictionary rows will be inserted here by JS -->
+						</tbody>
+					</table>
+					<p id="dictionary-no-entries" class="text-center text-base-content/60 py-4 hidden" data-i18n="editor.dictionaryModal.noEntries">No dictionary entries yet. Click 'Add Row' to start.</p>
+				</div>
+			</div>
+		</div>
+		
+		<!-- Footer Section -->
+		<div class="flex-shrink-0 px-6 py-4 border-t border-base-300">
+			<div class="flex justify-between mb-4">
+				<div class="flex gap-2">
+					<button type="button" id="dictionary-add-row-btn" class="btn btn-sm btn-outline" data-i18n="editor.dictionaryModal.addRow">Add Row</button>
+					<button type="button" id="dictionary-delete-selected-btn" class="btn btn-sm btn-outline btn-error" disabled data-i18n="editor.dictionaryModal.deleteSelected">Delete Selected</button>
+				</div>
+			</div>
+			<div class="modal-action p-0 mt-0">
+				<form method="dialog" class="flex gap-3 w-full">
+					<button class="btn flex-1" data-i18n="common.cancel">Cancel</button>
+					<button type="button" id="dictionary-save-btn" class="btn btn-primary flex-1" data-i18n="common.save">Save</button>
+				</form>
+			</div>
+		</div>
+	</div>
+</dialog>
