@@ -12,6 +12,7 @@ import { setupSearchAndReplace } from './search-replace.js';
 import { setupSpellcheckDropdown } from './spellcheck.js';
 import { handleOpenDictionaryWithSelection } from './dictionary-handler.js';
 import { createIframeEditorInterface } from './editor-interface.js';
+import { setupShortcuts } from './shortcuts.js'; // New: Import the shortcut handler
 
 // ... (debounce and state management code remains the same) ...
 const debounce = (func, delay) => {
@@ -38,6 +39,7 @@ let lastFocusedSourceEditor = null; // New: Track the last focused source editor
 
 // --- State Accessors and Mutators ---
 const getActiveEditor = () => activeEditor;
+const getLastFocusedSourceEditor = () => lastFocusedSourceEditor; // New: Accessor for the shortcut module
 const setActiveEditor = (editorWindow) => { activeEditor = editorWindow; };
 const setActiveChapterId = (chapterId, callback) => {
 	if (chapterId && chapterId !== activeChapterId) {
@@ -414,6 +416,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 		const searchAPI = setupSearch(chapterEditorViews, (handler) => { searchResultHandler = handler; });
 		const searchReplaceAPI = setupSearchAndReplace(chapterEditorViews, (handler) => { searchReplaceResultHandler = handler; });
 		
+		// New: Setup global keyboard shortcuts after other components are initialized.
+		setupShortcuts({
+			searchAPI,
+			searchReplaceAPI,
+			getActiveEditor,
+			getLastFocusedSourceEditor,
+			chapterEditorViews
+		});
+		
 		initDictionaryModal(novelId);
 		
 		document.body.addEventListener('dictionary:find-replace', (event) => {
@@ -590,88 +601,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 			}
 		});
 		
-		window.addEventListener('keydown', (e) => {
-			const activeEl = document.activeElement;
-			const isModalOpen = document.querySelector('.modal[open], .modal-open');
-			
-			if (isModalOpen) {
-				return; // Ignore all shortcuts when a modal is active.
-			}
-			
-			if (e.key === 'Escape') {
-				const isSearchVisible = !searchAPI.isHidden();
-				const isSearchReplaceVisible = !searchReplaceAPI.isHidden();
-				
-				if (isSearchVisible) {
-					searchAPI.toggle(false);
-					e.preventDefault();
-				}
-				if (isSearchReplaceVisible) {
-					searchReplaceAPI.toggle(false);
-					e.preventDefault();
-				}
-				if (isSearchVisible || isSearchReplaceVisible) {
-					return;
-				}
-			}
-			
-			if (e.ctrlKey || e.metaKey) {
-				const isGenericInputFocused = activeEl &&
-					(activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA') &&
-					!activeEl.closest('#js-search-bar') &&
-					!activeEl.closest('#js-search-replace-bar');
-				
-				if (isGenericInputFocused && ['f', 'h', 't'].includes(e.key.toLowerCase())) {
-					return;
-				}
-				
-				switch (e.key.toLowerCase()) {
-					case 'f':
-						e.preventDefault();
-						if (searchReplaceAPI.isHidden()) {
-							searchAPI.toggle(true);
-						}
-						break;
-					case 'h':
-						e.preventDefault();
-						searchReplaceAPI.toggle(true);
-						break;
-					case '1':
-						e.preventDefault();
-						if (lastFocusedSourceEditor) {
-							lastFocusedSourceEditor.focus();
-						} else {
-							const sourceContainer = document.getElementById('js-source-column-container');
-							const firstEditor = sourceContainer.querySelector('.source-content-readonly');
-							if (firstEditor) {
-								firstEditor.focus();
-							} else {
-								sourceContainer.focus({ preventScroll: true });
-							}
-						}
-						break;
-					case '2':
-						e.preventDefault();
-						const editorToFocus = getActiveEditor();
-						if (editorToFocus) {
-							editorToFocus.postMessage({ type: 'focusEditor' }, window.location.origin);
-						} else if (activeChapterId) {
-							const viewInfo = chapterEditorViews.get(activeChapterId.toString());
-							if (viewInfo && viewInfo.isReady) {
-								viewInfo.contentWindow.postMessage({ type: 'focusEditor' }, window.location.origin);
-							}
-						}
-						break;
-					case 't':
-						const activeTargetEditor = getActiveEditor();
-						if (activeTargetEditor) {
-							e.preventDefault();
-							activeTargetEditor.postMessage({ type: 'triggerTranslate' }, window.location.origin);
-						}
-						break;
-				}
-			}
-		});
+		// Modified: The global keydown listener has been removed from here and is now handled by shortcuts.js
 		
 		window.api?.onManuscriptScrollToChapter((event, chapterId) => {
 			if (chapterId) {

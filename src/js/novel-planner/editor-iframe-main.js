@@ -7,6 +7,7 @@ import { baseKeymap, toggleMark, setBlockType, wrapIn, lift } from 'prosemirror-
 import { wrapInList, liftListItem } from 'prosemirror-schema-list';
 import { schema as basicSchema } from 'prosemirror-schema-basic';
 import { addListNodes } from 'prosemirror-schema-list';
+import { createShortcutKeymap } from './editor-shortcuts.js'; // New: Import the shortcut keymap creator
 
 // --- ProseMirror Schema Definition
 const highlightMarkSpec = (colorClass) => {
@@ -250,41 +251,7 @@ function createEditorView (mount, config) {
 	chapterId = id;
 	field = fieldName;
 	
-	// New: Define keymap for shortcuts that need to communicate with the parent window.
-	const shortcutKeymap = keymap({
-		'Mod-f': () => {
-			postToParent('shortcut:find');
-			return true; // Mark as handled
-		},
-		'Mod-h': () => {
-			postToParent('shortcut:find-replace');
-			return true;
-		},
-		'Mod-1': () => {
-			postToParent('shortcut:focus-source');
-			return true;
-		},
-		'Mod-2': () => {
-			postToParent('shortcut:focus-target');
-			return true;
-		},
-		'Mod-t': (state) => {
-			// This shortcut directly triggers the translation action if the floating button is visible.
-			if (floatingTranslateBtn && document.body.contains(floatingTranslateBtn)) {
-				const { selection } = state;
-				if (selection.empty) {
-					const { $from } = selection;
-					const pos = $from.pos;
-					postToParent('requestTranslation', { from: pos, to: pos });
-					if (floatingTranslateBtn) {
-						floatingTranslateBtn.remove();
-						floatingTranslateBtn = null;
-					}
-				}
-			}
-			return true;
-		}
-	});
+	// Modified: The shortcutKeymap definition has been moved to editor-shortcuts.js
 	
 	const editorPlugin = new Plugin({
 		props: {
@@ -343,12 +310,12 @@ function createEditorView (mount, config) {
 	editorView = new EditorView(mount, {
 		state: EditorState.create({
 			doc: doc,
-			// Modified: Added the new shortcutKeymap to the plugins array.
+			// Modified: Added the new shortcutKeymap to the plugins array via the imported creator function.
 			plugins: [
 				history(),
 				keymap({ 'Mod-z': undo, 'Mod-y': redo }),
 				keymap(baseKeymap),
-				shortcutKeymap, // New keymap for parent communication and other shortcuts
+				createShortcutKeymap(postToParent), // Use the imported function
 				editorPlugin,
 				searchPlugin,
 				searchReplacePlugin
