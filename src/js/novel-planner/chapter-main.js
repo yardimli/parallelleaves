@@ -641,7 +641,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 					window.api.logTargetEditEvent({
 						novelId: novelId,
 						chapterId: payload.chapterId,
-						marker: `chapter-${payload.chapterId}`,
+						marker: payload.marker,
 						content: payload.content
 					}).catch(err => console.error('Failed to log target edit event:', err));
 					break;

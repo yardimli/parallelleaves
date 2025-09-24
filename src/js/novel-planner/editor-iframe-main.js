@@ -156,18 +156,65 @@ const postToParent = (type, payload) => {
 const debouncedLogEdit = debounce(() => {
 	if (!editorView) return;
 	
-	// Serialize the current editor content to HTML
-	const serializer = DOMSerializer.fromSchema(editorView.state.schema);
-	const fragment = serializer.serializeFragment(editorView.state.doc.content);
-	const tempDiv = document.createElement('div');
-	tempDiv.appendChild(fragment);
-	const content = tempDiv.innerHTML;
+	const { doc, selection } = editorView.state;
+	const cursorPos = selection.from;
+	const markerRegex = /(\[\[#(\d+)\]\])|(\{\{#(\d+)\}\})/g;
 	
-	// Post the content to the parent window for logging
-	postToParent('logTargetEdit', {
-		chapterId: chapterId,
-		content: content
+	const markers = [];
+	doc.descendants((node, pos) => {
+		if (!node.isText) return;
+		let match;
+		while ((match = markerRegex.exec(node.text)) !== null) {
+			const number = match[2] || match[4];
+			const type = match[1] ? 'opening' : 'closing';
+			markers.push({
+				number: parseInt(number, 10),
+				type: type,
+				from: pos + match.index,
+				to: pos + match.index + match[0].length
+			});
+		}
 	});
+	
+	if (markers.length === 0) return;
+	
+	markers.sort((a, b) => a.from - b.from);
+	
+	let lastOpening = null;
+	for (const marker of markers) {
+		if (marker.type === 'opening' && marker.to <= cursorPos) {
+			lastOpening = marker;
+		}
+	}
+	
+	let firstClosing = null;
+	if (lastOpening) {
+		for (const marker of markers) {
+			if (marker.from >= cursorPos && marker.type === 'closing' && marker.number === lastOpening.number) {
+				firstClosing = marker;
+				break;
+			}
+		}
+	}
+	
+	if (lastOpening && firstClosing) {
+		const contentFragment = doc.slice(lastOpening.to, firstClosing.from);
+		// Using textBetween on the fragment content to get plain text
+		const contentText = contentFragment.content.textBetween(0, contentFragment.content.size, ' ').trim();
+		
+		const wordCount = contentText.split(/\s+/).filter(Boolean).length;
+		if (wordCount > 1500) {
+			console.log(`Skipping log for marker #${lastOpening.number}, word count (${wordCount}) exceeds 1500.`);
+			return;
+		}
+		
+		// Post the plain text content to the parent window for logging
+		postToParent('logTargetEdit', {
+			chapterId: chapterId,
+			marker: lastOpening.number.toString(),
+			content: contentText
+		});
+	}
 }, 10000); // 10-second debounce
 // MODIFICATION END
 
