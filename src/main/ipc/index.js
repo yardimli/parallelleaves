@@ -9,6 +9,7 @@ const { registerNovelHandlers } = require('./novelHandlers.js');
 const { registerSectionHandlers } = require('./sectionHandlers.js');
 const { registerSystemHandlers } = require('./systemHandlers.js');
 const { registerDictionaryHandlers } = require('./dictionaryHandlers.js');
+const { registerLoggingHandlers } = require('./loggingHandlers.js'); // New
 
 /**
  * Registers all IPC handlers for the application.
@@ -28,6 +29,7 @@ function registerIpcHandlers(db, sessionManager, windowManager) {
 	registerSectionHandlers(db);
 	registerSystemHandlers(db, sessionManager, windowManager);
 	registerDictionaryHandlers();
+	registerLoggingHandlers(db, sessionManager); // New
 }
 
 module.exports = { registerIpcHandlers };

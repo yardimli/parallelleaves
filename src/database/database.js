@@ -1,11 +1,32 @@
-// src/database/database.js
-
 const path = require('path');
 const fs = require('fs');
 const Database = require('better-sqlite3');
 const { app } = require('electron');
 
 let db; // Keep a reference to the database instance
+
+/**
+ * Reads the schema.sql file and executes it against the database.
+ * The schema file uses "CREATE TABLE IF NOT EXISTS" statements, making this function
+ * idempotent and safe to run on every app start. It will create any missing tables
+ * without altering or throwing errors on existing ones. This effectively verifies
+ * that the database schema is up-to-date with the application's requirements.
+ * @param {Database.Database} database - The better-sqlite3 database instance.
+ */
+function verifyAndApplySchema(database) {
+	try {
+		const schemaPath = path.join(__dirname, 'schema.sql');
+		const schema = fs.readFileSync(schemaPath, 'utf8');
+		
+		// The .exec() method can execute a string containing multiple SQL statements.
+		// Because we use "CREATE TABLE IF NOT EXISTS", this operation is safe to run every time.
+		// It ensures that all tables defined in the schema file are present in the database.
+		database.exec(schema);
+		console.log('Database schema verified. All required tables are present.');
+	} catch (error) {
+		console.error('Failed to apply database schema:', error);
+	}
+}
 
 /**
  * Initializes the database connection. This function MUST be called
@@ -30,18 +51,14 @@ function initializeDatabase() {
 	
 	db = new Database(dbPath);
 	
-	// Enable WAL mode for better performance.
+	// Enable WAL mode for better performance and concurrency.
 	db.pragma('journal_mode = WAL');
 	
-	// Run schema setup.
-	try {
-		const schemaPath = path.join(__dirname, 'schema.sql');
-		const schema = fs.readFileSync(schemaPath, 'utf8');
-		db.exec(schema);
-		console.log(`Database initialized successfully at: ${dbPath}`);
-	} catch (error) {
-		console.error('Failed to initialize database schema:', error);
-	}
+	// On startup, verify that all tables from the schema file exist,
+	// and create any that are missing.
+	verifyAndApplySchema(db);
+	
+	console.log(`Database initialized successfully at: ${dbPath}`);
 	
 	return db;
 }

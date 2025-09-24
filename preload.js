@@ -91,5 +91,8 @@ contextBridge.exposeInMainWorld('api', {
 	getDictionaryContentForAI: (novelId, type) => ipcRenderer.invoke('dictionary:getContentForAI', novelId, type),
 	saveNovelDictionary: (novelId, data) => ipcRenderer.invoke('dictionary:save', novelId, data),
 	
+	// New: API for logging translation events
+	logTranslationEvent: (data) => ipcRenderer.invoke('log:translation', data),
+	
 	findHighestMarkerNumber: (sourceHtml, targetHtml) => ipcRenderer.invoke('novels:findHighestMarkerNumber', sourceHtml, targetHtml)
 });

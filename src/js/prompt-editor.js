@@ -243,6 +243,19 @@ async function startAiAction(params) {
 			let newContentText = result.data.choices[0].message.content ?? 'No content generated.';
 			newContentText = newContentText.trim();
 			
+			// New: Log the translation event to local and remote databases.
+			if (currentPromptId === 'translate') {
+				window.api.logTranslationEvent({
+					novelId: currentContext.novelId,
+					chapterId: currentContext.chapterId,
+					sourceText: currentContext.selectedText,
+					targetText: newContentText,
+					marker: openingMarker,
+					model: params.model,
+					temperature: params.temperature
+				}).catch(err => console.error('Failed to log translation event:', err));
+			}
+			
 			let newContentHtml;
 			const textWithMarkers = openingMarker && closingMarker
 				? `${openingMarker} ${newContentText} ${closingMarker}`

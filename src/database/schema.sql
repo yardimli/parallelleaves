@@ -150,5 +150,15 @@ BEGIN
     WHERE id = OLD.novel_id;
 END;
 
--- MODIFICATION START: Removed triggers related to codex_entries.
--- MODIFICATION END
+CREATE TABLE IF NOT EXISTS translation_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    novel_id INTEGER NOT NULL,
+    chapter_id INTEGER NOT NULL,
+    source_text TEXT NOT NULL,
+    target_text TEXT NOT NULL,
+    marker TEXT,
+    model TEXT NOT NULL,
+    temperature REAL NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);

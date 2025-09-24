@@ -7,8 +7,26 @@
 	 * It validates a user session token for protected actions, logs all interactions to a MySQL database,
 	 * and provides a verified, grouped list of available models.
 	 *
-	 * @version 1.8.0
+	 * @version 1.8.1
 	 * @author Ekim Emre Yardimli
+	 */
+
+	/*
+	 * -- SQL for the new translation_logs table in MySQL
+	 * CREATE TABLE `translation_logs` (
+	 *   `id` int(11) NOT NULL AUTO_INCREMENT,
+	 *   `user_id` int(11) NOT NULL,
+	 *   `novel_id` int(11) NOT NULL,
+	 *   `chapter_id` int(11) NOT NULL,
+	 *   `source_text` text COLLATE utf8mb4_unicode_ci NOT NULL,
+	 *   `target_text` text COLLATE utf8mb4_unicode_ci NOT NULL,
+	 *   `marker` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+	 *   `model` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+	 *   `temperature` float NOT NULL,
+	 *   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+	 *   PRIMARY KEY (`id`),
+	 *   KEY `user_id` (`user_id`)
+	 * ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 	 */
 
 // Enforce PSR-12 standards
@@ -336,6 +354,42 @@
 		http_response_code($httpCode);
 		echo $response;
 		exit;
-	} else {
-		sendJsonError(400, 'Invalid action specified. Supported actions are "chat", "get_models", and "generate_cover".');
+	} elseif ($action === 'log_translation') { // New: Handle translation logging
+		if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+			sendJsonError(405, 'Method Not Allowed. Please use POST for logging translations.');
+		}
+
+		// Extract data from the payload
+		$novelId = $payload['novel_id'] ?? null;
+		$chapterId = $payload['chapter_id'] ?? null;
+		$sourceText = $payload['source_text'] ?? null;
+		$targetText = $payload['target_text'] ?? null;
+		$marker = $payload['marker'] ?? null;
+		$model = $payload['model'] ?? null;
+		$temperature = $payload['temperature'] ?? null;
+
+		// Basic validation
+		if (!$novelId || !$chapterId || !$sourceText || !$targetText || !$model || !isset($temperature)) {
+			sendJsonError(400, 'Missing required fields for translation logging.');
+		}
+
+		try {
+			$stmt = $db->prepare(
+				'INSERT INTO translation_logs (user_id, novel_id, chapter_id, source_text, target_text, marker, model, temperature) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+			);
+			// Note: bind_param types must match the columns: i, i, i, s, s, s, s, d
+			$stmt->bind_param('iiissssd', $userId, $novelId, $chapterId, $sourceText, $targetText, $marker, $model, $temperature);
+			$stmt->execute();
+			$stmt->close();
+
+			http_response_code(201); // 201 Created
+			echo json_encode(['success' => true, 'message' => 'Translation logged successfully.']);
+		} catch (Exception $e) {
+			// Log the actual DB error server-side for debugging, but don't expose it to the client.
+			error_log('Failed to write to translation_logs: ' . $e->getMessage());
+			sendJsonError(500, 'Failed to log translation to the database.');
+		}
+		exit;
+	} else { // Modified: Updated error message
+		sendJsonError(400, 'Invalid action specified. Supported actions are "chat", "get_models", "generate_cover", and "log_translation".');
 	}
