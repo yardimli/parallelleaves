@@ -1,7 +1,22 @@
-const { ipcMain, dialog } = require('electron');
+const { ipcMain, dialog, app } = require('electron'); // MODIFICATION: Added 'app'
 const path = require('path');
 const fs = require('fs');
 const imageHandler = require('../../utils/image-handler.js');
+
+// MODIFICATION START: Define paths for codex and dictionary directories
+const CODEX_DIR = path.join(app.getPath('userData'), 'codex');
+const DICTIONARIES_DIR = path.join(app.getPath('userData'), 'dictionaries');
+
+/**
+ * Ensures a directory exists.
+ * @param {string} dirPath - The path to the directory.
+ */
+function ensureDir(dirPath) {
+	if (!fs.existsSync(dirPath)) {
+		fs.mkdirSync(dirPath, { recursive: true });
+	}
+}
+// MODIFICATION END
 
 /**
  * Registers IPC handlers for backup and restore functionality.
@@ -33,11 +48,27 @@ function registerBackupRestoreHandlers(db, sessionManager) {
 				}
 			}
 			
+			// MODIFICATION START: Backup codex and dictionary files
+			let codexHtml = null;
+			const codexPath = path.join(CODEX_DIR, `codex-${novelId}.html`);
+			if (fs.existsSync(codexPath)) {
+				codexHtml = fs.readFileSync(codexPath, 'utf8');
+			}
+			
+			let dictionaryJson = null;
+			const dictionaryPath = path.join(DICTIONARIES_DIR, `${novelId}.json`);
+			if (fs.existsSync(dictionaryPath)) {
+				dictionaryJson = fs.readFileSync(dictionaryPath, 'utf8');
+			}
+			// MODIFICATION END
+			
 			return {
 				novel,
 				sections,
 				chapters,
-				image // Add image data to the backup object
+				image, // Add image data to the backup object
+				codexHtml,      // Add codex data
+				dictionaryJson  // Add dictionary data
 			};
 		} catch (error) {
 			console.error(`Failed to get novel for backup (ID: ${novelId}):`, error);
@@ -51,7 +82,9 @@ function registerBackupRestoreHandlers(db, sessionManager) {
 				novel,
 				sections = [],
 				chapters = [],
-				image
+				image,
+				codexHtml,      // MODIFICATION: Destructure codex data
+				dictionaryJson  // MODIFICATION: Destructure dictionary data
 			} = backupData;
 			
 			// 1. Insert the novel, getting the new ID.
@@ -106,6 +139,9 @@ function registerBackupRestoreHandlers(db, sessionManager) {
 			// 6. Restore cover image if it exists in the backup
 			if (image && image.data && image.filename) {
 				try {
+					// MODIFICATION START: Ensure images directory exists to fix potential macOS issue.
+					ensureDir(imageHandler.IMAGES_DIR);
+					// MODIFICATION END
 					const imageBuffer = Buffer.from(image.data, 'base64');
 					const fileExtension = path.extname(image.filename);
 					const uniqueName = `${Date.now()}-${newNovelId}-restored${fileExtension}`;
@@ -120,6 +156,28 @@ function registerBackupRestoreHandlers(db, sessionManager) {
 					console.error('Failed to restore cover image:', e);
 				}
 			}
+			
+			// MODIFICATION START: Restore codex and dictionary files
+			if (codexHtml) {
+				try {
+					ensureDir(CODEX_DIR);
+					const codexPath = path.join(CODEX_DIR, `codex-${newNovelId}.html`);
+					fs.writeFileSync(codexPath, codexHtml, 'utf8');
+				} catch (e) {
+					console.error('Failed to restore codex file:', e);
+				}
+			}
+			
+			if (dictionaryJson) {
+				try {
+					ensureDir(DICTIONARIES_DIR);
+					const dictionaryPath = path.join(DICTIONARIES_DIR, `${newNovelId}.json`);
+					fs.writeFileSync(dictionaryPath, dictionaryJson, 'utf8');
+				} catch (e) {
+					console.error('Failed to restore dictionary file:', e);
+				}
+			}
+			// MODIFICATION END
 		});
 		
 		try {
