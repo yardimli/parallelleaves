@@ -38,6 +38,7 @@
 	 *   `chapter_id` int(11) NOT NULL,
 	 *   `marker` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
 	 *   `content` text COLLATE utf8mb4_unicode_ci NOT NULL,
+	 *   `is_analyzed` tinyint(1) NOT NULL DEFAULT 0,
 	 *   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
 	 *   PRIMARY KEY (`id`),
 	 *   KEY `user_id` (`user_id`)

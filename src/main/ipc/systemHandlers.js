@@ -66,6 +66,14 @@ function registerSystemHandlers(db, sessionManager, windowManager) {
 		}
 	});
 	
+	// MODIFICATION START
+	ipcMain.on('app:openAnalysisWindow', (event, novelId) => {
+		if (windowManager && typeof windowManager.createAnalysisWindow === 'function') {
+			windowManager.createAnalysisWindow(novelId);
+		}
+	});
+	// MODIFICATION END
+	
 	/**
 	 * MODIFIED SECTION: This handler now reads all JSON files from a language-specific
 	 * directory, merges them into a single object, and returns the result. This supports

@@ -113,5 +113,14 @@
     "errorNoProject": "Kunne ikke bestemme gjeldende prosjekt.",
     "errorNoTargetEditor": "Kunne ikke finne målredigeringsprogrammet for dette kapittelet.",
     "errorNoActiveChapter": "Kan ikke legge til et notat uten et aktivt kapittel."
+  },
+  "analyze": "Analyser redigeringer",
+  "analysis": {
+    "title": "Analyser redigeringer",
+    "start": "Start analyse",
+    "apply": "Bruk resultater",
+    "loading": "Analyserer redigeringer, vennligst vent...",
+    "noResults": "Ingen nye redigeringer funnet å analysere.",
+    "resultsTitle": "Analyseresultater"
   }
 }

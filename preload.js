@@ -4,6 +4,11 @@ contextBridge.exposeInMainWorld('api', {
 	// --- App Level ---
 	openImportWindow: () => ipcRenderer.send('app:open-import-window'),
 	openChatWindow: (novelId) => ipcRenderer.send('app:openChatWindow', novelId),
+	// MODIFICATION START
+	openAnalysisWindow: (novelId) => ipcRenderer.send('app:openAnalysisWindow', novelId),
+	startAnalysis: (data) => ipcRenderer.invoke('analysis:start', data),
+	onAnalysisUpdate: (callback) => ipcRenderer.on('analysis:update', (event, ...args) => callback(...args)),
+	// MODIFICATION END
 	getLangFile: (lang) => ipcRenderer.invoke('i18n:get-lang-file', lang),
 	login: (credentials) => ipcRenderer.invoke('auth:login', credentials),
 	logout: () => ipcRenderer.invoke('auth:logout'),

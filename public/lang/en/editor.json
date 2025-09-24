@@ -113,5 +113,14 @@
     "errorNoProject": "Could not determine the current project.",
     "errorNoTargetEditor": "Could not find the target editor for this chapter.",
     "errorNoActiveChapter": "Cannot add a note without an active chapter."
+  },
+  "analyze": "Analyze Edits",
+  "analysis": {
+    "title": "Analyze Edits",
+    "start": "Start Analysis",
+    "apply": "Apply Results",
+    "loading": "Analyzing edits, please wait...",
+    "noResults": "No new edits found to analyze.",
+    "resultsTitle": "Analysis Results"
   }
 }

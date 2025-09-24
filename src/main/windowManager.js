@@ -7,6 +7,7 @@ let importWindow = null;
 let chapterEditorWindows = new Map();
 let codexViewerWindows = new Map();
 let chatWindow = null;
+let analysisWindow = null; // MODIFICATION: Added analysisWindow tracker
 let isMainWindowReady = false;
 
 /**
@@ -278,6 +279,36 @@ function createChatWindow(novelId) {
 	});
 }
 
+// MODIFICATION START: New function to create the analysis window
+function createAnalysisWindow(novelId) {
+	if (analysisWindow && !analysisWindow.isDestroyed()) {
+		analysisWindow.focus();
+		return;
+	}
+	
+	analysisWindow = new BrowserWindow({
+		width: 800,
+		height: 900,
+		icon: path.join(__dirname, '..', '..', 'public/assets/icon.png'),
+		title: 'Analyze Edits',
+		autoHideMenuBar: true,
+		webPreferences: {
+			preload: path.join(__dirname, '..', '..', 'preload.js'),
+			contextIsolation: true,
+			nodeIntegration: false,
+		},
+	});
+	
+	setContentSecurityPolicy(analysisWindow);
+	
+	analysisWindow.loadFile('public/analysis-window.html', { query: { novelId: novelId } });
+	
+	analysisWindow.on('closed', () => {
+		analysisWindow = null;
+	});
+}
+// MODIFICATION END
+
 function closeSplashAndShowMain() {
 	if (splashWindow && !splashWindow.isDestroyed()) {
 		splashWindow.close();
@@ -304,6 +335,7 @@ module.exports = {
 	createCodexViewerWindow,
 	createImportWindow,
 	createChatWindow,
+	createAnalysisWindow, // MODIFICATION: Export new function
 	closeSplashAndShowMain,
 	getMainWindow: () => mainWindow,
 	getImportWindow: () => importWindow,

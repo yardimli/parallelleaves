@@ -113,5 +113,14 @@
     "errorNoProject": "Aktif proje bulunamadı.",
     "errorNoTargetEditor": "Bu bölüm için hedef metin alanı bulunamadı.",
     "errorNoActiveChapter": "Not eklemek için aktif bir bölüm gerekli."
+  },
+  "analyze": "Düzenlemeleri Analiz Et",
+  "analysis": {
+    "title": "Düzenlemeleri Analiz Et",
+    "start": "Analizi Başlat",
+    "apply": "Sonuçları Uygula",
+    "loading": "Düzenlemeler analiz ediliyor, lütfen bekleyin...",
+    "noResults": "Analiz edilecek yeni düzenleme bulunamadı.",
+    "resultsTitle": "Analiz Sonuçları"
   }
 }

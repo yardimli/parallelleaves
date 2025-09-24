@@ -437,6 +437,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 		
 		document.getElementById('js-open-codex-btn')?.addEventListener('click', () => window.api.openCodex(novelId));
 		document.getElementById('js-open-chat-btn')?.addEventListener('click', () => window.api.openChatWindow(novelId));
+		// MODIFICATION START: Add event listener for the new analyze button
+		document.getElementById('js-analyze-btn')?.addEventListener('click', () => window.api.openAnalysisWindow(novelId));
+		// MODIFICATION END
 		
 		sourceContainer.addEventListener('scroll', () => debouncedSaveScroll(novelId, sourceContainer, targetContainer));
 		targetContainer.addEventListener('scroll', () => debouncedSaveScroll(novelId, sourceContainer, targetContainer));

@@ -17,6 +17,14 @@ function registerLoggingHandlers(db, sessionManager) {
 			return { success: false, message: 'User not authenticated.' };
 		}
 		
+		//check if logData.marker is in the format [[#number]] and extract the number
+		if (logData.marker && typeof logData.marker === 'string') {
+			const markerMatch = logData.marker.match(/^\[\[#(\d+)\]\]$/);
+			if (markerMatch) {
+				logData.marker = markerMatch[1]; // Extracted number as string
+			}
+		}
+		
 		// MODIFICATION START: Expanded normalization to include sourceText and targetText.
 		// This ensures that camelCase keys sent from the renderer are correctly mapped to snake_case for the database.
 		const normalizedLogData = {

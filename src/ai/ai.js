@@ -191,9 +191,11 @@ ${textChunk}
  * @param {string|null} params.token - The user's session token.
  * @param {string} [params.dictionaryContent=''] - Optional custom dictionary content to include.
  * @param {number} [params.temperature=0.7] - The temperature for the AI model.
+ * @param {object|null} [params.response_format=null] - Optional response format object (e.g., { type: 'json_object' }).
  * @returns {Promise<object>} The AI response object.
  */
-async function processLLMText({ prompt, model, token, dictionaryContent = '', temperature = 0.7 }) {
+// MODIFICATION START: Added `response_format` to the function signature and payload.
+async function processLLMText({ prompt, model, token, dictionaryContent = '', temperature = 0.7, response_format = null }) {
 	const messages = [];
 	if (prompt.system) {
 		messages.push({ role: 'system', content: prompt.system });
@@ -219,12 +221,19 @@ async function processLLMText({ prompt, model, token, dictionaryContent = '', te
 		throw new Error('Prompt is empty. Cannot call AI service.');
 	}
 	
-	return callOpenRouter({
+	const payload = {
 		model: model,
 		messages: messages,
-		temperature: temperature // Modified: Pass temperature
-	}, token);
+		temperature: temperature
+	};
+	
+	if (response_format) {
+		payload.response_format = response_format;
+	}
+	
+	return callOpenRouter(payload, token);
 }
+// MODIFICATION END
 
 /**
  * Fetches the list of available models from the AI Proxy.

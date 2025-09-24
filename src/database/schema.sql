@@ -171,6 +171,7 @@ CREATE TABLE IF NOT EXISTS target_editor_logs (
     chapter_id INTEGER NOT NULL,
     marker TEXT,
     content TEXT NOT NULL,
+    is_analyzed INTEGER NOT NULL DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 -- MODIFICATION END
