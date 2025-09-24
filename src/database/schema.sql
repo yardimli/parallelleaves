@@ -162,3 +162,15 @@ CREATE TABLE IF NOT EXISTS translation_logs (
     temperature REAL NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+-- MODIFICATION START: New table for logging target editor changes
+CREATE TABLE IF NOT EXISTS target_editor_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    novel_id INTEGER NOT NULL,
+    chapter_id INTEGER NOT NULL,
+    marker TEXT,
+    content TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+-- MODIFICATION END

@@ -12,9 +12,8 @@ import { setupSearchAndReplace } from './search-replace.js';
 import { setupSpellcheckDropdown } from './spellcheck.js';
 import { handleOpenDictionaryWithSelection } from './dictionary-handler.js';
 import { createIframeEditorInterface } from './editor-interface.js';
-import { setupShortcuts } from './shortcuts.js'; // New: Import the shortcut handler
+import { setupShortcuts } from './shortcuts.js';
 
-// ... (debounce and state management code remains the same) ...
 const debounce = (func, delay) => {
 	let timeout;
 	return function (...args) {
@@ -34,12 +33,12 @@ let iframesReadyCount = 0;
 let viewInitialized = false;
 let activeEditor = null; // contentWindow of the currently focused iframe editor.
 let searchResultHandler = null; // Callback for search results from iframes.
-let searchReplaceResultHandler = null; // New: Callback for search and replace results.
-let lastFocusedSourceEditor = null; // New: Track the last focused source editor div.
+let searchReplaceResultHandler = null;
+let lastFocusedSourceEditor = null;
 
 // --- State Accessors and Mutators ---
 const getActiveEditor = () => activeEditor;
-const getLastFocusedSourceEditor = () => lastFocusedSourceEditor; // New: Accessor for the shortcut module
+const getLastFocusedSourceEditor = () => lastFocusedSourceEditor;
 const setActiveEditor = (editorWindow) => { activeEditor = editorWindow; };
 const setActiveChapterId = (chapterId, callback) => {
 	if (chapterId && chapterId !== activeChapterId) {
@@ -48,7 +47,6 @@ const setActiveChapterId = (chapterId, callback) => {
 	}
 };
 
-// ... (debounced savers, restoreScrollPositions, source content editing, and marker sync remain the same) ...
 const debouncedContentSave = debounce(async ({ chapterId, field, value }) => {
 	if (field === 'target_content') {
 		const tempDiv = document.createElement('div');
@@ -178,7 +176,7 @@ async function synchronizeMarkers (chapterId, sourceContainer, targetHtml) {
 	
 	sourceMarkerNumbers.forEach(number => {
 		if (!targetMarkerNumbers.has(number)) {
-			const openingMarkerRegex = new RegExp(`\\[\\[#${number}\\]\\]\\s*`, 'g');
+			const openingMarkerRegex = new RegExp(`\\[\\[#${number}\\]\]\\s*`, 'g');
 			const closingMarkerRegex = new RegExp(`\\{\\{#${number}\\}\\}\\s*`, 'g');
 			const originalSourceHtml = sourceHtml;
 			sourceHtml = sourceHtml.replace(openingMarkerRegex, '').replace(closingMarkerRegex, '');
@@ -416,7 +414,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 		const searchAPI = setupSearch(chapterEditorViews, (handler) => { searchResultHandler = handler; });
 		const searchReplaceAPI = setupSearchAndReplace(chapterEditorViews, (handler) => { searchReplaceResultHandler = handler; });
 		
-		// New: Setup global keyboard shortcuts after other components are initialized.
 		setupShortcuts({
 			searchAPI,
 			searchReplaceAPI,
@@ -601,8 +598,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			}
 		});
 		
-		// Modified: The global keydown listener has been removed from here and is now handled by shortcuts.js
-		
 		window.api?.onManuscriptScrollToChapter((event, chapterId) => {
 			if (chapterId) {
 				scrollToChapter(chapterId, setActiveChapterId);
@@ -640,6 +635,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 				case 'contentChanged':
 					debouncedContentSave(payload);
 					break;
+				// MODIFICATION START: Handle debounced edit logs from the target editor iframe
+				case 'logTargetEdit': {
+					const novelId = document.body.dataset.novelId;
+					window.api.logTargetEditEvent({
+						novelId: novelId,
+						chapterId: payload.chapterId,
+						marker: `chapter-${payload.chapterId}`,
+						content: payload.content
+					}).catch(err => console.error('Failed to log target edit event:', err));
+					break;
+				}
+				// MODIFICATION END
 				case 'resize': {
 					const viewInfo = Array.from(chapterEditorViews.values()).find(v => v.contentWindow === sourceWindow);
 					if (viewInfo) {
@@ -703,7 +710,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 					})();
 					break;
 				}
-				// New: Handle shortcut messages from the iframe editor to orchestrate actions.
 				case 'shortcut:find':
 					if (searchReplaceAPI.isHidden()) {
 						searchAPI.toggle(true);
@@ -726,7 +732,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 					}
 					break;
 				case 'shortcut:focus-target':
-					// The iframe that sent the message is the one that should be focused.
 					sourceWindow.postMessage({ type: 'focusEditor' }, window.location.origin);
 					break;
 			}

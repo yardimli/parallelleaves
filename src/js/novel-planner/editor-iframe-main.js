@@ -7,7 +7,18 @@ import { baseKeymap, toggleMark, setBlockType, wrapIn, lift } from 'prosemirror-
 import { wrapInList, liftListItem } from 'prosemirror-schema-list';
 import { schema as basicSchema } from 'prosemirror-schema-basic';
 import { addListNodes } from 'prosemirror-schema-list';
-import { createShortcutKeymap } from './editor-shortcuts.js'; // New: Import the shortcut keymap creator
+import { createShortcutKeymap } from './editor-shortcuts.js';
+
+// MODIFICATION START: Added debounce utility function
+const debounce = (func, delay) => {
+	let timeout;
+	return function (...args) {
+		const context = this;
+		clearTimeout(timeout);
+		timeout = setTimeout(() => func.apply(context, args), delay);
+	};
+};
+// MODIFICATION END
 
 // --- ProseMirror Schema Definition
 const highlightMarkSpec = (colorClass) => {
@@ -141,6 +152,25 @@ const postToParent = (type, payload) => {
 	parent.window.postMessage({ type, payload }, parentOrigin);
 };
 
+// MODIFICATION START: New debounced function for logging target editor changes
+const debouncedLogEdit = debounce(() => {
+	if (!editorView) return;
+	
+	// Serialize the current editor content to HTML
+	const serializer = DOMSerializer.fromSchema(editorView.state.schema);
+	const fragment = serializer.serializeFragment(editorView.state.doc.content);
+	const tempDiv = document.createElement('div');
+	tempDiv.appendChild(fragment);
+	const content = tempDiv.innerHTML;
+	
+	// Post the content to the parent window for logging
+	postToParent('logTargetEdit', {
+		chapterId: chapterId,
+		content: content
+	});
+}, 10000); // 10-second debounce
+// MODIFICATION END
+
 /**
  * Calculates and sends the current height of the editor content to the parent.
  */
@@ -251,8 +281,6 @@ function createEditorView (mount, config) {
 	chapterId = id;
 	field = fieldName;
 	
-	// Modified: The shortcutKeymap definition has been moved to editor-shortcuts.js
-	
 	const editorPlugin = new Plugin({
 		props: {
 			editable: () => isEditable,
@@ -280,7 +308,6 @@ function createEditorView (mount, config) {
 				
 				if (parentNode.isTextblock) {
 					const textContent = parentNode.textContent;
-					// Modified Regex to better capture groups for type detection
 					const markerRegex = /(\[\[#(\d+)\]\])|(\{\{#(\d+)\}\})/g;
 					let match;
 					
@@ -289,11 +316,9 @@ function createEditorView (mount, config) {
 						const matchEnd = matchStart + match[0].length;
 						
 						if (offsetInParent >= matchStart && offsetInParent <= matchEnd) {
-							// Correctly get the marker ID and determine the type
-							const markerId = match[2] || match[4]; // Number is in group 2 or 4
-							const markerType = match[1] ? 'opening' : 'closing'; // If group 1 exists, it's an opening marker
+							const markerId = match[2] || match[4];
+							const markerType = match[1] ? 'opening' : 'closing';
 							
-							// Send a message to the parent window with the type
 							postToParent('markerClicked', { markerId, markerType });
 							break;
 						}
@@ -310,12 +335,11 @@ function createEditorView (mount, config) {
 	editorView = new EditorView(mount, {
 		state: EditorState.create({
 			doc: doc,
-			// Modified: Added the new shortcutKeymap to the plugins array via the imported creator function.
 			plugins: [
 				history(),
 				keymap({ 'Mod-z': undo, 'Mod-y': redo }),
 				keymap(baseKeymap),
-				createShortcutKeymap(postToParent), // Use the imported function
+				createShortcutKeymap(postToParent),
 				editorPlugin,
 				searchPlugin,
 				searchReplacePlugin
@@ -327,11 +351,16 @@ function createEditorView (mount, config) {
 			this.updateState(newState);
 			
 			if (isEditable && transaction.docChanged) {
+				// This block handles auto-saving
 				const serializer = DOMSerializer.fromSchema(this.state.schema);
 				const fragment = serializer.serializeFragment(this.state.doc.content);
 				const tempDiv = document.createElement('div');
 				tempDiv.appendChild(fragment);
 				postToParent('contentChanged', { chapterId, field, value: tempDiv.innerHTML });
+				
+				// MODIFICATION START: Trigger the debounced logger on every change
+				debouncedLogEdit();
+				// MODIFICATION END
 			}
 			
 			if (transaction.selectionSet || transaction.docChanged) {

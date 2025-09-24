@@ -10,49 +10,59 @@ const AI_PROXY_URL = config.AI_PROXY_URL;
  * @param {object} sessionManager - The session manager instance.
  */
 function registerLoggingHandlers(db, sessionManager) {
-	ipcMain.handle('log:translation', async (event, data) => {
+	// Handler for logging successful translations
+	ipcMain.handle('log:translation', async (event, logData) => {
 		const session = sessionManager.getSession();
-		if (!session || !session.user) {
-			console.error('Attempted to log translation without an active session.');
+		if (!session || !session.token) {
 			return { success: false, message: 'User not authenticated.' };
 		}
 		
-		const { novelId, chapterId, sourceText, targetText, marker, model, temperature } = data;
-		const userId = session.user.id;
+		// MODIFICATION START: Expanded normalization to include sourceText and targetText.
+		// This ensures that camelCase keys sent from the renderer are correctly mapped to snake_case for the database.
+		const normalizedLogData = {
+			novel_id: logData.novel_id || logData.novelId,
+			chapter_id: logData.chapter_id || logData.chapterId,
+			source_text: logData.source_text || logData.sourceText,
+			target_text: logData.target_text || logData.targetText,
+			marker: logData.marker,
+			model: logData.model,
+			temperature: logData.temperature
+		};
 		
-		// --- 1. Log to local SQLite database ---
+		// Added validation to fail early if essential text fields are missing after normalization.
+		// This prevents the NOT NULL constraint error in SQLite.
+		if (!normalizedLogData.source_text || !normalizedLogData.target_text) {
+			console.error('Failed to log translation: source_text or target_text is missing from logData.', logData);
+			return { success: false, message: 'Cannot log translation: source or target text is missing.' };
+		}
+		// MODIFICATION END
+		
+		// 1. Log to local SQLite database
 		try {
-			const stmt = db.prepare(`
-                INSERT INTO translation_logs
-                (user_id, novel_id, chapter_id, source_text, target_text, marker, model, temperature)
+			// Use the fully normalized data for the database query.
+			db.prepare(`
+                INSERT INTO translation_logs (user_id, novel_id, chapter_id, source_text, target_text, marker, model, temperature)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            `);
-			stmt.run(userId, novelId, chapterId, sourceText, targetText, marker, model, temperature);
-			console.log('Translation event logged locally.');
+            `).run(
+				session.user.id,
+				normalizedLogData.novel_id,
+				normalizedLogData.chapter_id,
+				normalizedLogData.source_text,
+				normalizedLogData.target_text,
+				normalizedLogData.marker,
+				normalizedLogData.model,
+				normalizedLogData.temperature
+			);
 		} catch (error) {
-			console.error('Failed to log translation event to local database:', error);
-			// We can decide whether to stop here or still try to log remotely.
-			// For now, let's continue but return an error at the end.
+			console.error('Failed to log translation to local DB:', error);
+			// Continue to attempt remote logging even if local fails.
 		}
 		
-		// --- 2. Log to remote server ---
-		if (!AI_PROXY_URL) {
-			console.warn('AI_PROXY_URL not configured. Skipping remote logging.');
-			return { success: true, message: 'Logged locally. Remote logging skipped.' };
-		}
-		
+		// 2. Log to remote MySQL database via proxy
 		try {
-			const payload = {
-				auth_token: session.token,
-				novel_id: novelId,
-				chapter_id: chapterId,
-				source_text: sourceText,
-				target_text: targetText,
-				marker: marker,
-				model: model,
-				temperature: temperature
-			};
-			
+			// Use the normalized data for the remote payload to ensure the proxy receives snake_case keys.
+			const payload = { ...normalizedLogData, auth_token: session.token };
+			console.log('Logging translation to remote server with payload:', payload);
 			const response = await fetch(`${AI_PROXY_URL}?action=log_translation`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -61,16 +71,57 @@ function registerLoggingHandlers(db, sessionManager) {
 			
 			if (!response.ok) {
 				const errorText = await response.text();
-				throw new Error(`Remote logging failed with status ${response.status}: ${errorText}`);
+				throw new Error(`Remote logging failed: ${errorText}`);
 			}
-			
-			console.log('Translation event logged remotely.');
-			return { success: true, message: 'Translation logged successfully both locally and remotely.' };
-			
+			return { success: true };
 		} catch (error) {
-			console.error('Failed to log translation event to remote server:', error);
-			// Return a failure but indicate local success if that happened.
-			return { success: false, message: `Logged locally, but remote logging failed: ${error.message}` };
+			console.error('Failed to log translation to remote server:', error);
+			return { success: false, message: error.message };
+		}
+	});
+	
+	// Handler for logging target editor changes
+	ipcMain.handle('log:target-edit', async (event, logData) => {
+		const session = sessionManager.getSession();
+		if (!session || !session.token) {
+			return { success: false, message: 'User not authenticated.' };
+		}
+		
+		// 1. Log to local SQLite database
+		try {
+			const { novelId, chapterId, marker, content } = logData;
+			db.prepare(`
+                INSERT INTO target_editor_logs (user_id, novel_id, chapter_id, marker, content)
+                VALUES (?, ?, ?, ?, ?)
+            `).run(session.user.id, novelId, chapterId, marker, content);
+		} catch (error) {
+			console.error('Failed to log target edit to local DB:', error);
+		}
+		
+		// 2. Log to remote MySQL database via proxy
+		try {
+			const payload = {
+				novel_id: logData.novelId,
+				chapter_id: logData.chapterId,
+				marker: logData.marker,
+				content: logData.content,
+				auth_token: session.token
+			};
+			console.log('Logging target edit to remote server with payload:', payload);
+			const response = await fetch(`${AI_PROXY_URL}?action=log_target_edit`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(payload)
+			});
+			
+			if (!response.ok) {
+				const errorText = await response.text();
+				throw new Error(`Remote target edit logging failed: ${errorText}`);
+			}
+			return { success: true };
+		} catch (error) {
+			console.error('Failed to log target edit to remote server:', error);
+			return { success: false, message: error.message };
 		}
 	});
 }

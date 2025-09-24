@@ -119,6 +119,14 @@ async function cleanupAiAction() {
 
 async function handleFloatyApply() {
 	if (!isAiActionActive || !currentEditorInterface) return;
+	
+	// MODIFICATION START: Log the translation event when the user applies the suggestion.
+	if (currentPromptId === 'translate' && currentAiParams && currentAiParams.logData) {
+		window.api.logTranslationEvent(currentAiParams.logData)
+			.catch(err => console.error('Failed to log translation event on apply:', err));
+	}
+	// MODIFICATION END
+	
 	await cleanupAiAction();
 }
 
@@ -243,18 +251,21 @@ async function startAiAction(params) {
 			let newContentText = result.data.choices[0].message.content ?? 'No content generated.';
 			newContentText = newContentText.trim();
 			
-			// New: Log the translation event to local and remote databases.
+			// MODIFICATION START: Store data for logging, which will happen when the user clicks "Apply".
+			// The premature logging call has been removed from here.
 			if (currentPromptId === 'translate') {
-				window.api.logTranslationEvent({
-					novelId: currentContext.novelId,
-					chapterId: currentContext.chapterId,
-					sourceText: currentContext.selectedText,
+				const context = currentAiParams.context; // Use the correct, updated context.
+				currentAiParams.logData = {
+					novelId: context.novelId,
+					chapterId: context.chapterId,
+					sourceText: context.selectedText,
 					targetText: newContentText,
 					marker: openingMarker,
 					model: params.model,
 					temperature: params.temperature
-				}).catch(err => console.error('Failed to log translation event:', err));
+				};
 			}
+			// MODIFICATION END
 			
 			let newContentHtml;
 			const textWithMarkers = openingMarker && closingMarker
@@ -532,8 +543,9 @@ async function handleModalApply() {
 		}
 	}
 	
-	// Modified: Add temperature to the parameters object
-	currentAiParams = { prompt, model, temperature, action, context: currentContext, formData: formDataObj, dictionaryContent };
+	// MODIFICATION START: Use the correct `promptContext` which contains the up-to-date `selectedText`.
+	currentAiParams = { prompt, model, temperature, action, context: promptContext, formData: formDataObj, dictionaryContent };
+	// MODIFICATION END
 	
 	startAiAction({
 		prompt: currentAiParams.prompt,

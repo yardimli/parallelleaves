@@ -17,7 +17,7 @@ function registerSystemHandlers(db, sessionManager, windowManager) {
 		return {
 			version: config.APP_VERSION,
 			user: sessionManager.getSession()?.user || null,
-			websiteUrl: 'https://github.com/yardimli/paralleleaves'
+			websiteUrl: 'https://github.com/yardimli/parallelleaves'
 		};
 	});
 	

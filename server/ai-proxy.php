@@ -29,6 +29,22 @@
 	 * ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 	 */
 
+	/*
+	 * -- MODIFICATION START: SQL for the new target_editor_logs table in MySQL
+	 * CREATE TABLE `target_editor_logs` (
+	 *   `id` int(11) NOT NULL AUTO_INCREMENT,
+	 *   `user_id` int(11) NOT NULL,
+	 *   `novel_id` int(11) NOT NULL,
+	 *   `chapter_id` int(11) NOT NULL,
+	 *   `marker` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+	 *   `content` text COLLATE utf8mb4_unicode_ci NOT NULL,
+	 *   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+	 *   PRIMARY KEY (`id`),
+	 *   KEY `user_id` (`user_id`)
+	 * ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+	 * -- MODIFICATION END
+	 */
+
 // Enforce PSR-12 standards
 	declare(strict_types=1);
 
@@ -354,7 +370,7 @@
 		http_response_code($httpCode);
 		echo $response;
 		exit;
-	} elseif ($action === 'log_translation') { // New: Handle translation logging
+	} elseif ($action === 'log_translation') {
 		if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 			sendJsonError(405, 'Method Not Allowed. Please use POST for logging translations.');
 		}
@@ -390,6 +406,38 @@
 			sendJsonError(500, 'Failed to log translation to the database.');
 		}
 		exit;
+	} elseif ($action === 'log_target_edit') { // MODIFICATION START: Handle target edit logging
+		if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+			sendJsonError(405, 'Method Not Allowed. Please use POST for logging target edits.');
+		}
+
+		// Extract data from the payload
+		$novelId = $payload['novel_id'] ?? null;
+		$chapterId = $payload['chapter_id'] ?? null;
+		$marker = $payload['marker'] ?? null;
+		$content = $payload['content'] ?? null;
+
+		// Basic validation
+		if (!$novelId || !$chapterId || !$content) {
+			sendJsonError(400, 'Missing required fields for target edit logging.');
+		}
+
+		try {
+			$stmt = $db->prepare(
+				'INSERT INTO target_editor_logs (user_id, novel_id, chapter_id, marker, content) VALUES (?, ?, ?, ?, ?)'
+			);
+			$stmt->bind_param('iiiss', $userId, $novelId, $chapterId, $marker, $content);
+			$stmt->execute();
+			$stmt->close();
+
+			http_response_code(201); // 201 Created
+			echo json_encode(['success' => true, 'message' => 'Target edit logged successfully.']);
+		} catch (Exception $e) {
+			error_log('Failed to write to target_editor_logs: ' . $e->getMessage());
+			sendJsonError(500, 'Failed to log target edit to the database.');
+		}
+		exit;
+		// MODIFICATION END
 	} else { // Modified: Updated error message
-		sendJsonError(400, 'Invalid action specified. Supported actions are "chat", "get_models", "generate_cover", and "log_translation".');
+		sendJsonError(400, 'Invalid action specified. Supported actions are "chat", "get_models", "generate_cover", "log_translation", and "log_target_edit".');
 	}
