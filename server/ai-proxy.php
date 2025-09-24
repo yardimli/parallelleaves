@@ -439,6 +439,33 @@
 		}
 		exit;
 		// MODIFICATION END
+	} elseif ($action === 'mark_edits_analyzed') { // MODIFICATION START: New action to mark edits as analyzed
+		if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+			sendJsonError(405, 'Method Not Allowed. Please use POST for this action.');
+		}
+
+		$novelId = $payload['novel_id'] ?? null;
+		if (!$novelId) {
+			sendJsonError(400, 'Missing required novel_id for marking edits as analyzed.');
+		}
+
+		try {
+			$stmt = $db->prepare(
+				'UPDATE target_editor_logs SET is_analyzed = 1 WHERE user_id = ? AND novel_id = ?'
+			);
+			$stmt->bind_param('ii', $userId, $novelId);
+			$stmt->execute();
+			$affectedRows = $stmt->affected_rows;
+			$stmt->close();
+
+			http_response_code(200);
+			echo json_encode(['success' => true, 'message' => "Marked {$affectedRows} edit(s) as analyzed."]);
+		} catch (Exception $e) {
+			error_log('Failed to update target_editor_logs: ' . $e->getMessage());
+			sendJsonError(500, 'Failed to mark edits as analyzed in the database.');
+		}
+		exit;
+		// MODIFICATION END
 	} else { // Modified: Updated error message
-		sendJsonError(400, 'Invalid action specified. Supported actions are "chat", "get_models", "generate_cover", "log_translation", and "log_target_edit".');
+		sendJsonError(400, 'Invalid action specified. Supported actions are "chat", "get_models", "generate_cover", "log_translation", "log_target_edit", and "mark_edits_analyzed".');
 	}

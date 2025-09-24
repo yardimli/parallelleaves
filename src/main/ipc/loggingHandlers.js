@@ -70,7 +70,7 @@ function registerLoggingHandlers(db, sessionManager) {
 		try {
 			// Use the normalized data for the remote payload to ensure the proxy receives snake_case keys.
 			const payload = { ...normalizedLogData, auth_token: session.token };
-			console.log('Logging translation to remote server with payload:', payload);
+			//console.log('Logging translation to remote server with payload:', payload);
 			const response = await fetch(`${AI_PROXY_URL}?action=log_translation`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -115,7 +115,7 @@ function registerLoggingHandlers(db, sessionManager) {
 				content: logData.content,
 				auth_token: session.token
 			};
-			console.log('Logging target edit to remote server with payload:', payload);
+			//console.log('Logging target edit to remote server with payload:', payload);
 			const response = await fetch(`${AI_PROXY_URL}?action=log_target_edit`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },

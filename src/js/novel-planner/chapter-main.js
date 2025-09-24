@@ -329,6 +329,28 @@ function initializeView (novelId, novelData, initialChapterId) {
 	}, 500);
 }
 
+// MODIFICATION START: New function to check for unanalyzed edits and update UI
+async function checkForUnanalyzedEdits(novelId) {
+	try {
+		const hasUnanalyzed = await window.api.hasUnanalyzedEdits(novelId);
+		const analyzeBtn = document.getElementById('js-analyze-btn');
+		if (analyzeBtn) {
+			if (hasUnanalyzed) {
+				// If there are unanalyzed edits, make the button fully visible and pulse
+				analyzeBtn.classList.remove('opacity-50');
+				analyzeBtn.classList.add('opacity-100', 'animate-pulse');
+			} else {
+				// Otherwise, reset to the default faded state
+				analyzeBtn.classList.add('opacity-50');
+				analyzeBtn.classList.remove('opacity-100', 'animate-pulse');
+			}
+		}
+	} catch (error) {
+		console.error('Failed to check for unanalyzed edits:', error);
+	}
+}
+// MODIFICATION END
+
 // --- Main Initialization ---
 document.addEventListener('DOMContentLoaded', async () => {
 	await loadModals([
@@ -386,6 +408,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 		await renderManuscript(novelData);
 		populateNavDropdown(novelData);
 		
+		// MODIFICATION START: Check for unanalyzed edits on load
+		await checkForUnanalyzedEdits(novelId);
+		// Listen for an event from the main process indicating analysis is complete
+		window.api.onAnalysisApplied(() => {
+			checkForUnanalyzedEdits(novelId);
+		});
+		// MODIFICATION END
+		
 		setupTopToolbar({
 			isChapterEditor: true,
 			getActiveChapterId: () => activeChapterId,
@@ -437,9 +467,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 		
 		document.getElementById('js-open-codex-btn')?.addEventListener('click', () => window.api.openCodex(novelId));
 		document.getElementById('js-open-chat-btn')?.addEventListener('click', () => window.api.openChatWindow(novelId));
-		// MODIFICATION START: Add event listener for the new analyze button
 		document.getElementById('js-analyze-btn')?.addEventListener('click', () => window.api.openAnalysisWindow(novelId));
-		// MODIFICATION END
 		
 		sourceContainer.addEventListener('scroll', () => debouncedSaveScroll(novelId, sourceContainer, targetContainer));
 		targetContainer.addEventListener('scroll', () => debouncedSaveScroll(novelId, sourceContainer, targetContainer));
@@ -638,7 +666,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 				case 'contentChanged':
 					debouncedContentSave(payload);
 					break;
-				// MODIFICATION START: Handle debounced edit logs from the target editor iframe
 				case 'logTargetEdit': {
 					const novelId = document.body.dataset.novelId;
 					window.api.logTargetEditEvent({
@@ -649,7 +676,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 					}).catch(err => console.error('Failed to log target edit event:', err));
 					break;
 				}
-				// MODIFICATION END
 				case 'resize': {
 					const viewInfo = Array.from(chapterEditorViews.values()).find(v => v.contentWindow === sourceWindow);
 					if (viewInfo) {

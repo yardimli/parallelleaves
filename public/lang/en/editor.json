@@ -121,6 +121,8 @@
     "apply": "Apply Results",
     "loading": "Analyzing edits, please wait...",
     "noResults": "No new edits found to analyze.",
-    "resultsTitle": "Analysis Results"
+    "resultsTitle": "Analysis Results",
+    "deleteRow": "Delete Row",
+    "applySuccess": "Successfully added {count} pairs to the dictionary and marked edits as analyzed."
   }
 }

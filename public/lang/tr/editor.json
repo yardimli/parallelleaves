@@ -121,6 +121,8 @@
     "apply": "Sonuçları Uygula",
     "loading": "Düzenlemeler analiz ediliyor, lütfen bekleyin...",
     "noResults": "Analiz edilecek yeni düzenleme bulunamadı.",
-    "resultsTitle": "Analiz Sonuçları"
+    "resultsTitle": "Analiz Sonuçları",
+    "deleteRow": "Satırı Sil",
+    "applySuccess": "Sözlüğe {count} çift başarıyla eklendi ve düzenlemeler analiz edildi olarak işaretlendi."
   }
 }

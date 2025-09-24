@@ -8,6 +8,9 @@ contextBridge.exposeInMainWorld('api', {
 	openAnalysisWindow: (novelId) => ipcRenderer.send('app:openAnalysisWindow', novelId),
 	startAnalysis: (data) => ipcRenderer.invoke('analysis:start', data),
 	onAnalysisUpdate: (callback) => ipcRenderer.on('analysis:update', (event, ...args) => callback(...args)),
+	markEditsAsAnalyzed: (novelId) => ipcRenderer.invoke('analysis:markAsAnalyzed', novelId),
+	hasUnanalyzedEdits: (novelId) => ipcRenderer.invoke('analysis:hasUnanalyzedEdits', novelId),
+	onAnalysisApplied: (callback) => ipcRenderer.on('analysis:applied', (event, ...args) => callback(...args)),
 	// MODIFICATION END
 	getLangFile: (lang) => ipcRenderer.invoke('i18n:get-lang-file', lang),
 	login: (credentials) => ipcRenderer.invoke('auth:login', credentials),
@@ -99,9 +102,8 @@ contextBridge.exposeInMainWorld('api', {
 	// API for logging translation events
 	logTranslationEvent: (data) => ipcRenderer.invoke('log:translation', data),
 	
-	// MODIFICATION START: New API for logging target editor changes
+	// API for logging target editor changes
 	logTargetEditEvent: (data) => ipcRenderer.invoke('log:target-edit', data),
-	// MODIFICATION END
 	
 	findHighestMarkerNumber: (sourceHtml, targetHtml) => ipcRenderer.invoke('novels:findHighestMarkerNumber', sourceHtml, targetHtml)
 });

@@ -99,7 +99,7 @@ export const buildPromptJson = (formData, context, dictionaryContent = '') => {
 };
 
 const updatePreview = async (container, context) => {
-	console.log('Updating preview with context:', context);
+	//console.log('Updating preview with context:', context);
 	const form = container.querySelector('#translate-editor-form');
 	if (!form) return;
 	
@@ -127,7 +127,7 @@ const updatePreview = async (container, context) => {
 				pairCount: formData.contextPairs,
 				selectedText: context.selectedText
 			});
-			console.log('Fetched translation pairs for preview:', pairs);
+			//console.log('Fetched translation pairs for preview:', pairs);
 			previewContext.translationPairs = pairs;
 		} catch (error) {
 			console.error('Failed to fetch translation context for preview:', error);

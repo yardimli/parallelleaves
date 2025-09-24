@@ -287,7 +287,7 @@ function createAnalysisWindow(novelId) {
 	}
 	
 	analysisWindow = new BrowserWindow({
-		width: 800,
+		width: 900,
 		height: 900,
 		icon: path.join(__dirname, '..', '..', 'public/assets/icon.png'),
 		title: 'Analyze Edits',

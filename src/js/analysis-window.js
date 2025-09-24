@@ -47,7 +47,14 @@ async function populateModels() {
 	}
 }
 
-// MODIFICATION START: Renders results in a grid of textareas for better viewing and future editing.
+/**
+ * Checks if any result pairs are left and enables/disables the Apply button.
+ */
+function updateApplyButtonState() {
+	const remainingPairs = resultsContainer.querySelectorAll('tbody tr').length;
+	applyBtn.disabled = remainingPairs === 0;
+}
+
 function renderResult(result) {
 	if (!result || !result.changes || Object.keys(result.changes).length === 0) {
 		return;
@@ -59,19 +66,27 @@ function renderResult(result) {
 	const cardBody = document.createElement('div');
 	cardBody.className = 'card-body';
 	
+	// Card Header with Title (no delete button here anymore)
+	const cardHeader = document.createElement('div');
+	cardHeader.className = 'card-title';
+	
 	const title = document.createElement('h3');
-	title.className = 'card-title text-sm';
+	title.className = 'text-sm';
 	title.textContent = `Changes in Marker #${result.marker}`;
-	cardBody.appendChild(title);
+	
+	cardHeader.appendChild(title);
+	cardBody.appendChild(cardHeader);
 	
 	const table = document.createElement('table');
 	table.className = 'table table-sm';
 	
 	const thead = document.createElement('thead');
+	// Add an actions column to the header
 	thead.innerHTML = `
         <tr>
-            <th class="w-1/2">Original</th>
-            <th class="w-1/2">Edited</th>
+            <th class="w-[calc(50%-1.5rem)]">Original</th>
+            <th class="w-[calc(50%-1.5rem)]">Edited</th>
+            <th class="w-12"></th>
         </tr>
     `;
 	table.appendChild(thead);
@@ -80,13 +95,13 @@ function renderResult(result) {
 	for (const [original, edited] of Object.entries(result.changes)) {
 		const row = document.createElement('tr');
 		
-		// Sanitize content to prevent issues within textarea tags
 		const escapeHtml = (text) => {
 			const div = document.createElement('div');
 			div.textContent = text;
 			return div.innerHTML;
 		};
 		
+		// Add the delete button cell to each row
 		row.innerHTML = `
             <td>
                 <textarea class="textarea textarea-bordered textarea-sm w-full bg-base-300/50" readonly rows="1">${escapeHtml(original)}</textarea>
@@ -94,27 +109,30 @@ function renderResult(result) {
             <td>
                 <textarea class="textarea textarea-bordered textarea-sm w-full" rows="1">${escapeHtml(edited)}</textarea>
             </td>
+            <td>
+                <button class="btn btn-ghost btn-xs btn-square js-delete-pair-btn" data-i18n-title="editor.analysis.deleteRow">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </td>
         `;
 		tbody.appendChild(row);
 	}
 	table.appendChild(tbody);
 	
-	// Add auto-resize logic to all textareas in the table
 	table.querySelectorAll('textarea').forEach(textarea => {
 		const resize = () => {
 			textarea.style.height = 'auto';
 			textarea.style.height = `${textarea.scrollHeight}px`;
 		};
 		textarea.addEventListener('input', resize);
-		// Initial resize after a short delay to allow rendering
 		setTimeout(resize, 0);
 	});
 	
 	cardBody.appendChild(table);
 	card.appendChild(cardBody);
 	resultsContainer.appendChild(card);
+	applyTranslationsTo(card); // Apply translation to the new button's title
 }
-// MODIFICATION END
 
 async function handleStartAnalysis() {
 	startBtn.disabled = true;
@@ -134,6 +152,80 @@ async function handleStartAnalysis() {
 		startBtn.querySelector('.loading').classList.add('hidden');
 	}
 }
+
+// MODIFICATION START: Removed the confirmation dialog from this function.
+async function handleApplyResults() {
+	const resultCards = Array.from(resultsContainer.querySelectorAll('.card'));
+	if (resultCards.length === 0) return;
+	
+	const newPairs = [];
+	resultCards.forEach(card => {
+		const tableRows = card.querySelectorAll('tbody tr');
+		tableRows.forEach(row => {
+			const originalTextarea = row.querySelector('td:nth-child(1) textarea');
+			const editedTextarea = row.querySelector('td:nth-child(2) textarea');
+			if (originalTextarea && editedTextarea && originalTextarea.value && editedTextarea.value) {
+				newPairs.push({
+					source: originalTextarea.value.trim(),
+					target: editedTextarea.value.trim(),
+					type: 'rephrasing'
+				});
+			}
+		});
+	});
+	
+	if (newPairs.length === 0) {
+		// If all pairs were deleted, just mark as analyzed and close.
+		try {
+			await window.api.markEditsAsAnalyzed(novelId);
+			window.close();
+		} catch (error) {
+			console.error('Failed to mark edits as analyzed:', error);
+			window.alert(`Error: ${error.message}`);
+		}
+		return;
+	}
+	
+	applyBtn.disabled = true;
+	const applyBtnSpan = applyBtn.querySelector('span');
+	if (applyBtnSpan) applyBtnSpan.classList.add('loading');
+	
+	try {
+		// 1. Get existing dictionary
+		const existingDictionary = await window.api.getNovelDictionary(novelId) || [];
+		
+		// 2. Merge new pairs, avoiding duplicates
+		let addedCount = 0;
+		const updatedDictionary = [...existingDictionary];
+		
+		newPairs.forEach(newPair => {
+			const isDuplicate = existingDictionary.some(existingPair =>
+				existingPair.source === newPair.source && existingPair.target === newPair.target
+			);
+			if (!isDuplicate) {
+				updatedDictionary.push(newPair);
+				addedCount++;
+			}
+		});
+		
+		// 3. Save the updated dictionary
+		await window.api.saveNovelDictionary(novelId, updatedDictionary);
+		
+		// 4. Mark edits as analyzed in the database
+		await window.api.markEditsAsAnalyzed(novelId);
+		
+		// 5. Close the window (success message is now optional or can be a toast notification later)
+		window.close();
+		
+	} catch (error) {
+		console.error('Failed to apply analysis results:', error);
+		window.alert(`Error: ${error.message}`);
+	} finally {
+		applyBtn.disabled = false;
+		if (applyBtnSpan) applyBtnSpan.classList.remove('loading');
+	}
+}
+// MODIFICATION END
 
 document.addEventListener('DOMContentLoaded', async () => {
 	await initI18n();
@@ -167,6 +259,30 @@ document.addEventListener('DOMContentLoaded', async () => {
 	await populateModels();
 	
 	startBtn.addEventListener('click', handleStartAnalysis);
+	applyBtn.addEventListener('click', handleApplyResults);
+	
+	resultsContainer.addEventListener('click', (event) => {
+		const deleteBtn = event.target.closest('.js-delete-pair-btn');
+		if (deleteBtn) {
+			const row = deleteBtn.closest('tr');
+			const tbody = row.parentElement;
+			const card = tbody.closest('.card');
+			
+			if (row) {
+				row.remove();
+			}
+			
+			// If the table body is now empty, remove the entire card for a cleaner UI.
+			if (tbody && tbody.children.length === 0) {
+				if (card) {
+					card.remove();
+				}
+			}
+			
+			// Update the state of the apply button after any deletion.
+			updateApplyButtonState();
+		}
+	});
 	
 	let hasResults = false;
 	

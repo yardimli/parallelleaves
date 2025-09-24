@@ -1,4 +1,4 @@
-const { ipcMain } = require('electron');
+const { ipcMain, BrowserWindow } = require('electron'); // MODIFICATION: Added BrowserWindow
 const aiService = require('../../ai/ai.js');
 
 /**
@@ -37,14 +37,13 @@ function registerAnalysisHandlers(db, sessionManager, windowManager) {
 			
 			const analysisPairs = [];
 			for (const edit of latestEdits) {
-				// MODIFICATION START: Updated query to handle both old ('[[#38]]') and new ('38') marker formats for backward compatibility.
+				// MODIFICATION: Updated query to handle both old ('[[#38]]') and new ('38') marker formats for backward compatibility.
 				const original = db.prepare(`
                     SELECT target_text FROM translation_logs
                     WHERE novel_id = ? AND (marker = ? OR marker = '[[' || '#' || ? || ']]')
                     ORDER BY created_at DESC
                     LIMIT 1
                 `).get(novelId, edit.marker, edit.marker);
-				// MODIFICATION END
 				
 				if (original && original.target_text.trim() !== edit.content.trim()) {
 					analysisPairs.push({
@@ -101,9 +100,6 @@ Example: {"the big red cat": "the large crimson cat", "he said happily": "he exc
 			analysisWindow.webContents.send('analysis:update', { type: 'results', data: finalResults });
 			analysisWindow.webContents.send('analysis:update', { type: 'finished', message: 'Analysis complete.' });
 			
-			// TODO: Mark the processed logs as analyzed in a separate "apply" step.
-			// For now, we just return the results.
-			
 			return { success: true, results: finalResults };
 			
 		} catch (error) {
@@ -112,6 +108,62 @@ Example: {"the big red cat": "the large crimson cat", "he said happily": "he exc
 			return { success: false, error: error.message };
 		}
 	});
+	
+	// MODIFICATION START: New handler to mark edits as analyzed
+	ipcMain.handle('analysis:markAsAnalyzed', async (event, novelId) => {
+		try {
+			// 1. Update local SQLite database
+			db.prepare('UPDATE target_editor_logs SET is_analyzed = 1 WHERE novel_id = ?')
+				.run(novelId);
+			
+			// 2. Update remote MySQL database via proxy
+			const session = sessionManager.getSession();
+			if (session && session.token) {
+				const fetch = require('node-fetch');
+				const config = require('../../../config.js');
+				const AI_PROXY_URL = config.AI_PROXY_URL;
+				
+				const payload = {
+					novel_id: novelId,
+					auth_token: session.token
+				};
+				
+				const response = await fetch(`${AI_PROXY_URL}?action=mark_edits_analyzed`, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(payload)
+				});
+				if (!response.ok) {
+					console.error('Failed to mark remote edits as analyzed:', await response.text());
+				}
+			}
+			
+			// 3. Notify all windows that analysis has been applied so they can update UI
+			BrowserWindow.getAllWindows().forEach(win => {
+				win.webContents.send('analysis:applied');
+			});
+			
+			return { success: true };
+		} catch (error) {
+			console.error(`Failed to mark edits as analyzed for novel ${novelId}:`, error);
+			return { success: false, message: error.message };
+		}
+	});
+	// MODIFICATION END
+	
+	// MODIFICATION START: New handler to check for unanalyzed edits
+	ipcMain.handle('analysis:hasUnanalyzedEdits', (event, novelId) => {
+		try {
+			const result = db.prepare(
+				'SELECT COUNT(*) as count FROM target_editor_logs WHERE novel_id = ? AND is_analyzed = 0'
+			).get(novelId);
+			return result.count > 0;
+		} catch (error) {
+			console.error(`Failed to check for unanalyzed edits for novel ${novelId}:`, error);
+			return false; // Return false on error to avoid UI bugs
+		}
+	});
+	// MODIFICATION END
 }
 
 module.exports = { registerAnalysisHandlers };

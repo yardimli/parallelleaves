@@ -282,7 +282,7 @@ async function startAiAction(params) {
 				newContentHtml = '<p>' + textWithMarkers.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>') + '</p>';
 			}
 			
-			console.log('AI Action Result:', newContentText, newContentHtml);
+			//console.log('AI Action Result:', newContentText, newContentHtml);
 			
 			const replacementData = await currentEditorInterface.replaceRangeWithSuggestion(
 				aiActionRange.from,
@@ -415,7 +415,7 @@ async function handleModalApply() {
 			.catch(err => console.error('Failed to save prompt settings:', err));
 	}
 	
-	console.log('AI Action Params:', { model, temperature, action, formData: formDataObj });
+	//console.log('AI Action Params:', { model, temperature, action, formData: formDataObj });
 	
 	let selectionInfo;
 	if (action === 'translate') {

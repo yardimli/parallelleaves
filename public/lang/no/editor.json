@@ -121,6 +121,8 @@
     "apply": "Bruk resultater",
     "loading": "Analyserer redigeringer, vennligst vent...",
     "noResults": "Ingen nye redigeringer funnet å analysere.",
-    "resultsTitle": "Analyseresultater"
+    "resultsTitle": "Analyseresultater",
+    "deleteRow": "Slett rad",
+    "applySuccess": "La til {count} par i ordboken og markerte redigeringer som analysert."
   }
 }
