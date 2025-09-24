@@ -1,9 +1,10 @@
-const { ipcMain, dialog, app } = require('electron'); // MODIFICATION: Added 'app'
+const { ipcMain, dialog, app } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const imageHandler = require('../../utils/image-handler.js');
+// MODIFICATION: Import the shared function for gathering backup data.
+const { getNovelBackupData } = require('../autoBackupManager.js');
 
-// MODIFICATION START: Define paths for codex and dictionary directories
 const CODEX_DIR = path.join(app.getPath('userData'), 'codex');
 const DICTIONARIES_DIR = path.join(app.getPath('userData'), 'dictionaries');
 
@@ -16,7 +17,6 @@ function ensureDir(dirPath) {
 		fs.mkdirSync(dirPath, { recursive: true });
 	}
 }
-// MODIFICATION END
 
 /**
  * Registers IPC handlers for backup and restore functionality.
@@ -24,52 +24,11 @@ function ensureDir(dirPath) {
  * @param {object} sessionManager - The session manager instance.
  */
 function registerBackupRestoreHandlers(db, sessionManager) {
+	// MODIFICATION: The manual backup process now uses the shared data gathering function.
 	ipcMain.handle('novels:getForBackup', (event, novelId) => {
 		try {
-			const novel = db.prepare('SELECT * FROM novels WHERE id = ?').get(novelId);
-			if (!novel) {
-				throw new Error('Novel not found.');
-			}
-			
-			const sections = db.prepare('SELECT * FROM sections WHERE novel_id = ? ORDER BY section_order').all(novelId);
-			const chapters = db.prepare('SELECT * FROM chapters WHERE novel_id = ? ORDER BY section_id, chapter_order').all(novelId);
-			
-			// Handle cover image backup
-			let image = null;
-			const imageRecord = db.prepare('SELECT image_local_path FROM images WHERE novel_id = ?').get(novelId);
-			if (imageRecord && imageRecord.image_local_path) {
-				const imagePath = path.join(imageHandler.IMAGES_DIR, imageRecord.image_local_path);
-				if (fs.existsSync(imagePath)) {
-					const imageData = fs.readFileSync(imagePath);
-					image = {
-						filename: path.basename(imageRecord.image_local_path),
-						data: imageData.toString('base64')
-					};
-				}
-			}
-			
-			// MODIFICATION START: Backup codex and dictionary files
-			let codexHtml = null;
-			const codexPath = path.join(CODEX_DIR, `codex-${novelId}.html`);
-			if (fs.existsSync(codexPath)) {
-				codexHtml = fs.readFileSync(codexPath, 'utf8');
-			}
-			
-			let dictionaryJson = null;
-			const dictionaryPath = path.join(DICTIONARIES_DIR, `${novelId}.json`);
-			if (fs.existsSync(dictionaryPath)) {
-				dictionaryJson = fs.readFileSync(dictionaryPath, 'utf8');
-			}
-			// MODIFICATION END
-			
-			return {
-				novel,
-				sections,
-				chapters,
-				image, // Add image data to the backup object
-				codexHtml,      // Add codex data
-				dictionaryJson  // Add dictionary data
-			};
+			// Pass the database connection to the shared function.
+			return getNovelBackupData(db, novelId);
 		} catch (error) {
 			console.error(`Failed to get novel for backup (ID: ${novelId}):`, error);
 			throw error; // Let the renderer process handle the error display.
@@ -83,8 +42,8 @@ function registerBackupRestoreHandlers(db, sessionManager) {
 				sections = [],
 				chapters = [],
 				image,
-				codexHtml,      // MODIFICATION: Destructure codex data
-				dictionaryJson  // MODIFICATION: Destructure dictionary data
+				codexHtml,
+				dictionaryJson
 			} = backupData;
 			
 			// 1. Insert the novel, getting the new ID.
@@ -139,9 +98,7 @@ function registerBackupRestoreHandlers(db, sessionManager) {
 			// 6. Restore cover image if it exists in the backup
 			if (image && image.data && image.filename) {
 				try {
-					// MODIFICATION START: Ensure images directory exists to fix potential macOS issue.
 					ensureDir(imageHandler.IMAGES_DIR);
-					// MODIFICATION END
 					const imageBuffer = Buffer.from(image.data, 'base64');
 					const fileExtension = path.extname(image.filename);
 					const uniqueName = `${Date.now()}-${newNovelId}-restored${fileExtension}`;
@@ -157,7 +114,7 @@ function registerBackupRestoreHandlers(db, sessionManager) {
 				}
 			}
 			
-			// MODIFICATION START: Restore codex and dictionary files
+			// Restore codex and dictionary files
 			if (codexHtml) {
 				try {
 					ensureDir(CODEX_DIR);
@@ -177,7 +134,6 @@ function registerBackupRestoreHandlers(db, sessionManager) {
 					console.error('Failed to restore dictionary file:', e);
 				}
 			}
-			// MODIFICATION END
 		});
 		
 		try {
