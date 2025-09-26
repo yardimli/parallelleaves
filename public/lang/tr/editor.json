@@ -117,7 +117,9 @@
   "analyze": "Düzenlemeleri Analiz Et",
   "analysis": {
     "title": "Düzenlemeleri Analiz Et",
-    "start": "Analizi Başlat",
+    "original" : "özgün",
+    "edited" : "düzenlenmiş",
+    "start" : "Analizi Başlat",
     "apply": "Sonuçları Uygula",
     "loading": "Düzenlemeler analiz ediliyor, lütfen bekleyin...",
     "noResults": "Analiz edilecek yeni düzenleme bulunamadı.",

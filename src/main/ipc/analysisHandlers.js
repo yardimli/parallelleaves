@@ -63,7 +63,7 @@ function registerAnalysisHandlers(db, sessionManager, windowManager) {
 			// Step 3: Send pairs to the LLM for analysis.
 			const analysisPromises = analysisPairs.map(pair => {
 				const prompt = {
-					system: `You are a linguistic analyst. Your task is to compare two versions of a text and identify the specific changes made.
+					system: `You are a linguistic analyst. Your task is to compare two versions of a text and identify the specific changes made. The changes are to be used in helping a translator understand the editor's style and preferences. Only include phrases that were changed, rephrased, or corrected. If a sentence was added or removed entirely, do not include it in the output. Focus solely on modifications within existing sentences.
 Respond ONLY with a valid JSON object where keys are the original phrases and values are the edited phrases.
 - The JSON object should only contain key-value pairs of actual changes.
 - If a sentence is completely new, do not include it.

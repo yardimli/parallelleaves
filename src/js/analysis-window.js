@@ -1,6 +1,7 @@
 import { initI18n, t, applyTranslationsTo } from './i18n.js';
 
 let novelId = null;
+let localStorageKey = null; // MODIFICATION: Key for storing results in localStorage
 
 const AI_SETTINGS_KEYS = {
 	MODEL: 'parallel-leaves-ai-model',
@@ -14,6 +15,59 @@ const startBtn = document.getElementById('js-start-analysis-btn');
 const applyBtn = document.getElementById('js-apply-results-btn');
 const resultsContainer = document.getElementById('js-analysis-results');
 const statusText = document.getElementById('js-status-text');
+
+/**
+ * MODIFICATION START: New functions to manage localStorage
+ * Saves the current state of the results from the DOM to localStorage.
+ */
+function saveResultsToLocalStorage() {
+	if (!localStorageKey) return;
+	
+	const resultCards = Array.from(resultsContainer.querySelectorAll('.card'));
+	const dataToSave = resultCards.map(card => {
+		const marker = card.dataset.marker;
+		const changes = {};
+		card.querySelectorAll('tbody tr').forEach(row => {
+			const original = row.querySelector('td:nth-child(1) textarea').value.trim();
+			const edited = row.querySelector('td:nth-child(2) textarea').value.trim();
+			if (original && edited) {
+				changes[original] = edited;
+			}
+		});
+		return { marker, changes };
+	}).filter(item => Object.keys(item.changes).length > 0); // Only save cards that still have pairs
+	
+	localStorage.setItem(localStorageKey, JSON.stringify(dataToSave));
+}
+
+/**
+ * Loads and renders results from localStorage when the window is opened.
+ */
+function loadResultsFromLocalStorage() {
+	if (!localStorageKey) return;
+	
+	const savedData = localStorage.getItem(localStorageKey);
+	if (savedData) {
+		try {
+			const results = JSON.parse(savedData);
+			if (Array.isArray(results) && results.length > 0) {
+				resultsContainer.innerHTML = ''; // Clear any placeholder text
+				const title = document.createElement('h2');
+				title.className = 'text-xl font-bold mb-2';
+				title.setAttribute('data-i18n', 'editor.analysis.resultsTitle');
+				resultsContainer.appendChild(title);
+				
+				results.forEach(result => renderResult(result));
+				applyTranslationsTo(resultsContainer);
+			}
+		} catch (e) {
+			console.error('Failed to parse analysis results from localStorage:', e);
+			localStorage.removeItem(localStorageKey); // Clear corrupted data
+		}
+	}
+	updateApplyButtonState();
+}
+// MODIFICATION END
 
 async function populateModels() {
 	try {
@@ -60,38 +114,50 @@ function renderResult(result) {
 		return;
 	}
 	
-	const card = document.createElement('div');
-	card.className = 'card bg-base-200 shadow-xl';
+	// MODIFICATION: Check if a card for this marker already exists to append to it.
+	let card = resultsContainer.querySelector(`.card[data-marker="${result.marker}"]`);
+	let tbody;
 	
-	const cardBody = document.createElement('div');
-	cardBody.className = 'card-body';
+	if (!card) {
+		card = document.createElement('div');
+		card.className = 'card bg-base-200 shadow-xl';
+		card.dataset.marker = result.marker; // MODIFICATION: Add marker data attribute for identification
+		
+		const cardBody = document.createElement('div');
+		cardBody.className = 'card-body';
+		
+		const cardHeader = document.createElement('div');
+		cardHeader.className = 'card-title';
+		
+		const title = document.createElement('h3');
+		title.className = 'text-sm';
+		title.textContent = `Changes in Marker #${result.marker}`;
+		
+		cardHeader.appendChild(title);
+		cardBody.appendChild(cardHeader);
+		
+		const table = document.createElement('table');
+		table.className = 'table table-sm';
+		
+		const thead = document.createElement('thead');
+		thead.innerHTML = `
+	        <tr>
+	            <th class="w-[calc(50%-1.5rem)]" data-i18n="editor.analysis.original">Original</th>
+	            <th class="w-[calc(50%-1.5rem)]" data-i18n="editor.analysis.edited">Edited</th>
+	            <th class="w-12"></th>
+	        </tr>
+	    `;
+		table.appendChild(thead);
+		
+		tbody = document.createElement('tbody');
+		table.appendChild(tbody);
+		cardBody.appendChild(table);
+		card.appendChild(cardBody);
+		resultsContainer.appendChild(card);
+	} else {
+		tbody = card.querySelector('tbody');
+	}
 	
-	// Card Header with Title (no delete button here anymore)
-	const cardHeader = document.createElement('div');
-	cardHeader.className = 'card-title';
-	
-	const title = document.createElement('h3');
-	title.className = 'text-sm';
-	title.textContent = `Changes in Marker #${result.marker}`;
-	
-	cardHeader.appendChild(title);
-	cardBody.appendChild(cardHeader);
-	
-	const table = document.createElement('table');
-	table.className = 'table table-sm';
-	
-	const thead = document.createElement('thead');
-	// Add an actions column to the header
-	thead.innerHTML = `
-        <tr>
-            <th class="w-[calc(50%-1.5rem)]">Original</th>
-            <th class="w-[calc(50%-1.5rem)]">Edited</th>
-            <th class="w-12"></th>
-        </tr>
-    `;
-	table.appendChild(thead);
-	
-	const tbody = document.createElement('tbody');
 	for (const [original, edited] of Object.entries(result.changes)) {
 		const row = document.createElement('tr');
 		
@@ -101,10 +167,9 @@ function renderResult(result) {
 			return div.innerHTML;
 		};
 		
-		// Add the delete button cell to each row
 		row.innerHTML = `
             <td>
-                <textarea class="textarea textarea-bordered textarea-sm w-full bg-base-300/50" readonly rows="1">${escapeHtml(original)}</textarea>
+                <textarea class="textarea textarea-bordered textarea-sm w-full" rows="1">${escapeHtml(original)}</textarea>
             </td>
             <td>
                 <textarea class="textarea textarea-bordered textarea-sm w-full" rows="1">${escapeHtml(edited)}</textarea>
@@ -117,34 +182,35 @@ function renderResult(result) {
         `;
 		tbody.appendChild(row);
 	}
-	table.appendChild(tbody);
 	
-	table.querySelectorAll('textarea').forEach(textarea => {
+	// MODIFICATION: Attach event listeners to all textareas in the card for auto-saving and resizing.
+	card.querySelectorAll('textarea').forEach(textarea => {
 		const resize = () => {
 			textarea.style.height = 'auto';
 			textarea.style.height = `${textarea.scrollHeight}px`;
 		};
-		textarea.addEventListener('input', resize);
-		setTimeout(resize, 0);
+		textarea.addEventListener('input', () => {
+			resize();
+			saveResultsToLocalStorage(); // Save on every edit
+		});
+		setTimeout(resize, 0); // Initial resize
 	});
 	
-	cardBody.appendChild(table);
-	card.appendChild(cardBody);
-	resultsContainer.appendChild(card);
-	applyTranslationsTo(card); // Apply translation to the new button's title
+	applyTranslationsTo(card);
 }
 
 async function handleStartAnalysis() {
 	startBtn.disabled = true;
 	startBtn.querySelector('.loading').classList.remove('hidden');
 	applyBtn.disabled = true;
-	resultsContainer.innerHTML = '';
+	// MODIFICATION: Do not clear the container, just update status text.
 	statusText.textContent = t('editor.analysis.loading');
 	
 	const selectedModel = modelSelect.value;
 	const temperature = parseFloat(tempSlider.value);
 	
 	try {
+		// The main process will now run the analysis on un-analyzed edits.
 		await window.api.startAnalysis({ novelId, model: selectedModel, temperature });
 	} catch (error) {
 		statusText.textContent = `Error: ${error.message}`;
@@ -153,7 +219,6 @@ async function handleStartAnalysis() {
 	}
 }
 
-// MODIFICATION START: Removed the confirmation dialog from this function.
 async function handleApplyResults() {
 	const resultCards = Array.from(resultsContainer.querySelectorAll('.card'));
 	if (resultCards.length === 0) return;
@@ -168,53 +233,42 @@ async function handleApplyResults() {
 				newPairs.push({
 					source: originalTextarea.value.trim(),
 					target: editedTextarea.value.trim(),
-					type: 'rephrasing'
+					type: 'rephrasing' // All analyzed pairs are for rephrasing context
 				});
 			}
 		});
 	});
-	
-	if (newPairs.length === 0) {
-		// If all pairs were deleted, just mark as analyzed and close.
-		try {
-			await window.api.markEditsAsAnalyzed(novelId);
-			window.close();
-		} catch (error) {
-			console.error('Failed to mark edits as analyzed:', error);
-			window.alert(`Error: ${error.message}`);
-		}
-		return;
-	}
 	
 	applyBtn.disabled = true;
 	const applyBtnSpan = applyBtn.querySelector('span');
 	if (applyBtnSpan) applyBtnSpan.classList.add('loading');
 	
 	try {
-		// 1. Get existing dictionary
-		const existingDictionary = await window.api.getNovelDictionary(novelId) || [];
+		if (newPairs.length > 0) {
+			const existingDictionary = await window.api.getNovelDictionary(novelId) || [];
+			const updatedDictionary = [...existingDictionary];
+			
+			newPairs.forEach(newPair => {
+				const isDuplicate = existingDictionary.some(existingPair =>
+					existingPair.source === newPair.source && existingPair.target === newPair.target
+				);
+				if (!isDuplicate) {
+					updatedDictionary.push(newPair);
+				}
+			});
+			
+			await window.api.saveNovelDictionary(novelId, updatedDictionary);
+		}
 		
-		// 2. Merge new pairs, avoiding duplicates
-		let addedCount = 0;
-		const updatedDictionary = [...existingDictionary];
+		// MODIFICATION START: The call to mark edits as analyzed has been removed from this function.
+		// It now happens automatically when the analysis finishes.
 		
-		newPairs.forEach(newPair => {
-			const isDuplicate = existingDictionary.some(existingPair =>
-				existingPair.source === newPair.source && existingPair.target === newPair.target
-			);
-			if (!isDuplicate) {
-				updatedDictionary.push(newPair);
-				addedCount++;
-			}
-		});
+		// Clear localStorage on successful application.
+		if (localStorageKey) {
+			localStorage.removeItem(localStorageKey);
+		}
+		// MODIFICATION END
 		
-		// 3. Save the updated dictionary
-		await window.api.saveNovelDictionary(novelId, updatedDictionary);
-		
-		// 4. Mark edits as analyzed in the database
-		await window.api.markEditsAsAnalyzed(novelId);
-		
-		// 5. Close the window (success message is now optional or can be a toast notification later)
 		window.close();
 		
 	} catch (error) {
@@ -225,7 +279,6 @@ async function handleApplyResults() {
 		if (applyBtnSpan) applyBtnSpan.classList.remove('loading');
 	}
 }
-// MODIFICATION END
 
 document.addEventListener('DOMContentLoaded', async () => {
 	await initI18n();
@@ -240,6 +293,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 		startBtn.disabled = true;
 		return;
 	}
+	
+	// MODIFICATION: Set the localStorage key and load any existing data.
+	localStorageKey = `analysis-results-${novelId}`;
+	loadResultsFromLocalStorage();
 	
 	// Setup AI settings controls
 	const lastTemp = localStorage.getItem(AI_SETTINGS_KEYS.TEMPERATURE) || '0.7';
@@ -268,23 +325,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 			const tbody = row.parentElement;
 			const card = tbody.closest('.card');
 			
-			if (row) {
-				row.remove();
+			row.remove();
+			
+			if (tbody.children.length === 0) {
+				card.remove();
 			}
 			
-			// If the table body is now empty, remove the entire card for a cleaner UI.
-			if (tbody && tbody.children.length === 0) {
-				if (card) {
-					card.remove();
-				}
-			}
-			
-			// Update the state of the apply button after any deletion.
 			updateApplyButtonState();
+			saveResultsToLocalStorage(); // MODIFICATION: Save state after deletion
 		}
 	});
 	
-	let hasResults = false;
+	let hasResultsHeader = resultsContainer.querySelector('h2') !== null;
 	
 	window.api.onAnalysisUpdate((update) => {
 		if (!update || typeof update.type === 'undefined') {
@@ -301,25 +353,35 @@ document.addEventListener('DOMContentLoaded', async () => {
 				break;
 			case 'results':
 				if (update.data && update.data.length > 0) {
-					if (!hasResults) {
+					if (!hasResultsHeader) {
 						const title = document.createElement('h2');
 						title.className = 'text-xl font-bold mb-2';
-						title.textContent = t('editor.analysis.resultsTitle');
-						resultsContainer.appendChild(title);
-						hasResults = true;
+						title.setAttribute('data-i18n', 'editor.analysis.resultsTitle');
+						resultsContainer.insertBefore(title, resultsContainer.firstChild);
+						applyTranslationsTo(title.parentElement);
+						hasResultsHeader = true;
 					}
 					update.data.forEach(renderResult);
+					// MODIFICATION: Save combined results to localStorage after receiving them.
+					saveResultsToLocalStorage();
 				}
 				break;
 			case 'finished':
 				statusText.textContent = update.message;
 				startBtn.disabled = false;
 				startBtn.querySelector('.loading').classList.add('hidden');
-				if (hasResults) {
-					applyBtn.disabled = false;
-				} else {
+				updateApplyButtonState();
+				if (resultsContainer.querySelectorAll('tbody tr').length === 0) {
 					statusText.textContent = t('editor.analysis.noResults');
 				}
+				
+				// MODIFICATION START: Automatically mark edits as analyzed once the process is complete.
+				// This prevents them from being analyzed again on the next run.
+				window.api.markEditsAsAnalyzed(novelId).catch(err => {
+					console.error('Failed to automatically mark edits as analyzed:', err);
+					// This is a non-critical error, so we just log it. The user can still apply results.
+				});
+				// MODIFICATION END
 				break;
 			case 'error':
 				statusText.textContent = `Error: ${update.message}`;

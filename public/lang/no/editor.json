@@ -117,7 +117,9 @@
   "analyze": "Analyser redigeringer",
   "analysis": {
     "title": "Analyser redigeringer",
-    "start": "Start analyse",
+    "original" : "original",
+    "edited" : "redigert",
+    "start" : "Start analyse",
     "apply": "Bruk resultater",
     "loading": "Analyserer redigeringer, vennligst vent...",
     "noResults": "Ingen nye redigeringer funnet å analysere.",

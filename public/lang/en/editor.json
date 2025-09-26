@@ -117,6 +117,8 @@
   "analyze": "Analyze Edits",
   "analysis": {
     "title": "Analyze Edits",
+    "original" : "original",
+    "edited" : "edited",
     "start": "Start Analysis",
     "apply": "Apply Results",
     "loading": "Analyzing edits, please wait...",
