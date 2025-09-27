@@ -61,6 +61,7 @@
   "confirmDeleteAct": "Bu perdeyi ve içindeki tüm bölümleri silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
   "confirmAnalysisTitle": "Düzenlemeleri Analiz Et?",
   "confirmAnalysisMessage": "Analiz edilmemiş düzenlemeleriniz var. Bunları analiz etmek, gelecekteki yapay zeka çevirilerini ve önerilerini iyileştirebilir. Analizi şimdi başlatmak ister misiniz?",
+  "declineSession": "Bu oturumda tekrar sorma",
   "aiToolbar": {
     "apply": "Uygula",
     "retry": "Yeniden Dene",

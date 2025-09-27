@@ -61,6 +61,7 @@
   "confirmDeleteAct": "Er du sikker på at du vil slette denne akten og alle dens kapitler? Dette kan ikke angres.",
   "confirmAnalysisTitle": "Analysere redigeringer?",
   "confirmAnalysisMessage": "Du har uanalyserte redigeringer. Å analysere dem kan forbedre fremtidige AI-oversettelser og forslag. Vil du starte analysen nå?",
+  "declineSession": "Ikke spør igjen denne økten",
   "aiToolbar": {
     "apply": "Godta",
     "retry": "Prøv igjen",

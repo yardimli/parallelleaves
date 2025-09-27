@@ -1,46 +1,75 @@
 /**
- * Shows a confirmation modal and returns a promise that resolves with true or false.
+ * Shows a confirmation modal and returns a promise that resolves with true, false, or 'decline'.
  * @param {string} title - The title of the modal.
  * @param {string} message - The confirmation message.
- * @returns {Promise<boolean>} - True if confirmed, false otherwise.
+ * @param {object} [options={}] - Optional settings.
+ * @param {boolean} [options.showDecline=false] - If true, shows the "Don't ask again" button.
+ * @returns {Promise<boolean|'decline'>} - true if confirmed, false if canceled, 'decline' if the third button is clicked.
  */
-export function showConfirmationModal (title, message) {
+export function showConfirmationModal (title, message, options = {}) {
 	return new Promise((resolve) => {
 		const modal = document.getElementById('confirmation-modal');
 		const titleEl = document.getElementById('confirmation-modal-title');
 		const contentEl = document.getElementById('confirmation-modal-content');
-		let confirmBtn = document.getElementById('confirmation-modal-confirm-btn');
+		const confirmBtn = document.getElementById('confirmation-modal-confirm-btn');
 		const cancelBtn = document.getElementById('confirmation-modal-cancel-btn');
+		// MODIFICATION: Get the new decline button.
+		const declineBtn = document.getElementById('confirmation-modal-decline-btn');
 		
-		// Clean up old listeners by replacing the button to prevent multiple resolves
+		// Clean up old listeners by cloning and replacing the buttons to prevent multiple resolves.
 		const newConfirmBtn = confirmBtn.cloneNode(true);
 		confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
-		confirmBtn = newConfirmBtn;
+		const newCancelBtn = cancelBtn.cloneNode(true);
+		cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+		const newDeclineBtn = declineBtn.cloneNode(true);
+		declineBtn.parentNode.replaceChild(newDeclineBtn, declineBtn);
 		
 		titleEl.textContent = title;
 		contentEl.textContent = message;
 		
+		// MODIFICATION: Show or hide the decline button based on options.
+		if (options.showDecline) {
+			newDeclineBtn.classList.remove('hidden');
+		} else {
+			newDeclineBtn.classList.add('hidden');
+		}
+		
+		const cleanup = () => {
+			modal.removeEventListener('close', handleClose);
+			newConfirmBtn.removeEventListener('click', handleConfirm);
+			newCancelBtn.removeEventListener('click', handleCancel);
+			newDeclineBtn.removeEventListener('click', handleDecline);
+		};
+		
 		const handleConfirm = () => {
+			cleanup();
 			modal.close();
 			resolve(true);
 		};
 		
 		const handleCancel = () => {
+			cleanup();
 			modal.close();
 			resolve(false);
 		};
 		
-		confirmBtn.addEventListener('click', handleConfirm, { once: true });
-		cancelBtn.addEventListener('click', handleCancel, { once: true });
-		
-		// Ensure promise resolves if the modal is closed via Escape key
-		const handleModalClose = () => {
-			resolve(false);
-			modal.removeEventListener('close', handleModalClose);
-			confirmBtn.removeEventListener('click', handleConfirm);
-			cancelBtn.removeEventListener('click', handleCancel);
+		// MODIFICATION: Handler for the new decline button.
+		const handleDecline = () => {
+			cleanup();
+			modal.close();
+			resolve('decline');
 		};
-		modal.addEventListener('close', handleModalClose);
+		
+		// This handles closing the modal with the Escape key.
+		const handleClose = () => {
+			cleanup();
+			resolve(false);
+		};
+		
+		newConfirmBtn.addEventListener('click', handleConfirm, { once: true });
+		newCancelBtn.addEventListener('click', handleCancel, { once: true });
+		newDeclineBtn.addEventListener('click', handleDecline, { once: true });
+		modal.addEventListener('close', handleClose, { once: true });
 		
 		modal.showModal();
 	});

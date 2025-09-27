@@ -48,6 +48,11 @@ const setActiveChapterId = (chapterId, callback) => {
 	}
 };
 
+// MODIFICATION: Create a debounced version of the analysis check to trigger after the user stops typing.
+const debouncedCheckForAnalysis = debounce((novelId) => {
+	checkForUnanalyzedEdits(novelId, true);
+}, 10000); // 10-second delay
+
 const debouncedContentSave = debounce(async ({ chapterId, field, value }) => {
 	if (field === 'target_content') {
 		const tempDiv = document.createElement('div');
@@ -348,14 +353,16 @@ async function checkForUnanalyzedEdits(novelId, showPrompt = false) {
 				
 				// Show a confirmation modal if requested and if the user hasn't declined it this session.
 				if (showPrompt && !analysisPromptDeclined) {
-					const userConfirmed = await showConfirmationModal(
+					const userResponse = await showConfirmationModal(
 						t('editor.confirmAnalysisTitle'),
-						t('editor.confirmAnalysisMessage')
+						t('editor.confirmAnalysisMessage'),
+						{ showDecline: true } // Show the third button
 					);
-					if (userConfirmed) {
+					
+					if (userResponse === true) {
 						// The second argument 'true' tells the main process to auto-start analysis.
 						window.api.openAnalysisWindow(novelId, true);
-					} else {
+					} else if (userResponse === 'decline') {
 						// If the user declines, don't ask again in this session.
 						analysisPromptDeclined = true;
 					}
@@ -430,7 +437,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 		populateNavDropdown(novelData);
 		
 		// MODIFICATION: Perform an initial check for unanalyzed edits and prompt the user if any are found.
-		await checkForUnanalyzedEdits(novelId, true);
+		setTimeout(() => {
+			checkForUnanalyzedEdits(novelId, true);
+		}, 3000);
 		
 		window.api.onAnalysisApplied(() => {
 			checkForUnanalyzedEdits(novelId);
@@ -694,8 +703,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 						marker: payload.marker,
 						content: payload.content
 					}).catch(err => console.error('Failed to log target edit event:', err));
-					// MODIFICATION: After an edit is logged (which is debounced), check if we should prompt for analysis.
-					checkForUnanalyzedEdits(novelId, true);
+					// MODIFICATION: After an edit is logged, trigger the debounced check for analysis.
+					debouncedCheckForAnalysis(novelId);
 					break;
 				}
 				case 'resize': {
