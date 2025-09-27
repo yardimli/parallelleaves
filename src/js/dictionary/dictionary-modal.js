@@ -20,13 +20,12 @@ function updateCurrentDictionaryDataFromDOM() {
 	Array.from(dictionaryTableBody.rows).forEach(row => {
 		const sourceInput = row.cells[1].querySelector('input');
 		const targetInput = row.cells[2].querySelector('input');
-		const typeSelect = row.cells[3].querySelector('select'); // Modified: Get type select element
-		// Always include the row, even if empty, to preserve its position if it's a new, unedited row.
-		// Empty rows will be filtered out during the final saveDictionary() call.
+		const typeSelect = row.cells[3].querySelector('select');
+		
 		updatedData.push({
 			source: sourceInput ? sourceInput.value.trim() : '',
 			target: targetInput ? targetInput.value.trim() : '',
-			type: typeSelect ? typeSelect.value : 'translation' // Modified: Get type value, default to translation
+			type: typeSelect ? typeSelect.value : 'translation'
 		});
 	});
 	currentDictionaryData = updatedData;
@@ -112,8 +111,7 @@ function renderDictionaryTable() {
  * @param {string} targetText - Optional text to pre-fill the target column.
  */
 function addRow(sourceText = '', targetText = '') {
-	updateCurrentDictionaryDataFromDOM(); // Save any unsaved edits before re-rendering
-	// Modified: Add 'type' field to new row object, defaulting to 'translation'.
+	updateCurrentDictionaryDataFromDOM();
 	currentDictionaryData.push({ source: sourceText, target: targetText, type: 'translation' });
 	renderDictionaryTable();
 }
@@ -155,13 +153,12 @@ async function saveDictionary() {
 	Array.from(dictionaryTableBody.rows).forEach(row => {
 		const sourceInput = row.cells[1].querySelector('input');
 		const targetInput = row.cells[2].querySelector('input');
-		const typeSelect = row.cells[3].querySelector('select'); // Modified: Get type select element
+		const typeSelect = row.cells[3].querySelector('select');
 		
 		if (sourceInput.value.trim() || targetInput.value.trim()) {
 			updatedData.push({
 				source: sourceInput.value.trim(),
 				target: targetInput.value.trim(),
-				// Modified: Save type, defaulting to 'translation' if it's somehow missing.
 				type: typeSelect ? typeSelect.value : 'translation'
 			});
 		}
@@ -187,7 +184,6 @@ function sortDictionary(sortBy, direction, shouldRender = true) {
 	updateCurrentDictionaryDataFromDOM();
 	
 	currentDictionaryData.sort((a, b) => {
-		// Modified: Default type to 'translation' for sorting if it's missing from an old entry.
 		const valA = (a[sortBy] || (sortBy === 'type' ? 'translation' : '')).toLowerCase();
 		const valB = (b[sortBy] || (sortBy === 'type' ? 'translation' : '')).toLowerCase();
 		
@@ -321,7 +317,6 @@ export async function openDictionaryModal(selectedText = '', sourceOrTarget = ''
 		
 		// If text is selected, add a pre-filled row directly to the data array.
 		if (selectedText) {
-			// Modified: Add 'type' field to new row object.
 			if (sourceOrTarget === 'source') {
 				currentDictionaryData.push({ source: selectedText, target: '', type: 'translation' });
 			} else if (sourceOrTarget === 'target') {

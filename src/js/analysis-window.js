@@ -1,7 +1,7 @@
 import { initI18n, t, applyTranslationsTo } from './i18n.js';
 
 let novelId = null;
-let localStorageKey = null; // MODIFICATION: Key for storing results in localStorage
+let localStorageKey = null;
 
 const AI_SETTINGS_KEYS = {
 	MODEL: 'parallel-leaves-ai-model',
@@ -67,7 +67,6 @@ function loadResultsFromLocalStorage() {
 	}
 	updateApplyButtonState();
 }
-// MODIFICATION END
 
 async function populateModels() {
 	try {
@@ -114,14 +113,13 @@ function renderResult(result) {
 		return;
 	}
 	
-	// MODIFICATION: Check if a card for this marker already exists to append to it.
 	let card = resultsContainer.querySelector(`.card[data-marker="${result.marker}"]`);
 	let tbody;
 	
 	if (!card) {
 		card = document.createElement('div');
 		card.className = 'card bg-base-200 shadow-xl';
-		card.dataset.marker = result.marker; // MODIFICATION: Add marker data attribute for identification
+		card.dataset.marker = result.marker;
 		
 		const cardBody = document.createElement('div');
 		cardBody.className = 'card-body';
@@ -131,7 +129,8 @@ function renderResult(result) {
 		
 		const title = document.createElement('h3');
 		title.className = 'text-sm';
-		title.textContent = `Changes in Marker #${result.marker}`;
+		// MODIFICATION: Use i18n for the dynamic card title.
+		title.textContent = t('editor.analysis.changesInMarker', { marker: result.marker });
 		
 		cardHeader.appendChild(title);
 		cardBody.appendChild(cardHeader);
@@ -140,6 +139,7 @@ function renderResult(result) {
 		table.className = 'table table-sm';
 		
 		const thead = document.createElement('thead');
+		// MODIFICATION: Add i18n attributes to table headers.
 		thead.innerHTML = `
 	        <tr>
 	            <th class="w-[calc(50%-1.5rem)]" data-i18n="editor.analysis.original">Original</th>
@@ -183,7 +183,6 @@ function renderResult(result) {
 		tbody.appendChild(row);
 	}
 	
-	// MODIFICATION: Attach event listeners to all textareas in the card for auto-saving and resizing.
 	card.querySelectorAll('textarea').forEach(textarea => {
 		const resize = () => {
 			textarea.style.height = 'auto';
@@ -203,7 +202,7 @@ async function handleStartAnalysis() {
 	startBtn.disabled = true;
 	startBtn.querySelector('.loading').classList.remove('hidden');
 	applyBtn.disabled = true;
-	// MODIFICATION: Do not clear the container, just update status text.
+	// MODIFICATION: Use i18n for status text.
 	statusText.textContent = t('editor.analysis.loading');
 	
 	const selectedModel = modelSelect.value;
@@ -213,7 +212,8 @@ async function handleStartAnalysis() {
 		// The main process will now run the analysis on un-analyzed edits.
 		await window.api.startAnalysis({ novelId, model: selectedModel, temperature });
 	} catch (error) {
-		statusText.textContent = `Error: ${error.message}`;
+		// MODIFICATION: Use i18n for error message.
+		statusText.textContent = t('editor.analysis.error', { message: error.message });
 		startBtn.disabled = false;
 		startBtn.querySelector('.loading').classList.add('hidden');
 	}
@@ -260,14 +260,9 @@ async function handleApplyResults() {
 			await window.api.saveNovelDictionary(novelId, updatedDictionary);
 		}
 		
-		// MODIFICATION START: The call to mark edits as analyzed has been removed from this function.
-		// It now happens automatically when the analysis finishes.
-		
-		// Clear localStorage on successful application.
 		if (localStorageKey) {
 			localStorage.removeItem(localStorageKey);
 		}
-		// MODIFICATION END
 		
 		window.close();
 		
@@ -287,14 +282,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 	
 	const params = new URLSearchParams(window.location.search);
 	novelId = params.get('novelId');
+	// MODIFICATION: Check for the autoStart query parameter.
+	const autoStart = params.get('autoStart') === 'true';
 	
 	if (!novelId) {
-		resultsContainer.innerHTML = '<p class="text-error p-4">Error: Novel ID is missing.</p>';
+		// MODIFICATION: Use i18n for error message.
+		resultsContainer.innerHTML = `<p class="text-error p-4">${t('editor.analysis.error', { message: 'Novel ID is missing.' })}</p>`;
 		startBtn.disabled = true;
 		return;
 	}
 	
-	// MODIFICATION: Set the localStorage key and load any existing data.
 	localStorageKey = `analysis-results-${novelId}`;
 	loadResultsFromLocalStorage();
 	
@@ -332,24 +329,35 @@ document.addEventListener('DOMContentLoaded', async () => {
 			}
 			
 			updateApplyButtonState();
-			saveResultsToLocalStorage(); // MODIFICATION: Save state after deletion
+			saveResultsToLocalStorage();
 		}
 	});
+	
+	// MODIFICATION: If autoStart is enabled, trigger the analysis.
+	if (autoStart) {
+		handleStartAnalysis();
+	}
 	
 	let hasResultsHeader = resultsContainer.querySelector('h2') !== null;
 	
 	window.api.onAnalysisUpdate((update) => {
 		if (!update || typeof update.type === 'undefined') {
 			console.error('Received invalid update from main process:', update);
-			statusText.textContent = 'Error: Received an invalid analysis update.';
+			statusText.textContent = t('editor.analysis.error', { message: 'Received an invalid analysis update.' });
 			startBtn.disabled = false;
 			startBtn.querySelector('.loading').classList.add('hidden');
 			return;
 		}
 		
+		// MODIFICATION: Handle i18n keys and params sent from the main process.
+		let messageText = '';
+		if (update.message) {
+			messageText = t(update.message, update.params || {});
+		}
+		
 		switch (update.type) {
 			case 'progress':
-				statusText.textContent = update.message;
+				statusText.textContent = messageText;
 				break;
 			case 'results':
 				if (update.data && update.data.length > 0) {
@@ -362,29 +370,24 @@ document.addEventListener('DOMContentLoaded', async () => {
 						hasResultsHeader = true;
 					}
 					update.data.forEach(renderResult);
-					// MODIFICATION: Save combined results to localStorage after receiving them.
 					saveResultsToLocalStorage();
 				}
 				break;
 			case 'finished':
-				statusText.textContent = update.message;
+				statusText.textContent = messageText;
 				startBtn.disabled = false;
 				startBtn.querySelector('.loading').classList.add('hidden');
 				updateApplyButtonState();
-				if (resultsContainer.querySelectorAll('tbody tr').length === 0) {
+				// If the process completed successfully but we have no results, display the "no results" message.
+				if (update.message === 'editor.analysis.complete' && resultsContainer.querySelectorAll('tbody tr').length === 0) {
 					statusText.textContent = t('editor.analysis.noResults');
 				}
-				
-				// MODIFICATION START: Automatically mark edits as analyzed once the process is complete.
-				// This prevents them from being analyzed again on the next run.
 				window.api.markEditsAsAnalyzed(novelId).catch(err => {
 					console.error('Failed to automatically mark edits as analyzed:', err);
-					// This is a non-critical error, so we just log it. The user can still apply results.
 				});
-				// MODIFICATION END
 				break;
 			case 'error':
-				statusText.textContent = `Error: ${update.message}`;
+				statusText.textContent = messageText;
 				startBtn.disabled = false;
 				startBtn.querySelector('.loading').classList.add('hidden');
 				break;

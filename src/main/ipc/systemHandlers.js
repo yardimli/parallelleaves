@@ -66,10 +66,11 @@ function registerSystemHandlers(db, sessionManager, windowManager) {
 		}
 	});
 	
-	// MODIFICATION START
-	ipcMain.on('app:openAnalysisWindow', (event, novelId) => {
+	// MODIFICATION START: The listener now accepts an 'autoStart' parameter.
+	ipcMain.on('app:openAnalysisWindow', (event, novelId, autoStart = false) => {
 		if (windowManager && typeof windowManager.createAnalysisWindow === 'function') {
-			windowManager.createAnalysisWindow(novelId);
+			// Pass the 'autoStart' flag to the window manager.
+			windowManager.createAnalysisWindow(novelId, autoStart);
 		}
 	});
 	// MODIFICATION END

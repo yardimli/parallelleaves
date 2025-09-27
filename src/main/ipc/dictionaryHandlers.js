@@ -41,13 +41,14 @@ function registerDictionaryHandlers() {
 				const data = fs.readFileSync(filePath, 'utf8');
 				let dictionaryEntries = JSON.parse(data) || [];
 				
-				// New: Filter entries based on the provided type if it exists.
+				dictionaryEntries = dictionaryEntries.map(entry => ({
+					...entry,
+					type: entry.type || 'translation' // If entry.type is missing or falsy, default to 'translation'
+				}));
+				
+				// If 'type' is an empty string (''), this block will be skipped, and all entries will be used.
 				if (type) {
-					dictionaryEntries = dictionaryEntries.filter(entry => {
-						// If an entry has no type (from older versions), default it to 'translation' for filtering.
-						const entryType = entry.type || 'translation';
-						return entryType === type;
-					});
+					dictionaryEntries = dictionaryEntries.filter(entry => entry.type === type);
 				}
 				
 				// Format as "source = target" per line for AI prompt.

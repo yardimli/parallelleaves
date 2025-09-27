@@ -9,7 +9,6 @@ import { schema as basicSchema } from 'prosemirror-schema-basic';
 import { addListNodes } from 'prosemirror-schema-list';
 import { createShortcutKeymap } from './editor-shortcuts.js';
 
-// MODIFICATION START: Added debounce utility function
 const debounce = (func, delay) => {
 	let timeout;
 	return function (...args) {
@@ -18,7 +17,6 @@ const debounce = (func, delay) => {
 		timeout = setTimeout(() => func.apply(context, args), delay);
 	};
 };
-// MODIFICATION END
 
 // --- ProseMirror Schema Definition
 const highlightMarkSpec = (colorClass) => {
@@ -152,7 +150,6 @@ const postToParent = (type, payload) => {
 	parent.window.postMessage({ type, payload }, parentOrigin);
 };
 
-// MODIFICATION START: New debounced function for logging target editor changes
 const debouncedLogEdit = debounce(() => {
 	if (!editorView) return;
 	
@@ -216,7 +213,6 @@ const debouncedLogEdit = debounce(() => {
 		});
 	}
 }, 10000); // 10-second debounce
-// MODIFICATION END
 
 /**
  * Calculates and sends the current height of the editor content to the parent.
@@ -405,9 +401,7 @@ function createEditorView (mount, config) {
 				tempDiv.appendChild(fragment);
 				postToParent('contentChanged', { chapterId, field, value: tempDiv.innerHTML });
 				
-				// MODIFICATION START: Trigger the debounced logger on every change
 				debouncedLogEdit();
-				// MODIFICATION END
 			}
 			
 			if (transaction.selectionSet || transaction.docChanged) {

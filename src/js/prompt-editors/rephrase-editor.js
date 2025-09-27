@@ -33,7 +33,7 @@ const buildSurroundingTextBlock = (wordsBefore, wordsAfter) => {
 	return t('prompt.rephrase.user.surroundingTextBlockAfterOnly', { wordsAfter });
 };
 
-export const buildPromptJson = (formData, context, dictionaryContent = '') => {
+export const buildPromptJson = (formData, context, contextualContent = '') => {
 	const { selectedText, wordCount, languageForPrompt, wordsBefore, wordsAfter } = context;
 	
 	const instructions = formData.instructions || t('prompt.rephrase.system.defaultInstruction');
@@ -59,10 +59,10 @@ export const buildPromptJson = (formData, context, dictionaryContent = '') => {
 	const surroundingText = buildSurroundingTextBlock(wordsBefore, wordsAfter);
 	
 	const userParts = [];
-	if (formData.useDictionary && dictionaryContent) {
-		userParts.push(t('prompt.common.user.dictionaryBlock', { dictionaryContent })); // Use common i18n key for dictionary block.
+	if (contextualContent) {
+		userParts.push(t('prompt.common.user.dictionaryBlock', { dictionaryContent: contextualContent }));
 	}
-	userParts.push(codexBlock); // Add codex block if available
+	userParts.push(codexBlock);
 	if (surroundingText) {
 		userParts.push(surroundingText);
 	}
@@ -99,8 +99,28 @@ const updatePreview = async (container, context) => {
 	
 	let dictionaryContent = '';
 	if (formData.useDictionary) {
-		dictionaryContent = await window.api.getDictionaryContentForAI(context.novelId);
+		dictionaryContent = await window.api.getDictionaryContentForAI(context.novelId, ''); //for now to return all without applying filter will test later if its better to filter for 'rephrasing'
 	}
+	
+	let analysisContent = '';
+	const analysisKey = `analysis-results-${context.novelId}`;
+	const analysisDataRaw = localStorage.getItem(analysisKey);
+	if (analysisDataRaw) {
+		try {
+			const analysisData = JSON.parse(analysisDataRaw);
+			const formattedChanges = analysisData.flatMap(item =>
+				Object.entries(item.changes).map(([original, edited]) => `${original} = ${edited}`)
+			).join('\n');
+			
+			if (formattedChanges) {
+				analysisContent = `\n\n${formattedChanges}`;
+			}
+		} catch (e) {
+			console.error('Failed to parse analysis data for preview:', e);
+		}
+	}
+	
+	const combinedContextualContent = (dictionaryContent + analysisContent).trim();
 	
 	const previewContext = { ...context };
 	if (formData.useCodex) {
@@ -108,7 +128,7 @@ const updatePreview = async (container, context) => {
 	}
 	
 	try {
-		const promptJson = buildPromptJson(formData, previewContext, dictionaryContent);
+		const promptJson = buildPromptJson(formData, previewContext, combinedContextualContent);
 		systemPreview.textContent = promptJson.system;
 		userPreview.textContent = promptJson.user;
 		aiPreview.textContent = promptJson.ai || t('prompt.preview.empty');

@@ -11,6 +11,9 @@ function registerAiHandlers(db, sessionManager) {
 	ipcMain.handle('llm:process-text', async (event, data) => {
 		try {
 			const token = sessionManager.getSession()?.token || null;
+			// MODIFICATION: The `data` object passed from the renderer now contains `contextualContent`.
+			// The spread operator `{ ...data, token }` correctly passes this along to the service.
+			// No explicit renaming is needed here as it's handled by the object structure.
 			const result = await aiService.processLLMText({ ...data, token });
 			return { success: true, data: result };
 		} catch (error) {

@@ -52,12 +52,10 @@ export async function restoreNovel() {
 		// 2. Parse the file content as JSON.
 		const backupData = JSON.parse(fileContent);
 		
-		// MODIFICATION START: Updated validation to remove obsolete 'codex_categories' check.
 		// The presence of 'novel' and 'sections' is sufficient to identify a valid backup file.
 		if (!backupData.novel || !backupData.sections) {
 			throw new Error('Invalid or corrupted backup file format.');
 		}
-		// MODIFICATION END
 		
 		// 3. Send the data to the main process to handle the database operations.
 		const result = await window.api.restoreNovelFromBackup(backupData);

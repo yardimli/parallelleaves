@@ -120,12 +120,10 @@ async function cleanupAiAction() {
 async function handleFloatyApply() {
 	if (!isAiActionActive || !currentEditorInterface) return;
 	
-	// MODIFICATION START: Log the translation event when the user applies the suggestion.
 	if (currentPromptId === 'translate' && currentAiParams && currentAiParams.logData) {
 		window.api.logTranslationEvent(currentAiParams.logData)
 			.catch(err => console.error('Failed to log translation event on apply:', err));
 	}
-	// MODIFICATION END
 	
 	await cleanupAiAction();
 }
@@ -177,7 +175,6 @@ async function handleFloatyRetry() {
 		floatingToolbar = null;
 	}
 	
-	// Modified: Perform a partial cleanup that reverts the target editor but preserves the source markers.
 	// 1. Revert the suggestion in the target editor.
 	await currentEditorInterface.discardAiSuggestion(aiActionRange.from, aiActionRange.to, originalFragmentJson);
 	
@@ -231,9 +228,8 @@ function createFloatingToolbar(from, to, model) {
 	});
 }
 
-// Modified: Function signature and body updated to accept and pass temperature
 async function startAiAction(params) {
-	const { prompt, model, temperature, openingMarker, closingMarker, dictionaryContent } = params;
+	const { prompt, model, temperature, openingMarker, closingMarker, contextualContent } = params;
 	
 	isAiActionActive = true;
 	if (currentEditorInterface.type === 'iframe') {
@@ -243,18 +239,15 @@ async function startAiAction(params) {
 	showAiSpinner();
 	
 	try {
-		// Modified: Pass temperature to the API call
-		const result = await window.api.processLLMText({ prompt, model, temperature, dictionaryContent });
+		const result = await window.api.processLLMText({ prompt, model, temperature, contextualContent });
 		hideAiSpinner();
 		
 		if (result.success && result.data.choices && result.data.choices.length > 0) {
 			let newContentText = result.data.choices[0].message.content ?? 'No content generated.';
 			newContentText = newContentText.trim();
 			
-			// MODIFICATION START: Store data for logging, which will happen when the user clicks "Apply".
-			// The premature logging call has been removed from here.
 			if (currentPromptId === 'translate') {
-				const context = currentAiParams.context; // Use the correct, updated context.
+				const context = currentAiParams.context;
 				currentAiParams.logData = {
 					novelId: context.novelId,
 					chapterId: context.chapterId,
@@ -265,7 +258,6 @@ async function startAiAction(params) {
 					temperature: params.temperature
 				};
 			}
-			// MODIFICATION END
 			
 			let newContentHtml;
 			const textWithMarkers = openingMarker && closingMarker
@@ -329,7 +321,6 @@ async function startAiAction(params) {
 	}
 }
 
-// Modified: This function now uses global localStorage settings instead of per-prompt initial state.
 async function populateModelDropdown() {
 	if (!modalEl) return;
 	const select = modalEl.querySelector('.js-llm-model-select');
@@ -379,7 +370,6 @@ async function populateModelDropdown() {
 async function handleModalApply() {
 	if (!modalEl || isAiActionActive) return;
 	
-	// Modified: Read model and temperature from the modal's shared controls
 	const model = modalEl.querySelector('.js-llm-model-select').value;
 	const temperature = parseFloat(modalEl.querySelector('.js-ai-temperature-slider').value);
 	const action = currentPromptId;
@@ -409,13 +399,10 @@ async function handleModalApply() {
 	
 	const novelId = document.body.dataset.novelId;
 	if (novelId) {
-		// Modified: Only save prompt-specific settings, not the global model/temp.
 		const settingsToSave = { ...formDataObj };
 		window.api.updatePromptSettings({ novelId, promptType: action, settings: settingsToSave })
 			.catch(err => console.error('Failed to save prompt settings:', err));
 	}
-	
-	//console.log('AI Action Params:', { model, temperature, action, formData: formDataObj });
 	
 	let selectionInfo;
 	if (action === 'translate') {
@@ -476,22 +463,44 @@ async function handleModalApply() {
 		}
 	}
 	
-	const prompt = builder(formDataObj, promptContext);
-	
 	let dictionaryContent = '';
 	if (formDataObj.useDictionary) {
-		dictionaryContent = await window.api.getDictionaryContentForAI(novelId);
+		const dictionaryType = action === 'translate' ? 'translation' : 'rephrasing';
+		dictionaryContent = await window.api.getDictionaryContentForAI(novelId, ''); //for now to return all without applying filter
 	}
+	
+	let analysisContent = '';
+	const analysisKey = `analysis-results-${novelId}`;
+	const analysisDataRaw = localStorage.getItem(analysisKey);
+	if (analysisDataRaw) {
+		try {
+			const analysisData = JSON.parse(analysisDataRaw);
+			// Flatten all changes from all markers into a single list.
+			const formattedChanges = analysisData.flatMap(item =>
+				Object.entries(item.changes).map(([original, edited]) => `${original} = ${edited}`)
+			).join('\n');
+			
+			if (formattedChanges) {
+				// Add a header to distinguish these suggestions in the prompt.
+				analysisContent = `\n\n${formattedChanges}`;
+			}
+		} catch (e) {
+			console.error('Failed to parse analysis data:', e);
+		}
+	}
+	
+	// Combine both sources into a single string.
+	const combinedContextualContent = (dictionaryContent + analysisContent).trim();
+	
+	const prompt = builder(formDataObj, promptContext, combinedContextualContent);
 	
 	let openingMarker = '';
 	let closingMarker = '';
 	if (action === 'translate') {
-		// Modified: Check if we are retrying and markers already exist.
 		if (currentActionMarkers) {
 			openingMarker = currentActionMarkers.opening;
 			closingMarker = currentActionMarkers.closing;
 		} else {
-			// This is a new translation, so create and insert new markers.
 			const allContentResult = await window.api.getAllNovelContent(novelId);
 			
 			let highestNum = 0;
@@ -543,9 +552,7 @@ async function handleModalApply() {
 		}
 	}
 	
-	// MODIFICATION START: Use the correct `promptContext` which contains the up-to-date `selectedText`.
-	currentAiParams = { prompt, model, temperature, action, context: promptContext, formData: formDataObj, dictionaryContent };
-	// MODIFICATION END
+	currentAiParams = { prompt, model, temperature, action, context: promptContext, formData: formDataObj, contextualContent: combinedContextualContent };
 	
 	startAiAction({
 		prompt: currentAiParams.prompt,
@@ -553,7 +560,7 @@ async function handleModalApply() {
 		temperature: currentAiParams.temperature,
 		openingMarker,
 		closingMarker,
-		dictionaryContent
+		contextualContent: combinedContextualContent // Pass the combined content here
 	});
 }
 

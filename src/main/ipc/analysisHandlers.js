@@ -29,11 +29,13 @@ function registerAnalysisHandlers(db, sessionManager, windowManager) {
             `).all(novelId);
 			
 			if (latestEdits.length === 0) {
-				analysisWindow.webContents.send('analysis:update', { type: 'finished', message: 'No new edits to analyze.' });
+				// MODIFICATION: Send an i18n key instead of a hardcoded string.
+				analysisWindow.webContents.send('analysis:update', { type: 'finished', message: 'editor.analysis.noNewEdits' });
 				return { success: true, message: 'No edits found.' };
 			}
 			
-			analysisWindow.webContents.send('analysis:update', { type: 'progress', message: `Found ${latestEdits.length} edits to analyze...` });
+			// MODIFICATION: Send an i18n key and parameters for dynamic text.
+			analysisWindow.webContents.send('analysis:update', { type: 'progress', message: 'editor.analysis.foundEdits', params: { count: latestEdits.length } });
 			
 			const analysisPairs = [];
 			for (const edit of latestEdits) {
@@ -56,7 +58,8 @@ function registerAnalysisHandlers(db, sessionManager, windowManager) {
 			}
 			
 			if (analysisPairs.length === 0) {
-				analysisWindow.webContents.send('analysis:update', { type: 'finished', message: 'No significant changes found in edits.' });
+				// MODIFICATION: Send an i18n key.
+				analysisWindow.webContents.send('analysis:update', { type: 'finished', message: 'editor.analysis.noSignificantChanges' });
 				return { success: true, message: 'No significant changes.' };
 			}
 			
@@ -81,14 +84,16 @@ Example: {"the big red cat": "the large crimson cat", "he said happily": "he exc
 					temperature,
 					response_format: { type: 'json_object' }
 				}).then(result => {
-					analysisWindow.webContents.send('analysis:update', { type: 'progress', message: `Analyzed marker #${pair.marker}...` });
+					// MODIFICATION: Send an i18n key and parameters.
+					analysisWindow.webContents.send('analysis:update', { type: 'progress', message: 'editor.analysis.analyzedMarker', params: { marker: pair.marker } });
 					return {
 						marker: pair.marker,
 						changes: result // The result is already parsed JSON
 					};
 				}).catch(error => {
 					console.error(`Error analyzing marker ${pair.marker}:`, error);
-					analysisWindow.webContents.send('analysis:update', { type: 'error', message: `Error analyzing marker #${pair.marker}: ${error.message}` });
+					// MODIFICATION: Send an i18n key and parameters for the error message.
+					analysisWindow.webContents.send('analysis:update', { type: 'error', message: 'editor.analysis.errorMarker', params: { marker: pair.marker, message: error.message } });
 					return { marker: pair.marker, changes: {} }; // Return empty on error
 				});
 			});
@@ -98,13 +103,15 @@ Example: {"the big red cat": "the large crimson cat", "he said happily": "he exc
 			const finalResults = allResults.filter(r => r && Object.keys(r.changes).length > 0);
 			
 			analysisWindow.webContents.send('analysis:update', { type: 'results', data: finalResults });
-			analysisWindow.webContents.send('analysis:update', { type: 'finished', message: 'Analysis complete.' });
+			// MODIFICATION: Send an i18n key for the completion message.
+			analysisWindow.webContents.send('analysis:update', { type: 'finished', message: 'editor.analysis.complete' });
 			
 			return { success: true, results: finalResults };
 			
 		} catch (error) {
 			console.error('Analysis process failed:', error);
-			analysisWindow.webContents.send('analysis:update', { type: 'error', message: `Analysis failed: ${error.message}` });
+			// MODIFICATION: Send an i18n key and parameters for the failure message.
+			analysisWindow.webContents.send('analysis:update', { type: 'error', message: 'editor.analysis.error', params: { message: error.message } });
 			return { success: false, error: error.message };
 		}
 	});

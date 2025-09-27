@@ -35,6 +35,7 @@ let activeEditor = null; // contentWindow of the currently focused iframe editor
 let searchResultHandler = null; // Callback for search results from iframes.
 let searchReplaceResultHandler = null;
 let lastFocusedSourceEditor = null;
+let analysisPromptDeclined = false; // MODIFICATION: Flag to prevent re-prompting for analysis in the same session.
 
 // --- State Accessors and Mutators ---
 const getActiveEditor = () => activeEditor;
@@ -329,18 +330,38 @@ function initializeView (novelId, novelData, initialChapterId) {
 	}, 500);
 }
 
-// MODIFICATION START: New function to check for unanalyzed edits and update UI
-async function checkForUnanalyzedEdits(novelId) {
+/**
+ * MODIFICATION START: Updated function to handle prompting the user for analysis.
+ * Checks for unanalyzed edits and, if found, prompts the user to start the analysis.
+ * @param {string} novelId - The ID of the current novel.
+ * @param {boolean} [showPrompt=false] - Whether to show the confirmation modal.
+ */
+async function checkForUnanalyzedEdits(novelId, showPrompt = false) {
 	try {
 		const hasUnanalyzed = await window.api.hasUnanalyzedEdits(novelId);
 		const analyzeBtn = document.getElementById('js-analyze-btn');
 		if (analyzeBtn) {
 			if (hasUnanalyzed) {
-				// If there are unanalyzed edits, make the button fully visible and pulse
+				// If there are unanalyzed edits, make the button fully visible and pulse.
 				analyzeBtn.classList.remove('opacity-50');
 				analyzeBtn.classList.add('opacity-100', 'animate-pulse');
+				
+				// Show a confirmation modal if requested and if the user hasn't declined it this session.
+				if (showPrompt && !analysisPromptDeclined) {
+					const userConfirmed = await showConfirmationModal(
+						t('editor.confirmAnalysisTitle'),
+						t('editor.confirmAnalysisMessage')
+					);
+					if (userConfirmed) {
+						// The second argument 'true' tells the main process to auto-start analysis.
+						window.api.openAnalysisWindow(novelId, true);
+					} else {
+						// If the user declines, don't ask again in this session.
+						analysisPromptDeclined = true;
+					}
+				}
 			} else {
-				// Otherwise, reset to the default faded state
+				// Otherwise, reset to the default faded state.
 				analyzeBtn.classList.add('opacity-50');
 				analyzeBtn.classList.remove('opacity-100', 'animate-pulse');
 			}
@@ -408,13 +429,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 		await renderManuscript(novelData);
 		populateNavDropdown(novelData);
 		
-		// MODIFICATION START: Check for unanalyzed edits on load
-		await checkForUnanalyzedEdits(novelId);
-		// Listen for an event from the main process indicating analysis is complete
+		// MODIFICATION: Perform an initial check for unanalyzed edits and prompt the user if any are found.
+		await checkForUnanalyzedEdits(novelId, true);
+		
 		window.api.onAnalysisApplied(() => {
 			checkForUnanalyzedEdits(novelId);
 		});
-		// MODIFICATION END
 		
 		setupTopToolbar({
 			isChapterEditor: true,
@@ -674,6 +694,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 						marker: payload.marker,
 						content: payload.content
 					}).catch(err => console.error('Failed to log target edit event:', err));
+					// MODIFICATION: After an edit is logged (which is debounced), check if we should prompt for analysis.
+					checkForUnanalyzedEdits(novelId, true);
 					break;
 				}
 				case 'resize': {

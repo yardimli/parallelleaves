@@ -5,7 +5,6 @@ const { initializeDatabase } = require('./src/database/database.js');
 const sessionManager = require('./src/main/sessionManager.js');
 const windowManager = require('./src/main/windowManager.js');
 const { registerIpcHandlers } = require('./src/main/ipc');
-// MODIFICATION: Import the new auto backup manager
 const autoBackupManager = require('./src/main/autoBackupManager.js');
 
 // Set app name for macOS development
@@ -49,7 +48,6 @@ app.on('ready', () => {
 	// Register all IPC event listeners, passing necessary dependencies
 	registerIpcHandlers(db, sessionManager, windowManager);
 	
-	// MODIFICATION: Initialize the auto-backup manager after all other components are ready.
 	autoBackupManager.initialize(db);
 	
 	// Create initial windows

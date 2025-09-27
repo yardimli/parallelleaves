@@ -59,6 +59,8 @@
   "confirmModalBtn": "Confirm Action",
   "confirmDeleteChapter": "Are you sure you want to delete this chapter? This cannot be undone.",
   "confirmDeleteAct": "Are you sure you want to delete this act and all its chapters? This cannot be undone.",
+  "confirmAnalysisTitle": "Analyze Edits?",
+  "confirmAnalysisMessage": "You have unanalyzed edits. Analyzing them can improve future AI translations and suggestions. Would you like to start the analysis now?",
   "aiToolbar": {
     "apply": "Apply",
     "retry": "Retry",
@@ -117,14 +119,22 @@
   "analyze": "Analyze Edits",
   "analysis": {
     "title": "Analyze Edits",
-    "original" : "original",
-    "edited" : "edited",
+    "original": "original",
+    "edited": "edited",
     "start": "Start Analysis",
     "apply": "Apply Results",
     "loading": "Analyzing edits, please wait...",
     "noResults": "No new edits found to analyze.",
     "resultsTitle": "Analysis Results",
     "deleteRow": "Delete Row",
-    "applySuccess": "Successfully added {count} pairs to the dictionary and marked edits as analyzed."
+    "applySuccess": "Successfully added {count} pairs to the dictionary and marked edits as analyzed.",
+    "changesInMarker": "Changes in Marker #{marker}",
+    "noNewEdits": "No new edits to analyze.",
+    "foundEdits": "Found {count} edits to analyze...",
+    "noSignificantChanges": "No significant changes found in edits.",
+    "analyzedMarker": "Analyzed marker #{marker}...",
+    "errorMarker": "Error analyzing marker #{marker}: {message}",
+    "complete": "Analysis complete.",
+    "error": "Error: {message}"
   }
 }

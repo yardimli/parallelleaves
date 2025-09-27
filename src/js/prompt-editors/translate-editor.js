@@ -50,7 +50,7 @@ const buildTranslationContextBlock = (translationPairs, languageForPrompt, targe
 	return contextMessages;
 };
 
-export const buildPromptJson = (formData, context, dictionaryContent = '') => {
+export const buildPromptJson = (formData, context, contextualContent = '') => {
 	const { selectedText, languageForPrompt, targetLanguage, translationPairs } = context;
 	
 	const plainTextToTranslate = selectedText;
@@ -79,8 +79,8 @@ export const buildPromptJson = (formData, context, dictionaryContent = '') => {
 	const contextMessages = buildTranslationContextBlock(translationPairs, languageForPrompt, targetLanguage);
 	
 	const finalUserPromptParts = [];
-	if (formData.useDictionary && dictionaryContent) {
-		finalUserPromptParts.push(t('prompt.common.user.dictionaryBlock', { dictionaryContent }));
+	if (contextualContent) {
+		finalUserPromptParts.push(t('prompt.common.user.dictionaryBlock', { dictionaryContent: contextualContent }));
 	}
 	finalUserPromptParts.push(codexBlock);
 	finalUserPromptParts.push(t('prompt.translate.user.textToTranslate', {
@@ -99,7 +99,6 @@ export const buildPromptJson = (formData, context, dictionaryContent = '') => {
 };
 
 const updatePreview = async (container, context) => {
-	//console.log('Updating preview with context:', context);
 	const form = container.querySelector('#translate-editor-form');
 	if (!form) return;
 	
@@ -138,15 +137,38 @@ const updatePreview = async (container, context) => {
 	
 	let dictionaryContent = '';
 	if (formData.useDictionary) {
-		dictionaryContent = await window.api.getDictionaryContentForAI(context.novelId);
+		// Get dictionary content specifically for 'translation' type entries.
+		dictionaryContent = await window.api.getDictionaryContentForAI(context.novelId, ''); //for now to return all without applying filter will test later if its better to filter for 'translation'
 	}
+	
+	let analysisContent = '';
+	const analysisKey = `analysis-results-${context.novelId}`;
+	const analysisDataRaw = localStorage.getItem(analysisKey);
+	if (analysisDataRaw) {
+		try {
+			const analysisData = JSON.parse(analysisDataRaw);
+			const formattedChanges = analysisData.flatMap(item =>
+				Object.entries(item.changes).map(([original, edited]) => `${original} = ${edited}`)
+			).join('\n');
+			
+			if (formattedChanges) {
+				analysisContent = `\n\n${formattedChanges}`;
+			}
+		} catch (e) {
+			console.error('Failed to parse analysis data for preview:', e);
+		}
+	}
+	
+	const combinedContextualContent = (dictionaryContent + analysisContent).trim();
+	// MODIFICATION END
 	
 	if (formData.useCodex) {
 		previewContext.codexContent = await window.api.codex.get(context.novelId);
 	}
 	
 	try {
-		const promptJson = buildPromptJson(formData, previewContext, dictionaryContent);
+		// MODIFICATION: Pass the combined content to the prompt builder.
+		const promptJson = buildPromptJson(formData, previewContext, combinedContextualContent);
 		systemPreview.textContent = promptJson.system;
 		userPreview.textContent = promptJson.user;
 		aiPreview.textContent = promptJson.ai || t('prompt.preview.empty');

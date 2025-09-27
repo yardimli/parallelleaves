@@ -22,7 +22,6 @@ export function setupSearch (chapterEditorViews, registerSearchResultHandler) {
 	
 	const toggleSearchBar = (show) => {
 		if (show) {
-			// Modified: Ensure search & replace bar is hidden when this one opens.
 			document.getElementById('js-search-replace-bar').classList.add('hidden');
 			searchBar.classList.remove('hidden');
 			searchInput.focus();

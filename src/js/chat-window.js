@@ -161,12 +161,10 @@ async function populateModels() {
 				});
 				modelSelect.appendChild(optgroup);
 			});
-			// Modified: Set the last used model from localStorage
 			const lastModel = localStorage.getItem(AI_SETTINGS_KEYS.MODEL);
 			if (lastModel && modelSelect.querySelector(`option[value="${lastModel}"]`)) {
 				modelSelect.value = lastModel;
 			} else if (modelSelect.options.length > 0) {
-				// Fallback to the first available model
 				modelSelect.selectedIndex = 0;
 				localStorage.setItem(AI_SETTINGS_KEYS.MODEL, modelSelect.value);
 			}
@@ -321,7 +319,6 @@ async function handleSendMessage(event) {
 		// This slice now applies *after* potentially adding chapter context
 		const contextMessages = messagesToSend.slice(-5);
 		
-		// Modified: Get temperature and send it with the message
 		const temperature = parseFloat(tempSlider.value);
 		const result = await window.api.chatSendMessage({
 			model: selectedModel,

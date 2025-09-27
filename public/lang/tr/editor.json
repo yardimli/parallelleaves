@@ -59,6 +59,8 @@
   "confirmModalBtn": "Kabul Et",
   "confirmDeleteChapter": "Bu bölümü silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
   "confirmDeleteAct": "Bu perdeyi ve içindeki tüm bölümleri silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
+  "confirmAnalysisTitle": "Düzenlemeleri Analiz Et?",
+  "confirmAnalysisMessage": "Analiz edilmemiş düzenlemeleriniz var. Bunları analiz etmek, gelecekteki yapay zeka çevirilerini ve önerilerini iyileştirebilir. Analizi şimdi başlatmak ister misiniz?",
   "aiToolbar": {
     "apply": "Uygula",
     "retry": "Yeniden Dene",
@@ -117,14 +119,22 @@
   "analyze": "Düzenlemeleri Analiz Et",
   "analysis": {
     "title": "Düzenlemeleri Analiz Et",
-    "original" : "özgün",
-    "edited" : "düzenlenmiş",
-    "start" : "Analizi Başlat",
+    "original": "özgün",
+    "edited": "düzenlenmiş",
+    "start": "Analizi Başlat",
     "apply": "Sonuçları Uygula",
     "loading": "Düzenlemeler analiz ediliyor, lütfen bekleyin...",
     "noResults": "Analiz edilecek yeni düzenleme bulunamadı.",
     "resultsTitle": "Analiz Sonuçları",
     "deleteRow": "Satırı Sil",
-    "applySuccess": "Sözlüğe {count} çift başarıyla eklendi ve düzenlemeler analiz edildi olarak işaretlendi."
+    "applySuccess": "Sözlüğe {count} çift başarıyla eklendi ve düzenlemeler analiz edildi olarak işaretlendi.",
+    "changesInMarker": "İşaretçi #{marker} içindeki değişiklikler",
+    "noNewEdits": "Analiz edilecek yeni düzenleme yok.",
+    "foundEdits": "Analiz edilecek {count} düzenleme bulundu...",
+    "noSignificantChanges": "Düzenlemelerde önemli bir değişiklik bulunamadı.",
+    "analyzedMarker": "#{marker} numaralı işaretçi analiz edildi...",
+    "errorMarker": "#{marker} işaretçisi analiz edilirken hata oluştu: {message}",
+    "complete": "Analiz tamamlandı.",
+    "error": "Hata: {message}"
   }
 }

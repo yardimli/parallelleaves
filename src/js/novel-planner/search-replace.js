@@ -254,7 +254,6 @@ export function setupSearchAndReplace(views, registerHandler) {
 		}
 	});
 	
-	// Modified: Added isHidden to the returned API for the global shortcut handler.
 	return {
 		openWithValues: openSearchAndReplaceWithValues,
 		toggle: toggleSearchReplaceBar,

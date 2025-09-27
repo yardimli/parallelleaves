@@ -279,8 +279,8 @@ function createChatWindow(novelId) {
 	});
 }
 
-// MODIFICATION START: New function to create the analysis window
-function createAnalysisWindow(novelId) {
+// MODIFICATION START: The function now accepts an 'autoStart' parameter.
+function createAnalysisWindow(novelId, autoStart = false) {
 	if (analysisWindow && !analysisWindow.isDestroyed()) {
 		analysisWindow.focus();
 		return;
@@ -301,7 +301,8 @@ function createAnalysisWindow(novelId) {
 	
 	setContentSecurityPolicy(analysisWindow);
 	
-	analysisWindow.loadFile('public/analysis-window.html', { query: { novelId: novelId } });
+	// The 'autoStart' flag is passed as a query parameter to the window's URL.
+	analysisWindow.loadFile('public/analysis-window.html', { query: { novelId, autoStart } });
 	
 	analysisWindow.on('closed', () => {
 		analysisWindow = null;

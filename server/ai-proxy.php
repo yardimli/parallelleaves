@@ -407,7 +407,7 @@
 			sendJsonError(500, 'Failed to log translation to the database.');
 		}
 		exit;
-	} elseif ($action === 'log_target_edit') { // MODIFICATION START: Handle target edit logging
+	} elseif ($action === 'log_target_edit') {
 		if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 			sendJsonError(405, 'Method Not Allowed. Please use POST for logging target edits.');
 		}

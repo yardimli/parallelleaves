@@ -176,7 +176,7 @@ ${textChunk}
 	const response = await callOpenRouter({
 		model: model,
 		messages: [{ role: 'user', content: prompt }],
-		temperature: temperature // Modified: Pass temperature
+		temperature: temperature
 	}, token);
 	
 	// The response is not JSON, so we directly access the content.
@@ -189,13 +189,12 @@ ${textChunk}
  * @param {object} params.prompt - An object with 'system', 'user', and 'ai' properties for the prompt.
  * @param {string} params.model - The LLM model to use.
  * @param {string|null} params.token - The user's session token.
- * @param {string} [params.dictionaryContent=''] - Optional custom dictionary content to include.
+ * @param {string} [params.contextualContent=''] - MODIFICATION: Renamed from dictionaryContent to reflect its new purpose.
  * @param {number} [params.temperature=0.7] - The temperature for the AI model.
  * @param {object|null} [params.response_format=null] - Optional response format object (e.g., { type: 'json_object' }).
  * @returns {Promise<object>} The AI response object.
  */
-// MODIFICATION START: Added `response_format` to the function signature and payload.
-async function processLLMText({ prompt, model, token, dictionaryContent = '', temperature = 0.7, response_format = null }) {
+async function processLLMText({ prompt, model, token, contextualContent = '', temperature = 0.7, response_format = null }) {
 	const messages = [];
 	if (prompt.system) {
 		messages.push({ role: 'system', content: prompt.system });
@@ -205,8 +204,8 @@ async function processLLMText({ prompt, model, token, dictionaryContent = '', te
 	}
 	
 	let userContent = prompt.user;
-	if (dictionaryContent) {
-		const dictionaryBlock = `Take into account the following custom dictionary:\n<dictionary>\n${dictionaryContent}\n</dictionary>`;
+	if (contextualContent) {
+		const dictionaryBlock = `Take into account the following custom dictionary:\n<dictionary>\n${contextualContent}\n</dictionary>`;
 		userContent = `${dictionaryBlock}\n\n${userContent}`;
 	}
 	
@@ -233,7 +232,6 @@ async function processLLMText({ prompt, model, token, dictionaryContent = '', te
 	
 	return callOpenRouter(payload, token);
 }
-// MODIFICATION END
 
 /**
  * Fetches the list of available models from the AI Proxy.
