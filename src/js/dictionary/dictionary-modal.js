@@ -70,7 +70,6 @@ function renderDictionaryTable() {
 		targetInput.placeholder = t('dictionary.targetTranslation');
 		targetCell.appendChild(targetInput);
 		
-		// New: Add type cell with a select dropdown
 		const typeCell = row.insertCell();
 		const typeSelect = document.createElement('select');
 		typeSelect.className = 'select select-ghost select-sm w-full max-w-xs';

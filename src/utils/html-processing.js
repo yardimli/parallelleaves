@@ -54,12 +54,6 @@ export function processSourceContentForMarkers(htmlString) {
 	});
 }
 
-/**
- * New: Removes obsolete <a class="codex-link"> tags from HTML, keeping the inner text.
- * This is a cleanup utility for legacy content.
- * @param {string} htmlString - The HTML content to process.
- * @returns {string} The HTML string with codex links removed.
- */
 export function removeObsoleteCodexLinks(htmlString) {
 	if (!htmlString) {
 		return htmlString;

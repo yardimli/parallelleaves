@@ -44,6 +44,7 @@
   "chapterTitlePlaceholder": "Kapitteltittel",
   "search": "Søk (Ctrl+F)",
   "openChat": "Åpne AI-chat",
+  "openCodex": "Åpne Codex",
   "syncScrollSourceToTarget": "Synkroniser rulling fra kilde til mål",
   "syncScrollTargetToSource": "Synkroniser rulling fra mål til kilde",
   "renameAct": "Gi nytt navn til akt",

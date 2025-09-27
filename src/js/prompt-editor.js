@@ -4,7 +4,6 @@ import { updateToolbarState as updateChapterToolbarState } from './novel-planner
 import { t, applyTranslationsTo } from './i18n.js';
 import { htmlToPlainText, processSourceContentForMarkers } from '../utils/html-processing.js';
 
-// New: Constants for shared AI settings stored in localStorage
 const AI_SETTINGS_KEYS = {
 	MODEL: 'parallel-leaves-ai-model',
 	TEMPERATURE: 'parallel-leaves-ai-temperature'
@@ -587,7 +586,6 @@ export function setupPromptEditor() {
 		});
 	}
 	
-	// New: Setup listeners for global AI settings controls
 	const modelSelect = modalEl.querySelector('.js-llm-model-select');
 	const tempSlider = modalEl.querySelector('.js-ai-temperature-slider');
 	const tempValue = modalEl.querySelector('.js-ai-temperature-value');

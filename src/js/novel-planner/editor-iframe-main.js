@@ -86,7 +86,7 @@ let field;
 let hasSourceSelection = false;
 let floatingTranslateBtn = null;
 let localSearchMatches = []; // State for local search match positions {from, to}
-let localSearchReplaceMatches = []; // New: State for local search & replace match positions
+let localSearchReplaceMatches = []; // State for local search & replace match positions
 
 // ProseMirror plugin to manage search result decorations.
 const searchPlugin = new Plugin({
@@ -115,7 +115,6 @@ const searchPlugin = new Plugin({
 	},
 });
 
-// New: ProseMirror plugin to manage search and replace result decorations.
 const searchReplacePlugin = new Plugin({
 	state: {
 		init() {
@@ -566,7 +565,6 @@ function navigateToSearchMatch(matchIndex, isActive) {
 	}
 }
 
-// New: Helper function to clear search and replace decorations
 function clearSearchReplaceDecorations() {
 	localSearchReplaceMatches = [];
 	if (editorView) {
@@ -704,7 +702,6 @@ window.addEventListener('message', (event) => {
 			break;
 		}
 		
-		// New: Handle search and replace commands
 		case 'search-replace:find': {
 			const { query, caseSensitive } = payload;
 			clearSearchReplaceDecorations();

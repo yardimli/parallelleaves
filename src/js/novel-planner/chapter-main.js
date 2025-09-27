@@ -35,7 +35,7 @@ let activeEditor = null; // contentWindow of the currently focused iframe editor
 let searchResultHandler = null; // Callback for search results from iframes.
 let searchReplaceResultHandler = null;
 let lastFocusedSourceEditor = null;
-let analysisPromptDeclined = false; // MODIFICATION: Flag to prevent re-prompting for analysis in the same session.
+let analysisPromptDeclined = false;
 
 // --- State Accessors and Mutators ---
 const getActiveEditor = () => activeEditor;
@@ -48,10 +48,9 @@ const setActiveChapterId = (chapterId, callback) => {
 	}
 };
 
-// MODIFICATION: Create a debounced version of the analysis check to trigger after the user stops typing.
-const debouncedCheckForAnalysis = debounce((novelId) => {
+const triggerAnalysisCheckWithDebounce = debounce((novelId) => {
 	checkForUnanalyzedEdits(novelId, true);
-}, 10000); // 10-second delay
+}, 5000);
 
 const debouncedContentSave = debounce(async ({ chapterId, field, value }) => {
 	if (field === 'target_content') {
@@ -336,8 +335,6 @@ function initializeView (novelId, novelData, initialChapterId) {
 }
 
 /**
- * MODIFICATION START: Updated function to handle prompting the user for analysis.
- * Checks for unanalyzed edits and, if found, prompts the user to start the analysis.
  * @param {string} novelId - The ID of the current novel.
  * @param {boolean} [showPrompt=false] - Whether to show the confirmation modal.
  */
@@ -351,12 +348,11 @@ async function checkForUnanalyzedEdits(novelId, showPrompt = false) {
 				analyzeBtn.classList.remove('opacity-50');
 				analyzeBtn.classList.add('opacity-100', 'animate-pulse');
 				
-				// Show a confirmation modal if requested and if the user hasn't declined it this session.
-				if (showPrompt && !analysisPromptDeclined) {
+				if (showPrompt && !analysisPromptDeclined && document.hasFocus()) {
 					const userResponse = await showConfirmationModal(
 						t('editor.confirmAnalysisTitle'),
 						t('editor.confirmAnalysisMessage'),
-						{ showDecline: true } // Show the third button
+						{ showDecline: true }
 					);
 					
 					if (userResponse === true) {
@@ -377,7 +373,6 @@ async function checkForUnanalyzedEdits(novelId, showPrompt = false) {
 		console.error('Failed to check for unanalyzed edits:', error);
 	}
 }
-// MODIFICATION END
 
 // --- Main Initialization ---
 document.addEventListener('DOMContentLoaded', async () => {
@@ -436,7 +431,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 		await renderManuscript(novelData);
 		populateNavDropdown(novelData);
 		
-		// MODIFICATION: Perform an initial check for unanalyzed edits and prompt the user if any are found.
 		setTimeout(() => {
 			checkForUnanalyzedEdits(novelId, true);
 		}, 3000);
@@ -703,8 +697,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 						marker: payload.marker,
 						content: payload.content
 					}).catch(err => console.error('Failed to log target edit event:', err));
-					// MODIFICATION: After an edit is logged, trigger the debounced check for analysis.
-					debouncedCheckForAnalysis(novelId);
+					triggerAnalysisCheckWithDebounce(novelId);
 					break;
 				}
 				case 'resize': {

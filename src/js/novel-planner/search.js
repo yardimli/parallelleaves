@@ -220,7 +220,6 @@ export function setupSearch (chapterEditorViews, registerSearchResultHandler) {
 		}
 	});
 	
-	// New: Return an API for external control (e.g., from global shortcut handler).
 	return {
 		toggle: toggleSearchBar,
 		isHidden: () => searchBar.classList.contains('hidden')

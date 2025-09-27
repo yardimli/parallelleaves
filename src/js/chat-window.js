@@ -6,7 +6,6 @@ let chatHistories = [];
 let currentChat = null;
 
 const LOCAL_STORAGE_KEY_PREFIX = 'parallel-leaves-chats-';
-// New: Constants for shared AI settings
 const AI_SETTINGS_KEYS = {
 	MODEL: 'parallel-leaves-ai-model',
 	TEMPERATURE: 'parallel-leaves-ai-temperature'
@@ -17,7 +16,6 @@ const chatForm = document.getElementById('js-chat-form');
 const chatInput = document.getElementById('js-chat-input');
 const sendBtn = document.getElementById('js-send-btn');
 const modelSelect = document.getElementById('js-llm-model-select');
-// New: Temperature slider elements
 const tempSlider = document.getElementById('js-ai-temperature-slider');
 const tempValue = document.getElementById('js-ai-temperature-value');
 
@@ -373,7 +371,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 		return;
 	}
 	
-	// New: Setup AI settings controls
 	const lastTemp = localStorage.getItem(AI_SETTINGS_KEYS.TEMPERATURE) || '0.7';
 	tempSlider.value = lastTemp;
 	tempValue.textContent = parseFloat(lastTemp).toFixed(1);

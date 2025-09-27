@@ -18,7 +18,6 @@ const debounce = (func, delay) => {
 	};
 };
 
-// New: Constants for shared AI settings
 const AI_SETTINGS_KEYS = {
 	MODEL: 'parallel-leaves-ai-model',
 	TEMPERATURE: 'parallel-leaves-ai-temperature'
@@ -65,9 +64,6 @@ const debouncedSave = debounce(async () => {
 	}
 }, 1500);
 
-/**
- * NEW: Fetches the latest codex content and updates the editor without a full page reload.
- */
 async function reloadCodexContent() {
 	if (!editorView || !novelId) return;
 	
@@ -292,7 +288,6 @@ async function setupAutogenCodex(novelId) {
 			
 			const select = modalContent.querySelector('.js-llm-model-select');
 			
-			// New: Inject temperature slider after the model select's parent element
 			const sliderHtml = `
                 <div class="form-control mt-4">
                     <label class="label">
@@ -308,7 +303,6 @@ async function setupAutogenCodex(novelId) {
 				applyTranslationsTo(select.parentElement.nextElementSibling);
 			}
 			
-			// New: Setup temperature slider controls
 			const tempSlider = modalContent.querySelector('.js-ai-temperature-slider');
 			const tempValue = modalContent.querySelector('.js-ai-temperature-value');
 			if (tempSlider && tempValue) {
@@ -336,7 +330,6 @@ async function setupAutogenCodex(novelId) {
 					});
 					select.appendChild(optgroup);
 				});
-				// New: Set last used model and add listener
 				const lastModel = localStorage.getItem(AI_SETTINGS_KEYS.MODEL);
 				if (lastModel && select.querySelector(`option[value="${lastModel}"]`)) {
 					select.value = lastModel;
@@ -368,7 +361,6 @@ async function setupAutogenCodex(novelId) {
 			return;
 		}
 		
-		// New: Get temperature value
 		const temperatureSlider = form.querySelector('.js-ai-temperature-slider');
 		const temperature = temperatureSlider ? parseFloat(temperatureSlider.value) : 0.7;
 		
@@ -386,7 +378,6 @@ async function setupAutogenCodex(novelId) {
 			}, { once: true });
 		}
 		
-		// New: Pass temperature to the main process
 		window.api.startCodexAutogen({ novelId, model, temperature });
 	});
 	

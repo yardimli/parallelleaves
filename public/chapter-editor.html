@@ -116,15 +116,6 @@
 	</div>
 	<div class="divider divider-horizontal mx-0"></div>
 	<div class="flex items-center gap-1">
-		<button type="button" id="js-open-dictionary-btn" class="btn btn-ghost btn-sm btn-square" data-i18n-title="prompt.common.dictionary">
-			<i class="bi bi-book text-lg"></i>
-		</button>
-		<button type="button" id="js-open-codex-btn" class="btn btn-ghost btn-sm btn-square" data-i18n-title="editor.openCodex">
-			<i class="bi bi-journal-richtext text-lg"></i>
-		</button>
-	</div>
-	<div class="divider divider-horizontal mx-0"></div>
-	<div class="flex items-center gap-1">
 		<button type="button" class="js-toolbar-btn js-ai-action-btn btn btn-ghost btn-sm" data-action="rephrase"
 		        data-i18n-title="editor.rephrase" disabled data-i18n="editor.rephrase">Rephrase
 		</button>
@@ -134,18 +125,27 @@
 		<button type="button" id="js-open-chat-btn" class="btn btn-ghost btn-sm btn-square" data-i18n-title="editor.openChat">
 			<i class="bi bi-chat-dots text-lg"></i>
 		</button>
+	</div>
+	<div class="divider divider-horizontal mx-0"></div>
+	<div class="flex items-center gap-1">
 		<button type="button" id="js-search-btn" class="btn btn-ghost btn-sm btn-square" data-i18n-title="editor.search">
 			<i class="bi bi-search text-lg"></i>
 		</button>
-		<!-- New: Search and Replace Button -->
 		<button type="button" id="js-search-replace-btn" class="btn btn-ghost btn-sm btn-square" data-i18n-title="editor.searchReplace.title">
 			<i class="bi bi-search-heart text-lg"></i>
 		</button>
-		<!-- MODIFICATION START: Added transition classes for fade effect -->
+	</div>
+	<div class="divider divider-horizontal mx-0"></div>
+	<div class="flex items-center gap-1">
+		<button type="button" id="js-open-dictionary-btn" class="btn btn-ghost btn-sm btn-square" data-i18n-title="prompt.common.dictionary">
+			<i class="bi bi-book text-lg"></i>
+		</button>
+		<button type="button" id="js-open-codex-btn" class="btn btn-ghost btn-sm btn-square" data-i18n-title="editor.openCodex">
+			<i class="bi bi-journal-richtext text-lg"></i>
+		</button>
 		<button type="button" id="js-analyze-btn" class="btn btn-ghost btn-sm btn-square opacity-50 transition-opacity duration-500" data-i18n-title="editor.analyze">
 			<i class="bi bi-clipboard-data text-lg"></i>
 		</button>
-		<!-- MODIFICATION END -->
 	</div>
 	<div class="flex-grow"></div>
 	<button id="typography-settings-btn" class="btn btn-ghost btn-circle" data-i18n-title="common.typography">
@@ -286,7 +286,6 @@
 	</div>
 </div>
 
-<!-- New: Placeholder for dynamically loaded modals -->
 <div id="modal-placeholders"></div>
 
 <script src="../src/js/theme.js"></script>

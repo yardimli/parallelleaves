@@ -61,7 +61,6 @@ i[class^="bi-"], i[class*=" bi-"] {
     @apply bg-accent text-accent-content;
 }
 
-/* New: Styles for search and replace highlights */
 .search-replace-highlight {
     @apply bg-amber-400/30 text-amber-900 dark:text-amber-100 rounded px-0.5;
 }
@@ -70,7 +69,6 @@ i[class^="bi-"], i[class*=" bi-"] {
     @apply bg-amber-500 text-white dark:text-black;
 }
 
-/* New: Style for the active case-sensitive button */
 #js-search-replace-bar #js-case-sensitive-btn.active {
     @apply bg-primary/20 text-primary;
 }
