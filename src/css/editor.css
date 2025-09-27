@@ -88,27 +88,21 @@ i[class^="bi-"], i[class*=" bi-"] {
     @apply p-0 focus:ring-0;
 }
 
-.dark ::-webkit-scrollbar {
+::-webkit-scrollbar {
     -webkit-appearance: none;
     @apply w-3 h-3;
 }
 
-.dark ::-webkit-scrollbar-track {
+::-webkit-scrollbar-track {
     @apply bg-gray-800;
 }
 
-.dark ::-webkit-scrollbar-thumb {
+::-webkit-scrollbar-thumb {
     @apply bg-gray-600 rounded-full border-2 border-solid border-gray-800;
 }
 
-.dark ::-webkit-scrollbar-thumb:hover {
+::-webkit-scrollbar-thumb:hover {
     @apply bg-gray-500;
-}
-
-.dark .overflow-auto,
-.dark .overflow-y-auto {
-    scrollbar-width: thin;
-    scrollbar-color: theme('colors.gray.600') theme('colors.gray.800');
 }
 
 /* Styles for the Import Document page */
