@@ -4,23 +4,34 @@
 		<div>
 			<label for="translate-instructions" class="label"><span class="label-text text-lg font-semibold" data-i18n="prompt.translate.instructions">Instructions</span></label>
 			<textarea id="translate-instructions" name="instructions" class="textarea textarea-bordered w-full h-24 font-mono text-sm" data-i18n-placeholder="prompt.translate.instructionsPlaceholder"></textarea>
-			<p class="text-xs text-base-content/60 mt-1" data-i18n="prompt.translate.instructionsHelp">Provide any specific instructions for translating the text.</p>
+			<!-- Help text moved below -->
 		</div>
 		
-		<!-- Tense Selection -->
-		<div>
-			<label class="label"><span class="label-text text-lg font-semibold" data-i18n="prompt.common.tense">Tense</span></label>
-			<div class="btn-group w-full js-tense-group">
-				<button type="button" class="js-tense-btn btn flex-1 btn-active" data-tense="past" data-i18n="prompt.common.past">Past</button>
-				<button type="button" class="js-tense-btn btn flex-1" data-tense="present" data-i18n="prompt.common.present">Present</button>
+		<div class="flex items-end gap-4">
+			<!-- Tense Selection -->
+			<div class="flex-1">
+				<label class="label"><span class="label-text text-lg font-semibold" data-i18n="prompt.common.tense">Tense</span></label>
+				<div class="join w-full js-tense-group">
+					<button type="button" class="js-tense-btn btn join-item flex-1 btn-active" data-tense="past" data-i18n="prompt.common.past">Past</button>
+					<button type="button" class="js-tense-btn btn join-item flex-1" data-tense="present" data-i18n="prompt.common.present">Present</button>
+				</div>
+				<input type="hidden" name="tense" value="past">
 			</div>
-			<input type="hidden" name="tense" value="past">
+			
+			<!-- Previous Translation Pairs -->
+			<div class="flex-1">
+				<label for="translate-context-pairs" class="label pb-1">
+					<span class="label-text font-semibold" data-i18n="prompt.translate.prevPairs">Previous Translation Pairs</span>
+				</label>
+				<input type="number" id="translate-context-pairs" name="context_pairs" class="input input-bordered w-full" value="4" min="0" max="10">
+				<!-- Help text moved below -->
+			</div>
 		</div>
 		
 		<!-- Context Options -->
 		<div class="space-y-2">
 			<h3 class="text-lg font-semibold" data-i18n="prompt.translate.contextInfo">Contextual Information</h3>
-			<p class="text-xs text-base-content/60 mb-2" data-i18n="prompt.translate.contextHelp">Relevant contextual information (like glossary entries) can be sent to the AI for better translations.</p>
+			<!-- Help text moved below -->
 			
 			<div class="form-control">
 				<label class="label cursor-pointer justify-start gap-2 py-1">
@@ -34,17 +45,14 @@
 					<input type="checkbox" name="use_dictionary" class="js-use-dictionary-toggle checkbox checkbox-sm" checked />
 					<span class="label-text font-semibold" data-i18n="prompt.common.useDictionary">Use Custom Dictionary</span>
 				</label>
-				<button type="button" class="js-edit-dictionary-btn btn btn-ghost btn-sm mt-2 w-fit" data-i18n="prompt.common.editDictionary">Edit Dictionary</button>
 			</div>
-			
-			<div>
-				<label for="translate-context-pairs" class="label pb-1">
-					<span class="label-text font-semibold" data-i18n="prompt.translate.prevPairs">Previous Translation Pairs</span>
-				</label>
-				<input type="number" id="translate-context-pairs" name="context_pairs" class="input input-bordered w-full" value="4" min="0" max="10">
-				<p class="text-xs text-base-content/60 mt-1" data-i18n="prompt.translate.prevPairsHelp">Include N previous translation as context for the AI. (0 to disable)</p>
-			</div>
+		</div>
 		
+		<!-- Help Hints -->
+		<div class="text-xs text-base-content/60 pt-2 border-t border-base-300 space-y-1">
+			<p data-i18n="prompt.translate.instructionsHelp">Provide any specific instructions for translating the text.</p>
+			<p data-i18n="prompt.translate.prevPairsHelp">Include N previous translation as context for the AI. (0 to disable)</p>
+			<p data-i18n="prompt.translate.contextHelp">Relevant contextual information (like glossary entries) can be sent to the AI for better translations.</p>
 		</div>
 	</form>
 	

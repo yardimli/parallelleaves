@@ -1,6 +1,5 @@
 import { t, applyTranslationsTo } from '../i18n.js';
 import { htmlToPlainText } from '../../utils/html-processing.js';
-import { openDictionaryModal } from '../dictionary/dictionary-modal.js';
 
 // Add debounce utility
 const debounce = (func, delay) => {
@@ -234,11 +233,6 @@ export const init = async (container, context) => {
 		populateForm(container, context.initialState || defaultState, context.novelId);
 		
 		const form = container.querySelector('#translate-editor-form');
-		const editDictionaryBtn = container.querySelector('.js-edit-dictionary-btn');
-		
-		if (editDictionaryBtn) {
-			editDictionaryBtn.addEventListener('click', () => openDictionaryModal(context.novelId));
-		}
 		
 		const debouncedUpdatePreview = debounce(() => {
 			updatePreview(container, fullContext);

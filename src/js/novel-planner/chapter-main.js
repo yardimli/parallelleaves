@@ -14,14 +14,22 @@ import { handleOpenDictionaryWithSelection } from './dictionary-handler.js';
 import { createIframeEditorInterface } from './editor-interface.js';
 import { setupShortcuts } from './shortcuts.js';
 
+// MODIFICATION START: The debounce utility is updated to include a cancel method.
 const debounce = (func, delay) => {
 	let timeout;
-	return function (...args) {
+	const debounced = function (...args) {
 		const context = this;
 		clearTimeout(timeout);
 		timeout = setTimeout(() => func.apply(context, args), delay);
 	};
+	
+	debounced.cancel = () => {
+		clearTimeout(timeout);
+	};
+	
+	return debounced;
 };
+// MODIFICATION END
 
 // --- State Management ---
 let activeChapterId = null;
@@ -36,6 +44,7 @@ let searchResultHandler = null; // Callback for search results from iframes.
 let searchReplaceResultHandler = null;
 let lastFocusedSourceEditor = null;
 let analysisPromptDeclined = false;
+let targetEditCount = 0; // MODIFICATION: Counter for target edits.
 
 // --- State Accessors and Mutators ---
 const getActiveEditor = () => activeEditor;
@@ -344,9 +353,7 @@ async function checkForUnanalyzedEdits(novelId, showPrompt = false) {
 		const analyzeBtn = document.getElementById('js-analyze-btn');
 		if (analyzeBtn) {
 			if (hasUnanalyzed) {
-				// If there are unanalyzed edits, make the button fully visible and pulse.
-				analyzeBtn.classList.remove('opacity-50');
-				analyzeBtn.classList.add('opacity-100', 'animate-pulse');
+				analyzeBtn.classList.add('animate-pulse');
 				
 				if (showPrompt && !analysisPromptDeclined && document.hasFocus()) {
 					const userResponse = await showConfirmationModal(
@@ -364,9 +371,7 @@ async function checkForUnanalyzedEdits(novelId, showPrompt = false) {
 					}
 				}
 			} else {
-				// Otherwise, reset to the default faded state.
-				analyzeBtn.classList.add('opacity-50');
-				analyzeBtn.classList.remove('opacity-100', 'animate-pulse');
+				analyzeBtn.classList.remove('animate-pulse');
 			}
 		}
 	} catch (error) {
@@ -436,7 +441,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 		}, 3000);
 		
 		window.api.onAnalysisApplied(() => {
-			checkForUnanalyzedEdits(novelId);
+			checkForUnanalyzedEdits(novelId, false);
 		});
 		
 		setupTopToolbar({
@@ -490,7 +495,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 		
 		document.getElementById('js-open-codex-btn')?.addEventListener('click', () => window.api.openCodex(novelId));
 		document.getElementById('js-open-chat-btn')?.addEventListener('click', () => window.api.openChatWindow(novelId));
-		document.getElementById('js-analyze-btn')?.addEventListener('click', () => window.api.openAnalysisWindow(novelId));
+		// MODIFICATION START: Cancel any pending analysis check when the button is manually clicked.
+		document.getElementById('js-analyze-btn')?.addEventListener('click', () => {
+			triggerAnalysisCheckWithDebounce.cancel();
+			window.api.openAnalysisWindow(novelId);
+		});
+		// MODIFICATION END
 		
 		sourceContainer.addEventListener('scroll', () => debouncedSaveScroll(novelId, sourceContainer, targetContainer));
 		targetContainer.addEventListener('scroll', () => debouncedSaveScroll(novelId, sourceContainer, targetContainer));
@@ -689,6 +699,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 				case 'contentChanged':
 					debouncedContentSave(payload);
 					break;
+				// MODIFICATION START: The analysis check is now triggered after 3 edits.
 				case 'logTargetEdit': {
 					const novelId = document.body.dataset.novelId;
 					window.api.logTargetEditEvent({
@@ -697,9 +708,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 						marker: payload.marker,
 						content: payload.content
 					}).catch(err => console.error('Failed to log target edit event:', err));
-					triggerAnalysisCheckWithDebounce(novelId);
+					
+					targetEditCount++;
+					console.log(`Target edit count: ${targetEditCount}`);
+					if (targetEditCount >= 10) {
+						triggerAnalysisCheckWithDebounce(novelId);
+						targetEditCount = 0; // Reset counter after triggering
+					}
 					break;
 				}
+				// MODIFICATION END
 				case 'resize': {
 					const viewInfo = Array.from(chapterEditorViews.values()).find(v => v.contentWindow === sourceWindow);
 					if (viewInfo) {
@@ -789,6 +807,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 					break;
 			}
 		});
+		
+		// MODIFICATION START: Add window focus/blur listeners to manage the analysis check.
+		window.addEventListener('blur', () => {
+			triggerAnalysisCheckWithDebounce.cancel();
+		});
+		
+		window.addEventListener('focus', () => {
+			const novelId = document.body.dataset.novelId;
+			if (novelId) {
+				// Check for unanalyzed edits on focus, but don't show the prompt.
+				// This ensures the button state is up-to-date if analysis was run elsewhere.
+				checkForUnanalyzedEdits(novelId, false);
+			}
+		});
+		// MODIFICATION END
+		
 	} catch (error) {
 		console.error('Failed to load manuscript data:', error);
 		document.body.innerHTML = `<p class="p-8 text-error">${t('editor.errorLoadManuscript', { message: error.message })}</p>`;

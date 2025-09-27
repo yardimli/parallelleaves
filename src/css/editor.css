@@ -89,6 +89,7 @@ i[class^="bi-"], i[class*=" bi-"] {
 }
 
 .dark ::-webkit-scrollbar {
+    -webkit-appearance: none;
     @apply w-3 h-3;
 }
 
