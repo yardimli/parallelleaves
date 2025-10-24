@@ -7,7 +7,7 @@
 	 * It validates a user session token for protected actions, logs all interactions to a MySQL database,
 	 * and provides a verified, grouped list of available models.
 	 *
-	 * @version 1.8.1
+	 * @version 1.8.2
 	 * @author Ekim Emre Yardimli
 	 */
 
@@ -309,6 +309,26 @@
 		if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 			sendJsonError(405, 'Method Not Allowed. Please use POST for chat completions.');
 		}
+
+		// MODIFICATION START: Check prompt length
+		$promptLength = 0;
+		if (isset($payload['messages']) && is_array($payload['messages'])) {
+			foreach ($payload['messages'] as $message) {
+				if (isset($message['content'])) {
+					$promptLength += strlen($message['content']);
+				}
+			}
+		}
+
+		if ($promptLength > 100000) {
+			$errorResponse = ['error' => ['message' => 'The total length of the prompt is more than 100000 characters.']];
+			$errorResponseJson = json_encode($errorResponse);
+			logInteraction($db, $userId, $action, $payload, $errorResponseJson, 413); // 413 Payload Too Large
+			http_response_code(413);
+			echo $errorResponseJson;
+			exit;
+		}
+		// MODIFICATION END
 
 		if (isset($payload['stream'])) {
 			unset($payload['stream']);

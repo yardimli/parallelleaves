@@ -96,38 +96,19 @@ const updatePreview = async (container, context) => {
 	
 	if (!systemPreview || !userPreview || !aiPreview) return;
 	
-	let dictionaryContent = '';
+	let dictionaryContextualContent = '';
 	if (formData.useDictionary) {
-		dictionaryContent = await window.api.getDictionaryContentForAI(context.novelId, ''); //for now to return all without applying filter will test later if its better to filter for 'rephrasing'
+		// Now only fetches content from the dictionary.
+		dictionaryContextualContent = await window.api.getDictionaryContentForAI(context.novelId, '');
 	}
-	
-	let analysisContent = '';
-	const analysisKey = `analysis-results-${context.novelId}`;
-	const analysisDataRaw = localStorage.getItem(analysisKey);
-	if (analysisDataRaw) {
-		try {
-			const analysisData = JSON.parse(analysisDataRaw);
-			const formattedChanges = analysisData.flatMap(item =>
-				Object.entries(item.changes).map(([original, edited]) => `${original} = ${edited}`)
-			).join('\n');
-			
-			if (formattedChanges) {
-				analysisContent = `\n\n${formattedChanges}`;
-			}
-		} catch (e) {
-			console.error('Failed to parse analysis data for preview:', e);
-		}
-	}
-	
-	const combinedContextualContent = (dictionaryContent + analysisContent).trim();
-	
+
 	const previewContext = { ...context };
 	if (formData.useCodex) {
 		previewContext.codexContent = await window.api.codex.get(context.novelId);
 	}
 	
 	try {
-		const promptJson = buildPromptJson(formData, previewContext, combinedContextualContent);
+		const promptJson = buildPromptJson(formData, previewContext, dictionaryContextualContent);
 		systemPreview.textContent = promptJson.system;
 		userPreview.textContent = promptJson.user;
 		aiPreview.textContent = promptJson.ai || t('prompt.preview.empty');

@@ -464,36 +464,15 @@ async function handleModalApply() {
 		}
 	}
 	
-	let dictionaryContent = '';
+	// MODIFICATION START: Logic to read analysis content from localStorage has been removed.
+	// The dictionary is now the single source of truth for all contextual content.
+	let dictionaryContextualContent = '';
 	if (formDataObj.useDictionary) {
-		const dictionaryType = action === 'translate' ? 'translation' : 'rephrasing';
-		dictionaryContent = await window.api.getDictionaryContentForAI(novelId, ''); //for now to return all without applying filter
+		dictionaryContextualContent = await window.api.getDictionaryContentForAI(novelId, '');
 	}
+	// MODIFICATION END
 	
-	let analysisContent = '';
-	const analysisKey = `analysis-results-${novelId}`;
-	const analysisDataRaw = localStorage.getItem(analysisKey);
-	if (analysisDataRaw) {
-		try {
-			const analysisData = JSON.parse(analysisDataRaw);
-			// Flatten all changes from all markers into a single list.
-			const formattedChanges = analysisData.flatMap(item =>
-				Object.entries(item.changes).map(([original, edited]) => `${original} = ${edited}`)
-			).join('\n');
-			
-			if (formattedChanges) {
-				// Add a header to distinguish these suggestions in the prompt.
-				analysisContent = `\n\n${formattedChanges}`;
-			}
-		} catch (e) {
-			console.error('Failed to parse analysis data:', e);
-		}
-	}
-	
-	// Combine both sources into a single string.
-	const combinedContextualContent = (dictionaryContent + analysisContent).trim();
-	
-	const prompt = builder(formDataObj, promptContext, combinedContextualContent);
+	const prompt = builder(formDataObj, promptContext, dictionaryContextualContent);
 	
 	let openingMarker = '';
 	let closingMarker = '';

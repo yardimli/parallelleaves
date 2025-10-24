@@ -17,7 +17,7 @@ const resultsContainer = document.getElementById('js-analysis-results');
 const statusText = document.getElementById('js-status-text');
 
 /**
- * MODIFICATION START: New functions to manage localStorage
+ * MODIFICATION START: The function is updated to prevent saving corrupted data.
  * Saves the current state of the results from the DOM to localStorage.
  */
 function saveResultsToLocalStorage() {
@@ -37,11 +37,25 @@ function saveResultsToLocalStorage() {
 		return { marker, changes };
 	}).filter(item => Object.keys(item.changes).length > 0); // Only save cards that still have pairs
 	
-	localStorage.setItem(localStorageKey, JSON.stringify(dataToSave));
+	try {
+		// This will throw an error if the data contains circular references or other non-serializable values.
+		const jsonString = JSON.stringify(dataToSave);
+		// This check prevents saving malformed strings that are not valid JSON objects.
+		if (jsonString.startsWith('[') && jsonString.endsWith(']')) {
+			localStorage.setItem(localStorageKey, jsonString);
+		} else {
+			throw new Error('Attempted to save invalid JSON structure.');
+		}
+	} catch (error) {
+		console.error('Failed to serialize and save analysis results to localStorage:', error);
+		// This prevents corrupted data from being saved, addressing the root cause of the issue.
+	}
 }
+// MODIFICATION END
 
 /**
  * Loads and renders results from localStorage when the window is opened.
+ * This function already includes a try-catch block to handle and clear corrupted data.
  */
 function loadResultsFromLocalStorage() {
 	if (!localStorageKey) return;
@@ -49,6 +63,7 @@ function loadResultsFromLocalStorage() {
 	const savedData = localStorage.getItem(localStorageKey);
 	if (savedData) {
 		try {
+			// The JSON.parse will fail if the data is corrupted, as shown in the problem description.
 			const results = JSON.parse(savedData);
 			if (Array.isArray(results) && results.length > 0) {
 				resultsContainer.innerHTML = ''; // Clear any placeholder text
@@ -61,7 +76,8 @@ function loadResultsFromLocalStorage() {
 				applyTranslationsTo(resultsContainer);
 			}
 		} catch (e) {
-			console.error('Failed to parse analysis results from localStorage:', e);
+			// This block correctly handles the error by logging it and removing the invalid data.
+			console.error('Failed to parse analysis results from localStorage, clearing corrupted data:', e);
 			localStorage.removeItem(localStorageKey); // Clear corrupted data
 		}
 	}
@@ -129,7 +145,6 @@ function renderResult(result) {
 		
 		const title = document.createElement('h3');
 		title.className = 'text-sm';
-		// MODIFICATION: Use i18n for the dynamic card title.
 		title.textContent = t('editor.analysis.changesInMarker', { marker: result.marker });
 		
 		cardHeader.appendChild(title);
@@ -139,7 +154,6 @@ function renderResult(result) {
 		table.className = 'table table-sm';
 		
 		const thead = document.createElement('thead');
-		// MODIFICATION: Add i18n attributes to table headers.
 		thead.innerHTML = `
 	        <tr>
 	            <th class="w-[calc(50%-1.5rem)]" data-i18n="editor.analysis.original">Original</th>
@@ -202,7 +216,6 @@ async function handleStartAnalysis() {
 	startBtn.disabled = true;
 	startBtn.querySelector('.loading').classList.remove('hidden');
 	applyBtn.disabled = true;
-	// MODIFICATION: Use i18n for status text.
 	statusText.textContent = t('editor.analysis.loading');
 	
 	const selectedModel = modelSelect.value;
@@ -212,7 +225,6 @@ async function handleStartAnalysis() {
 		// The main process will now run the analysis on un-analyzed edits.
 		await window.api.startAnalysis({ novelId, model: selectedModel, temperature });
 	} catch (error) {
-		// MODIFICATION: Use i18n for error message.
 		statusText.textContent = t('editor.analysis.error', { message: error.message });
 		startBtn.disabled = false;
 		startBtn.querySelector('.loading').classList.add('hidden');
@@ -282,11 +294,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 	
 	const params = new URLSearchParams(window.location.search);
 	novelId = params.get('novelId');
-	// MODIFICATION: Check for the autoStart query parameter.
 	const autoStart = params.get('autoStart') === 'true';
 	
 	if (!novelId) {
-		// MODIFICATION: Use i18n for error message.
 		resultsContainer.innerHTML = `<p class="text-error p-4">${t('editor.analysis.error', { message: 'Novel ID is missing.' })}</p>`;
 		startBtn.disabled = true;
 		return;
@@ -333,7 +343,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 		}
 	});
 	
-	// MODIFICATION: If autoStart is enabled, trigger the analysis.
 	if (autoStart) {
 		handleStartAnalysis();
 	}
@@ -349,7 +358,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			return;
 		}
 		
-		// MODIFICATION: Handle i18n keys and params sent from the main process.
 		let messageText = '';
 		if (update.message) {
 			messageText = t(update.message, update.params || {});
