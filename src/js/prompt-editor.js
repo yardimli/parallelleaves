@@ -228,7 +228,8 @@ function createFloatingToolbar(from, to, model) {
 }
 
 async function startAiAction(params) {
-	const { prompt, model, temperature, openingMarker, closingMarker, contextualContent } = params;
+	// MODIFICATION: Removed `contextualContent` as it's now part of the `prompt` object itself.
+	const { prompt, model, temperature, openingMarker, closingMarker } = params;
 	
 	isAiActionActive = true;
 	if (currentEditorInterface.type === 'iframe') {
@@ -238,7 +239,8 @@ async function startAiAction(params) {
 	showAiSpinner();
 	
 	try {
-		const result = await window.api.processLLMText({ prompt, model, temperature, contextualContent });
+		// MODIFICATION: No longer passing `contextualContent` separately.
+		const result = await window.api.processLLMText({ prompt, model, temperature });
 		hideAiSpinner();
 		
 		if (result.success && result.data.choices && result.data.choices.length > 0) {
@@ -551,15 +553,17 @@ async function handleModalApply() {
 		}
 	}
 	
-	currentAiParams = { prompt, model, temperature, action, context: promptContext, formData: formDataObj, contextualContent: combinedContextualContent };
+	// MODIFICATION: `contextualContent` is no longer stored separately in `currentAiParams`
+	// because it's already been built into the `prompt` object.
+	currentAiParams = { prompt, model, temperature, action, context: promptContext, formData: formDataObj };
 	
 	startAiAction({
 		prompt: currentAiParams.prompt,
 		model: currentAiParams.model,
 		temperature: currentAiParams.temperature,
 		openingMarker,
-		closingMarker,
-		contextualContent: combinedContextualContent // Pass the combined content here
+		closingMarker
+		// MODIFICATION: No longer passing `contextualContent` here.
 	});
 }
 

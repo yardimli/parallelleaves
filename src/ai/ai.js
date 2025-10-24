@@ -189,12 +189,11 @@ ${textChunk}
  * @param {object} params.prompt - An object with 'system', 'user', and 'ai' properties for the prompt.
  * @param {string} params.model - The LLM model to use.
  * @param {string|null} params.token - The user's session token.
- * @param {string} [params.contextualContent=''] - MODIFICATION: Renamed from dictionaryContent to reflect its new purpose.
  * @param {number} [params.temperature=0.7] - The temperature for the AI model.
  * @param {object|null} [params.response_format=null] - Optional response format object (e.g., { type: 'json_object' }).
  * @returns {Promise<object>} The AI response object.
  */
-async function processLLMText({ prompt, model, token, contextualContent = '', temperature = 0.7, response_format = null }) {
+async function processLLMText({ prompt, model, token, temperature = 0.7, response_format = null }) { // MODIFICATION: Removed contextualContent
 	const messages = [];
 	if (prompt.system) {
 		messages.push({ role: 'system', content: prompt.system });
@@ -203,15 +202,13 @@ async function processLLMText({ prompt, model, token, contextualContent = '', te
 		messages.push(...prompt.context_pairs);
 	}
 	
-	let userContent = prompt.user;
-	if (contextualContent) {
-		const dictionaryBlock = `Take into account the following custom dictionary:\n<dictionary>\n${contextualContent}\n</dictionary>`;
-		userContent = `${dictionaryBlock}\n\n${userContent}`;
+	// MODIFICATION START: The logic for adding contextualContent has been removed.
+	// The prompt builders are now solely responsible for constructing the final user prompt.
+	if (prompt.user) {
+		messages.push({ role: 'user', content: prompt.user });
 	}
+	// MODIFICATION END
 	
-	if (userContent) {
-		messages.push({ role: 'user', content: userContent });
-	}
 	if (prompt.ai) {
 		messages.push({ role: 'assistant', content: prompt.ai });
 	}

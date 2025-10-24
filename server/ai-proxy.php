@@ -466,6 +466,6 @@
 		}
 		exit;
 		// MODIFICATION END
-	} else { // Modified: Updated error message
+	} else { // MODIFICATION: Updated error message
 		sendJsonError(400, 'Invalid action specified. Supported actions are "chat", "get_models", "generate_cover", "log_translation", "log_target_edit", and "mark_edits_analyzed".');
 	}
