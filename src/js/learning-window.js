@@ -25,6 +25,7 @@ const debounce = (func, delay) => {
 
 let novelId = null;
 let lastProcessedMarker = 0; // Keep track of the last marker we processed
+let isLearningRunning = false; // MODIFICATION: Added state to track if the process is running.
 
 const AI_SETTINGS_KEYS = {
 	MODEL: 'parallel-leaves-ai-model',
@@ -35,6 +36,7 @@ const modelSelect = document.getElementById('js-llm-model-select');
 const tempSlider = document.getElementById('js-ai-temperature-slider');
 const tempValue = document.getElementById('js-ai-temperature-value');
 const startBtn = document.getElementById('js-start-learning-btn');
+const stopBtn = document.getElementById('js-stop-learning-btn'); // MODIFICATION: Get the new stop button.
 const editor = document.getElementById('js-learning-results-editor');
 const statusText = document.getElementById('js-status-text');
 
@@ -82,29 +84,65 @@ function getLastMarkerFromEditor() {
 	return Math.max(...numbers);
 }
 
-async function findNextPair() {
+// MODIFICATION START: Renamed and refactored to handle the continuous process.
+/**
+ * Starts the learning process loop.
+ */
+async function startLearningProcess() {
+	if (isLearningRunning) return; // Prevent multiple starts.
+	
+	isLearningRunning = true;
+	
+	// Update UI to reflect running state.
 	startBtn.disabled = true;
 	startBtn.querySelector('.loading').classList.remove('hidden');
+	stopBtn.classList.remove('hidden');
 	statusText.textContent = t('editor.learning.loading');
+	
+	// Get the last marker from the editor to know where to start.
+	lastProcessedMarker = getLastMarkerFromEditor();
+	
+	// Kick off the first call. The loop is continued by the 'onLearningUpdate' handler.
+	await sendLearningRequest();
+}
+
+/**
+ * Stops the learning process.
+ */
+function stopLearningProcess() {
+	isLearningRunning = false;
+	
+	// Reset UI to the default state.
+	startBtn.disabled = false;
+	startBtn.querySelector('.loading').classList.add('hidden');
+	stopBtn.classList.add('hidden');
+	statusText.textContent = ''; // Clear status text.
+}
+
+/**
+ * Sends a single request to the main process to find and analyze the next pair.
+ */
+async function sendLearningRequest() {
+	if (!isLearningRunning) return; // Stop if the process was cancelled.
 	
 	const selectedModel = modelSelect.value;
 	const temperature = parseFloat(tempSlider.value);
 	
-	lastProcessedMarker = getLastMarkerFromEditor();
-	
 	try {
+		// The main process will find the next pair after `lastProcessedMarker`.
 		await window.api.startLearning({
 			novelId,
 			model: selectedModel,
 			temperature,
-			lastMarkerNumber: lastProcessedMarker
+			lastMarkerNumber: lastProcessedMarker,
+			lang: localStorage.getItem('app_lang') || 'en' // MODIFICATION: Pass current language.
 		});
 	} catch (error) {
 		statusText.textContent = t('editor.learning.error', { message: error.message });
-		startBtn.disabled = false;
-		startBtn.querySelector('.loading').classList.add('hidden');
+		stopLearningProcess(); // Stop the process on error.
 	}
 }
+// MODIFICATION END
 
 // MODIFICATION START: This function now handles the core save logic without UI updates.
 /**
@@ -184,14 +222,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 	});
 	// MODIFICATION END
 	
-	startBtn.addEventListener('click', findNextPair);
+	// MODIFICATION: Changed the event listener to call the new start function.
+	startBtn.addEventListener('click', startLearningProcess);
+	// MODIFICATION: Added event listener for the stop button.
+	stopBtn.addEventListener('click', stopLearningProcess);
 	
 	window.api.onLearningUpdate((update) => {
 		if (!update || typeof update.type === 'undefined') {
 			console.error('Received invalid update from main process:', update);
 			statusText.textContent = t('editor.learning.error', { message: 'Received an invalid learning update.' });
-			startBtn.disabled = false;
-			startBtn.querySelector('.loading').classList.add('hidden');
+			stopLearningProcess(); // Stop on invalid update.
 			return;
 		}
 		
@@ -202,24 +242,25 @@ document.addEventListener('DOMContentLoaded', async () => {
 		
 		switch (update.type) {
 			case 'new_instructions':
-				statusText.textContent = '';
+				// Update editor with new content.
 				editor.value += update.data.formattedBlock;
 				editor.scrollTop = editor.scrollHeight;
-				lastProcessedMarker = update.data.marker;
-				startBtn.disabled = false;
-				startBtn.querySelector('.loading').classList.add('hidden');
-				// MODIFICATION: Trigger an immediate save after new content is added.
-				saveInstructions();
+				lastProcessedMarker = update.data.marker; // Update our progress tracker.
+				saveInstructions(); // Trigger an immediate save.
+				
+				// MODIFICATION: Continue the loop by sending the next request.
+				if (isLearningRunning) {
+					statusText.textContent = t('editor.learning.loading');
+					sendLearningRequest(); // This continues the process.
+				}
 				break;
 			case 'finished':
 				statusText.textContent = messageText;
-				startBtn.disabled = true;
-				startBtn.querySelector('.loading').classList.add('hidden');
+				stopLearningProcess(); // The process is finished, so stop and reset UI.
 				break;
 			case 'error':
 				statusText.textContent = messageText;
-				startBtn.disabled = false;
-				startBtn.querySelector('.loading').classList.add('hidden');
+				stopLearningProcess(); // Stop the process on error.
 				break;
 		}
 	});

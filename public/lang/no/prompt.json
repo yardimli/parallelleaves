@@ -71,5 +71,13 @@
   "errorNoActiveEditor": "Ingen aktivt redigeringsprogram å bruke endringer på.",
   "errorNoSelection": "Kunne ikke hente utvalg fra redigeringsprogrammet. For omformulering, vennligst velg litt tekst.",
   "errorFetchContext": "Kunne ikke hente forrige oversettelsesblokker for kontekst. {message}",
-  "errorNoInterface": "Kan ikke åpne AI-redigeringsprogram: Redigeringsgrensesnitt er ikke tilgjengelig."
+  "errorNoInterface": "Kan ikke åpne AI-redigeringsprogram: Redigeringsgrensesnitt er ikke tilgjengelig.",
+  "learning": {
+    "system": {
+      "base": "You are a literary translation analyst. Your task is to analyze a pair of texts—an original and its translation—and generate concise, actionable translation pairs for an AI translator to imitate the style of the human translator.\n- Each instruction MUST be a pair of lines.\n- The first line is the source text, starting with <{sourceLanguage}> and ending with </{sourceLanguage}>.\n- The second line is the target text, starting with <{targetLanguage}> and ending with </{targetLanguage}>.\n- Do NOT add any extra text, explanations, or formatting."
+    },
+    "user": {
+      "base": "Analyze the following pair and generate exactly two (2) translation pairs that best reflect the translator's style.\n\nSource ({sourceLanguage}):\n{sourceText}\n\nTranslation ({targetLanguage}):\n{targetText}"
+    }
+  }
 }

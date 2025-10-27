@@ -120,6 +120,7 @@
     "windowTitle": "Parallel Leaves - Öğrenme Oturumu",
     "start": "Öğrenmeye Başla",
     "next": "Sıradaki Çifti Bul",
+    "stop": "Durdur",
     "loading": "Sıradaki çift bulunuyor ve analiz ediliyor...",
     "noMorePairs": "Bu romanda başka çeviri çifti bulunamadı.",
     "resultsTitle": "Önerilen Talimatlar",

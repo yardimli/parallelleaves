@@ -120,6 +120,7 @@
     "windowTitle": "Parallel Leaves - Learning Session",
     "start": "Start Learning",
     "next": "Find Next Pair",
+    "stop": "Stop",
     "loading": "Finding next pair and analyzing...",
     "noMorePairs": "No more translation pairs found in this novel.",
     "resultsTitle": "Suggested Instructions",

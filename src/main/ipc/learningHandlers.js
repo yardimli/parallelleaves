@@ -1,6 +1,84 @@
 const { ipcMain } = require('electron');
 const aiService = require('../../ai/ai.js');
 const { htmlToPlainText } = require('../utils.js');
+const path = require('path'); // MODIFICATION: Added for path handling.
+const fs = require('fs'); // MODIFICATION: Added for file system access.
+
+// MODIFICATION START: Main-process i18n utility.
+const translationsCache = new Map();
+
+/**
+ * Loads and merges all .json files from a language directory.
+ * @param {string} lang - The language code (e.g., 'en').
+ * @returns {object} The merged translation object.
+ */
+function loadLanguage(lang) {
+	if (translationsCache.has(lang)) {
+		return translationsCache.get(lang);
+	}
+	
+	const langDir = path.join(__dirname, '..', '..', '..', 'public', 'lang', lang);
+	const mergedTranslations = {};
+	
+	try {
+		if (!fs.existsSync(langDir) || !fs.lstatSync(langDir).isDirectory()) {
+			throw new Error(`Language directory not found: ${lang}`);
+		}
+		
+		const files = fs.readdirSync(langDir).filter(file => file.endsWith('.json'));
+		
+		for (const file of files) {
+			const filePath = path.join(langDir, file);
+			const fileContent = fs.readFileSync(filePath, 'utf8');
+			const jsonData = JSON.parse(fileContent);
+			const key = path.basename(file, '.json');
+			mergedTranslations[key] = jsonData;
+		}
+		
+		translationsCache.set(lang, mergedTranslations);
+		return mergedTranslations;
+	} catch (error) {
+		console.error(`Failed to load language files for '${lang}':`, error);
+		translationsCache.set(lang, {}); // Cache empty object on failure to avoid retries.
+		return {};
+	}
+}
+
+/**
+ * Gets a nested property from an object using a dot-notation string.
+ * @param {object} obj - The object to search.
+ * @param {string} path - The dot-notation path (e.g., 'common.save').
+ * @returns {*} The value if found, otherwise undefined.
+ */
+function getNested(obj, path) {
+	return path.split('.').reduce((acc, part) => acc && acc[part], obj);
+}
+
+/**
+ * A simple translation function for the main process.
+ * @param {string} lang - The target language.
+ * @param {string} key - The translation key.
+ * @param {object} [substitutions={}] - An object of substitutions for placeholders.
+ * @returns {string} The translated string.
+ */
+function t_main(lang, key, substitutions = {}) {
+	const translations = loadLanguage(lang);
+	const enTranslations = loadLanguage('en'); // Always load English as a fallback.
+	
+	let result = getNested(translations, key) ?? getNested(enTranslations, key);
+	
+	if (result === undefined) {
+		return key; // Return the key if no translation is found.
+	}
+	
+	if (typeof result === 'string') {
+		for (const [subKey, subValue] of Object.entries(substitutions)) {
+			result = result.replaceAll(`{${subKey}}`, subValue);
+		}
+	}
+	
+	return result;
+}
 
 /**
  * Extracts translation pairs from source and target HTML based on markers.
@@ -67,7 +145,7 @@ const extractAllMarkerPairs = (sourceHtml, targetHtml) => {
 			});
 		}
 	}
-	console.log(pairs);
+
 	// Sort by marker number to ensure chronological order
 	return pairs.sort((a, b) => a.marker - b.marker);
 };
@@ -125,7 +203,8 @@ function validateAndFilterLLMResponse(responseText, sourceLang, targetLang) {
  * @param {object} sessionManager - The session manager instance.
  */
 function registerLearningHandlers(db, sessionManager) {
-	ipcMain.handle('learning:start', async (event, { novelId, model, temperature, lastMarkerNumber }) => {
+	// MODIFICATION: The handler now accepts `lang` from the renderer.
+	ipcMain.handle('learning:start', async (event, { novelId, model, temperature, lastMarkerNumber, lang = 'en' }) => {
 		const learningWindow = event.sender.getOwnerBrowserWindow();
 		
 		try {
@@ -153,22 +232,25 @@ function registerLearningHandlers(db, sessionManager) {
 				return { success: true, message: 'No more pairs.' };
 			}
 			
-			// 5. Construct the prompt
+			// 5. Construct the prompt using the new i18n utility.
+			// MODIFICATION START: Replaced hardcoded prompts with dynamic, translated ones.
+			const systemPrompt = t_main(lang, 'prompt.learning.system.base', {
+				sourceLanguage: novel.source_language,
+				targetLanguage: novel.target_language
+			});
+			
+			const userPrompt = t_main(lang, 'prompt.learning.user.base', {
+				sourceLanguage: novel.source_language,
+				targetLanguage: novel.target_language,
+				sourceText: nextPair.source,
+				targetText: nextPair.target
+			});
+			
 			const prompt = {
-				system: `You are a literary translation analyst. Your task is to analyze a pair of texts—an original and its translation—and generate concise, actionable translation pairs for an AI translator to imitate the style of the human translator.
-- Each instruction MUST be a pair of lines.
-- The first line is the source text, starting with <${novel.source_language}> and ending with </${novel.source_language}>.
-- The second line is the target text, starting with <${novel.target_language}> and ending with </${novel.target_language}>.
-- Do NOT add any extra text, explanations, or formatting.`,
-				user: `Analyze the following pair and generate exactly two (2) translation pairs that best reflect the translator's style.
-
-Source (${novel.source_language}):
-${nextPair.source}
-
-Translation (${novel.target_language}):
-${nextPair.target}
-`
+				system: systemPrompt,
+				user: userPrompt
 			};
+			// MODIFICATION END
 			
 			// 6. Call the LLM
 			const result = await aiService.processLLMText({

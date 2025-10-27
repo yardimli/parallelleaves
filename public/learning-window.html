@@ -32,11 +32,16 @@
 <!-- Action Bar -->
 <div class="flex-shrink-0 p-4 border-t border-base-300 bg-base-200 flex items-center gap-2">
 	<div id="js-status-text" class="text-sm text-base-content/70 flex-grow"></div>
-	<!-- MODIFICATION: Removed the save button -->
+	<!-- MODIFICATION START: Added a Stop button and adjusted the Find Next Pair button -->
 	<button id="js-start-learning-btn" class="btn btn-primary">
-		<span class="loading loading-spinner hidden"></span>  
+		<span class="loading loading-spinner hidden"></span>
 		<span data-i18n="editor.learning.next">Find Next Pair</span>
 	</button>
+	<button id="js-stop-learning-btn" class="btn btn-error hidden">
+		<i class="bi bi-stop-circle"></i>
+		<span data-i18n="editor.learning.stop">Stop</span>
+	</button>
+	<!-- MODIFICATION END -->
 </div>
 
 <script src="../src/js/theme.js"></script>

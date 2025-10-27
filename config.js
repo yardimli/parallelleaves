@@ -11,7 +11,7 @@ module.exports = {
 	 * Used by the splash screen to check for updates.
 	 * @type {string}
 	 */
-	APP_VERSION: '0.1.6',
+	APP_VERSION: '0.1.7',
 	
 	/**
 	 * URL for the server-side version check script (version-check.php).

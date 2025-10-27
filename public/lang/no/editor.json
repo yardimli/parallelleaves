@@ -120,6 +120,7 @@
     "windowTitle": "Parallel Leaves - Læringsøkt",
     "start": "Start læring",
     "next": "Finn neste par",
+    "stop": "Stopp",
     "loading": "Finner neste par og analyserer...",
     "noMorePairs": "Ingen flere oversettelsespar funnet i denne romanen.",
     "resultsTitle": "Foreslåtte instruksjoner",
