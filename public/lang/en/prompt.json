@@ -44,9 +44,11 @@
     "prevPairs": "Previous Translation Pairs",
     "prevPairsHelp": "Include N previous translation blocks as context for the AI. (0 to disable)",
     "system": {
-      "base": "You are an expert literary translator. Your task is to translate a text from {sourceLanguage} to {targetLanguage}.\n{tenseBlock}\nPreserve the original tone, style, and literary devices as much as possible. Maintain the original paragraph breaks.\n\n{instructionsBlock}\n\nOnly return the translated text, nothing else.",
+      "base": "You are an expert literary translator. Your task is to translate a text from {sourceLanguage} to {targetLanguage}.\n{tenseBlock}\nPreserve the original tone, style, and literary devices as much as possible. Maintain the original paragraph breaks.\n\n{instructionsBlock}\n{dictionaryBlock}\n{examplesBlock}\n\nOnly return the translated text, nothing else.",
       "instructionsBlock": "Follow these specific instructions: <instructions>{instructions}</instructions>",
-      "tenseInstruction": "Translate in the {tense} tense. "
+      "tenseInstruction": "Translate in the {tense} tense. ",
+      "dictionaryBlock": "Use the following custom dictionary for consistent translation:\n<dictionary>\n{dictionaryContent}\n</dictionary>",
+      "examplesBlock": "Use the following translation examples to guide the translation:\n<examples>\n{translationExamples}\n</examples>"
     },
     "user": {
       "codexBlock": "Use the following glossary for consistent translation.\n<glossary>\n{codexContent}\n</glossary>",

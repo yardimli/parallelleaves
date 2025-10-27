@@ -61,11 +61,23 @@ export const buildPromptJson = (formData, context, contextualContent = '', learn
 	
 	const tenseBlock = t('prompt.translate.system.tenseInstruction', { tense: formData.tense });
 	
+	// MODIFICATION START: Create blocks for dictionary and examples to be inserted into the system prompt.
+	const dictionaryBlock = contextualContent
+		? t('prompt.translate.system.dictionaryBlock', { dictionaryContent: contextualContent })
+		: '';
+	
+	const examplesBlock = learningContent
+		? t('prompt.translate.system.examplesBlock', { translationExamples: learningContent })
+		: '';
+	// MODIFICATION END
+	
 	const system = t('prompt.translate.system.base', {
 		sourceLanguage: languageForPrompt,
 		targetLanguage: targetLanguage,
 		tenseBlock: tenseBlock,
-		instructionsBlock: instructionsBlock
+		instructionsBlock: instructionsBlock,
+		dictionaryBlock: dictionaryBlock, // MODIFICATION: Pass the dictionary block to the system prompt.
+		examplesBlock: examplesBlock      // MODIFICATION: Pass the examples block to the system prompt.
 	}).trim();
 	
 	let codexBlock = '';
@@ -78,22 +90,8 @@ export const buildPromptJson = (formData, context, contextualContent = '', learn
 	
 	const contextMessages = buildTranslationContextBlock(translationPairs, languageForPrompt, targetLanguage);
 	
-	// MODIFICATION START: Create a block for translation examples from the learning content
-	let translationExamplesBlock = '';
-	if (learningContent) {
-		translationExamplesBlock = t('prompt.translate.user.translationExamples', { translationExamples: learningContent });
-	}
-	// MODIFICATION END
-	
 	const finalUserPromptParts = [];
-	if (contextualContent) {
-		finalUserPromptParts.push(t('prompt.common.user.dictionaryBlock', { dictionaryContent: contextualContent }));
-	}
-	// MODIFICATION START: Add the translation examples block to the prompt
-	if (translationExamplesBlock) {
-		finalUserPromptParts.push(translationExamplesBlock);
-	}
-	// MODIFICATION END
+	// MODIFICATION: Removed dictionary and example blocks from the user prompt parts.
 	finalUserPromptParts.push(codexBlock);
 	finalUserPromptParts.push(t('prompt.translate.user.textToTranslate', {
 		sourceLanguage: languageForPrompt,
