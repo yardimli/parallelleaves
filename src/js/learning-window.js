@@ -1,6 +1,5 @@
 import { initI18n, t, applyTranslationsTo } from './i18n.js';
 
-// MODIFICATION START: Added a debounce utility for auto-saving.
 /**
  * Creates a debounced function that delays invoking func until after wait milliseconds have elapsed
  * since the last time the debounced function was invoked.
@@ -21,11 +20,10 @@ const debounce = (func, delay) => {
 	};
 	return debounced;
 };
-// MODIFICATION END
 
 let novelId = null;
-let lastProcessedMarker = 0; // Keep track of the last marker we processed
-let isLearningRunning = false; // MODIFICATION: Added state to track if the process is running.
+// MODIFICATION: Removed lastProcessedMarker as the logic now scans the editor content directly.
+let isLearningRunning = false;
 
 const AI_SETTINGS_KEYS = {
 	MODEL: 'parallel-leaves-ai-model',
@@ -36,7 +34,7 @@ const modelSelect = document.getElementById('js-llm-model-select');
 const tempSlider = document.getElementById('js-ai-temperature-slider');
 const tempValue = document.getElementById('js-ai-temperature-value');
 const startBtn = document.getElementById('js-start-learning-btn');
-const stopBtn = document.getElementById('js-stop-learning-btn'); // MODIFICATION: Get the new stop button.
+const stopBtn = document.getElementById('js-stop-learning-btn');
 const editor = document.getElementById('js-learning-results-editor');
 const statusText = document.getElementById('js-status-text');
 
@@ -73,36 +71,50 @@ async function populateModels() {
 }
 
 /**
- * Finds the last marker number from the editor's content.
- * @returns {number} The highest marker number found, or 0.
+ * MODIFICATION: New function to scan the editor for already processed markers for the current novel.
+ * Scans the editor's content to find all processed markers for the current novel.
+ * @returns {number[]} An array of marker numbers that have already been processed.
  */
-function getLastMarkerFromEditor() {
-	if (!editor.value) return 0;
-	const matches = editor.value.match(/#(\d+)/g);
-	if (!matches) return 0;
-	const numbers = matches.map(m => parseInt(m.substring(1), 10));
-	return Math.max(...numbers);
+function getProcessedMarkers() {
+	if (!editor.value || !novelId) {
+		return [];
+	}
+	
+	const processedMarkers = [];
+	// Regex to find markers in the format #{novelId}-{markerNumber}
+	const markerRegex = /#(\d+)-(\d+)/g;
+	let match;
+	
+	while ((match = markerRegex.exec(editor.value)) !== null) {
+		const foundNovelId = parseInt(match[1], 10);
+		const markerNumber = parseInt(match[2], 10);
+		
+		// Only add the marker if it belongs to the currently active novel.
+		if (foundNovelId === parseInt(novelId, 10)) {
+			processedMarkers.push(markerNumber);
+		}
+	}
+	
+	return processedMarkers;
 }
 
-// MODIFICATION START: Renamed and refactored to handle the continuous process.
 /**
  * Starts the learning process loop.
  */
 async function startLearningProcess() {
-	if (isLearningRunning) return; // Prevent multiple starts.
+	if (isLearningRunning) {
+		return;
+	}
 	
 	isLearningRunning = true;
 	
-	// Update UI to reflect running state.
 	startBtn.disabled = true;
 	startBtn.querySelector('.loading').classList.remove('hidden');
 	stopBtn.classList.remove('hidden');
 	statusText.textContent = t('editor.learning.loading');
 	
-	// Get the last marker from the editor to know where to start.
-	lastProcessedMarker = getLastMarkerFromEditor();
-	
-	// Kick off the first call. The loop is continued by the 'onLearningUpdate' handler.
+	// MODIFICATION: The logic no longer depends on a single last marker.
+	// We kick off the first request, and the loop continues via the 'onLearningUpdate' handler.
 	await sendLearningRequest();
 }
 
@@ -112,39 +124,42 @@ async function startLearningProcess() {
 function stopLearningProcess() {
 	isLearningRunning = false;
 	
-	// Reset UI to the default state.
 	startBtn.disabled = false;
 	startBtn.querySelector('.loading').classList.add('hidden');
 	stopBtn.classList.add('hidden');
-	statusText.textContent = ''; // Clear status text.
+	statusText.textContent = '';
 }
 
 /**
- * Sends a single request to the main process to find and analyze the next pair.
+ * MODIFICATION: This function now gets the list of processed markers each time it's called.
+ * Sends a single request to the main process to find and analyze the next available pair.
  */
 async function sendLearningRequest() {
-	if (!isLearningRunning) return; // Stop if the process was cancelled.
+	if (!isLearningRunning) {
+		return;
+	}
 	
 	const selectedModel = modelSelect.value;
 	const temperature = parseFloat(tempSlider.value);
 	
+	// MODIFICATION: Get the list of markers already in the editor.
+	const processedMarkerNumbers = getProcessedMarkers();
+	
 	try {
-		// The main process will find the next pair after `lastProcessedMarker`.
+		// MODIFICATION: Pass the list of processed markers to the main process.
 		await window.api.startLearning({
 			novelId,
 			model: selectedModel,
 			temperature,
-			lastMarkerNumber: lastProcessedMarker,
-			lang: localStorage.getItem('app_lang') || 'en' // MODIFICATION: Pass current language.
+			processedMarkerNumbers: processedMarkerNumbers, // Pass the array here
+			lang: localStorage.getItem('app_lang') || 'en'
 		});
 	} catch (error) {
 		statusText.textContent = t('editor.learning.error', { message: error.message });
-		stopLearningProcess(); // Stop the process on error.
+		stopLearningProcess();
 	}
 }
-// MODIFICATION END
 
-// MODIFICATION START: This function now handles the core save logic without UI updates.
 /**
  * Saves the current content of the editor to localStorage.
  */
@@ -152,10 +167,8 @@ function saveInstructions() {
 	try {
 		const storageKey = `learning-instructions-${novelId}`;
 		localStorage.setItem(storageKey, editor.value);
-		// Console log for debugging purposes, no visible UI feedback to keep it unobtrusive.
 		console.log('Learning instructions auto-saved.');
 	} catch (error) {
-		// This might happen if localStorage is full, which is unlikely.
 		console.error('Failed to auto-save learning instructions:', error);
 		statusText.textContent = t('editor.learning.error', { message: error.message });
 	}
@@ -163,7 +176,6 @@ function saveInstructions() {
 
 // Create a debounced version of the save function for use with the 'input' event.
 const debouncedSave = debounce(saveInstructions, 5000); // 5-second delay
-// MODIFICATION END
 
 document.addEventListener('DOMContentLoaded', async () => {
 	await initI18n();
@@ -205,7 +217,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 		editor.value = t('editor.learning.error', { message: `Failed to load instructions from local storage: ${error.message}` });
 	}
 	
-	// MODIFICATION START: Set up auto-saving event listeners.
 	// Save after 5 seconds of inactivity.
 	editor.addEventListener('input', debouncedSave);
 	
@@ -220,18 +231,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 		debouncedSave.cancel();
 		saveInstructions();
 	});
-	// MODIFICATION END
 	
-	// MODIFICATION: Changed the event listener to call the new start function.
 	startBtn.addEventListener('click', startLearningProcess);
-	// MODIFICATION: Added event listener for the stop button.
 	stopBtn.addEventListener('click', stopLearningProcess);
 	
 	window.api.onLearningUpdate((update) => {
 		if (!update || typeof update.type === 'undefined') {
 			console.error('Received invalid update from main process:', update);
 			statusText.textContent = t('editor.learning.error', { message: 'Received an invalid learning update.' });
-			stopLearningProcess(); // Stop on invalid update.
+			stopLearningProcess();
 			return;
 		}
 		
@@ -242,11 +250,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 		
 		switch (update.type) {
 			case 'new_instructions':
-				// Update editor with new content.
 				editor.value += update.data.formattedBlock;
 				editor.scrollTop = editor.scrollHeight;
-				lastProcessedMarker = update.data.marker; // Update our progress tracker.
-				saveInstructions(); // Trigger an immediate save.
+				// MODIFICATION: No longer need to track lastProcessedMarker.
+				saveInstructions();
 				
 				// MODIFICATION: Continue the loop by sending the next request.
 				if (isLearningRunning) {
@@ -256,11 +263,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 				break;
 			case 'finished':
 				statusText.textContent = messageText;
-				stopLearningProcess(); // The process is finished, so stop and reset UI.
+				stopLearningProcess();
 				break;
 			case 'error':
 				statusText.textContent = messageText;
-				stopLearningProcess(); // Stop the process on error.
+				stopLearningProcess();
 				break;
 		}
 	});
