@@ -58,19 +58,27 @@ function escapeRegex(str) {
 
 function showAiSpinner() {
 	const overlay = document.getElementById('ai-action-spinner-overlay');
-	if (overlay) overlay.classList.remove('hidden');
+	if (overlay) {
+		overlay.classList.remove('hidden');
+	}
 }
 
 function hideAiSpinner() {
 	const overlay = document.getElementById('ai-action-spinner-overlay');
-	if (overlay) overlay.classList.add('hidden');
+	if (overlay) {
+		overlay.classList.add('hidden');
+	}
 }
 
 const loadPrompt = async (promptId) => {
-	if (!modalEl) return;
+	if (!modalEl) {
+		return;
+	}
 	
 	const toggleBtn = modalEl.querySelector('.js-toggle-preview-btn');
-	if (toggleBtn) toggleBtn.textContent = t('editor.showPreview');
+	if (toggleBtn) {
+		toggleBtn.textContent = t('editor.showPreview');
+	}
 	
 	const placeholder = modalEl.querySelector('.js-prompt-placeholder');
 	const customEditorPane = modalEl.querySelector('.js-custom-editor-pane');
@@ -117,7 +125,9 @@ async function cleanupAiAction() {
 }
 
 async function handleFloatyApply() {
-	if (!isAiActionActive || !currentEditorInterface) return;
+	if (!isAiActionActive || !currentEditorInterface) {
+		return;
+	}
 	
 	if (currentPromptId === 'translate' && currentAiParams && currentAiParams.logData) {
 		window.api.logTranslationEvent(currentAiParams.logData)
@@ -128,7 +138,9 @@ async function handleFloatyApply() {
 }
 
 async function handleFloatyDiscard() {
-	if (!isAiActionActive || !currentEditorInterface || !originalFragmentJson) return;
+	if (!isAiActionActive || !currentEditorInterface || !originalFragmentJson) {
+		return;
+	}
 	
 	if (currentActionMarkers && currentActionMarkers.opening) {
 		try {
@@ -163,7 +175,9 @@ async function handleFloatyDiscard() {
 }
 
 async function handleFloatyRetry() {
-	if (!isAiActionActive || !currentEditorInterface || !currentAiParams) return;
+	if (!isAiActionActive || !currentEditorInterface || !currentAiParams) {
+		return;
+	}
 	
 	const actionToRetry = currentAiParams.action;
 	const contextForRetry = currentAiParams.context;
@@ -194,7 +208,9 @@ async function handleFloatyRetry() {
 }
 
 function createFloatingToolbar(from, to, model) {
-	if (floatingToolbar) floatingToolbar.remove();
+	if (floatingToolbar) {
+		floatingToolbar.remove();
+	}
 	
 	const modelName = model.split('/').pop() || model;
 	
@@ -219,11 +235,19 @@ function createFloatingToolbar(from, to, model) {
 	toolbarEl.addEventListener('mousedown', (e) => e.preventDefault());
 	toolbarEl.addEventListener('click', (e) => {
 		const button = e.target.closest('button');
-		if (!button) return;
+		if (!button) {
+			return;
+		}
 		const action = button.dataset.action;
-		if (action === 'apply') handleFloatyApply();
-		if (action === 'discard') handleFloatyDiscard();
-		if (action === 'retry') handleFloatyRetry();
+		if (action === 'apply') {
+			handleFloatyApply();
+		}
+		if (action === 'discard') {
+			handleFloatyDiscard();
+		}
+		if (action === 'retry') {
+			handleFloatyRetry();
+		}
 	});
 }
 
@@ -321,9 +345,13 @@ async function startAiAction(params) {
 }
 
 async function populateModelDropdown() {
-	if (!modalEl) return;
+	if (!modalEl) {
+		return;
+	}
 	const select = modalEl.querySelector('.js-llm-model-select');
-	if (!select) return;
+	if (!select) {
+		return;
+	}
 	
 	try {
 		const result = await window.api.getModels();
@@ -367,7 +395,9 @@ async function populateModelDropdown() {
 }
 
 async function handleModalApply() {
-	if (!modalEl || isAiActionActive) return;
+	if (!modalEl || isAiActionActive) {
+		return;
+	}
 	
 	const model = modalEl.querySelector('.js-llm-model-select').value;
 	const temperature = parseFloat(modalEl.querySelector('.js-ai-temperature-slider').value);
@@ -464,10 +494,20 @@ async function handleModalApply() {
 	
 	let dictionaryContextualContent = '';
 	if (formDataObj.useDictionary) {
-		dictionaryContextualContent = await window.api.getDictionaryContentForAI(novelId, '');
+		dictionaryContextualContent = await window.api.getDictionaryContentForAI(novelId, 'translation');
 	}
 	
-	const prompt = builder(formDataObj, promptContext, dictionaryContextualContent);
+	// MODIFICATION START: Fetch learning instructions to include in the prompt
+	let learningContent = '';
+	try {
+		learningContent = await window.api.getLearningInstructionsForAI(novelId);
+	} catch (error) {
+		console.error('Failed to fetch learning instructions for prompt:', error);
+		// Non-critical error, proceed without learning content
+	}
+	// MODIFICATION END
+	
+	const prompt = builder(formDataObj, promptContext, dictionaryContextualContent, learningContent);
 	
 	let openingMarker = '';
 	let closingMarker = '';
@@ -540,7 +580,9 @@ async function handleModalApply() {
 
 export function setupPromptEditor() {
 	modalEl = document.getElementById('prompt-editor-modal');
-	if (!modalEl) return;
+	if (!modalEl) {
+		return;
+	}
 	
 	const applyBtn = modalEl.querySelector('.js-prompt-apply-btn');
 	if (applyBtn) {
@@ -551,10 +593,14 @@ export function setupPromptEditor() {
 	if (toggleBtn) {
 		toggleBtn.addEventListener('click', () => {
 			const formContainer = modalEl.querySelector('.js-custom-editor-pane');
-			if (!formContainer) return;
+			if (!formContainer) {
+				return;
+			}
 			
 			const previewSection = formContainer.querySelector('.js-live-preview-section');
-			if (!previewSection) return;
+			if (!previewSection) {
+				return;
+			}
 			
 			const isHidden = previewSection.classList.toggle('hidden');
 			toggleBtn.textContent = isHidden ? t('editor.showPreview') : t('editor.hidePreview');

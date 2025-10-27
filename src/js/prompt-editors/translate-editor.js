@@ -49,7 +49,8 @@ const buildTranslationContextBlock = (translationPairs, languageForPrompt, targe
 	return contextMessages;
 };
 
-export const buildPromptJson = (formData, context, contextualContent = '') => {
+// MODIFICATION: Added learningContent parameter to include translation examples
+export const buildPromptJson = (formData, context, contextualContent = '', learningContent = '') => {
 	const { selectedText, languageForPrompt, targetLanguage, translationPairs } = context;
 	
 	const plainTextToTranslate = selectedText;
@@ -77,10 +78,22 @@ export const buildPromptJson = (formData, context, contextualContent = '') => {
 	
 	const contextMessages = buildTranslationContextBlock(translationPairs, languageForPrompt, targetLanguage);
 	
+	// MODIFICATION START: Create a block for translation examples from the learning content
+	let translationExamplesBlock = '';
+	if (learningContent) {
+		translationExamplesBlock = t('prompt.translate.user.translationExamples', { translationExamples: learningContent });
+	}
+	// MODIFICATION END
+	
 	const finalUserPromptParts = [];
 	if (contextualContent) {
 		finalUserPromptParts.push(t('prompt.common.user.dictionaryBlock', { dictionaryContent: contextualContent }));
 	}
+	// MODIFICATION START: Add the translation examples block to the prompt
+	if (translationExamplesBlock) {
+		finalUserPromptParts.push(translationExamplesBlock);
+	}
+	// MODIFICATION END
 	finalUserPromptParts.push(codexBlock);
 	finalUserPromptParts.push(t('prompt.translate.user.textToTranslate', {
 		sourceLanguage: languageForPrompt,
@@ -99,7 +112,9 @@ export const buildPromptJson = (formData, context, contextualContent = '') => {
 
 const updatePreview = async (container, context) => {
 	const form = container.querySelector('#translate-editor-form');
-	if (!form) return;
+	if (!form) {
+		return;
+	}
 	
 	const formData = {
 		instructions: form.elements.instructions.value.trim(),
@@ -114,7 +129,9 @@ const updatePreview = async (container, context) => {
 	const aiPreview = container.querySelector('.js-preview-ai');
 	const contextPairsContainer = container.querySelector('.js-preview-context-pairs');
 	
-	if (!systemPreview || !userPreview || !aiPreview || !contextPairsContainer) return;
+	if (!systemPreview || !userPreview || !aiPreview || !contextPairsContainer) {
+		return;
+	}
 	
 	const previewContext = { ...context, translationPairs: [] };
 	
@@ -137,15 +154,25 @@ const updatePreview = async (container, context) => {
 	let dictionaryContextualContent = '';
 	if (formData.useDictionary) {
 		// Now only fetches content from the dictionary.
-		dictionaryContextualContent = await window.api.getDictionaryContentForAI(context.novelId, '');
+		dictionaryContextualContent = await window.api.getDictionaryContentForAI(context.novelId, 'translation');
 	}
 	
 	if (formData.useCodex) {
 		previewContext.codexContent = await window.api.codex.get(context.novelId);
 	}
 	
+	// MODIFICATION START: Fetch learning instructions for the preview
+	let learningContent = '';
 	try {
-		const promptJson = buildPromptJson(formData, previewContext, dictionaryContextualContent);
+		learningContent = await window.api.getLearningInstructionsForAI(context.novelId);
+	} catch (error) {
+		console.error('Failed to fetch learning instructions for preview:', error);
+	}
+	// MODIFICATION END
+	
+	try {
+		// MODIFICATION: Pass the fetched learning content to the prompt builder
+		const promptJson = buildPromptJson(formData, previewContext, dictionaryContextualContent, learningContent);
 		systemPreview.textContent = promptJson.system;
 		userPreview.textContent = promptJson.user;
 		aiPreview.textContent = promptJson.ai || t('prompt.preview.empty');
@@ -181,7 +208,9 @@ const updatePreview = async (container, context) => {
 
 const populateForm = (container, state, novelId) => {
 	const form = container.querySelector('#translate-editor-form');
-	if (!form) return;
+	if (!form) {
+		return;
+	}
 	
 	const storageKey = `tense-preference-${novelId}-translate`;
 	const savedTense = localStorage.getItem(storageKey);
@@ -225,7 +254,9 @@ export const init = async (container, context) => {
 			if (tenseGroup) {
 				tenseGroup.addEventListener('click', (e) => {
 					const button = e.target.closest('.js-tense-btn');
-					if (!button) return;
+					if (!button) {
+						return;
+					}
 					
 					const newTense = button.dataset.tense;
 					

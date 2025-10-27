@@ -141,6 +141,10 @@ async function sendLearningRequest() {
 	
 	const selectedModel = modelSelect.value;
 	const temperature = parseFloat(tempSlider.value);
+	// MODIFICATION START: Get pair count from input
+	const pairCountInput = document.getElementById('js-learning-pairs-count');
+	const pairCount = parseInt(pairCountInput.value, 10) || 2;
+	// MODIFICATION END
 	
 	// MODIFICATION: Get the list of markers already in the editor.
 	const processedMarkerNumbers = getProcessedMarkers();
@@ -152,6 +156,7 @@ async function sendLearningRequest() {
 			model: selectedModel,
 			temperature,
 			processedMarkerNumbers: processedMarkerNumbers, // Pass the array here
+			pairCount: pairCount, // MODIFICATION: Pass pair count
 			lang: localStorage.getItem('app_lang') || 'en'
 		});
 	} catch (error) {
@@ -161,12 +166,12 @@ async function sendLearningRequest() {
 }
 
 /**
- * Saves the current content of the editor to localStorage.
+ * Saves the current content of the editor to a file via the main process.
  */
-function saveInstructions() {
+async function saveInstructions() {
 	try {
-		const storageKey = `learning-instructions-${novelId}`;
-		localStorage.setItem(storageKey, editor.value);
+		// MODIFICATION: Use IPC to save instead of localStorage
+		await window.api.saveLearningInstructions({ novelId, content: editor.value });
 		console.log('Learning instructions auto-saved.');
 	} catch (error) {
 		console.error('Failed to auto-save learning instructions:', error);
@@ -206,15 +211,39 @@ document.addEventListener('DOMContentLoaded', async () => {
 		localStorage.setItem(AI_SETTINGS_KEYS.MODEL, modelSelect.value);
 	});
 	
+	// MODIFICATION START: Handle pair count input
+	const pairsCountInput = document.getElementById('js-learning-pairs-count');
+	const PAIRS_COUNT_KEY = `learning-pairs-count-${novelId}`;
+	
+	const savedPairsCount = localStorage.getItem(PAIRS_COUNT_KEY) || '2';
+	pairsCountInput.value = savedPairsCount;
+	
+	pairsCountInput.addEventListener('change', () => {
+		let value = parseInt(pairsCountInput.value, 10);
+		if (isNaN(value) || value < 1) {
+			value = 1;
+		}
+		if (value > 10) {
+			value = 10;
+		}
+		pairsCountInput.value = value; // Correct the value in the input
+		localStorage.setItem(PAIRS_COUNT_KEY, value);
+	});
+	// MODIFICATION END
+	
 	await populateModels();
 	
-	// Load existing instructions from localStorage
+	// Load existing instructions from file via main process
 	try {
-		const storageKey = `learning-instructions-${novelId}`;
-		const savedInstructions = localStorage.getItem(storageKey);
-		editor.value = savedInstructions || '';
+		// MODIFICATION: Use IPC to load instead of localStorage
+		const result = await window.api.loadLearningInstructions(novelId);
+		if (result.success) {
+			editor.value = result.content || '';
+		} else {
+			throw new Error(result.message);
+		}
 	} catch (error) {
-		editor.value = t('editor.learning.error', { message: `Failed to load instructions from local storage: ${error.message}` });
+		editor.value = t('editor.learning.error', { message: `Failed to load instructions: ${error.message}` });
 	}
 	
 	// Save after 5 seconds of inactivity.

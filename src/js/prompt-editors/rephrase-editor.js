@@ -99,7 +99,7 @@ const updatePreview = async (container, context) => {
 	let dictionaryContextualContent = '';
 	if (formData.useDictionary) {
 		// Now only fetches content from the dictionary.
-		dictionaryContextualContent = await window.api.getDictionaryContentForAI(context.novelId, '');
+		dictionaryContextualContent = await window.api.getDictionaryContentForAI(context.novelId, 'translation');
 	}
 
 	const previewContext = { ...context };

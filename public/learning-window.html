@@ -30,9 +30,14 @@
 </div>
 
 <!-- Action Bar -->
-<div class="flex-shrink-0 p-4 border-t border-base-300 bg-base-200 flex items-center gap-2">
+<div class="flex-shrink-0 p-4 border-t border-base-300 bg-base-200 flex items-center gap-4">
 	<div id="js-status-text" class="text-sm text-base-content/70 flex-grow"></div>
-	<!-- MODIFICATION START: Added a Stop button and adjusted the Find Next Pair button -->
+	<!-- MODIFICATION START: Added pair count selector -->
+	<div class="flex items-center gap-2">
+		<label for="js-learning-pairs-count" class="text-sm font-medium" data-i18n="prompt.learning.pairsToGenerate">Pairs to Generate</label>
+		<input type="number" id="js-learning-pairs-count" class="input input-bordered input-sm w-20 text-center" value="2" min="1" max="10">
+	</div>
+	<!-- MODIFICATION END -->
 	<button id="js-start-learning-btn" class="btn btn-primary">
 		<span class="loading loading-spinner hidden"></span>
 		<span data-i18n="editor.learning.next">Find Next Pair</span>
@@ -41,7 +46,6 @@
 		<i class="bi bi-stop-circle"></i>
 		<span data-i18n="editor.learning.stop">Stop</span>
 	</button>
-	<!-- MODIFICATION END -->
 </div>
 
 <script src="../src/js/theme.js"></script>

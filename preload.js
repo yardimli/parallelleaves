@@ -7,6 +7,11 @@ contextBridge.exposeInMainWorld('api', {
 	openLearningWindow: (novelId) => ipcRenderer.send('app:openLearningWindow', novelId),
 	startLearning: (data) => ipcRenderer.invoke('learning:start', data),
 	onLearningUpdate: (callback) => ipcRenderer.on('learning:update', (event, ...args) => callback(...args)),
+	// MODIFICATION START: Add new learning instruction handlers
+	saveLearningInstructions: (data) => ipcRenderer.invoke('learning:saveInstructions', data),
+	loadLearningInstructions: (novelId) => ipcRenderer.invoke('learning:loadInstructions', novelId),
+	getLearningInstructionsForAI: (novelId) => ipcRenderer.invoke('learning:getInstructionsForAI', novelId),
+	// MODIFICATION END
 	getLangFile: (lang) => ipcRenderer.invoke('i18n:get-lang-file', lang),
 	login: (credentials) => ipcRenderer.invoke('auth:login', credentials),
 	logout: () => ipcRenderer.invoke('auth:logout'),

@@ -1,4 +1,4 @@
-const { ipcMain } = require('electron');
+const { ipcMain, app } = require('electron');
 const aiService = require('../../ai/ai.js');
 const { htmlToPlainText } = require('../utils.js');
 const path = require('path');
@@ -175,14 +175,23 @@ function validateAndFilterLLMResponse(responseText, sourceLang, targetLang) {
 	return validPairs.join('\n');
 }
 
+// MODIFICATION START: Helper function to get the file path for a novel's learning instructions
+const getLearningInstructionsPath = (novelId) => {
+	if (!novelId) {
+		return null;
+	}
+	return path.join(app.getPath('userData'), `learning_instructions_${novelId}.txt`);
+};
+// MODIFICATION END
+
 /**
  * Registers IPC handlers for the learning window functionality.
  * @param {Database.Database} db - The application's database connection.
  * @param {object} sessionManager - The session manager instance.
  */
 function registerLearningHandlers(db, sessionManager) {
-	// MODIFICATION: The handler now accepts `processedMarkerNumbers` and `lang`.
-	ipcMain.handle('learning:start', async (event, { novelId, model, temperature, processedMarkerNumbers, lang = 'en' }) => {
+	// MODIFICATION: The handler now accepts `processedMarkerNumbers`, `lang`, and `pairCount`.
+	ipcMain.handle('learning:start', async (event, { novelId, model, temperature, processedMarkerNumbers, lang = 'en', pairCount = 2 }) => {
 		const learningWindow = event.sender.getOwnerBrowserWindow();
 		
 		try {
@@ -212,11 +221,13 @@ function registerLearningHandlers(db, sessionManager) {
 				targetLanguage: novel.target_language
 			});
 			
+			// MODIFICATION: Pass pairCount to the user prompt translation.
 			const userPrompt = t_main(lang, 'prompt.learning.user.base', {
 				sourceLanguage: novel.source_language,
 				targetLanguage: novel.target_language,
 				sourceText: nextPair.source,
-				targetText: nextPair.target
+				targetText: nextPair.target,
+				pairCount: pairCount
 			});
 			
 			const prompt = {
@@ -261,6 +272,55 @@ function registerLearningHandlers(db, sessionManager) {
 			return { success: false, error: error.message };
 		}
 	});
+	
+	// MODIFICATION START: Add new handlers for saving, loading, and getting learning instructions
+	ipcMain.handle('learning:saveInstructions', (event, { novelId, content }) => {
+		const filePath = getLearningInstructionsPath(novelId);
+		if (!filePath) {
+			return { success: false, message: 'Invalid novelId.' };
+		}
+		try {
+			fs.writeFileSync(filePath, content, 'utf8');
+			return { success: true };
+		} catch (error) {
+			console.error(`Failed to save learning instructions for novel ${novelId}:`, error);
+			return { success: false, message: error.message };
+		}
+	});
+	
+	ipcMain.handle('learning:loadInstructions', (event, novelId) => {
+		const filePath = getLearningInstructionsPath(novelId);
+		if (!filePath) {
+			return { success: false, message: 'Invalid novelId.' };
+		}
+		try {
+			if (fs.existsSync(filePath)) {
+				const content = fs.readFileSync(filePath, 'utf8');
+				return { success: true, content };
+			}
+			return { success: true, content: '' }; // File doesn't exist yet, return empty string
+		} catch (error) {
+			console.error(`Failed to load learning instructions for novel ${novelId}:`, error);
+			return { success: false, message: error.message };
+		}
+	});
+	
+	ipcMain.handle('learning:getInstructionsForAI', (event, novelId) => {
+		const filePath = getLearningInstructionsPath(novelId);
+		if (!filePath) {
+			return ''; // Return empty string if invalid ID
+		}
+		try {
+			if (fs.existsSync(filePath)) {
+				return fs.readFileSync(filePath, 'utf8');
+			}
+			return '';
+		} catch (error) {
+			console.error(`Failed to get learning instructions for AI (novel ${novelId}):`, error);
+			return ''; // Return empty string on error
+		}
+	});
+	// MODIFICATION END
 }
 
 module.exports = { registerLearningHandlers };
