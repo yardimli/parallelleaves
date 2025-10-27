@@ -48,7 +48,7 @@ const extractAllMarkerPairs = (sourceHtml, targetHtml) => {
 			pairs.push({
 				marker: targetSegment.number,
 				source: sourceMap.get(targetSegment.number),
-				target: targetSegment.text,
+				target: targetSegment.text
 			});
 		}
 	}
@@ -56,7 +56,6 @@ const extractAllMarkerPairs = (sourceHtml, targetHtml) => {
 	// Sort by marker number to ensure chronological order
 	return pairs.sort((a, b) => a.marker - b.marker);
 };
-
 
 /**
  * Registers IPC handlers for the learning window functionality.
@@ -93,28 +92,30 @@ function registerLearningHandlers(db, sessionManager) {
 			}
 			
 			// 5. Construct the prompt
+			// MODIFICATION START: Corrected the user prompt to fix typos and ensure correct template literal formatting.
 			const prompt = {
-				system: `You are a literary translation analyst. Your task is to analyze a pair of texts—an original and its translation—and generate three concise, actionable instructions for an AI translator to improve future translations based on the style observed.
-- Each instruction must be a single sentence.
-- Focus on tone, style, word choice, and literary devices.
-- Do not mention specific words or phrases from the text. Generalize the advice.
-- Respond ONLY with the three instructions, each on a new line. Do not add any other text, formatting, or numbering.`,
-				user: `Analyze the translation and create 3 instructions each of up to a sentence long to a llm in format of:
+				system: `You are a literary translation analyst. Your task is to analyze a pair of texts—an original and its translation—and generate concise, actionable translation pairs for an AI translator to imitiate the language of the human who translated the original text.
+- Each instruction must be a pair like.
 <${novel.source_language}></${novel.source_language}>
 <${novel.target_language}></${novel.target_language}>
-
-${novel.source_language} Text:
-<text>
+`,
+				user: `Source in ${novel.source_language}:
 ${nextPair.source}
-</text>
 
-${novel.target_language} Text:
-<text>
+Translation in ${novel.target_language}:
 ${nextPair.target}
-</text>
+
+return only 2(two) pairs that reflect the translators style the best.
 `
 			};
-			console.log(prompt);
+			// MODIFICATION END
+			
+			const dataForRenderer = {
+				marker: nextPair.marker,
+				prompt: prompt,
+				instructions: [],
+				rawResponse: ''
+			};
 			
 			// 6. Call the LLM
 			const result = await aiService.processLLMText({
@@ -124,17 +125,17 @@ ${nextPair.target}
 				temperature
 			});
 			
-			if (result.success && result.data.choices && result.data.choices.length > 0) {
-				const instructions = result.data.choices[0].message.content.trim();
+			if (result && result.choices && result.choices.length > 0) {
+				const rawResponse = result.choices[0].message.content.trim();
+				dataForRenderer.rawResponse = rawResponse;
+				dataForRenderer.instructions = rawResponse.split('\n').filter(line => line.trim() !== '');
 				learningWindow.webContents.send('learning:update', {
 					type: 'results',
-					data: {
-						marker: nextPair.marker,
-						instructions: instructions.split('\n').filter(line => line.trim() !== '')
-					}
+					data: dataForRenderer
 				});
 			} else {
-				const errorMessage = result.error || (result.data.error ? result.data.error.message : 'Unknown AI error.');
+				// Handle cases where the API returns a valid response but no choices, or an error structure
+				const errorMessage = result.error ? result.error.message : 'AI response was empty or invalid.';
 				throw new Error(errorMessage);
 			}
 			

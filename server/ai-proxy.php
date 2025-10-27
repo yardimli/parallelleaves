@@ -29,22 +29,6 @@
 	 * ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 	 */
 
-	/*
-	 * -- MODIFICATION START: SQL for the new target_editor_logs table in MySQL
-	 * CREATE TABLE `target_editor_logs` (
-	 *   `id` int(11) NOT NULL AUTO_INCREMENT,
-	 *   `user_id` int(11) NOT NULL,
-	 *   `novel_id` int(11) NOT NULL,
-	 *   `chapter_id` int(11) NOT NULL,
-	 *   `marker` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-	 *   `content` text COLLATE utf8mb4_unicode_ci NOT NULL,
-	 *   `is_analyzed` tinyint(1) NOT NULL DEFAULT 0,
-	 *   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-	 *   PRIMARY KEY (`id`),
-	 *   KEY `user_id` (`user_id`)
-	 * ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-	 * -- MODIFICATION END
-	 */
 
 // Enforce PSR-12 standards
 	declare(strict_types=1);
@@ -425,63 +409,6 @@
 			sendJsonError(500, 'Failed to log translation to the database.');
 		}
 		exit;
-	} elseif ($action === 'log_target_edit') {
-		if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-			sendJsonError(405, 'Method Not Allowed. Please use POST for logging target edits.');
-		}
-
-		// Extract data from the payload
-		$novelId = $payload['novel_id'] ?? null;
-		$chapterId = $payload['chapter_id'] ?? null;
-		$marker = $payload['marker'] ?? null;
-		$content = $payload['content'] ?? null;
-
-		// Basic validation
-		if (!$novelId || !$chapterId || !$content) {
-			sendJsonError(400, 'Missing required fields for target edit logging.');
-		}
-
-		try {
-			$stmt = $db->prepare(
-				'INSERT INTO target_editor_logs (user_id, novel_id, chapter_id, marker, content) VALUES (?, ?, ?, ?, ?)'
-			);
-			$stmt->bind_param('iiiss', $userId, $novelId, $chapterId, $marker, $content);
-			$stmt->execute();
-			$stmt->close();
-
-			http_response_code(201); // 201 Created
-			echo json_encode(['success' => true, 'message' => 'Target edit logged successfully.']);
-		} catch (Exception $e) {
-			error_log('Failed to write to target_editor_logs: ' . $e->getMessage());
-			sendJsonError(500, 'Failed to log target edit to the database.');
-		}
-		exit;
-	} elseif ($action === 'mark_edits_analyzed') {
-		if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-			sendJsonError(405, 'Method Not Allowed. Please use POST for this action.');
-		}
-
-		$novelId = $payload['novel_id'] ?? null;
-		if (!$novelId) {
-			sendJsonError(400, 'Missing required novel_id for marking edits as analyzed.');
-		}
-
-		try {
-			$stmt = $db->prepare(
-				'UPDATE target_editor_logs SET is_analyzed = 1 WHERE user_id = ? AND novel_id = ?'
-			);
-			$stmt->bind_param('ii', $userId, $novelId);
-			$stmt->execute();
-			$affectedRows = $stmt->affected_rows;
-			$stmt->close();
-
-			http_response_code(200);
-			echo json_encode(['success' => true, 'message' => "Marked {$affectedRows} edit(s) as analyzed."]);
-		} catch (Exception $e) {
-			error_log('Failed to update target_editor_logs: ' . $e->getMessage());
-			sendJsonError(500, 'Failed to mark edits as analyzed in the database.');
-		}
-		exit;
 	} else {
-		sendJsonError(400, 'Invalid action specified. Supported actions are "chat", "get_models", "generate_cover", "log_translation", "log_target_edit", and "mark_edits_analyzed".');
+		sendJsonError(400, 'Invalid action specified. Supported actions are "chat", "get_models", "generate_cover", "log_translation".');
 	}

@@ -7,7 +7,6 @@ let importWindow = null;
 let chapterEditorWindows = new Map();
 let codexViewerWindows = new Map();
 let chatWindow = null;
-let analysisWindow = null;
 let learningWindow = null;
 let isMainWindowReady = false;
 
@@ -276,35 +275,6 @@ function createChatWindow(novelId) {
 	});
 }
 
-function createAnalysisWindow(novelId, autoStart = false) {
-	if (analysisWindow && !analysisWindow.isDestroyed()) {
-		analysisWindow.focus();
-		return;
-	}
-	
-	analysisWindow = new BrowserWindow({
-		width: 900,
-		height: 900,
-		icon: path.join(__dirname, '..', '..', 'public/assets/icon.png'),
-		title: 'Analyze Edits',
-		autoHideMenuBar: true,
-		webPreferences: {
-			preload: path.join(__dirname, '..', '..', 'preload.js'),
-			contextIsolation: true,
-			nodeIntegration: false,
-		},
-	});
-	
-	setContentSecurityPolicy(analysisWindow);
-	
-	// The 'autoStart' flag is passed as a query parameter to the window's URL.
-	analysisWindow.loadFile('public/analysis-window.html', { query: { novelId, autoStart } });
-	
-	analysisWindow.on('closed', () => {
-		analysisWindow = null;
-	});
-}
-
 function createLearningWindow(novelId) {
 	if (learningWindow && !learningWindow.isDestroyed()) {
 		learningWindow.focus();
@@ -359,7 +329,6 @@ module.exports = {
 	createCodexViewerWindow,
 	createImportWindow,
 	createChatWindow,
-	createAnalysisWindow,
 	createLearningWindow,
 	closeSplashAndShowMain,
 	getMainWindow: () => mainWindow,

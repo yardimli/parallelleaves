@@ -60,9 +60,6 @@
   "confirmModalBtn": "Bekreft handling",
   "confirmDeleteChapter": "Er du sikker på at du vil slette dette kapittelet? Dette kan ikke angres.",
   "confirmDeleteAct": "Er du sikker på at du vil slette denne akten og alle dens kapitler? Dette kan ikke angres.",
-  "confirmAnalysisTitle": "Analysere redigeringer?",
-  "confirmAnalysisMessage": "Du har uanalyserte redigeringer. Å analysere dem kan forbedre fremtidige AI-oversettelser og forslag. Vil du starte analysen nå?",
-  "declineSession": "Ikke spør igjen denne økten",
   "aiToolbar": {
     "apply": "Godta",
     "retry": "Prøv igjen",
@@ -117,27 +114,6 @@
     "errorNoProject": "Kunne ikke bestemme gjeldende prosjekt.",
     "errorNoTargetEditor": "Kunne ikke finne målredigeringsprogrammet for dette kapittelet.",
     "errorNoActiveChapter": "Kan ikke legge til et notat uten et aktivt kapittel."
-  },
-  "analyze": "Analyser redigeringer",
-  "analysis": {
-    "title": "Analyser redigeringer",
-    "original": "original",
-    "edited": "redigert",
-    "start": "Start analyse",
-    "apply": "Bruk resultater",
-    "loading": "Analyserer redigeringer, vennligst vent...",
-    "noResults": "Ingen nye redigeringer funnet å analysere.",
-    "resultsTitle": "Analyseresultater",
-    "deleteRow": "Slett rad",
-    "applySuccess": "La til {count} par i ordboken og markerte redigeringer som analysert.",
-    "changesInMarker": "Endringer i markør #{marker}",
-    "noNewEdits": "Ingen nye redigeringer å analysere.",
-    "foundEdits": "Fant {count} redigeringer å analysere...",
-    "noSignificantChanges": "Ingen betydelige endringer funnet i redigeringer.",
-    "analyzedMarker": "Analyserte markør #{marker}...",
-    "errorMarker": "Feil ved analyse av markør #{marker}: {message}",
-    "complete": "Analyse fullført.",
-    "error": "Feil: {message}"
   },
   "learning": {
     "title": "Start læringsøkt",

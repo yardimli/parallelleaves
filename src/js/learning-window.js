@@ -47,8 +47,13 @@ async function populateModels() {
 	}
 }
 
+/**
+ * Renders a result card for a processed translation pair.
+ * This function now displays the prompt sent to the AI and the detailed response.
+ * @param {object} result - The result data from the main process.
+ */
 function renderResult(result) {
-	if (!result || !result.instructions || result.instructions.length === 0) {
+	if (!result) {
 		return;
 	}
 	
@@ -65,33 +70,76 @@ function renderResult(result) {
 	card.className = 'card bg-base-200 shadow-xl';
 	
 	const cardBody = document.createElement('div');
-	cardBody.className = 'card-body p-4';
+	cardBody.className = 'card-body p-4 space-y-4';
 	
+	// Card Header
 	const cardHeader = document.createElement('div');
 	cardHeader.className = 'card-title';
-	
 	const title = document.createElement('h3');
-	title.className = 'text-sm font-mono';
+	title.className = 'text-lg';
 	title.textContent = `Pair #${result.marker}`;
-	
 	cardHeader.appendChild(title);
 	cardBody.appendChild(cardHeader);
 	
-	const list = document.createElement('ul');
-	list.className = 'list-disc list-inside space-y-1 text-base-content/90';
+	// Prompt Sent to LLM
+	const promptDetails = document.createElement('details');
+	promptDetails.className = 'collapse collapse-arrow bg-base-100';
+	promptDetails.innerHTML = `
+        <summary class="collapse-title text-md font-medium" data-i18n="editor.learning.promptTitle">Prompt Sent to LLM</summary>
+        <div class="collapse-content">
+            <h4 class="font-semibold mt-2 font-mono text-success" data-i18n="prompt.preview.system">System Prompt</h4>
+            <pre class="bg-base-300 p-2 rounded-md text-xs whitespace-pre-wrap font-mono">${result.prompt.system}</pre>
+            <h4 class="font-semibold mt-4 font-mono text-info" data-i18n="prompt.preview.user">User Prompt</h4>
+            <pre class="bg-base-300 p-2 rounded-md text-xs whitespace-pre-wrap font-mono">${result.prompt.user}</pre>
+        </div>
+    `;
+	cardBody.appendChild(promptDetails);
 	
-	result.instructions.forEach(instruction => {
-		const li = document.createElement('li');
-		li.textContent = instruction;
-		list.appendChild(li);
-	});
+	// LLM Response
+	const responseDiv = document.createElement('div');
+	const responseTitle = document.createElement('h4');
+	responseTitle.className = 'text-md font-medium';
+	responseTitle.setAttribute('data-i18n', 'editor.learning.responseTitle');
+	responseTitle.textContent = 'LLM Response';
+	responseDiv.appendChild(responseTitle);
 	
-	cardBody.appendChild(list);
+	if (result.instructions && result.instructions.length > 0) {
+		const list = document.createElement('ul');
+		list.className = 'list-disc list-inside space-y-1 text-base-content/90 bg-base-100 p-3 rounded-md';
+		result.instructions.forEach(instruction => {
+			const li = document.createElement('li');
+			li.textContent = instruction;
+			list.appendChild(li);
+		});
+		responseDiv.appendChild(list);
+		if (result.instructions.length !== 3) {
+			const warning = document.createElement('p');
+			warning.className = 'text-xs text-warning mt-1';
+			warning.setAttribute('data-i18n', 'editor.learning.parseWarning');
+			warning.textContent = 'Warning: The response was not in the expected format of 3 distinct instructions.';
+			responseDiv.appendChild(warning);
+		}
+	} else {
+		const error = document.createElement('p');
+		error.className = 'text-error text-sm bg-base-100 p-3 rounded-md';
+		error.setAttribute('data-i18n', 'editor.learning.parseError');
+		error.textContent = 'Could not parse instructions from the response.';
+		responseDiv.appendChild(error);
+		
+		const rawResponsePre = document.createElement('pre');
+		rawResponsePre.className = 'bg-base-300 p-2 rounded-md text-xs whitespace-pre-wrap font-mono mt-2';
+		rawResponsePre.textContent = result.rawResponse || t('editor.learning.noResponse');
+		responseDiv.appendChild(rawResponsePre);
+	}
+	
+	cardBody.appendChild(responseDiv);
 	card.appendChild(cardBody);
-	resultsContainer.appendChild(card);
+	applyTranslationsTo(card);
+	
+	resultsContainer.appendChild(card); // MODIFICATION: Ensure the card is appended to the container
 	
 	// Scroll to the new result
-	card.scrollIntoView({ behavior: 'smooth' });
+	card.scrollIntoView({ behavior: 'smooth', block: 'end' });
 }
 
 async function handleStartLearning() {

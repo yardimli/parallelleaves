@@ -66,12 +66,6 @@ function registerSystemHandlers(db, sessionManager, windowManager) {
 		}
 	});
 	
-	ipcMain.on('app:openAnalysisWindow', (event, novelId, autoStart = false) => {
-		if (windowManager && typeof windowManager.createAnalysisWindow === 'function') {
-			// Pass the 'autoStart' flag to the window manager.
-			windowManager.createAnalysisWindow(novelId, autoStart);
-		}
-	});
 	ipcMain.on('app:openLearningWindow', (event, novelId) => {
 		if (windowManager && typeof windowManager.createLearningWindow === 'function') {
 			windowManager.createLearningWindow(novelId);

@@ -84,51 +84,6 @@ function registerLoggingHandlers(db, sessionManager) {
 			return { success: false, message: error.message };
 		}
 	});
-	
-	// Handler for logging target editor changes
-	ipcMain.handle('log:target-edit', async (event, logData) => {
-		const session = sessionManager.getSession();
-		if (!session || !session.token) {
-			return { success: false, message: 'User not authenticated.' };
-		}
-		
-		// 1. Log to local SQLite database
-		try {
-			const { novelId, chapterId, marker, content } = logData;
-			db.prepare(`
-                INSERT INTO target_editor_logs (user_id, novel_id, chapter_id, marker, content)
-                VALUES (?, ?, ?, ?, ?)
-            `).run(session.user.id, novelId, chapterId, marker, content);
-		} catch (error) {
-			console.error('Failed to log target edit to local DB:', error);
-		}
-		
-		// 2. Log to remote MySQL database via proxy
-		try {
-			const payload = {
-				novel_id: logData.novelId,
-				chapter_id: logData.chapterId,
-				marker: logData.marker,
-				content: logData.content,
-				auth_token: session.token
-			};
-			//console.log('Logging target edit to remote server with payload:', payload);
-			const response = await fetch(`${AI_PROXY_URL}?action=log_target_edit`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(payload)
-			});
-			
-			if (!response.ok) {
-				const errorText = await response.text();
-				throw new Error(`Remote target edit logging failed: ${errorText}`);
-			}
-			return { success: true };
-		} catch (error) {
-			console.error('Failed to log target edit to remote server:', error);
-			return { success: false, message: error.message };
-		}
-	});
 }
 
 module.exports = { registerLoggingHandlers };

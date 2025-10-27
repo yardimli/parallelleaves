@@ -133,7 +133,7 @@ async function generateCoverImageViaProxy({ prompt, token }) {
 }
 
 /**
- * Analyzes a text chunk to create or update codex entries as an HTML string.
+ * for codex look at a text chunk to create or update codex entries as an HTML string.
  * @param {object} params - The parameters for generation.
  * @param {string} params.textChunk - A chunk of the novel text.
  * @param {string} params.existingCodexHtml - The HTML content of the existing codex file.

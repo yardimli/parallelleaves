@@ -203,13 +203,6 @@ const debouncedLogEdit = debounce(() => {
 			console.log(`Skipping log for marker #${lastOpening.number}, word count (${wordCount}) exceeds 1500.`);
 			return;
 		}
-		
-		// Post the plain text content to the parent window for logging
-		postToParent('logTargetEdit', {
-			chapterId: chapterId,
-			marker: lastOpening.number.toString(),
-			content: contentText
-		});
 	}
 }, 10000); // 10-second debounce
 

@@ -4,15 +4,9 @@ contextBridge.exposeInMainWorld('api', {
 	// --- App Level ---
 	openImportWindow: () => ipcRenderer.send('app:open-import-window'),
 	openChatWindow: (novelId) => ipcRenderer.send('app:openChatWindow', novelId),
-	openAnalysisWindow: (novelId, autoStart) => ipcRenderer.send('app:openAnalysisWindow', novelId, autoStart),
 	openLearningWindow: (novelId) => ipcRenderer.send('app:openLearningWindow', novelId),
 	startLearning: (data) => ipcRenderer.invoke('learning:start', data),
 	onLearningUpdate: (callback) => ipcRenderer.on('learning:update', (event, ...args) => callback(...args)),
-	startAnalysis: (data) => ipcRenderer.invoke('analysis:start', data),
-	onAnalysisUpdate: (callback) => ipcRenderer.on('analysis:update', (event, ...args) => callback(...args)),
-	markEditsAsAnalyzed: (novelId) => ipcRenderer.invoke('analysis:markAsAnalyzed', novelId),
-	hasUnanalyzedEdits: (novelId) => ipcRenderer.invoke('analysis:hasUnanalyzedEdits', novelId),
-	onAnalysisApplied: (callback) => ipcRenderer.on('analysis:applied', (event, ...args) => callback(...args)),
 	getLangFile: (lang) => ipcRenderer.invoke('i18n:get-lang-file', lang),
 	login: (credentials) => ipcRenderer.invoke('auth:login', credentials),
 	logout: () => ipcRenderer.invoke('auth:logout'),
@@ -102,9 +96,6 @@ contextBridge.exposeInMainWorld('api', {
 	
 	// API for logging translation events
 	logTranslationEvent: (data) => ipcRenderer.invoke('log:translation', data),
-	
-	// API for logging target editor changes
-	logTargetEditEvent: (data) => ipcRenderer.invoke('log:target-edit', data),
 	
 	findHighestMarkerNumber: (sourceHtml, targetHtml) => ipcRenderer.invoke('novels:findHighestMarkerNumber', sourceHtml, targetHtml)
 });
