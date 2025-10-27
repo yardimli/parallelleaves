@@ -13,10 +13,8 @@ export function showConfirmationModal (title, message, options = {}) {
 		const contentEl = document.getElementById('confirmation-modal-content');
 		const confirmBtn = document.getElementById('confirmation-modal-confirm-btn');
 		const cancelBtn = document.getElementById('confirmation-modal-cancel-btn');
-		// MODIFICATION: Get the new decline button.
 		const declineBtn = document.getElementById('confirmation-modal-decline-btn');
 		
-		// Clean up old listeners by cloning and replacing the buttons to prevent multiple resolves.
 		const newConfirmBtn = confirmBtn.cloneNode(true);
 		confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
 		const newCancelBtn = cancelBtn.cloneNode(true);
@@ -27,7 +25,6 @@ export function showConfirmationModal (title, message, options = {}) {
 		titleEl.textContent = title;
 		contentEl.textContent = message;
 		
-		// MODIFICATION: Show or hide the decline button based on options.
 		if (options.showDecline) {
 			newDeclineBtn.classList.remove('hidden');
 		} else {
@@ -53,7 +50,6 @@ export function showConfirmationModal (title, message, options = {}) {
 			resolve(false);
 		};
 		
-		// MODIFICATION: Handler for the new decline button.
 		const handleDecline = () => {
 			cleanup();
 			modal.close();

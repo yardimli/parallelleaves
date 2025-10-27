@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en" class="h-full">
+<head>
+	<meta charset="UTF-8"/>
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
+	<meta http-equiv="Content-Security-Policy"
+	      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' file: data: https:;">
+	<title data-i18n="editor.learning.windowTitle">Parallel Leaves - Learning Session</title>
+	<link rel="stylesheet" href="../node_modules/bootstrap-icons/font/bootstrap-icons.css">
+	<link rel="stylesheet" href="../dist/styles.css">
+</head>
+<body class="h-full bg-base-100 text-base-content overflow-hidden flex flex-col">
+
+<!-- Top Bar -->
+<div class="flex-shrink-0 h-14 bg-base-200 flex items-center px-4 gap-4 z-10 border-b border-base-300">
+	<h1 class="text-lg font-bold" data-i18n="editor.learning.title">Learning Session</h1>
+	<div class="flex-grow"></div>
+	<select id="js-llm-model-select" class="select select-bordered select-sm w-full max-w-xs">
+		<option disabled selected data-i18n="editor.chat.loadingModels">Loading models...</option>
+	</select>
+	<div class="flex items-center gap-2">
+		<label class="text-sm font-medium" data-i18n="editor.temperature">Temperature</label>
+		<input type="range" min="0" max="2" value="0.7" step="0.1" id="js-ai-temperature-slider" class="range range-xs w-24" />
+		<span id="js-ai-temperature-value" class="text-sm font-mono w-8 text-center">0.7</span>
+	</div>
+</div>
+
+<!-- Results Area -->
+<div id="js-learning-results" class="flex-grow p-4 overflow-y-auto space-y-4">
+	<!-- Results will be appended here by JS -->
+</div>
+
+<!-- Action Bar -->
+<div class="flex-shrink-0 p-4 border-t border-base-300 bg-base-200 flex items-center gap-2">
+	<div id="js-status-text" class="text-sm text-base-content/70 flex-grow"></div>
+	<button id="js-start-learning-btn" class="btn btn-primary">
+		<span class="loading loading-spinner hidden"></span>
+		<span data-i18n="editor.learning.start">Start Learning</span>
+	</button>
+</div>
+
+<script src="../src/js/theme.js"></script>
+<script type="module" src="../dist/learning-window-bundle.js"></script>
+</body>
+</html>

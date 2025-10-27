@@ -25,8 +25,6 @@ function registerLoggingHandlers(db, sessionManager) {
 			}
 		}
 		
-		// MODIFICATION START: Expanded normalization to include sourceText and targetText.
-		// This ensures that camelCase keys sent from the renderer are correctly mapped to snake_case for the database.
 		const normalizedLogData = {
 			novel_id: logData.novel_id || logData.novelId,
 			chapter_id: logData.chapter_id || logData.chapterId,
@@ -43,7 +41,6 @@ function registerLoggingHandlers(db, sessionManager) {
 			console.error('Failed to log translation: source_text or target_text is missing from logData.', logData);
 			return { success: false, message: 'Cannot log translation: source or target text is missing.' };
 		}
-		// MODIFICATION END
 		
 		// 1. Log to local SQLite database
 		try {

@@ -11,12 +11,8 @@ function registerAiHandlers(db, sessionManager) {
 	ipcMain.handle('llm:process-text', async (event, data) => {
 		try {
 			const token = sessionManager.getSession()?.token || null;
-			// MODIFICATION START: The `contextualContent` property is no longer used by the aiService,
-			// so we explicitly destructure the data to pass only the necessary properties.
-			// This prevents passing unused data and makes the handler's intent clearer.
 			const { prompt, model, temperature, response_format } = data;
 			const result = await aiService.processLLMText({ prompt, model, temperature, response_format, token });
-			// MODIFICATION END
 			return { success: true, data: result };
 		} catch (error) {
 			console.error('AI Processing Error in main process:', error);

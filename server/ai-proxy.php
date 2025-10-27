@@ -310,7 +310,6 @@
 			sendJsonError(405, 'Method Not Allowed. Please use POST for chat completions.');
 		}
 
-		// MODIFICATION START: Check prompt length
 		$promptLength = 0;
 		if (isset($payload['messages']) && is_array($payload['messages'])) {
 			foreach ($payload['messages'] as $message) {
@@ -328,7 +327,6 @@
 			echo $errorResponseJson;
 			exit;
 		}
-		// MODIFICATION END
 
 		if (isset($payload['stream'])) {
 			unset($payload['stream']);
@@ -458,8 +456,7 @@
 			sendJsonError(500, 'Failed to log target edit to the database.');
 		}
 		exit;
-		// MODIFICATION END
-	} elseif ($action === 'mark_edits_analyzed') { // MODIFICATION START: New action to mark edits as analyzed
+	} elseif ($action === 'mark_edits_analyzed') {
 		if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 			sendJsonError(405, 'Method Not Allowed. Please use POST for this action.');
 		}
@@ -485,7 +482,6 @@
 			sendJsonError(500, 'Failed to mark edits as analyzed in the database.');
 		}
 		exit;
-		// MODIFICATION END
-	} else { // MODIFICATION: Updated error message
+	} else {
 		sendJsonError(400, 'Invalid action specified. Supported actions are "chat", "get_models", "generate_cover", "log_translation", "log_target_edit", and "mark_edits_analyzed".');
 	}

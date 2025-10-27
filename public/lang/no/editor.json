@@ -138,5 +138,15 @@
     "errorMarker": "Feil ved analyse av markør #{marker}: {message}",
     "complete": "Analyse fullført.",
     "error": "Feil: {message}"
+  },
+  "learning": {
+    "title": "Start læringsøkt",
+    "windowTitle": "Parallel Leaves - Læringsøkt",
+    "start": "Start læring",
+    "next": "Neste par",
+    "loading": "Finner neste par og analyserer...",
+    "noMorePairs": "Ingen flere oversettelsespar funnet i denne romanen.",
+    "resultsTitle": "Foreslåtte instruksjoner",
+    "error": "Feil: {message}"
   }
 }

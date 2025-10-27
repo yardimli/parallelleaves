@@ -4,8 +4,10 @@ contextBridge.exposeInMainWorld('api', {
 	// --- App Level ---
 	openImportWindow: () => ipcRenderer.send('app:open-import-window'),
 	openChatWindow: (novelId) => ipcRenderer.send('app:openChatWindow', novelId),
-	// MODIFICATION: The 'openAnalysisWindow' function now accepts an 'autoStart' boolean.
 	openAnalysisWindow: (novelId, autoStart) => ipcRenderer.send('app:openAnalysisWindow', novelId, autoStart),
+	openLearningWindow: (novelId) => ipcRenderer.send('app:openLearningWindow', novelId),
+	startLearning: (data) => ipcRenderer.invoke('learning:start', data),
+	onLearningUpdate: (callback) => ipcRenderer.on('learning:update', (event, ...args) => callback(...args)),
 	startAnalysis: (data) => ipcRenderer.invoke('analysis:start', data),
 	onAnalysisUpdate: (callback) => ipcRenderer.on('analysis:update', (event, ...args) => callback(...args)),
 	markEditsAsAnalyzed: (novelId) => ipcRenderer.invoke('analysis:markAsAnalyzed', novelId),

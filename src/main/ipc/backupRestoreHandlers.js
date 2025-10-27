@@ -2,7 +2,6 @@ const { ipcMain, dialog, app } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const imageHandler = require('../../utils/image-handler.js');
-// MODIFICATION: Import the shared function for gathering backup data.
 const { getNovelBackupData } = require('../autoBackupManager.js');
 
 const CODEX_DIR = path.join(app.getPath('userData'), 'codex');
@@ -24,7 +23,6 @@ function ensureDir(dirPath) {
  * @param {object} sessionManager - The session manager instance.
  */
 function registerBackupRestoreHandlers(db, sessionManager) {
-	// MODIFICATION: The manual backup process now uses the shared data gathering function.
 	ipcMain.handle('novels:getForBackup', (event, novelId) => {
 		try {
 			// Pass the database connection to the shared function.

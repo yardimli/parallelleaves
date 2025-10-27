@@ -10,7 +10,8 @@ const { registerSectionHandlers } = require('./sectionHandlers.js');
 const { registerSystemHandlers } = require('./systemHandlers.js');
 const { registerDictionaryHandlers } = require('./dictionaryHandlers.js');
 const { registerLoggingHandlers } = require('./loggingHandlers.js');
-const { registerAnalysisHandlers } = require('./analysisHandlers.js'); // MODIFICATION: New import
+const { registerAnalysisHandlers } = require('./analysisHandlers.js');
+const { registerLearningHandlers } = require('./learningHandlers.js');
 
 /**
  * Registers all IPC handlers for the application.
@@ -31,7 +32,8 @@ function registerIpcHandlers(db, sessionManager, windowManager) {
 	registerSystemHandlers(db, sessionManager, windowManager);
 	registerDictionaryHandlers();
 	registerLoggingHandlers(db, sessionManager);
-	registerAnalysisHandlers(db, sessionManager, windowManager); // MODIFICATION: Register new handlers
+	registerAnalysisHandlers(db, sessionManager, windowManager);
+	registerLearningHandlers(db, sessionManager);
 }
 
 module.exports = { registerIpcHandlers };

@@ -138,5 +138,15 @@
     "errorMarker": "#{marker} işaretçisi analiz edilirken hata oluştu: {message}",
     "complete": "Analiz tamamlandı.",
     "error": "Hata: {message}"
+  },
+  "learning": {
+    "title": "Öğrenme Oturumu Başlat",
+    "windowTitle": "Parallel Leaves - Öğrenme Oturumu",
+    "start": "Öğrenmeye Başla",
+    "next": "Sonraki Çift",
+    "loading": "Sıradaki çift bulunuyor ve analiz ediliyor...",
+    "noMorePairs": "Bu romanda başka çeviri çifti bulunamadı.",
+    "resultsTitle": "Önerilen Talimatlar",
+    "error": "Hata: {message}"
   }
 }

@@ -48,10 +48,8 @@ function saveResultsToLocalStorage() {
 		}
 	} catch (error) {
 		console.error('Failed to serialize and save analysis results to localStorage:', error);
-		// This prevents corrupted data from being saved, addressing the root cause of the issue.
 	}
 }
-// MODIFICATION END
 
 /**
  * Loads and renders results from localStorage when the window is opened.

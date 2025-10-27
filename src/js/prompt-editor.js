@@ -228,7 +228,6 @@ function createFloatingToolbar(from, to, model) {
 }
 
 async function startAiAction(params) {
-	// MODIFICATION: Removed `contextualContent` as it's now part of the `prompt` object itself.
 	const { prompt, model, temperature, openingMarker, closingMarker } = params;
 	
 	isAiActionActive = true;
@@ -239,7 +238,6 @@ async function startAiAction(params) {
 	showAiSpinner();
 	
 	try {
-		// MODIFICATION: No longer passing `contextualContent` separately.
 		const result = await window.api.processLLMText({ prompt, model, temperature });
 		hideAiSpinner();
 		
@@ -464,13 +462,10 @@ async function handleModalApply() {
 		}
 	}
 	
-	// MODIFICATION START: Logic to read analysis content from localStorage has been removed.
-	// The dictionary is now the single source of truth for all contextual content.
 	let dictionaryContextualContent = '';
 	if (formDataObj.useDictionary) {
 		dictionaryContextualContent = await window.api.getDictionaryContentForAI(novelId, '');
 	}
-	// MODIFICATION END
 	
 	const prompt = builder(formDataObj, promptContext, dictionaryContextualContent);
 	
@@ -532,8 +527,6 @@ async function handleModalApply() {
 		}
 	}
 	
-	// MODIFICATION: `contextualContent` is no longer stored separately in `currentAiParams`
-	// because it's already been built into the `prompt` object.
 	currentAiParams = { prompt, model, temperature, action, context: promptContext, formData: formDataObj };
 	
 	startAiAction({
@@ -542,7 +535,6 @@ async function handleModalApply() {
 		temperature: currentAiParams.temperature,
 		openingMarker,
 		closingMarker
-		// MODIFICATION: No longer passing `contextualContent` here.
 	});
 }
 
@@ -631,7 +623,6 @@ export async function openPromptEditor(context, promptId, initialState = null) {
 	customEditorPane.classList.remove('hidden');
 	
 	try {
-		// Modified: No longer passes initialState, as model is now global
 		await populateModelDropdown();
 		await loadPrompt(promptId);
 		modalEl.showModal();

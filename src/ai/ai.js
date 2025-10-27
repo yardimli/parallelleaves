@@ -102,9 +102,14 @@ async function generateCoverImageViaProxy({ prompt, token }) {
 	}
 	
 	const payload = {
-		prompt: prompt,
-		auth_token: token
+		prompt: prompt
 	};
+	
+	if (token) {
+		payload.auth_token = token;
+	}
+	
+	console.log(payload);
 	
 	const response = await fetch(`${AI_PROXY_URL}?action=generate_cover`, {
 		method: 'POST',
@@ -193,7 +198,7 @@ ${textChunk}
  * @param {object|null} [params.response_format=null] - Optional response format object (e.g., { type: 'json_object' }).
  * @returns {Promise<object>} The AI response object.
  */
-async function processLLMText({ prompt, model, token, temperature = 0.7, response_format = null }) { // MODIFICATION: Removed contextualContent
+async function processLLMText({ prompt, model, token, temperature = 0.7, response_format = null }) {
 	const messages = [];
 	if (prompt.system) {
 		messages.push({ role: 'system', content: prompt.system });
@@ -202,12 +207,9 @@ async function processLLMText({ prompt, model, token, temperature = 0.7, respons
 		messages.push(...prompt.context_pairs);
 	}
 	
-	// MODIFICATION START: The logic for adding contextualContent has been removed.
-	// The prompt builders are now solely responsible for constructing the final user prompt.
 	if (prompt.user) {
 		messages.push({ role: 'user', content: prompt.user });
 	}
-	// MODIFICATION END
 	
 	if (prompt.ai) {
 		messages.push({ role: 'assistant', content: prompt.ai });

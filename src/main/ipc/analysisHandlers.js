@@ -1,4 +1,4 @@
-const { ipcMain, BrowserWindow } = require('electron'); // MODIFICATION: Added BrowserWindow
+const { ipcMain, BrowserWindow } = require('electron')
 const aiService = require('../../ai/ai.js');
 
 /**
@@ -29,17 +29,15 @@ function registerAnalysisHandlers(db, sessionManager, windowManager) {
             `).all(novelId);
 			
 			if (latestEdits.length === 0) {
-				// MODIFICATION: Send an i18n key instead of a hardcoded string.
 				analysisWindow.webContents.send('analysis:update', { type: 'finished', message: 'editor.analysis.noNewEdits' });
 				return { success: true, message: 'No edits found.' };
 			}
 			
-			// MODIFICATION: Send an i18n key and parameters for dynamic text.
 			analysisWindow.webContents.send('analysis:update', { type: 'progress', message: 'editor.analysis.foundEdits', params: { count: latestEdits.length } });
 			
 			const analysisPairs = [];
 			for (const edit of latestEdits) {
-				// MODIFICATION: Updated query to handle both old ('[[#38]]') and new ('38') marker formats for backward compatibility.
+				// Updated query to handle both old ('[[#38]]') and new ('38') marker formats for backward compatibility.
 				const original = db.prepare(`
                     SELECT target_text FROM translation_logs
                     WHERE novel_id = ? AND (marker = ? OR marker = '[[' || '#' || ? || ']]')
@@ -58,7 +56,6 @@ function registerAnalysisHandlers(db, sessionManager, windowManager) {
 			}
 			
 			if (analysisPairs.length === 0) {
-				// MODIFICATION: Send an i18n key.
 				analysisWindow.webContents.send('analysis:update', { type: 'finished', message: 'editor.analysis.noSignificantChanges' });
 				return { success: true, message: 'No significant changes.' };
 			}
@@ -84,7 +81,6 @@ Example: {"the big red cat": "the large crimson cat", "he said happily": "he exc
 					temperature,
 					response_format: { type: 'json_object' }
 				}).then(result => {
-					// MODIFICATION: Send an i18n key and parameters.
 					analysisWindow.webContents.send('analysis:update', { type: 'progress', message: 'editor.analysis.analyzedMarker', params: { marker: pair.marker } });
 					return {
 						marker: pair.marker,
@@ -92,7 +88,6 @@ Example: {"the big red cat": "the large crimson cat", "he said happily": "he exc
 					};
 				}).catch(error => {
 					console.error(`Error analyzing marker ${pair.marker}:`, error);
-					// MODIFICATION: Send an i18n key and parameters for the error message.
 					analysisWindow.webContents.send('analysis:update', { type: 'error', message: 'editor.analysis.errorMarker', params: { marker: pair.marker, message: error.message } });
 					return { marker: pair.marker, changes: {} }; // Return empty on error
 				});
@@ -103,20 +98,17 @@ Example: {"the big red cat": "the large crimson cat", "he said happily": "he exc
 			const finalResults = allResults.filter(r => r && Object.keys(r.changes).length > 0);
 			
 			analysisWindow.webContents.send('analysis:update', { type: 'results', data: finalResults });
-			// MODIFICATION: Send an i18n key for the completion message.
 			analysisWindow.webContents.send('analysis:update', { type: 'finished', message: 'editor.analysis.complete' });
 			
 			return { success: true, results: finalResults };
 			
 		} catch (error) {
 			console.error('Analysis process failed:', error);
-			// MODIFICATION: Send an i18n key and parameters for the failure message.
 			analysisWindow.webContents.send('analysis:update', { type: 'error', message: 'editor.analysis.error', params: { message: error.message } });
 			return { success: false, error: error.message };
 		}
 	});
 	
-	// MODIFICATION START: New handler to mark edits as analyzed
 	ipcMain.handle('analysis:markAsAnalyzed', async (event, novelId) => {
 		try {
 			// 1. Update local SQLite database
@@ -156,9 +148,7 @@ Example: {"the big red cat": "the large crimson cat", "he said happily": "he exc
 			return { success: false, message: error.message };
 		}
 	});
-	// MODIFICATION END
 	
-	// MODIFICATION START: New handler to check for unanalyzed edits
 	ipcMain.handle('analysis:hasUnanalyzedEdits', (event, novelId) => {
 		try {
 			const result = db.prepare(
@@ -170,7 +160,6 @@ Example: {"the big red cat": "the large crimson cat", "he said happily": "he exc
 			return false; // Return false on error to avoid UI bugs
 		}
 	});
-	// MODIFICATION END
 }
 
 module.exports = { registerAnalysisHandlers };

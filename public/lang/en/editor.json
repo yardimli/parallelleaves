@@ -138,5 +138,15 @@
     "errorMarker": "Error analyzing marker #{marker}: {message}",
     "complete": "Analysis complete.",
     "error": "Error: {message}"
+  },
+  "learning": {
+    "title": "Start Learning Session",
+    "windowTitle": "Parallel Leaves - Learning Session",
+    "start": "Start Learning",
+    "next": "Next Pair",
+    "loading": "Finding next pair and analyzing...",
+    "noMorePairs": "No more translation pairs found in this novel.",
+    "resultsTitle": "Suggested Instructions",
+    "error": "Error: {message}"
   }
 }

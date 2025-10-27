@@ -32,7 +32,6 @@ function registerDictionaryHandlers() {
 		}
 	});
 	
-	// Modified: This handler now accepts an optional 'type' to filter the dictionary for the AI.
 	ipcMain.handle('dictionary:getContentForAI', async (event, novelId, type) => {
 		ensureDictionariesDir();
 		const filePath = path.join(DICTIONARIES_DIR, `${novelId}.json`);

@@ -1,4 +1,4 @@
-const { BrowserWindow, Menu, MenuItem, shell } = require('electron'); // MODIFICATION: Added 'shell'
+const { BrowserWindow, Menu, MenuItem, shell } = require('electron');
 const path = require('path');
 
 let mainWindow = null;
@@ -7,7 +7,8 @@ let importWindow = null;
 let chapterEditorWindows = new Map();
 let codexViewerWindows = new Map();
 let chatWindow = null;
-let analysisWindow = null; // MODIFICATION: Added analysisWindow tracker
+let analysisWindow = null;
+let learningWindow = null;
 let isMainWindowReady = false;
 
 /**
@@ -57,7 +58,6 @@ function createContextMenu(win) {
 			if (menu.items.length > 0) menu.append(new MenuItem({ type: 'separator' }));
 			menu.append(new MenuItem({ label: 'Cut', role: 'cut', enabled: hasSelection }));
 			menu.append(new MenuItem({ label: 'Copy', role: 'copy', enabled: hasSelection }));
-			// MODIFICATION START: Add "Lookup on Google" option for selected text.
 			if (hasSelection) {
 				menu.append(new MenuItem({
 					label: 'Lookup on Google',
@@ -67,7 +67,6 @@ function createContextMenu(win) {
 					}
 				}));
 			}
-			// MODIFICATION END
 			menu.append(new MenuItem({ label: 'Paste', role: 'paste' }));
 			menu.append(new MenuItem({ type: 'separator' }));
 			menu.append(new MenuItem({ label: 'Select All', role: 'selectAll' }));
@@ -77,7 +76,6 @@ function createContextMenu(win) {
 				menu.append(new MenuItem({ type: 'separator' }));
 			}
 			menu.append(new MenuItem({ label: 'Copy', role: 'copy' }));
-			// MODIFICATION START: Add "Lookup on Google" option for selected text.
 			menu.append(new MenuItem({
 				label: 'Lookup on Google',
 				click: () => {
@@ -85,7 +83,6 @@ function createContextMenu(win) {
 					shell.openExternal(searchUrl);
 				}
 			}));
-			// MODIFICATION END
 			menu.append(new MenuItem({ type: 'separator' }));
 			menu.append(new MenuItem({ label: 'Select All', role: 'selectAll' }));
 		}
@@ -279,7 +276,6 @@ function createChatWindow(novelId) {
 	});
 }
 
-// MODIFICATION START: The function now accepts an 'autoStart' parameter.
 function createAnalysisWindow(novelId, autoStart = false) {
 	if (analysisWindow && !analysisWindow.isDestroyed()) {
 		analysisWindow.focus();
@@ -308,7 +304,34 @@ function createAnalysisWindow(novelId, autoStart = false) {
 		analysisWindow = null;
 	});
 }
-// MODIFICATION END
+
+function createLearningWindow(novelId) {
+	if (learningWindow && !learningWindow.isDestroyed()) {
+		learningWindow.focus();
+		return;
+	}
+	
+	learningWindow = new BrowserWindow({
+		width: 900,
+		height: 700,
+		icon: path.join(__dirname, '..', '..', 'public/assets/icon.png'),
+		title: 'Learning Session', // This will be replaced by i18n on the page
+		autoHideMenuBar: true,
+		webPreferences: {
+			preload: path.join(__dirname, '..', '..', 'preload.js'),
+			contextIsolation: true,
+			nodeIntegration: false,
+		},
+	});
+	
+	setContentSecurityPolicy(learningWindow);
+	
+	learningWindow.loadFile('public/learning-window.html', { query: { novelId } });
+	
+	learningWindow.on('closed', () => {
+		learningWindow = null;
+	});
+}
 
 function closeSplashAndShowMain() {
 	if (splashWindow && !splashWindow.isDestroyed()) {
@@ -336,7 +359,8 @@ module.exports = {
 	createCodexViewerWindow,
 	createImportWindow,
 	createChatWindow,
-	createAnalysisWindow, // MODIFICATION: Export new function
+	createAnalysisWindow,
+	createLearningWindow,
 	closeSplashAndShowMain,
 	getMainWindow: () => mainWindow,
 	getImportWindow: () => importWindow,
