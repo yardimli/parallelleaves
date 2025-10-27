@@ -119,10 +119,13 @@
     "title": "Öğrenme Oturumu Başlat",
     "windowTitle": "Parallel Leaves - Öğrenme Oturumu",
     "start": "Öğrenmeye Başla",
-    "next": "Sonraki Çift",
+    "next": "Sıradaki Çifti Bul",
     "loading": "Sıradaki çift bulunuyor ve analiz ediliyor...",
     "noMorePairs": "Bu romanda başka çeviri çifti bulunamadı.",
     "resultsTitle": "Önerilen Talimatlar",
-    "error": "Hata: {message}"
+    "error": "Hata: {message}",
+    "save": "Talimatları Kaydet",
+    "saving": "Kaydediliyor...",
+    "saved": "Talimatlar kaydedildi!"
   }
 }

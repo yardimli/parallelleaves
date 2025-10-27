@@ -119,10 +119,13 @@
     "title": "Start Learning Session",
     "windowTitle": "Parallel Leaves - Learning Session",
     "start": "Start Learning",
-    "next": "Next Pair",
+    "next": "Find Next Pair",
     "loading": "Finding next pair and analyzing...",
     "noMorePairs": "No more translation pairs found in this novel.",
     "resultsTitle": "Suggested Instructions",
-    "error": "Error: {message}"
+    "error": "Error: {message}",
+    "save": "Save Instructions",
+    "saving": "Saving...",
+    "saved": "Instructions saved!"
   }
 }

@@ -1,5 +1,28 @@
 import { initI18n, t, applyTranslationsTo } from './i18n.js';
 
+// MODIFICATION START: Added a debounce utility for auto-saving.
+/**
+ * Creates a debounced function that delays invoking func until after wait milliseconds have elapsed
+ * since the last time the debounced function was invoked.
+ * @param {Function} func The function to debounce.
+ * @param {number} delay The number of milliseconds to delay.
+ * @returns {Function} Returns the new debounced function.
+ */
+const debounce = (func, delay) => {
+	let timeout;
+	const debounced = function (...args) {
+		const context = this;
+		clearTimeout(timeout);
+		timeout = setTimeout(() => func.apply(context, args), delay);
+	};
+	// Add a method to cancel the pending debounced call.
+	debounced.cancel = () => {
+		clearTimeout(timeout);
+	};
+	return debounced;
+};
+// MODIFICATION END
+
 let novelId = null;
 let lastProcessedMarker = 0; // Keep track of the last marker we processed
 
@@ -12,7 +35,7 @@ const modelSelect = document.getElementById('js-llm-model-select');
 const tempSlider = document.getElementById('js-ai-temperature-slider');
 const tempValue = document.getElementById('js-ai-temperature-value');
 const startBtn = document.getElementById('js-start-learning-btn');
-const resultsContainer = document.getElementById('js-learning-results');
+const editor = document.getElementById('js-learning-results-editor');
 const statusText = document.getElementById('js-status-text');
 
 async function populateModels() {
@@ -48,107 +71,26 @@ async function populateModels() {
 }
 
 /**
- * Renders a result card for a processed translation pair.
- * This function now displays the prompt sent to the AI and the detailed response.
- * @param {object} result - The result data from the main process.
+ * Finds the last marker number from the editor's content.
+ * @returns {number} The highest marker number found, or 0.
  */
-function renderResult(result) {
-	if (!result) {
-		return;
-	}
-	
-	// Create a header for the results if it doesn't exist
-	if (!resultsContainer.querySelector('h2')) {
-		const title = document.createElement('h2');
-		title.className = 'text-xl font-bold mb-2';
-		title.setAttribute('data-i18n', 'editor.learning.resultsTitle');
-		resultsContainer.appendChild(title);
-		applyTranslationsTo(resultsContainer);
-	}
-	
-	const card = document.createElement('div');
-	card.className = 'card bg-base-200 shadow-xl';
-	
-	const cardBody = document.createElement('div');
-	cardBody.className = 'card-body p-4 space-y-4';
-	
-	// Card Header
-	const cardHeader = document.createElement('div');
-	cardHeader.className = 'card-title';
-	const title = document.createElement('h3');
-	title.className = 'text-lg';
-	title.textContent = `Pair #${result.marker}`;
-	cardHeader.appendChild(title);
-	cardBody.appendChild(cardHeader);
-	
-	// Prompt Sent to LLM
-	const promptDetails = document.createElement('details');
-	promptDetails.className = 'collapse collapse-arrow bg-base-100';
-	promptDetails.innerHTML = `
-        <summary class="collapse-title text-md font-medium" data-i18n="editor.learning.promptTitle">Prompt Sent to LLM</summary>
-        <div class="collapse-content">
-            <h4 class="font-semibold mt-2 font-mono text-success" data-i18n="prompt.preview.system">System Prompt</h4>
-            <pre class="bg-base-300 p-2 rounded-md text-xs whitespace-pre-wrap font-mono">${result.prompt.system}</pre>
-            <h4 class="font-semibold mt-4 font-mono text-info" data-i18n="prompt.preview.user">User Prompt</h4>
-            <pre class="bg-base-300 p-2 rounded-md text-xs whitespace-pre-wrap font-mono">${result.prompt.user}</pre>
-        </div>
-    `;
-	cardBody.appendChild(promptDetails);
-	
-	// LLM Response
-	const responseDiv = document.createElement('div');
-	const responseTitle = document.createElement('h4');
-	responseTitle.className = 'text-md font-medium';
-	responseTitle.setAttribute('data-i18n', 'editor.learning.responseTitle');
-	responseTitle.textContent = 'LLM Response';
-	responseDiv.appendChild(responseTitle);
-	
-	if (result.instructions && result.instructions.length > 0) {
-		const list = document.createElement('ul');
-		list.className = 'list-disc list-inside space-y-1 text-base-content/90 bg-base-100 p-3 rounded-md';
-		result.instructions.forEach(instruction => {
-			const li = document.createElement('li');
-			li.textContent = instruction;
-			list.appendChild(li);
-		});
-		responseDiv.appendChild(list);
-		if (result.instructions.length !== 3) {
-			const warning = document.createElement('p');
-			warning.className = 'text-xs text-warning mt-1';
-			warning.setAttribute('data-i18n', 'editor.learning.parseWarning');
-			warning.textContent = 'Warning: The response was not in the expected format of 3 distinct instructions.';
-			responseDiv.appendChild(warning);
-		}
-	} else {
-		const error = document.createElement('p');
-		error.className = 'text-error text-sm bg-base-100 p-3 rounded-md';
-		error.setAttribute('data-i18n', 'editor.learning.parseError');
-		error.textContent = 'Could not parse instructions from the response.';
-		responseDiv.appendChild(error);
-		
-		const rawResponsePre = document.createElement('pre');
-		rawResponsePre.className = 'bg-base-300 p-2 rounded-md text-xs whitespace-pre-wrap font-mono mt-2';
-		rawResponsePre.textContent = result.rawResponse || t('editor.learning.noResponse');
-		responseDiv.appendChild(rawResponsePre);
-	}
-	
-	cardBody.appendChild(responseDiv);
-	card.appendChild(cardBody);
-	applyTranslationsTo(card);
-	
-	resultsContainer.appendChild(card); // MODIFICATION: Ensure the card is appended to the container
-	
-	// Scroll to the new result
-	card.scrollIntoView({ behavior: 'smooth', block: 'end' });
+function getLastMarkerFromEditor() {
+	if (!editor.value) return 0;
+	const matches = editor.value.match(/#(\d+)/g);
+	if (!matches) return 0;
+	const numbers = matches.map(m => parseInt(m.substring(1), 10));
+	return Math.max(...numbers);
 }
 
-async function handleStartLearning() {
+async function findNextPair() {
 	startBtn.disabled = true;
 	startBtn.querySelector('.loading').classList.remove('hidden');
 	statusText.textContent = t('editor.learning.loading');
 	
 	const selectedModel = modelSelect.value;
 	const temperature = parseFloat(tempSlider.value);
+	
+	lastProcessedMarker = getLastMarkerFromEditor();
 	
 	try {
 		await window.api.startLearning({
@@ -164,6 +106,27 @@ async function handleStartLearning() {
 	}
 }
 
+// MODIFICATION START: This function now handles the core save logic without UI updates.
+/**
+ * Saves the current content of the editor to localStorage.
+ */
+function saveInstructions() {
+	try {
+		const storageKey = `learning-instructions-${novelId}`;
+		localStorage.setItem(storageKey, editor.value);
+		// Console log for debugging purposes, no visible UI feedback to keep it unobtrusive.
+		console.log('Learning instructions auto-saved.');
+	} catch (error) {
+		// This might happen if localStorage is full, which is unlikely.
+		console.error('Failed to auto-save learning instructions:', error);
+		statusText.textContent = t('editor.learning.error', { message: error.message });
+	}
+}
+
+// Create a debounced version of the save function for use with the 'input' event.
+const debouncedSave = debounce(saveInstructions, 5000); // 5-second delay
+// MODIFICATION END
+
 document.addEventListener('DOMContentLoaded', async () => {
 	await initI18n();
 	applyTranslationsTo(document.body);
@@ -173,7 +136,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 	novelId = params.get('novelId');
 	
 	if (!novelId) {
-		resultsContainer.innerHTML = `<p class="text-error p-4">${t('editor.learning.error', { message: 'Novel ID is missing.' })}</p>`;
+		editor.value = t('editor.learning.error', { message: 'Novel ID is missing.' });
 		startBtn.disabled = true;
 		return;
 	}
@@ -195,7 +158,33 @@ document.addEventListener('DOMContentLoaded', async () => {
 	
 	await populateModels();
 	
-	startBtn.addEventListener('click', handleStartLearning);
+	// Load existing instructions from localStorage
+	try {
+		const storageKey = `learning-instructions-${novelId}`;
+		const savedInstructions = localStorage.getItem(storageKey);
+		editor.value = savedInstructions || '';
+	} catch (error) {
+		editor.value = t('editor.learning.error', { message: `Failed to load instructions from local storage: ${error.message}` });
+	}
+	
+	// MODIFICATION START: Set up auto-saving event listeners.
+	// Save after 5 seconds of inactivity.
+	editor.addEventListener('input', debouncedSave);
+	
+	// Save immediately when the user clicks away from the textarea.
+	editor.addEventListener('blur', () => {
+		debouncedSave.cancel(); // Cancel any pending debounced save.
+		saveInstructions(); // Save immediately.
+	});
+	
+	// Save immediately before the window is closed.
+	window.addEventListener('beforeunload', () => {
+		debouncedSave.cancel();
+		saveInstructions();
+	});
+	// MODIFICATION END
+	
+	startBtn.addEventListener('click', findNextPair);
 	
 	window.api.onLearningUpdate((update) => {
 		if (!update || typeof update.type === 'undefined') {
@@ -212,18 +201,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 		}
 		
 		switch (update.type) {
-			case 'results':
+			case 'new_instructions':
 				statusText.textContent = '';
+				editor.value += update.data.formattedBlock;
+				editor.scrollTop = editor.scrollHeight;
 				lastProcessedMarker = update.data.marker;
-				renderResult(update.data);
-				// Change button text to "Next Pair"
-				startBtn.querySelector('span:not(.loading)').textContent = t('editor.learning.next');
 				startBtn.disabled = false;
 				startBtn.querySelector('.loading').classList.add('hidden');
+				// MODIFICATION: Trigger an immediate save after new content is added.
+				saveInstructions();
 				break;
 			case 'finished':
 				statusText.textContent = messageText;
-				startBtn.disabled = true; // No more pairs, so disable the button
+				startBtn.disabled = true;
 				startBtn.querySelector('.loading').classList.add('hidden');
 				break;
 			case 'error':

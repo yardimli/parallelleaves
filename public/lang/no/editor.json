@@ -119,10 +119,13 @@
     "title": "Start læringsøkt",
     "windowTitle": "Parallel Leaves - Læringsøkt",
     "start": "Start læring",
-    "next": "Neste par",
+    "next": "Finn neste par",
     "loading": "Finner neste par og analyserer...",
     "noMorePairs": "Ingen flere oversettelsespar funnet i denne romanen.",
     "resultsTitle": "Foreslåtte instruksjoner",
-    "error": "Feil: {message}"
+    "error": "Feil: {message}",
+    "save": "Lagre instruksjoner",
+    "saving": "Lagrer...",
+    "saved": "Instruksjoner lagret!"
   }
 }
