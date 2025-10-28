@@ -4,7 +4,6 @@ contextBridge.exposeInMainWorld('api', {
 	// --- App Level ---
 	openImportWindow: () => ipcRenderer.send('app:open-import-window'),
 	openChatWindow: (novelId) => ipcRenderer.send('app:openChatWindow', novelId),
-	// MODIFICATION: Renamed API functions for Translation Memory
 	openTranslationMemoryWindow: (novelId) => ipcRenderer.send('app:openTranslationMemoryWindow', novelId),
 	translationMemoryStart: (data) => ipcRenderer.invoke('translation-memory:start', data),
 	onTranslationMemoryUpdate: (callback) => ipcRenderer.on('translation-memory:update', (event, ...args) => callback(...args)),

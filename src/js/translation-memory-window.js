@@ -29,7 +29,6 @@ const AI_SETTINGS_KEYS = {
 	TEMPERATURE: 'parallel-leaves-ai-temperature'
 };
 
-// MODIFICATION: Updated element IDs
 const modelSelect = document.getElementById('js-llm-model-select');
 const tempSlider = document.getElementById('js-ai-temperature-slider');
 const tempValue = document.getElementById('js-ai-temperature-value');
@@ -110,7 +109,6 @@ async function startGenerationProcess() {
 	startBtn.disabled = true;
 	startBtn.querySelector('.loading').classList.remove('hidden');
 	stopBtn.classList.remove('hidden');
-	// MODIFICATION: Updated i18n key
 	statusText.textContent = t('editor.translationMemory.loading');
 	
 	await sendGenerationRequest();
@@ -144,7 +142,6 @@ async function sendGenerationRequest() {
 	const processedMarkerNumbers = getProcessedMarkers();
 	
 	try {
-		// MODIFICATION: Updated API call
 		await window.api.translationMemoryStart({
 			novelId,
 			model: selectedModel,
@@ -154,7 +151,6 @@ async function sendGenerationRequest() {
 			lang: localStorage.getItem('app_lang') || 'en'
 		});
 	} catch (error) {
-		// MODIFICATION: Updated i18n key
 		statusText.textContent = t('editor.translationMemory.error', { message: error.message });
 		stopGenerationProcess();
 	}
@@ -165,12 +161,10 @@ async function sendGenerationRequest() {
  */
 async function saveMemory() {
 	try {
-		// MODIFICATION: Updated API call
 		await window.api.translationMemorySave({ novelId, content: editor.value });
 		console.log('Translation memory auto-saved.');
 	} catch (error) {
 		console.error('Failed to auto-save translation memory:', error);
-		// MODIFICATION: Updated i18n key
 		statusText.textContent = t('editor.translationMemory.error', { message: error.message });
 	}
 }
@@ -180,14 +174,12 @@ const debouncedSave = debounce(saveMemory, 5000); // 5-second delay
 document.addEventListener('DOMContentLoaded', async () => {
 	await initI18n();
 	applyTranslationsTo(document.body);
-	// MODIFICATION: Updated i18n key
 	document.title = t('editor.translationMemory.windowTitle');
 	
 	const params = new URLSearchParams(window.location.search);
 	novelId = params.get('novelId');
 	
 	if (!novelId) {
-		// MODIFICATION: Updated i18n key
 		editor.value = t('editor.translationMemory.error', { message: 'Novel ID is missing.' });
 		startBtn.disabled = true;
 		return;
@@ -208,7 +200,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 	});
 	
 	const pairsCountInput = document.getElementById('js-analysis-pairs-count');
-	// MODIFICATION: Updated storage key
 	const PAIRS_COUNT_KEY = `translation-memory-pairs-count-${novelId}`;
 	
 	const savedPairsCount = localStorage.getItem(PAIRS_COUNT_KEY) || '2';
@@ -225,7 +216,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 	await populateModels();
 	
 	try {
-		// MODIFICATION: Updated API call
 		const result = await window.api.translationMemoryLoad(novelId);
 		if (result.success) {
 			editor.value = result.content || '';
@@ -233,7 +223,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			throw new Error(result.message);
 		}
 	} catch (error) {
-		// MODIFICATION: Updated i18n key
 		editor.value = t('editor.translationMemory.error', { message: `Failed to load memory: ${error.message}` });
 	}
 	
@@ -252,11 +241,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 	startBtn.addEventListener('click', startGenerationProcess);
 	stopBtn.addEventListener('click', stopGenerationProcess);
 	
-	// MODIFICATION: Updated event listener
 	window.api.onTranslationMemoryUpdate((update) => {
 		if (!update || typeof update.type === 'undefined') {
 			console.error('Received invalid update from main process:', update);
-			// MODIFICATION: Updated i18n key
 			statusText.textContent = t('editor.translationMemory.error', { message: 'Received an invalid update.' });
 			stopGenerationProcess();
 			return;
@@ -274,7 +261,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 				saveMemory();
 				
 				if (isGenerationRunning) {
-					// MODIFICATION: Updated i18n key
 					statusText.textContent = t('editor.translationMemory.loading');
 					sendGenerationRequest();
 				}

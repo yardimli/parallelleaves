@@ -17,7 +17,6 @@ const defaultState = { // Default state for the translate editor form
 	useCodex: true,
 	contextPairs: 4,
 	useDictionary: false,
-	// MODIFICATION: Added default for translation memories
 	translationMemoryIds: []
 };
 
@@ -51,7 +50,6 @@ const buildTranslationContextBlock = (translationPairs, languageForPrompt, targe
 	return contextMessages;
 };
 
-// MODIFICATION: Renamed learningContent to translationMemoryContent for clarity
 export const buildPromptJson = (formData, context, contextualContent = '', translationMemoryContent = '') => {
 	const { selectedText, languageForPrompt, targetLanguage, translationPairs } = context;
 	
@@ -67,7 +65,6 @@ export const buildPromptJson = (formData, context, contextualContent = '', trans
 		? t('prompt.translate.system.dictionaryBlock', { dictionaryContent: contextualContent })
 		: '';
 	
-	// MODIFICATION: Renamed variable and key
 	const examplesBlock = translationMemoryContent
 		? t('prompt.translate.system.examplesBlock', { translationExamples: translationMemoryContent })
 		: '';
@@ -122,7 +119,6 @@ const updatePreview = async (container, context) => {
 		useCodex: form.elements.use_codex.checked,
 		contextPairs: parseInt(form.elements.context_pairs.value, 10) || 0,
 		useDictionary: form.elements.use_dictionary.checked,
-		// MODIFICATION: Include selected memory IDs
 		translationMemoryIds: selectedMemoryIds
 	};
 	
@@ -161,7 +157,6 @@ const updatePreview = async (container, context) => {
 		previewContext.codexContent = await window.api.codex.get(context.novelId);
 	}
 	
-	// MODIFICATION: Fetch content from selected translation memories for the preview
 	let translationMemoryContent = '';
 	if (formData.translationMemoryIds.length > 0) {
 		try {
@@ -172,7 +167,6 @@ const updatePreview = async (container, context) => {
 	}
 	
 	try {
-		// MODIFICATION: Pass the fetched memory content to the prompt builder
 		const promptJson = buildPromptJson(formData, previewContext, dictionaryContextualContent, translationMemoryContent);
 		systemPreview.textContent = promptJson.system;
 		userPreview.textContent = promptJson.user;
@@ -230,7 +224,6 @@ const populateForm = (container, state, novelId) => {
 	});
 };
 
-// MODIFICATION: New function to populate the translation memory dropdown
 const populateTranslationMemoriesDropdown = async (container, currentNovelId) => {
 	const list = container.querySelector('#js-translation-memory-list');
 	if (!list) return;
@@ -283,7 +276,6 @@ export const init = async (container, context) => {
 		const fullContext = { ...context };
 		
 		populateForm(container, context.initialState || defaultState, context.novelId);
-		// MODIFICATION: Populate the new dropdown
 		await populateTranslationMemoriesDropdown(container, context.novelId);
 		
 		const form = container.querySelector('#translate-editor-form');
@@ -293,7 +285,6 @@ export const init = async (container, context) => {
 		}, 500);
 		
 		if (form) {
-			// MODIFICATION: Use 'change' event for checkboxes as well
 			form.addEventListener('input', debouncedUpdatePreview);
 			form.addEventListener('change', (e) => {
 				if (e.target.type === 'checkbox') {

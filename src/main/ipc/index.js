@@ -10,7 +10,6 @@ const { registerSectionHandlers } = require('./sectionHandlers.js');
 const { registerSystemHandlers } = require('./systemHandlers.js');
 const { registerDictionaryHandlers } = require('./dictionaryHandlers.js');
 const { registerLoggingHandlers } = require('./loggingHandlers.js');
-// MODIFICATION: Renamed handler import
 const { registerTranslationMemoryHandlers } = require('./translationMemoryHandlers.js');
 
 /**
@@ -32,7 +31,6 @@ function registerIpcHandlers(db, sessionManager, windowManager) {
 	registerSystemHandlers(db, sessionManager, windowManager);
 	registerDictionaryHandlers();
 	registerLoggingHandlers(db, sessionManager);
-	// MODIFICATION: Renamed handler registration
 	registerTranslationMemoryHandlers(db, sessionManager);
 }
 

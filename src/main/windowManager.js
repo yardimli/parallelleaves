@@ -7,7 +7,6 @@ let importWindow = null;
 let chapterEditorWindows = new Map();
 let codexViewerWindows = new Map();
 let chatWindow = null;
-// MODIFICATION: Renamed variable
 let translationMemoryWindow = null;
 let isMainWindowReady = false;
 
@@ -271,7 +270,6 @@ function createChatWindow(novelId) {
 	});
 }
 
-// MODIFICATION: Renamed function and updated its implementation
 function createTranslationMemoryWindow(novelId) {
 	if (translationMemoryWindow && !translationMemoryWindow.isDestroyed()) {
 		translationMemoryWindow.focus();
@@ -326,7 +324,6 @@ module.exports = {
 	createCodexViewerWindow,
 	createImportWindow,
 	createChatWindow,
-	// MODIFICATION: Exported renamed function
 	createTranslationMemoryWindow,
 	closeSplashAndShowMain,
 	getMainWindow: () => mainWindow,

@@ -65,7 +65,6 @@ function registerSystemHandlers(db, sessionManager, windowManager) {
 		}
 	});
 	
-	// MODIFICATION: Renamed IPC channel and the function it calls
 	ipcMain.on('app:openTranslationMemoryWindow', (event, novelId) => {
 		if (windowManager && typeof windowManager.createTranslationMemoryWindow === 'function') {
 			windowManager.createTranslationMemoryWindow(novelId);

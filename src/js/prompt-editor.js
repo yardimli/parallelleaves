@@ -26,7 +26,6 @@ const formDataExtractors = {
 		useCodex: form.elements.use_codex.checked,
 		useDictionary: form.elements.use_dictionary.checked
 	}),
-	// MODIFICATION: Extractor now also gets selected translation memory IDs
 	'translate': (form) => ({
 		instructions: form.elements.instructions.value.trim(),
 		tense: form.elements.tense.value,
@@ -496,7 +495,6 @@ async function handleModalApply() {
 		dictionaryContextualContent = await window.api.getDictionaryContentForAI(novelId, 'translation');
 	}
 	
-	// MODIFICATION: Fetch translation memory content from selected novels
 	let translationMemoryContent = '';
 	if (action === 'translate' && formDataObj.translationMemoryIds && formDataObj.translationMemoryIds.length > 0) {
 		try {

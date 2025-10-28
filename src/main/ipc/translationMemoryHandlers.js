@@ -175,12 +175,10 @@ function validateAndFilterLLMResponse(responseText, sourceLang, targetLang) {
 	return validPairs.join('\n');
 }
 
-// MODIFICATION: Renamed function to reflect its purpose
 const getTranslationMemoryPath = (novelId) => {
 	if (!novelId) {
 		return null;
 	}
-	// MODIFICATION: Updated file naming convention
 	return path.join(app.getPath('userData'), `translation_memory_${novelId}.txt`);
 };
 
@@ -189,9 +187,7 @@ const getTranslationMemoryPath = (novelId) => {
  * @param {Database.Database} db - The application's database connection.
  * @param {object} sessionManager - The session manager instance.
  */
-// MODIFICATION: Renamed handler registration function
 function registerTranslationMemoryHandlers(db, sessionManager) {
-	// MODIFICATION: Renamed IPC handler and updated logic
 	ipcMain.handle('translation-memory:start', async (event, { novelId, model, temperature, processedMarkerNumbers, lang = 'en', pairCount = 2 }) => {
 		const memoryWindow = event.sender.getOwnerBrowserWindow();
 		
@@ -212,7 +208,6 @@ function registerTranslationMemoryHandlers(db, sessionManager) {
 			const nextPair = allPairs.find(p => !processedMarkerNumbers.includes(p.marker));
 			
 			if (!nextPair) {
-				// MODIFICATION: Updated event channel and i18n key
 				memoryWindow.webContents.send('translation-memory:update', { type: 'finished', message: 'editor.translationMemory.noMorePairs' });
 				return { success: true, message: 'No more pairs.' };
 			}
@@ -249,7 +244,6 @@ function registerTranslationMemoryHandlers(db, sessionManager) {
 				if (validatedResponse) {
 					const formattedBlock = `\n\n#${novelId}-${nextPair.marker}\n${validatedResponse}`;
 					
-					// MODIFICATION: Updated event channel
 					memoryWindow.webContents.send('translation-memory:update', {
 						type: 'new_instructions',
 						data: {
@@ -268,13 +262,11 @@ function registerTranslationMemoryHandlers(db, sessionManager) {
 			return { success: true };
 		} catch (error) {
 			console.error('Translation memory generation failed:', error);
-			// MODIFICATION: Updated event channel and i18n key
 			memoryWindow.webContents.send('translation-memory:update', { type: 'error', message: 'editor.translationMemory.error', params: { message: error.message } });
 			return { success: false, error: error.message };
 		}
 	});
 	
-	// MODIFICATION: Renamed handler and added XML metadata header on save
 	ipcMain.handle('translation-memory:save', (event, { novelId, content }) => {
 		const filePath = getTranslationMemoryPath(novelId);
 		if (!filePath) {
@@ -286,21 +278,18 @@ function registerTranslationMemoryHandlers(db, sessionManager) {
 				throw new Error('Novel not found for metadata generation.');
 			}
 			
-			// Create XML metadata header
-			const metadata = `<!--
-<metadata>
+			const metadata = `<metadata>
   <novel_id>${novelId}</novel_id>
   <title>${novel.title || 'Untitled'}</title>
   <author>${novel.author || 'Unknown'}</author>
   <source_language>${novel.source_language}</source_language>
   <target_language>${novel.target_language}</target_language>
   <generated_at>${new Date().toISOString()}</generated_at>
-</metadata>
--->`;
+</metadata>`;
 			
-			// Strip any existing header before prepending the new one
-			const contentWithoutHeader = content.replace(/<!--\s*<metadata>[\s\S]*?<\/metadata>\s*-->\s*/, '');
-			const finalContent = `${metadata}\n${contentWithoutHeader}`;
+			// This ensures that when saving, we replace any old header with the new one.
+			const contentWithoutHeader = content.replace(/(<!--\s*)?<metadata>[\s\S]*?<\/metadata>(\s*-->)?\s*/, '');
+			const finalContent = `${metadata}\n${contentWithoutHeader.trim()}`;
 			
 			fs.writeFileSync(filePath, finalContent, 'utf8');
 			return { success: true };
@@ -310,7 +299,6 @@ function registerTranslationMemoryHandlers(db, sessionManager) {
 		}
 	});
 	
-	// MODIFICATION: Renamed handler
 	ipcMain.handle('translation-memory:load', (event, novelId) => {
 		const filePath = getTranslationMemoryPath(novelId);
 		if (!filePath) {
@@ -318,7 +306,9 @@ function registerTranslationMemoryHandlers(db, sessionManager) {
 		}
 		try {
 			if (fs.existsSync(filePath)) {
-				const content = fs.readFileSync(filePath, 'utf8');
+				let content = fs.readFileSync(filePath, 'utf8');
+				// This regex handles both the old commented format and the new raw format.
+				content = content.replace(/(<!--\s*)?<metadata>[\s\S]*?<\/metadata>(\s*-->)?\s*/, '').trim();
 				return { success: true, content };
 			}
 			return { success: true, content: '' };
@@ -328,7 +318,6 @@ function registerTranslationMemoryHandlers(db, sessionManager) {
 		}
 	});
 	
-	// MODIFICATION: Renamed handler and added logic to strip XML header
 	ipcMain.handle('translation-memory:getForAI', (event, novelId) => {
 		const filePath = getTranslationMemoryPath(novelId);
 		if (!filePath) {
@@ -337,8 +326,7 @@ function registerTranslationMemoryHandlers(db, sessionManager) {
 		try {
 			if (fs.existsSync(filePath)) {
 				const content = fs.readFileSync(filePath, 'utf8');
-				// Strip XML header and marker lines
-				const contentWithoutHeader = content.replace(/<!--\s*<metadata>[\s\S]*?<\/metadata>\s*-->\s*/, '');
+				const contentWithoutHeader = content.replace(/(<!--\s*)?<metadata>[\s\S]*?<\/metadata>(\s*-->)?\s*/, '');
 				const lines = contentWithoutHeader.split('\n');
 				const filteredLines = lines.filter(line => !/^\s*#\d+-\d+\s*$/.test(line.trim()));
 				return filteredLines.join('\n');
@@ -350,7 +338,6 @@ function registerTranslationMemoryHandlers(db, sessionManager) {
 		}
 	});
 	
-	// NEW HANDLER: Get combined memory content for multiple novels
 	ipcMain.handle('translation-memory:getForNovels', (event, novelIds) => {
 		if (!Array.isArray(novelIds) || novelIds.length === 0) {
 			return '';
@@ -362,7 +349,7 @@ function registerTranslationMemoryHandlers(db, sessionManager) {
 			if (filePath && fs.existsSync(filePath)) {
 				try {
 					const content = fs.readFileSync(filePath, 'utf8');
-					const contentWithoutHeader = content.replace(/<!--\s*<metadata>[\s\S]*?<\/metadata>\s*-->\s*/, '');
+					const contentWithoutHeader = content.replace(/(<!--\s*)?<metadata>[\s\S]*?<\/metadata>(\s*-->)?\s*/, '');
 					const lines = contentWithoutHeader.split('\n');
 					const filteredLines = lines.filter(line => !/^\s*#\d+-\d+\s*$/.test(line.trim()));
 					if (filteredLines.length > 0) {
@@ -377,5 +364,4 @@ function registerTranslationMemoryHandlers(db, sessionManager) {
 	});
 }
 
-// MODIFICATION: Renamed exported function
 module.exports = { registerTranslationMemoryHandlers };
