@@ -69,6 +69,15 @@ export const buildPromptJson = (formData, context, contextualContent = '', learn
 	const examplesBlock = learningContent
 		? t('prompt.translate.system.examplesBlock', { translationExamples: learningContent })
 		: '';
+	
+	// MODIFICATION START: Create codex block for the system prompt.
+	let codexBlock = '';
+	if (formData.useCodex && context.codexContent) {
+		const plainCodex = htmlToPlainText(context.codexContent);
+		if (plainCodex) {
+			codexBlock = t('prompt.translate.system.codexBlock', { codexContent: plainCodex });
+		}
+	}
 	// MODIFICATION END
 	
 	const system = t('prompt.translate.system.base', {
@@ -77,22 +86,14 @@ export const buildPromptJson = (formData, context, contextualContent = '', learn
 		tenseBlock: tenseBlock,
 		instructionsBlock: instructionsBlock,
 		dictionaryBlock: dictionaryBlock, // MODIFICATION: Pass the dictionary block to the system prompt.
-		examplesBlock: examplesBlock      // MODIFICATION: Pass the examples block to the system prompt.
+		examplesBlock: examplesBlock,      // MODIFICATION: Pass the examples block to the system prompt.
+		codexBlock: codexBlock             // MODIFICATION: Pass the codex block to the system prompt.
 	}).trim();
-	
-	let codexBlock = '';
-	if (formData.useCodex && context.codexContent) {
-		const plainCodex = htmlToPlainText(context.codexContent);
-		if (plainCodex) {
-			codexBlock = t('prompt.translate.user.codexBlock', { codexContent: plainCodex });
-		}
-	}
 	
 	const contextMessages = buildTranslationContextBlock(translationPairs, languageForPrompt, targetLanguage);
 	
 	const finalUserPromptParts = [];
-	// MODIFICATION: Removed dictionary and example blocks from the user prompt parts.
-	finalUserPromptParts.push(codexBlock);
+	// MODIFICATION: The codex block is no longer added to the user prompt.
 	finalUserPromptParts.push(t('prompt.translate.user.textToTranslate', {
 		sourceLanguage: languageForPrompt,
 		targetLanguage: targetLanguage,

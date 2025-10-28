@@ -312,7 +312,13 @@ function registerLearningHandlers(db, sessionManager) {
 		}
 		try {
 			if (fs.existsSync(filePath)) {
-				return fs.readFileSync(filePath, 'utf8');
+				const content = fs.readFileSync(filePath, 'utf8');
+				// MODIFICATION START: Filter out the marker lines before returning the content.
+				// This prevents metadata like '#1-54' from being included in the AI prompt.
+				const lines = content.split('\n');
+				const filteredLines = lines.filter(line => !/^\s*#\d+-\d+\s*$/.test(line.trim()));
+				return filteredLines.join('\n');
+				// MODIFICATION END
 			}
 			return '';
 		} catch (error) {
