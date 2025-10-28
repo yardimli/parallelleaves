@@ -11,6 +11,9 @@ const debounce = (func, delay) => {
 	};
 };
 
+// NEW: Variable to hold the Choices.js instance
+let translationMemoryChoices = null;
+
 const defaultState = { // Default state for the translate editor form
 	instructions: '',
 	tense: 'past',
@@ -111,7 +114,9 @@ const updatePreview = async (container, context) => {
 		return;
 	}
 	
-	const selectedMemoryIds = Array.from(form.querySelectorAll('#js-translation-memory-list input:checked')).map(cb => cb.value);
+	// MODIFIED: Read selected options from the <select> element
+	const selectEl = form.querySelector('#js-translation-memory-select');
+	const selectedMemoryIds = Array.from(selectEl.selectedOptions).map(opt => opt.value);
 	
 	const formData = {
 		instructions: form.elements.instructions.value.trim(),
@@ -224,45 +229,48 @@ const populateForm = (container, state, novelId) => {
 	});
 };
 
+// MODIFIED: This function now populates a <select> and initializes Choices.js
 const populateTranslationMemoriesDropdown = async (container, currentNovelId) => {
-	const list = container.querySelector('#js-translation-memory-list');
-	if (!list) return;
+	const select = container.querySelector('#js-translation-memory-select');
+	if (!select) return;
+	
+	// Destroy any existing Choices instance to prevent duplicates
+	if (translationMemoryChoices) {
+		translationMemoryChoices.destroy();
+		translationMemoryChoices = null;
+	}
 	
 	try {
-		const novels = await window.api.getAllNovelsSimple();
-		list.innerHTML = ''; // Clear loading state
+		const novels = await window.api.getAllNovelsWithTM();
+		select.innerHTML = ''; // Clear element
 		
 		if (novels && novels.length > 0) {
 			novels.forEach(novel => {
-				const li = document.createElement('li');
-				const label = document.createElement('label');
-				label.className = 'label cursor-pointer';
-				
-				const span = document.createElement('span');
-				span.className = 'label-text';
-				span.textContent = novel.title;
-				
-				const checkbox = document.createElement('input');
-				checkbox.type = 'checkbox';
-				checkbox.className = 'checkbox checkbox-sm';
-				checkbox.value = novel.id;
-				
-				// By default, check the memory for the current novel
+				const option = new Option(novel.title, novel.id);
+				// By default, select the memory for the current novel
 				if (novel.id.toString() === currentNovelId.toString()) {
-					checkbox.checked = true;
+					option.selected = true;
 				}
-				
-				label.appendChild(span);
-				label.appendChild(checkbox);
-				li.appendChild(label);
-				list.appendChild(li);
+				select.appendChild(option);
 			});
-		} else {
-			list.innerHTML = `<li><span class="text-base-content/60">${t('prompt.translate.noTranslationMemories')}</span></li>`;
 		}
+		
+		// Initialize Choices.js on the select element
+		translationMemoryChoices = new Choices(select, {
+			removeItemButton: true,
+			placeholder: true,
+			placeholderValue: t('prompt.translate.selectTranslationMemories'),
+			// FIXED: Corrected the classNames configuration to not include spaces in values.
+			classNames: {
+				containerOuter: 'choices',
+				containerInner: 'choices__inner',
+			}
+		});
+		
 	} catch (error) {
 		console.error('Failed to load novels for translation memory selection:', error);
-		list.innerHTML = `<li><span class="text-error">${t('common.error')}</span></li>`;
+		// Optionally, disable the element or show an error message
+		select.disabled = true;
 	}
 };
 
@@ -286,6 +294,13 @@ export const init = async (container, context) => {
 		
 		if (form) {
 			form.addEventListener('input', debouncedUpdatePreview);
+			
+			// MODIFIED: Listen for changes on the Choices.js select element
+			const selectEl = form.querySelector('#js-translation-memory-select');
+			if (selectEl) {
+				selectEl.addEventListener('change', debouncedUpdatePreview);
+			}
+			
 			form.addEventListener('change', (e) => {
 				if (e.target.type === 'checkbox') {
 					debouncedUpdatePreview();

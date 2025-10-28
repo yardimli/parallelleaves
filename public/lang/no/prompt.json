@@ -44,6 +44,8 @@
     "loadingCodex": "Laster codex-oppføringer...",
     "prevPairs": "Forrige oversettelsespar",
     "prevPairsHelp": "Inkluder N forrige oversettelsesblokker som kontekst for AI-en. (0 for å deaktivere)",
+    "noTranslationMemories" : "Ingen oversettelsesminner tilgjengelig.",
+    "selectTranslationMemories" : "Velg oversettelsesminner",
     "system": {
       "base": "You are an expert literary translator. Your task is to translate a text from {sourceLanguage} to {targetLanguage}.\n{tenseBlock}\nPreserve the original tone, style, and literary devices as much as possible. Maintain the original paragraph breaks.\n\n{instructionsBlock}\n{dictionaryBlock}\n{examplesBlock}\n{codexBlock}\n\nOnly return the translated text, nothing else.",
       "instructionsBlock": "Follow these specific instructions: <instructions>{instructions}</instructions>",

@@ -44,6 +44,8 @@
     "loadingCodex": "Kodeks kayıtları yükleniyor...",
     "prevPairs": "Önceki Çeviriler",
     "prevPairsHelp": "Yapay zekaya bağlam sağlamak için önceki N çeviri bloğunu dahil et. (Kapatmak için 0 girin).",
+    "noTranslationMemories" : "Kullanılabilir çeviri belleği yok.",
+    "selectTranslationMemories" : "Çeviri Belleklerini Seç",
     "system": {
       "base": "You are an expert literary translator. Your task is to translate a text from {sourceLanguage} to {targetLanguage}.\n{tenseBlock}\nPreserve the original tone, style, and literary devices as much as possible. Maintain the original paragraph breaks.\n\n{instructionsBlock}\n{dictionaryBlock}\n{examplesBlock}\n{codexBlock}\n\nOnly return the translated text, nothing else.",
       "instructionsBlock": "Follow these specific instructions: <instructions>{instructions}</instructions>",

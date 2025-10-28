@@ -26,8 +26,7 @@ contextBridge.exposeInMainWorld('api', {
 	
 	// --- Dashboard/Novel Creation ---
 	getNovelsWithCovers: () => ipcRenderer.invoke('novels:getAllWithCovers'),
-	// NEW API: Get a simple list of novels for UI elements
-	getAllNovelsSimple: () => ipcRenderer.invoke('novels:getAllSimple'),
+	getAllNovelsWithTM: () => ipcRenderer.invoke('novels:getAllWithTranslationMemory'),
 	getOneNovel: (novelId) => ipcRenderer.invoke('novels:getOne', novelId),
 	getFullManuscript: (novelId) => ipcRenderer.invoke('novels:getFullManuscript', novelId),
 	getAllNovelContent: (novelId) => ipcRenderer.invoke('novels:getAllNovelContent', novelId),

@@ -183,6 +183,28 @@ const getTranslationMemoryPath = (novelId) => {
 };
 
 /**
+ * MODIFICATION: Checks if a novel has a non-empty translation memory file, ignoring metadata.
+ * This function is exported for use in other handlers.
+ * @param {string|number} novelId The ID of the novel to check.
+ * @returns {boolean} True if a valid, non-empty translation memory exists.
+ */
+function hasValidTranslationMemory(novelId) {
+	const filePath = getTranslationMemoryPath(novelId);
+	if (!filePath || !fs.existsSync(filePath)) {
+		return false;
+	}
+	try {
+		const content = fs.readFileSync(filePath, 'utf8');
+		// This regex handles both the old commented format and the new raw format.
+		const contentWithoutHeader = content.replace(/(<!--\s*)?<metadata>[\s\S]*?<\/metadata>(\s*-->)?\s*/, '').trim();
+		return contentWithoutHeader.length > 0;
+	} catch (error) {
+		console.error(`Failed to read or parse translation memory for novel ${novelId}:`, error);
+		return false;
+	}
+}
+
+/**
  * Registers IPC handlers for the translation memory window functionality.
  * @param {Database.Database} db - The application's database connection.
  * @param {object} sessionManager - The session manager instance.
@@ -364,4 +386,5 @@ function registerTranslationMemoryHandlers(db, sessionManager) {
 	});
 }
 
-module.exports = { registerTranslationMemoryHandlers };
+// MODIFICATION: Export the helper function alongside the main registration function.
+module.exports = { registerTranslationMemoryHandlers, hasValidTranslationMemory };

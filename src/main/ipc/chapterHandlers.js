@@ -15,20 +15,25 @@ const extractMarkerPairsFromHtml = (sourceHtml, targetHtml, selectedText = null)
 	
 	const getSegments = (html) => {
 		const segments = [];
-		const parts = html.split(/(\[\[#\d+\]\])/g);
-		for (let i = 1; i < parts.length; i += 2) {
-			const marker = parts[i];
-			const content = parts[i + 1] || '';
-			const match = marker.match(/\[\[#(\d+)\]\]/);
-			if (match) {
-				const number = parseInt(match[1], 10);
-				// Remove any closing markers from the content segment before processing.
-				// This ensures that `{{#...}}` tags don't get included in the context pairs.
-				const contentWithoutClosingMarkers = content.replace(/\{\{#\d+\}\}/g, '');
-				const plainText = htmlToPlainText(contentWithoutClosingMarkers);
+		const openingMarkerRegex = /\[\[#(\d+)\]\]/g;
+		let match;
+		
+		while ((match = openingMarkerRegex.exec(html)) !== null) {
+			const number = parseInt(match[1], 10);
+			const openMarkerEndIndex = match.index + match[0].length;
+			
+			const closingMarkerRegex = new RegExp(`\\{\\{#${number}\\}\\}`);
+			const restOfString = html.substring(openMarkerEndIndex);
+			const closeMatch = restOfString.match(closingMarkerRegex);
+			
+			if (closeMatch) {
+				const contentEndIndex = openMarkerEndIndex + closeMatch.index;
+				const contentHtml = html.substring(openMarkerEndIndex, contentEndIndex);
+				const contentWithoutInnerMarkers = contentHtml.replace(/(\[\[#\d+\]\])|(\{\{#\d+\}\})/g, '');
+				const plainText = htmlToPlainText(contentWithoutInnerMarkers).trim();
 				
 				if (plainText) {
-					segments.push({ number, text: plainText, isLastSegment: i === parts.length - 2 });
+					segments.push({ number, text: plainText });
 				}
 			}
 		}

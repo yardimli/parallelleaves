@@ -5,6 +5,8 @@ const HTMLtoDOCX = require('html-to-docx');
 const imageHandler = require('../../utils/image-handler.js');
 const { countWordsInHtml, htmlToPlainText } = require('../utils.js');
 const { mapLanguageToIsoCode } = require('../../js/languages.js');
+// MODIFICATION: Import the helper function to check for valid translation memories.
+const { hasValidTranslationMemory } = require('./translationMemoryHandlers.js');
 
 function toRoman(num) {
 	const roman = { M: 1000, CM: 900, D: 500, CD: 400, C: 100, XC: 90, L: 50, XL: 40, X: 10, IX: 9, V: 5, IV: 4, I: 1 };
@@ -53,12 +55,14 @@ function registerNovelHandlers(db, sessionManager, windowManager) {
 		return novels;
 	});
 	
-	// NEW HANDLER: Gets a simplified list of all novels for UI elements.
-	ipcMain.handle('novels:getAllSimple', (event) => {
+	ipcMain.handle('novels:getAllWithTranslationMemory', (event) => {
 		try {
-			return db.prepare('SELECT id, title FROM novels ORDER BY title ASC').all();
+			const allNovels = db.prepare('SELECT id, title FROM novels ORDER BY title ASC').all();
+			// Filter the list by checking each novel's translation memory file.
+			const filteredNovels = allNovels.filter(novel => hasValidTranslationMemory(novel.id));
+			return filteredNovels;
 		} catch (error) {
-			console.error('Failed to get simple list of novels:', error);
+			console.error('Failed to get novels with translation memory:', error);
 			return [];
 		}
 	});
