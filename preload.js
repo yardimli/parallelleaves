@@ -11,6 +11,9 @@ contextBridge.exposeInMainWorld('api', {
 	translationMemoryLoad: (novelId) => ipcRenderer.invoke('translation-memory:load', novelId),
 	translationMemoryGetForAI: (novelId) => ipcRenderer.invoke('translation-memory:getForAI', novelId),
 	translationMemoryGetForNovels: (novelIds) => ipcRenderer.invoke('translation-memory:getForNovels', novelIds),
+	// NEW: Handlers for comparing novel pairs and TM entries.
+	getTranslationMemoryEntryCount: (novelId) => ipcRenderer.invoke('translation-memory:get-entry-count', novelId),
+	getNovelTranslationPairCount: (novelId) => ipcRenderer.invoke('novels:get-translation-pair-count', novelId),
 	// END MODIFICATION
 	getLangFile: (lang) => ipcRenderer.invoke('i18n:get-lang-file', lang),
 	login: (credentials) => ipcRenderer.invoke('auth:login', credentials),

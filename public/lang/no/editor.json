@@ -60,6 +60,11 @@
   "confirmModalBtn": "Bekreft handling",
   "confirmDeleteChapter": "Er du sikker på at du vil slette dette kapittelet? Dette kan ikke angres.",
   "confirmDeleteAct": "Er du sikker på at du vil slette denne akten og alle dens kapitler? Dette kan ikke angres.",
+  "confirmUpdateTMMemory": {
+    "title": "Oppdatere oversettelsesminnet?",
+    "content": "Romanen din har {count} flere oversettelsespar enn oversettelsesminnet ditt. For bedre AI-ytelse anbefaler vi at du oppdaterer det nå. Du kan starte prosessen fra verktøylinjen ved å bruke <i class='bi bi-lightbulb text-lg'></i>-ikonet.",
+    "decline": "Ikke spør igjen i denne økten"
+  },
   "aiToolbar": {
     "apply": "Godta",
     "retry": "Prøv igjen",

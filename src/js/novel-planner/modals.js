@@ -1,9 +1,12 @@
+import { t } from '../i18n.js';
+
 /**
  * Shows a confirmation modal and returns a promise that resolves with true, false, or 'decline'.
  * @param {string} title - The title of the modal.
  * @param {string} message - The confirmation message.
  * @param {object} [options={}] - Optional settings.
  * @param {boolean} [options.showDecline=false] - If true, shows the "Don't ask again" button.
+ * @param {string} [options.declineKey] - An i18n key for the decline button's text.
  * @returns {Promise<boolean|'decline'>} - true if confirmed, false if canceled, 'decline' if the third button is clicked.
  */
 export function showConfirmationModal (title, message, options = {}) {
@@ -22,11 +25,15 @@ export function showConfirmationModal (title, message, options = {}) {
 		const newDeclineBtn = declineBtn.cloneNode(true);
 		declineBtn.parentNode.replaceChild(newDeclineBtn, declineBtn);
 		
-		titleEl.textContent = title;
-		contentEl.textContent = message;
+		titleEl.innerHTML = title; // MODIFIED: Allow HTML in title
+		contentEl.innerHTML = message; // MODIFIED: Allow HTML in message
 		
 		if (options.showDecline) {
 			newDeclineBtn.classList.remove('hidden');
+			// NEW: Allow custom text for decline button via i18n key
+			if (options.declineKey) {
+				newDeclineBtn.textContent = t(options.declineKey);
+			}
 		} else {
 			newDeclineBtn.classList.add('hidden');
 		}

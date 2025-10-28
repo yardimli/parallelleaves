@@ -735,6 +735,49 @@ document.addEventListener('DOMContentLoaded', async () => {
 			}
 		});
 		
+		// NEW: Function to check if TM needs updating and prompt user.
+		const checkTranslationMemoryStatus = async (novelId) => {
+			const sessionKey = `dontAskUpdateTM-${novelId}`;
+			if (sessionStorage.getItem(sessionKey)) {
+				return;
+			}
+			
+			try {
+				const [novelPairsResult, tmEntriesResult] = await Promise.all([
+					window.api.getNovelTranslationPairCount(novelId),
+					window.api.getTranslationMemoryEntryCount(novelId)
+				]);
+				
+				if (!novelPairsResult.success || !tmEntriesResult.success) {
+					console.error('Failed to get pair/entry counts:', novelPairsResult.message, tmEntriesResult.message);
+					return;
+				}
+				
+				const novelPairCount = novelPairsResult.count;
+				const tmEntryCount = tmEntriesResult.count;
+				const diff = novelPairCount - tmEntryCount;
+				
+				if (diff > 5) {
+					const title = t('editor.confirmUpdateTMMemory.title');
+					const content = t('editor.confirmUpdateTMMemory.content', { count: diff });
+					
+					const userChoice = await showConfirmationModal(title, content, {
+						showDecline: true,
+						declineKey: 'editor.confirmUpdateTMMemory.decline'
+					});
+					
+					if (userChoice === 'decline') {
+						sessionStorage.setItem(sessionKey, 'true');
+					}
+				}
+			} catch (error) {
+				console.error('Error checking translation memory status:', error);
+			}
+		};
+		
+		// Call the check after a short delay to ensure the UI is fully settled.
+		setTimeout(() => checkTranslationMemoryStatus(novelId), 2000);
+		
 	} catch (error) {
 		console.error('Failed to load manuscript data:', error);
 		document.body.innerHTML = `<p class="p-8 text-error">${t('editor.errorLoadManuscript', { message: error.message })}</p>`;

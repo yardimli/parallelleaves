@@ -85,6 +85,7 @@ function t_main(lang, key, substitutions = {}) {
  * @param {string} targetHtml - The target HTML content.
  * @returns {Array<object>} An array of {marker, source, target} text pairs.
  */
+// MODIFICATION: Export this function for use in other handlers.
 const extractAllMarkerPairs = (sourceHtml, targetHtml) => {
 	if (!sourceHtml || !targetHtml) {
 		return [];
@@ -201,6 +202,28 @@ function hasValidTranslationMemory(novelId) {
 	} catch (error) {
 		console.error(`Failed to read or parse translation memory for novel ${novelId}:`, error);
 		return false;
+	}
+}
+
+/**
+ * Counts the number of entries in a novel's translation memory file.
+ * @param {string|number} novelId The ID of the novel.
+ * @returns {number} The number of entries found.
+ */
+function getTranslationMemoryEntryCount(novelId) {
+	const filePath = getTranslationMemoryPath(novelId);
+	if (!filePath || !fs.existsSync(filePath)) {
+		return 0;
+	}
+	try {
+		const content = fs.readFileSync(filePath, 'utf8');
+		// Regex to find markers in the format #{novelId}-{markerNumber}
+		const markerRegex = new RegExp(`#${novelId}-\\d+`, 'g');
+		const matches = content.match(markerRegex);
+		return matches ? matches.length : 0;
+	} catch (error) {
+		console.error(`Failed to read or parse translation memory for novel ${novelId}:`, error);
+		return 0;
 	}
 }
 
@@ -340,6 +363,17 @@ function registerTranslationMemoryHandlers(db, sessionManager) {
 		}
 	});
 	
+	// NEW: IPC handler to get the entry count for a translation memory file.
+	ipcMain.handle('translation-memory:get-entry-count', (event, novelId) => {
+		try {
+			const count = getTranslationMemoryEntryCount(novelId);
+			return { success: true, count };
+		} catch (error) {
+			console.error(`Failed to get translation memory entry count for novel ${novelId}:`, error);
+			return { success: false, message: error.message, count: 0 };
+		}
+	});
+	
 	ipcMain.handle('translation-memory:getForAI', (event, novelId) => {
 		const filePath = getTranslationMemoryPath(novelId);
 		if (!filePath) {
@@ -386,5 +420,5 @@ function registerTranslationMemoryHandlers(db, sessionManager) {
 	});
 }
 
-// MODIFICATION: Export the helper function alongside the main registration function.
-module.exports = { registerTranslationMemoryHandlers, hasValidTranslationMemory };
+// MODIFICATION: Export the helper functions alongside the main registration function.
+module.exports = { registerTranslationMemoryHandlers, hasValidTranslationMemory, extractAllMarkerPairs };

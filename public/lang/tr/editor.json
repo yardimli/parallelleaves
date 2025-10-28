@@ -60,6 +60,11 @@
   "confirmModalBtn": "Eylemi Onayla",
   "confirmDeleteChapter": "Bu fasılı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
   "confirmDeleteAct": "Bu bölümü ve içindeki tüm fasılları silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
+  "confirmUpdateTMMemory": {
+    "title": "Çeviri Belleğini Güncelle?",
+    "content": "Romanınız, Çeviri Belleğinizdekinden {count} daha fazla çeviri çiftine sahip. Daha iyi yapay zeka performansı için şimdi güncellemenizi öneririz. İşlemi araç çubuğundaki <i class='bi bi-lightbulb text-lg'></i> simgesini kullanarak başlatabilirsiniz.",
+    "decline": "Bu oturumda bir daha sorma"
+  },
   "aiToolbar": {
     "apply": "Uygula",
     "retry": "Yeniden Dene",

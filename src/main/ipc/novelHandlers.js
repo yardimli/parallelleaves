@@ -5,8 +5,8 @@ const HTMLtoDOCX = require('html-to-docx');
 const imageHandler = require('../../utils/image-handler.js');
 const { countWordsInHtml, htmlToPlainText } = require('../utils.js');
 const { mapLanguageToIsoCode } = require('../../js/languages.js');
-// MODIFICATION: Import the helper function to check for valid translation memories.
-const { hasValidTranslationMemory } = require('./translationMemoryHandlers.js');
+// MODIFICATION: Import the helper functions to check for valid translation memories and extract pairs.
+const { hasValidTranslationMemory, extractAllMarkerPairs } = require('./translationMemoryHandlers.js');
 
 function toRoman(num) {
 	const roman = { M: 1000, CM: 900, D: 500, CD: 400, C: 100, XC: 90, L: 50, XL: 40, X: 10, IX: 9, V: 5, IV: 4, I: 1 };
@@ -220,6 +220,22 @@ function registerNovelHandlers(db, sessionManager, windowManager) {
 		} catch (error) {
 			console.error(`Failed to get all content for novel ${novelId}:`, error);
 			return { success: false, message: 'Failed to retrieve novel content.' };
+		}
+	});
+	
+	// NEW: IPC handler to count translation pairs in a novel.
+	ipcMain.handle('novels:get-translation-pair-count', (event, novelId) => {
+		try {
+			const chapters = db.prepare('SELECT source_content, target_content FROM chapters WHERE novel_id = ?').all(novelId);
+			const combinedSource = chapters.map(c => c.source_content || '').join('');
+			const combinedTarget = chapters.map(c => c.target_content || '').join('');
+			
+			const pairs = extractAllMarkerPairs(combinedSource, combinedTarget);
+			
+			return { success: true, count: pairs.length };
+		} catch (error) {
+			console.error(`Failed to count translation pairs for novel ${novelId}:`, error);
+			return { success: false, message: error.message, count: 0 };
 		}
 	});
 	
