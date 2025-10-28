@@ -41,7 +41,8 @@ function registerBackupRestoreHandlers(db, sessionManager) {
 				chapters = [],
 				image,
 				codexHtml,
-				dictionaryJson
+				dictionaryJson,
+				translationMemoryTxt // NEW: Destructure translation memory data from the backup.
 			} = backupData;
 			
 			// 1. Insert the novel, getting the new ID.
@@ -130,6 +131,17 @@ function registerBackupRestoreHandlers(db, sessionManager) {
 					fs.writeFileSync(dictionaryPath, dictionaryJson, 'utf8');
 				} catch (e) {
 					console.error('Failed to restore dictionary file:', e);
+				}
+			}
+			
+			// NEW: Restore translation memory file if it exists in the backup.
+			if (translationMemoryTxt) {
+				try {
+					const translationMemoryPath = path.join(app.getPath('userData'), `translation_memory_${newNovelId}.txt`);
+					fs.writeFileSync(translationMemoryPath, translationMemoryTxt, 'utf8');
+				} catch (e) {
+					// We log the error but don't stop the entire restore process.
+					console.error('Failed to restore translation memory file:', e);
 				}
 			}
 		});

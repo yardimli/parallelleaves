@@ -240,37 +240,61 @@ const populateTranslationMemoriesDropdown = async (container, currentNovelId) =>
 		translationMemoryChoices = null;
 	}
 	
+	// Initialize Choices.js on the empty select element.
+	translationMemoryChoices = new Choices(select, {
+		removeItemButton: true,
+		placeholder: true,
+		placeholderValue: t('prompt.translate.selectTranslationMemories'),
+		classNames: {
+			containerOuter: 'choices',
+			containerInner: 'choices__inner',
+		}
+	});
+	
 	try {
+		// 1. Get all available novels that have a translation memory.
 		const novels = await window.api.getAllNovelsWithTM();
-		select.innerHTML = ''; // Clear element
-		
-		if (novels && novels.length > 0) {
-			novels.forEach(novel => {
-				const option = new Option(novel.title, novel.id);
-				// By default, select the memory for the current novel
-				if (novel.id.toString() === currentNovelId.toString()) {
-					option.selected = true;
-				}
-				select.appendChild(option);
-			});
+		if (!novels || novels.length === 0) {
+			translationMemoryChoices.disable();
+			return;
 		}
 		
-		// Initialize Choices.js on the select element
-		translationMemoryChoices = new Choices(select, {
-			removeItemButton: true,
-			placeholder: true,
-			placeholderValue: t('prompt.translate.selectTranslationMemories'),
-			// FIXED: Corrected the classNames configuration to not include spaces in values.
-			classNames: {
-				containerOuter: 'choices',
-				containerInner: 'choices__inner',
+		// 2. Determine which novels should be selected based on localStorage or a default.
+		const storageKey = `translation-memory-selection-${currentNovelId}`;
+		const savedSelectionJson = localStorage.getItem(storageKey);
+		let idsToSelect = [];
+		
+		if (savedSelectionJson) {
+			// If a selection is saved, use it.
+			try {
+				const savedIds = JSON.parse(savedSelectionJson);
+				if (Array.isArray(savedIds)) {
+					idsToSelect = savedIds;
+				}
+			} catch (e) {
+				console.error('Failed to parse saved translation memory selection:', e);
+				// Fall back to the default if parsing fails.
+				idsToSelect = [currentNovelId.toString()];
 			}
-		});
+		} else {
+			// Otherwise, use the current novel's memory as the default selection.
+			idsToSelect = [currentNovelId.toString()];
+		}
+		
+		// 3. Create the choices array, marking the correct items as selected.
+		const choices = novels.map(novel => ({
+			value: novel.id.toString(),
+			label: novel.title,
+			selected: idsToSelect.includes(novel.id.toString())
+		}));
+		
+		// 4. Populate the dropdown with the choices and their selection state in a single API call.
+		translationMemoryChoices.setChoices(choices, 'value', 'label', true);
 		
 	} catch (error) {
 		console.error('Failed to load novels for translation memory selection:', error);
-		// Optionally, disable the element or show an error message
-		select.disabled = true;
+		// Disable the dropdown on error.
+		translationMemoryChoices.disable();
 	}
 };
 
@@ -295,10 +319,20 @@ export const init = async (container, context) => {
 		if (form) {
 			form.addEventListener('input', debouncedUpdatePreview);
 			
-			// MODIFIED: Listen for changes on the Choices.js select element
 			const selectEl = form.querySelector('#js-translation-memory-select');
 			if (selectEl) {
-				selectEl.addEventListener('change', debouncedUpdatePreview);
+				// Add an event listener to save the selection whenever it changes.
+				selectEl.addEventListener('change', () => {
+					if (translationMemoryChoices) {
+						// Get the current selected values from Choices.js.
+						const selectedIds = translationMemoryChoices.getValue(true); // `true` returns an array of strings.
+						const storageKey = `translation-memory-selection-${context.novelId}`;
+						// Save the selection to localStorage.
+						localStorage.setItem(storageKey, JSON.stringify(selectedIds));
+					}
+					// Trigger the live preview update.
+					debouncedUpdatePreview();
+				});
 			}
 			
 			form.addEventListener('change', (e) => {
