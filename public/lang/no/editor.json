@@ -115,18 +115,18 @@
     "errorNoTargetEditor": "Kunne ikke finne målredigeringsprogrammet for dette kapittelet.",
     "errorNoActiveChapter": "Kan ikke legge til et notat uten et aktivt kapittel."
   },
-  "learning": {
-    "title": "Start læringsøkt",
-    "windowTitle": "Parallel Leaves - Læringsøkt",
-    "start": "Start læring",
-    "next": "Finn neste par",
+  "translationMemory": {
+    "title": "Åpne oversettelsesminne",
+    "windowTitle": "Parallel Leaves - Oversettelsesminne",
+    "start": "Start generering",
+    "next": "Generer neste",
     "stop": "Stopp",
     "loading": "Finner neste par og analyserer...",
-    "noMorePairs": "Ingen flere oversettelsespar funnet i denne romanen.",
-    "resultsTitle": "Foreslåtte instruksjoner",
+    "noMorePairs": "Ingen flere oversettelsespar funnet å generere fra.",
+    "resultsTitle": "Generert minne",
     "error": "Feil: {message}",
-    "save": "Lagre instruksjoner",
+    "save": "Lagre minne",
     "saving": "Lagrer...",
-    "saved": "Instruksjoner lagret!"
+    "saved": "Minne lagret!"
   }
 }

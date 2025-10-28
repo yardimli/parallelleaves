@@ -175,24 +175,25 @@ function validateAndFilterLLMResponse(responseText, sourceLang, targetLang) {
 	return validPairs.join('\n');
 }
 
-// MODIFICATION START: Helper function to get the file path for a novel's learning instructions
-const getLearningInstructionsPath = (novelId) => {
+// MODIFICATION: Renamed function to reflect its purpose
+const getTranslationMemoryPath = (novelId) => {
 	if (!novelId) {
 		return null;
 	}
-	return path.join(app.getPath('userData'), `learning_instructions_${novelId}.txt`);
+	// MODIFICATION: Updated file naming convention
+	return path.join(app.getPath('userData'), `translation_memory_${novelId}.txt`);
 };
-// MODIFICATION END
 
 /**
- * Registers IPC handlers for the learning window functionality.
+ * Registers IPC handlers for the translation memory window functionality.
  * @param {Database.Database} db - The application's database connection.
  * @param {object} sessionManager - The session manager instance.
  */
-function registerLearningHandlers(db, sessionManager) {
-	// MODIFICATION: The handler now accepts `processedMarkerNumbers`, `lang`, and `pairCount`.
-	ipcMain.handle('learning:start', async (event, { novelId, model, temperature, processedMarkerNumbers, lang = 'en', pairCount = 2 }) => {
-		const learningWindow = event.sender.getOwnerBrowserWindow();
+// MODIFICATION: Renamed handler registration function
+function registerTranslationMemoryHandlers(db, sessionManager) {
+	// MODIFICATION: Renamed IPC handler and updated logic
+	ipcMain.handle('translation-memory:start', async (event, { novelId, model, temperature, processedMarkerNumbers, lang = 'en', pairCount = 2 }) => {
+		const memoryWindow = event.sender.getOwnerBrowserWindow();
 		
 		try {
 			const token = sessionManager.getSession()?.token || null;
@@ -208,21 +209,20 @@ function registerLearningHandlers(db, sessionManager) {
 			
 			const allPairs = extractAllMarkerPairs(combinedSource, combinedTarget);
 			
-			// MODIFICATION: Find the first pair whose marker is not in the provided list.
 			const nextPair = allPairs.find(p => !processedMarkerNumbers.includes(p.marker));
 			
 			if (!nextPair) {
-				learningWindow.webContents.send('learning:update', { type: 'finished', message: 'editor.learning.noMorePairs' });
+				// MODIFICATION: Updated event channel and i18n key
+				memoryWindow.webContents.send('translation-memory:update', { type: 'finished', message: 'editor.translationMemory.noMorePairs' });
 				return { success: true, message: 'No more pairs.' };
 			}
 			
-			const systemPrompt = t_main(lang, 'prompt.learning.system.base', {
+			const systemPrompt = t_main(lang, 'prompt.translationMemory.system.base', {
 				sourceLanguage: novel.source_language,
 				targetLanguage: novel.target_language
 			});
 			
-			// MODIFICATION: Pass pairCount to the user prompt translation.
-			const userPrompt = t_main(lang, 'prompt.learning.user.base', {
+			const userPrompt = t_main(lang, 'prompt.translationMemory.user.base', {
 				sourceLanguage: novel.source_language,
 				targetLanguage: novel.target_language,
 				sourceText: nextPair.source,
@@ -247,10 +247,10 @@ function registerLearningHandlers(db, sessionManager) {
 				const validatedResponse = validateAndFilterLLMResponse(rawResponse, novel.source_language, novel.target_language);
 				
 				if (validatedResponse) {
-					// MODIFICATION: The formatted block now includes the novelId.
 					const formattedBlock = `\n\n#${novelId}-${nextPair.marker}\n${validatedResponse}`;
 					
-					learningWindow.webContents.send('learning:update', {
+					// MODIFICATION: Updated event channel
+					memoryWindow.webContents.send('translation-memory:update', {
 						type: 'new_instructions',
 						data: {
 							formattedBlock: formattedBlock,
@@ -267,29 +267,52 @@ function registerLearningHandlers(db, sessionManager) {
 			
 			return { success: true };
 		} catch (error) {
-			console.error('Learning process failed:', error);
-			learningWindow.webContents.send('learning:update', { type: 'error', message: 'editor.learning.error', params: { message: error.message } });
+			console.error('Translation memory generation failed:', error);
+			// MODIFICATION: Updated event channel and i18n key
+			memoryWindow.webContents.send('translation-memory:update', { type: 'error', message: 'editor.translationMemory.error', params: { message: error.message } });
 			return { success: false, error: error.message };
 		}
 	});
 	
-	// MODIFICATION START: Add new handlers for saving, loading, and getting learning instructions
-	ipcMain.handle('learning:saveInstructions', (event, { novelId, content }) => {
-		const filePath = getLearningInstructionsPath(novelId);
+	// MODIFICATION: Renamed handler and added XML metadata header on save
+	ipcMain.handle('translation-memory:save', (event, { novelId, content }) => {
+		const filePath = getTranslationMemoryPath(novelId);
 		if (!filePath) {
 			return { success: false, message: 'Invalid novelId.' };
 		}
 		try {
-			fs.writeFileSync(filePath, content, 'utf8');
+			const novel = db.prepare('SELECT title, author, source_language, target_language FROM novels WHERE id = ?').get(novelId);
+			if (!novel) {
+				throw new Error('Novel not found for metadata generation.');
+			}
+			
+			// Create XML metadata header
+			const metadata = `<!--
+<metadata>
+  <novel_id>${novelId}</novel_id>
+  <title>${novel.title || 'Untitled'}</title>
+  <author>${novel.author || 'Unknown'}</author>
+  <source_language>${novel.source_language}</source_language>
+  <target_language>${novel.target_language}</target_language>
+  <generated_at>${new Date().toISOString()}</generated_at>
+</metadata>
+-->`;
+			
+			// Strip any existing header before prepending the new one
+			const contentWithoutHeader = content.replace(/<!--\s*<metadata>[\s\S]*?<\/metadata>\s*-->\s*/, '');
+			const finalContent = `${metadata}\n${contentWithoutHeader}`;
+			
+			fs.writeFileSync(filePath, finalContent, 'utf8');
 			return { success: true };
 		} catch (error) {
-			console.error(`Failed to save learning instructions for novel ${novelId}:`, error);
+			console.error(`Failed to save translation memory for novel ${novelId}:`, error);
 			return { success: false, message: error.message };
 		}
 	});
 	
-	ipcMain.handle('learning:loadInstructions', (event, novelId) => {
-		const filePath = getLearningInstructionsPath(novelId);
+	// MODIFICATION: Renamed handler
+	ipcMain.handle('translation-memory:load', (event, novelId) => {
+		const filePath = getTranslationMemoryPath(novelId);
 		if (!filePath) {
 			return { success: false, message: 'Invalid novelId.' };
 		}
@@ -298,35 +321,61 @@ function registerLearningHandlers(db, sessionManager) {
 				const content = fs.readFileSync(filePath, 'utf8');
 				return { success: true, content };
 			}
-			return { success: true, content: '' }; // File doesn't exist yet, return empty string
+			return { success: true, content: '' };
 		} catch (error) {
-			console.error(`Failed to load learning instructions for novel ${novelId}:`, error);
+			console.error(`Failed to load translation memory for novel ${novelId}:`, error);
 			return { success: false, message: error.message };
 		}
 	});
 	
-	ipcMain.handle('learning:getInstructionsForAI', (event, novelId) => {
-		const filePath = getLearningInstructionsPath(novelId);
+	// MODIFICATION: Renamed handler and added logic to strip XML header
+	ipcMain.handle('translation-memory:getForAI', (event, novelId) => {
+		const filePath = getTranslationMemoryPath(novelId);
 		if (!filePath) {
-			return ''; // Return empty string if invalid ID
+			return '';
 		}
 		try {
 			if (fs.existsSync(filePath)) {
 				const content = fs.readFileSync(filePath, 'utf8');
-				// MODIFICATION START: Filter out the marker lines before returning the content.
-				// This prevents metadata like '#1-54' from being included in the AI prompt.
-				const lines = content.split('\n');
+				// Strip XML header and marker lines
+				const contentWithoutHeader = content.replace(/<!--\s*<metadata>[\s\S]*?<\/metadata>\s*-->\s*/, '');
+				const lines = contentWithoutHeader.split('\n');
 				const filteredLines = lines.filter(line => !/^\s*#\d+-\d+\s*$/.test(line.trim()));
 				return filteredLines.join('\n');
-				// MODIFICATION END
 			}
 			return '';
 		} catch (error) {
-			console.error(`Failed to get learning instructions for AI (novel ${novelId}):`, error);
-			return ''; // Return empty string on error
+			console.error(`Failed to get translation memory for AI (novel ${novelId}):`, error);
+			return '';
 		}
 	});
-	// MODIFICATION END
+	
+	// NEW HANDLER: Get combined memory content for multiple novels
+	ipcMain.handle('translation-memory:getForNovels', (event, novelIds) => {
+		if (!Array.isArray(novelIds) || novelIds.length === 0) {
+			return '';
+		}
+		
+		let combinedContent = '';
+		for (const novelId of novelIds) {
+			const filePath = getTranslationMemoryPath(novelId);
+			if (filePath && fs.existsSync(filePath)) {
+				try {
+					const content = fs.readFileSync(filePath, 'utf8');
+					const contentWithoutHeader = content.replace(/<!--\s*<metadata>[\s\S]*?<\/metadata>\s*-->\s*/, '');
+					const lines = contentWithoutHeader.split('\n');
+					const filteredLines = lines.filter(line => !/^\s*#\d+-\d+\s*$/.test(line.trim()));
+					if (filteredLines.length > 0) {
+						combinedContent += filteredLines.join('\n') + '\n\n';
+					}
+				} catch (error) {
+					console.error(`Failed to read translation memory for novel ${novelId}:`, error);
+				}
+			}
+		}
+		return combinedContent.trim();
+	});
 }
 
-module.exports = { registerLearningHandlers };
+// MODIFICATION: Renamed exported function
+module.exports = { registerTranslationMemoryHandlers };

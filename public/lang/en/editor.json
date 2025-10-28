@@ -115,18 +115,18 @@
     "errorNoTargetEditor": "Could not find the target editor for this chapter.",
     "errorNoActiveChapter": "Cannot add a note without an active chapter."
   },
-  "learning": {
-    "title": "Start Learning Session",
-    "windowTitle": "Parallel Leaves - Learning Session",
-    "start": "Start Learning",
-    "next": "Find Next Pair",
+  "translationMemory": {
+    "title": "Open Translation Memory",
+    "windowTitle": "Parallel Leaves - Translation Memory",
+    "start": "Start Generating",
+    "next": "Generate Next",
     "stop": "Stop",
     "loading": "Finding next pair and analyzing...",
-    "noMorePairs": "No more translation pairs found in this novel.",
-    "resultsTitle": "Suggested Instructions",
+    "noMorePairs": "No more translation pairs found to generate from.",
+    "resultsTitle": "Generated Memory",
     "error": "Error: {message}",
-    "save": "Save Instructions",
+    "save": "Save Memory",
     "saving": "Saving...",
-    "saved": "Instructions saved!"
+    "saved": "Memory saved!"
   }
 }

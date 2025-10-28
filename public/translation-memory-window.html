@@ -5,7 +5,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
 	<meta http-equiv="Content-Security-Policy"
 	      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' file: data: https:;">
-	<title data-i18n="editor.learning.windowTitle">Parallel Leaves - Learning Session</title>
+	<title data-i18n="editor.translationMemory.windowTitle">Parallel Leaves - Translation Memory</title>
 	<link rel="stylesheet" href="../node_modules/bootstrap-icons/font/bootstrap-icons.css">
 	<link rel="stylesheet" href="../dist/styles.css">
 </head>
@@ -13,7 +13,7 @@
 
 <!-- Top Bar -->
 <div class="flex-shrink-0 h-14 bg-base-200 flex items-center px-4 gap-4 z-10 border-b border-base-300">
-	<h1 class="text-lg font-bold" data-i18n="editor.learning.title">Learning Session</h1>
+	<h1 class="text-lg font-bold" data-i18n="editor.translationMemory.title">Translation Memory</h1>
 	<div class="flex-grow"></div>
 	<select id="js-llm-model-select" class="select select-bordered select-sm w-full max-w-xs">
 		<option disabled selected data-i18n="editor.chat.loadingModels">Loading models...</option>
@@ -26,29 +26,28 @@
 </div>
 
 <div class="flex-grow p-4 overflow-hidden flex">
-	<textarea id="js-learning-results-editor" class="textarea textarea-bordered w-full h-full font-mono text-sm" placeholder="Generated instructions will appear here..." spellcheck="false"></textarea>
+	<!-- MODIFICATION: Updated element ID -->
+	<textarea id="js-memory-editor" class="textarea textarea-bordered w-full h-full font-mono text-sm" placeholder="Generated memory will appear here..." spellcheck="false"></textarea>
 </div>
 
 <!-- Action Bar -->
 <div class="flex-shrink-0 p-4 border-t border-base-300 bg-base-200 flex items-center gap-4">
 	<div id="js-status-text" class="text-sm text-base-content/70 flex-grow"></div>
-	<!-- MODIFICATION START: Added pair count selector -->
 	<div class="flex items-center gap-2">
-		<label for="js-learning-pairs-count" class="text-sm font-medium" data-i18n="prompt.learning.pairsToGenerate">Pairs to Generate</label>
-		<input type="number" id="js-learning-pairs-count" class="input input-bordered input-sm w-20 text-center" value="2" min="1" max="10">
+		<label for="js-analysis-pairs-count" class="text-sm font-medium" data-i18n="prompt.translationMemory.pairsToAnalyze">Pairs to Analyze</label>
+		<input type="number" id="js-analysis-pairs-count" class="input input-bordered input-sm w-20 text-center" value="2" min="1" max="10">
 	</div>
-	<!-- MODIFICATION END -->
-	<button id="js-start-learning-btn" class="btn btn-primary">
+	<button id="js-start-generating-btn" class="btn btn-primary">
 		<span class="loading loading-spinner hidden"></span>
-		<span data-i18n="editor.learning.next">Find Next Pair</span>
+		<span data-i18n="editor.translationMemory.next">Generate Next</span>
 	</button>
-	<button id="js-stop-learning-btn" class="btn btn-error hidden">
+	<button id="js-stop-generating-btn" class="btn btn-error hidden">
 		<i class="bi bi-stop-circle"></i>
-		<span data-i18n="editor.learning.stop">Stop</span>
+		<span data-i18n="editor.translationMemory.stop">Stop</span>
 	</button>
 </div>
 
 <script src="../src/js/theme.js"></script>
-<script type="module" src="../dist/learning-window-bundle.js"></script>
+<script type="module" src="../src/js/translation-memory-window.js"></script>
 </body>
 </html>

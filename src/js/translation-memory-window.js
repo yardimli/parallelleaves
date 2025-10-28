@@ -22,20 +22,20 @@ const debounce = (func, delay) => {
 };
 
 let novelId = null;
-// MODIFICATION: Removed lastProcessedMarker as the logic now scans the editor content directly.
-let isLearningRunning = false;
+let isGenerationRunning = false;
 
 const AI_SETTINGS_KEYS = {
 	MODEL: 'parallel-leaves-ai-model',
 	TEMPERATURE: 'parallel-leaves-ai-temperature'
 };
 
+// MODIFICATION: Updated element IDs
 const modelSelect = document.getElementById('js-llm-model-select');
 const tempSlider = document.getElementById('js-ai-temperature-slider');
 const tempValue = document.getElementById('js-ai-temperature-value');
-const startBtn = document.getElementById('js-start-learning-btn');
-const stopBtn = document.getElementById('js-stop-learning-btn');
-const editor = document.getElementById('js-learning-results-editor');
+const startBtn = document.getElementById('js-start-generating-btn');
+const stopBtn = document.getElementById('js-stop-generating-btn');
+const editor = document.getElementById('js-memory-editor');
 const statusText = document.getElementById('js-status-text');
 
 async function populateModels() {
@@ -71,7 +71,6 @@ async function populateModels() {
 }
 
 /**
- * MODIFICATION: New function to scan the editor for already processed markers for the current novel.
  * Scans the editor's content to find all processed markers for the current novel.
  * @returns {number[]} An array of marker numbers that have already been processed.
  */
@@ -99,30 +98,29 @@ function getProcessedMarkers() {
 }
 
 /**
- * Starts the learning process loop.
+ * Starts the generation process loop.
  */
-async function startLearningProcess() {
-	if (isLearningRunning) {
+async function startGenerationProcess() {
+	if (isGenerationRunning) {
 		return;
 	}
 	
-	isLearningRunning = true;
+	isGenerationRunning = true;
 	
 	startBtn.disabled = true;
 	startBtn.querySelector('.loading').classList.remove('hidden');
 	stopBtn.classList.remove('hidden');
-	statusText.textContent = t('editor.learning.loading');
+	// MODIFICATION: Updated i18n key
+	statusText.textContent = t('editor.translationMemory.loading');
 	
-	// MODIFICATION: The logic no longer depends on a single last marker.
-	// We kick off the first request, and the loop continues via the 'onLearningUpdate' handler.
-	await sendLearningRequest();
+	await sendGenerationRequest();
 }
 
 /**
- * Stops the learning process.
+ * Stops the generation process.
  */
-function stopLearningProcess() {
-	isLearningRunning = false;
+function stopGenerationProcess() {
+	isGenerationRunning = false;
 	
 	startBtn.disabled = false;
 	startBtn.querySelector('.loading').classList.add('hidden');
@@ -131,72 +129,70 @@ function stopLearningProcess() {
 }
 
 /**
- * MODIFICATION: This function now gets the list of processed markers each time it's called.
  * Sends a single request to the main process to find and analyze the next available pair.
  */
-async function sendLearningRequest() {
-	if (!isLearningRunning) {
+async function sendGenerationRequest() {
+	if (!isGenerationRunning) {
 		return;
 	}
 	
 	const selectedModel = modelSelect.value;
 	const temperature = parseFloat(tempSlider.value);
-	// MODIFICATION START: Get pair count from input
-	const pairCountInput = document.getElementById('js-learning-pairs-count');
+	const pairCountInput = document.getElementById('js-analysis-pairs-count');
 	const pairCount = parseInt(pairCountInput.value, 10) || 2;
-	// MODIFICATION END
 	
-	// MODIFICATION: Get the list of markers already in the editor.
 	const processedMarkerNumbers = getProcessedMarkers();
 	
 	try {
-		// MODIFICATION: Pass the list of processed markers to the main process.
-		await window.api.startLearning({
+		// MODIFICATION: Updated API call
+		await window.api.translationMemoryStart({
 			novelId,
 			model: selectedModel,
 			temperature,
-			processedMarkerNumbers: processedMarkerNumbers, // Pass the array here
-			pairCount: pairCount, // MODIFICATION: Pass pair count
+			processedMarkerNumbers: processedMarkerNumbers,
+			pairCount: pairCount,
 			lang: localStorage.getItem('app_lang') || 'en'
 		});
 	} catch (error) {
-		statusText.textContent = t('editor.learning.error', { message: error.message });
-		stopLearningProcess();
+		// MODIFICATION: Updated i18n key
+		statusText.textContent = t('editor.translationMemory.error', { message: error.message });
+		stopGenerationProcess();
 	}
 }
 
 /**
  * Saves the current content of the editor to a file via the main process.
  */
-async function saveInstructions() {
+async function saveMemory() {
 	try {
-		// MODIFICATION: Use IPC to save instead of localStorage
-		await window.api.saveLearningInstructions({ novelId, content: editor.value });
-		console.log('Learning instructions auto-saved.');
+		// MODIFICATION: Updated API call
+		await window.api.translationMemorySave({ novelId, content: editor.value });
+		console.log('Translation memory auto-saved.');
 	} catch (error) {
-		console.error('Failed to auto-save learning instructions:', error);
-		statusText.textContent = t('editor.learning.error', { message: error.message });
+		console.error('Failed to auto-save translation memory:', error);
+		// MODIFICATION: Updated i18n key
+		statusText.textContent = t('editor.translationMemory.error', { message: error.message });
 	}
 }
 
-// Create a debounced version of the save function for use with the 'input' event.
-const debouncedSave = debounce(saveInstructions, 5000); // 5-second delay
+const debouncedSave = debounce(saveMemory, 5000); // 5-second delay
 
 document.addEventListener('DOMContentLoaded', async () => {
 	await initI18n();
 	applyTranslationsTo(document.body);
-	document.title = t('editor.learning.windowTitle');
+	// MODIFICATION: Updated i18n key
+	document.title = t('editor.translationMemory.windowTitle');
 	
 	const params = new URLSearchParams(window.location.search);
 	novelId = params.get('novelId');
 	
 	if (!novelId) {
-		editor.value = t('editor.learning.error', { message: 'Novel ID is missing.' });
+		// MODIFICATION: Updated i18n key
+		editor.value = t('editor.translationMemory.error', { message: 'Novel ID is missing.' });
 		startBtn.disabled = true;
 		return;
 	}
 	
-	// Setup AI settings controls
 	const lastTemp = localStorage.getItem(AI_SETTINGS_KEYS.TEMPERATURE) || '0.7';
 	tempSlider.value = lastTemp;
 	tempValue.textContent = parseFloat(lastTemp).toFixed(1);
@@ -211,64 +207,58 @@ document.addEventListener('DOMContentLoaded', async () => {
 		localStorage.setItem(AI_SETTINGS_KEYS.MODEL, modelSelect.value);
 	});
 	
-	// MODIFICATION START: Handle pair count input
-	const pairsCountInput = document.getElementById('js-learning-pairs-count');
-	const PAIRS_COUNT_KEY = `learning-pairs-count-${novelId}`;
+	const pairsCountInput = document.getElementById('js-analysis-pairs-count');
+	// MODIFICATION: Updated storage key
+	const PAIRS_COUNT_KEY = `translation-memory-pairs-count-${novelId}`;
 	
 	const savedPairsCount = localStorage.getItem(PAIRS_COUNT_KEY) || '2';
 	pairsCountInput.value = savedPairsCount;
 	
 	pairsCountInput.addEventListener('change', () => {
 		let value = parseInt(pairsCountInput.value, 10);
-		if (isNaN(value) || value < 1) {
-			value = 1;
-		}
-		if (value > 10) {
-			value = 10;
-		}
-		pairsCountInput.value = value; // Correct the value in the input
+		if (isNaN(value) || value < 1) value = 1;
+		if (value > 10) value = 10;
+		pairsCountInput.value = value;
 		localStorage.setItem(PAIRS_COUNT_KEY, value);
 	});
-	// MODIFICATION END
 	
 	await populateModels();
 	
-	// Load existing instructions from file via main process
 	try {
-		// MODIFICATION: Use IPC to load instead of localStorage
-		const result = await window.api.loadLearningInstructions(novelId);
+		// MODIFICATION: Updated API call
+		const result = await window.api.translationMemoryLoad(novelId);
 		if (result.success) {
 			editor.value = result.content || '';
 		} else {
 			throw new Error(result.message);
 		}
 	} catch (error) {
-		editor.value = t('editor.learning.error', { message: `Failed to load instructions: ${error.message}` });
+		// MODIFICATION: Updated i18n key
+		editor.value = t('editor.translationMemory.error', { message: `Failed to load memory: ${error.message}` });
 	}
 	
-	// Save after 5 seconds of inactivity.
 	editor.addEventListener('input', debouncedSave);
 	
-	// Save immediately when the user clicks away from the textarea.
 	editor.addEventListener('blur', () => {
-		debouncedSave.cancel(); // Cancel any pending debounced save.
-		saveInstructions(); // Save immediately.
+		debouncedSave.cancel();
+		saveMemory();
 	});
 	
-	// Save immediately before the window is closed.
 	window.addEventListener('beforeunload', () => {
 		debouncedSave.cancel();
-		saveInstructions();
+		saveMemory();
 	});
 	
-	startBtn.addEventListener('click', startLearningProcess);
-	stopBtn.addEventListener('click', stopLearningProcess);
+	startBtn.addEventListener('click', startGenerationProcess);
+	stopBtn.addEventListener('click', stopGenerationProcess);
 	
-	window.api.onLearningUpdate((update) => {
+	// MODIFICATION: Updated event listener
+	window.api.onTranslationMemoryUpdate((update) => {
 		if (!update || typeof update.type === 'undefined') {
 			console.error('Received invalid update from main process:', update);
-			statusText.textContent = t('editor.learning.error', { message: 'Received an invalid learning update.' });
-			stopLearningProcess();
+			// MODIFICATION: Updated i18n key
+			statusText.textContent = t('editor.translationMemory.error', { message: 'Received an invalid update.' });
+			stopGenerationProcess();
 			return;
 		}
 		
@@ -281,22 +271,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 			case 'new_instructions':
 				editor.value += update.data.formattedBlock;
 				editor.scrollTop = editor.scrollHeight;
-				// MODIFICATION: No longer need to track lastProcessedMarker.
-				saveInstructions();
+				saveMemory();
 				
-				// MODIFICATION: Continue the loop by sending the next request.
-				if (isLearningRunning) {
-					statusText.textContent = t('editor.learning.loading');
-					sendLearningRequest(); // This continues the process.
+				if (isGenerationRunning) {
+					// MODIFICATION: Updated i18n key
+					statusText.textContent = t('editor.translationMemory.loading');
+					sendGenerationRequest();
 				}
 				break;
 			case 'finished':
 				statusText.textContent = messageText;
-				stopLearningProcess();
+				stopGenerationProcess();
 				break;
 			case 'error':
 				statusText.textContent = messageText;
-				stopLearningProcess();
+				stopGenerationProcess();
 				break;
 		}
 	});

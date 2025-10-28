@@ -53,6 +53,16 @@ function registerNovelHandlers(db, sessionManager, windowManager) {
 		return novels;
 	});
 	
+	// NEW HANDLER: Gets a simplified list of all novels for UI elements.
+	ipcMain.handle('novels:getAllSimple', (event) => {
+		try {
+			return db.prepare('SELECT id, title FROM novels ORDER BY title ASC').all();
+		} catch (error) {
+			console.error('Failed to get simple list of novels:', error);
+			return [];
+		}
+	});
+	
 	ipcMain.handle('novels:createBlank', (event, { title, source_language, target_language }) => {
 		try {
 			const session = sessionManager.getSession();

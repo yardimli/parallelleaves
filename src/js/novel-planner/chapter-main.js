@@ -444,8 +444,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 		
 		document.getElementById('js-open-codex-btn')?.addEventListener('click', () => window.api.openCodex(novelId));
 		document.getElementById('js-open-chat-btn')?.addEventListener('click', () => window.api.openChatWindow(novelId));
-		document.getElementById('js-learning-btn')?.addEventListener('click', () => {
-			window.api.openLearningWindow(novelId);
+		// MODIFICATION: Changed button ID and corresponding API call
+		document.getElementById('js-translation-memory-btn')?.addEventListener('click', () => {
+			window.api.openTranslationMemoryWindow(novelId);
 		});
 		
 		sourceContainer.addEventListener('scroll', () => debouncedSaveScroll(novelId, sourceContainer, targetContainer));

@@ -16,7 +16,9 @@ const defaultState = { // Default state for the translate editor form
 	tense: 'past',
 	useCodex: true,
 	contextPairs: 4,
-	useDictionary: false
+	useDictionary: false,
+	// MODIFICATION: Added default for translation memories
+	translationMemoryIds: []
 };
 
 
@@ -49,8 +51,8 @@ const buildTranslationContextBlock = (translationPairs, languageForPrompt, targe
 	return contextMessages;
 };
 
-// MODIFICATION: Added learningContent parameter to include translation examples
-export const buildPromptJson = (formData, context, contextualContent = '', learningContent = '') => {
+// MODIFICATION: Renamed learningContent to translationMemoryContent for clarity
+export const buildPromptJson = (formData, context, contextualContent = '', translationMemoryContent = '') => {
 	const { selectedText, languageForPrompt, targetLanguage, translationPairs } = context;
 	
 	const plainTextToTranslate = selectedText;
@@ -61,16 +63,15 @@ export const buildPromptJson = (formData, context, contextualContent = '', learn
 	
 	const tenseBlock = t('prompt.translate.system.tenseInstruction', { tense: formData.tense });
 	
-	// MODIFICATION START: Create blocks for dictionary and examples to be inserted into the system prompt.
 	const dictionaryBlock = contextualContent
 		? t('prompt.translate.system.dictionaryBlock', { dictionaryContent: contextualContent })
 		: '';
 	
-	const examplesBlock = learningContent
-		? t('prompt.translate.system.examplesBlock', { translationExamples: learningContent })
+	// MODIFICATION: Renamed variable and key
+	const examplesBlock = translationMemoryContent
+		? t('prompt.translate.system.examplesBlock', { translationExamples: translationMemoryContent })
 		: '';
 	
-	// MODIFICATION START: Create codex block for the system prompt.
 	let codexBlock = '';
 	if (formData.useCodex && context.codexContent) {
 		const plainCodex = htmlToPlainText(context.codexContent);
@@ -78,22 +79,20 @@ export const buildPromptJson = (formData, context, contextualContent = '', learn
 			codexBlock = t('prompt.translate.system.codexBlock', { codexContent: plainCodex });
 		}
 	}
-	// MODIFICATION END
 	
 	const system = t('prompt.translate.system.base', {
 		sourceLanguage: languageForPrompt,
 		targetLanguage: targetLanguage,
 		tenseBlock: tenseBlock,
 		instructionsBlock: instructionsBlock,
-		dictionaryBlock: dictionaryBlock, // MODIFICATION: Pass the dictionary block to the system prompt.
-		examplesBlock: examplesBlock,      // MODIFICATION: Pass the examples block to the system prompt.
-		codexBlock: codexBlock             // MODIFICATION: Pass the codex block to the system prompt.
+		dictionaryBlock: dictionaryBlock,
+		examplesBlock: examplesBlock,
+		codexBlock: codexBlock
 	}).trim();
 	
 	const contextMessages = buildTranslationContextBlock(translationPairs, languageForPrompt, targetLanguage);
 	
 	const finalUserPromptParts = [];
-	// MODIFICATION: The codex block is no longer added to the user prompt.
 	finalUserPromptParts.push(t('prompt.translate.user.textToTranslate', {
 		sourceLanguage: languageForPrompt,
 		targetLanguage: targetLanguage,
@@ -115,12 +114,16 @@ const updatePreview = async (container, context) => {
 		return;
 	}
 	
+	const selectedMemoryIds = Array.from(form.querySelectorAll('#js-translation-memory-list input:checked')).map(cb => cb.value);
+	
 	const formData = {
 		instructions: form.elements.instructions.value.trim(),
 		tense: form.elements.tense.value,
 		useCodex: form.elements.use_codex.checked,
 		contextPairs: parseInt(form.elements.context_pairs.value, 10) || 0,
-		useDictionary: form.elements.use_dictionary.checked
+		useDictionary: form.elements.use_dictionary.checked,
+		// MODIFICATION: Include selected memory IDs
+		translationMemoryIds: selectedMemoryIds
 	};
 	
 	const systemPreview = container.querySelector('.js-preview-system');
@@ -141,7 +144,6 @@ const updatePreview = async (container, context) => {
 				pairCount: formData.contextPairs,
 				selectedText: context.selectedText
 			});
-			//console.log('Fetched translation pairs for preview:', pairs);
 			previewContext.translationPairs = pairs;
 		} catch (error) {
 			console.error('Failed to fetch translation context for preview:', error);
@@ -152,7 +154,6 @@ const updatePreview = async (container, context) => {
 	
 	let dictionaryContextualContent = '';
 	if (formData.useDictionary) {
-		// Now only fetches content from the dictionary.
 		dictionaryContextualContent = await window.api.getDictionaryContentForAI(context.novelId, 'translation');
 	}
 	
@@ -160,18 +161,19 @@ const updatePreview = async (container, context) => {
 		previewContext.codexContent = await window.api.codex.get(context.novelId);
 	}
 	
-	// MODIFICATION START: Fetch learning instructions for the preview
-	let learningContent = '';
-	try {
-		learningContent = await window.api.getLearningInstructionsForAI(context.novelId);
-	} catch (error) {
-		console.error('Failed to fetch learning instructions for preview:', error);
+	// MODIFICATION: Fetch content from selected translation memories for the preview
+	let translationMemoryContent = '';
+	if (formData.translationMemoryIds.length > 0) {
+		try {
+			translationMemoryContent = await window.api.translationMemoryGetForNovels(formData.translationMemoryIds);
+		} catch (error) {
+			console.error('Failed to fetch translation memory for preview:', error);
+		}
 	}
-	// MODIFICATION END
 	
 	try {
-		// MODIFICATION: Pass the fetched learning content to the prompt builder
-		const promptJson = buildPromptJson(formData, previewContext, dictionaryContextualContent, learningContent);
+		// MODIFICATION: Pass the fetched memory content to the prompt builder
+		const promptJson = buildPromptJson(formData, previewContext, dictionaryContextualContent, translationMemoryContent);
 		systemPreview.textContent = promptJson.system;
 		userPreview.textContent = promptJson.user;
 		aiPreview.textContent = promptJson.ai || t('prompt.preview.empty');
@@ -228,15 +230,61 @@ const populateForm = (container, state, novelId) => {
 	});
 };
 
+// MODIFICATION: New function to populate the translation memory dropdown
+const populateTranslationMemoriesDropdown = async (container, currentNovelId) => {
+	const list = container.querySelector('#js-translation-memory-list');
+	if (!list) return;
+	
+	try {
+		const novels = await window.api.getAllNovelsSimple();
+		list.innerHTML = ''; // Clear loading state
+		
+		if (novels && novels.length > 0) {
+			novels.forEach(novel => {
+				const li = document.createElement('li');
+				const label = document.createElement('label');
+				label.className = 'label cursor-pointer';
+				
+				const span = document.createElement('span');
+				span.className = 'label-text';
+				span.textContent = novel.title;
+				
+				const checkbox = document.createElement('input');
+				checkbox.type = 'checkbox';
+				checkbox.className = 'checkbox checkbox-sm';
+				checkbox.value = novel.id;
+				
+				// By default, check the memory for the current novel
+				if (novel.id.toString() === currentNovelId.toString()) {
+					checkbox.checked = true;
+				}
+				
+				label.appendChild(span);
+				label.appendChild(checkbox);
+				li.appendChild(label);
+				list.appendChild(li);
+			});
+		} else {
+			list.innerHTML = `<li><span class="text-base-content/60">${t('prompt.translate.noTranslationMemories')}</span></li>`;
+		}
+	} catch (error) {
+		console.error('Failed to load novels for translation memory selection:', error);
+		list.innerHTML = `<li><span class="text-error">${t('common.error')}</span></li>`;
+	}
+};
+
+
 export const init = async (container, context) => {
 	try {
 		const templateHtml = await window.api.getTemplate('prompt/translate-editor');
 		container.innerHTML = templateHtml;
 		applyTranslationsTo(container);
 		
-		const fullContext = { ...context }; // Create full context for use in updatePreview and rendering
+		const fullContext = { ...context };
 		
 		populateForm(container, context.initialState || defaultState, context.novelId);
+		// MODIFICATION: Populate the new dropdown
+		await populateTranslationMemoriesDropdown(container, context.novelId);
 		
 		const form = container.querySelector('#translate-editor-form');
 		
@@ -245,8 +293,12 @@ export const init = async (container, context) => {
 		}, 500);
 		
 		if (form) {
-			form.addEventListener('input', () => {
-				debouncedUpdatePreview();
+			// MODIFICATION: Use 'change' event for checkboxes as well
+			form.addEventListener('input', debouncedUpdatePreview);
+			form.addEventListener('change', (e) => {
+				if (e.target.type === 'checkbox') {
+					debouncedUpdatePreview();
+				}
 			});
 			
 			const tenseGroup = form.querySelector('.js-tense-group');
@@ -259,24 +311,19 @@ export const init = async (container, context) => {
 					
 					const newTense = button.dataset.tense;
 					
-					// Update UI
 					tenseGroup.querySelectorAll('.js-tense-btn').forEach(btn => btn.classList.remove('btn-active'));
 					button.classList.add('btn-active');
 					
-					// Update hidden input
 					form.elements.tense.value = newTense;
 					
-					// Save preference to localStorage
 					const storageKey = `tense-preference-${context.novelId}-translate`;
 					localStorage.setItem(storageKey, newTense);
 					
-					// Trigger preview update
 					debouncedUpdatePreview();
 				});
 			}
 		}
 		
-		// Set initial state
 		await updatePreview(container, fullContext);
 	} catch (error) {
 		container.innerHTML = `<p class="p-4 text-error">${t('prompt.errorLoadForm')}</p>`;

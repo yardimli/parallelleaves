@@ -26,12 +26,14 @@ const formDataExtractors = {
 		useCodex: form.elements.use_codex.checked,
 		useDictionary: form.elements.use_dictionary.checked
 	}),
+	// MODIFICATION: Extractor now also gets selected translation memory IDs
 	'translate': (form) => ({
 		instructions: form.elements.instructions.value.trim(),
 		tense: form.elements.tense.value,
 		useCodex: form.elements.use_codex.checked,
 		contextPairs: parseInt(form.elements.context_pairs.value, 10) || 0,
-		useDictionary: form.elements.use_dictionary.checked
+		useDictionary: form.elements.use_dictionary.checked,
+		translationMemoryIds: Array.from(form.querySelectorAll('#js-translation-memory-list input:checked')).map(cb => cb.value)
 	})
 };
 
@@ -297,8 +299,6 @@ async function startAiAction(params) {
 				newContentHtml = '<p>' + textWithMarkers.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>') + '</p>';
 			}
 			
-			//console.log('AI Action Result:', newContentText, newContentHtml);
-			
 			const replacementData = await currentEditorInterface.replaceRangeWithSuggestion(
 				aiActionRange.from,
 				aiActionRange.to,
@@ -385,7 +385,6 @@ async function populateModelDropdown() {
 			select.value = allModels[0].id;
 		}
 		
-		// Ensure the setting is saved, even if it's a fallback.
 		localStorage.setItem(AI_SETTINGS_KEYS.MODEL, select.value);
 		
 	} catch (error) {
@@ -497,17 +496,17 @@ async function handleModalApply() {
 		dictionaryContextualContent = await window.api.getDictionaryContentForAI(novelId, 'translation');
 	}
 	
-	// MODIFICATION START: Fetch learning instructions to include in the prompt
-	let learningContent = '';
-	try {
-		learningContent = await window.api.getLearningInstructionsForAI(novelId);
-	} catch (error) {
-		console.error('Failed to fetch learning instructions for prompt:', error);
-		// Non-critical error, proceed without learning content
+	// MODIFICATION: Fetch translation memory content from selected novels
+	let translationMemoryContent = '';
+	if (action === 'translate' && formDataObj.translationMemoryIds && formDataObj.translationMemoryIds.length > 0) {
+		try {
+			translationMemoryContent = await window.api.translationMemoryGetForNovels(formDataObj.translationMemoryIds);
+		} catch (error) {
+			console.error('Failed to fetch translation memory for prompt:', error);
+		}
 	}
-	// MODIFICATION END
 	
-	const prompt = builder(formDataObj, promptContext, dictionaryContextualContent, learningContent);
+	const prompt = builder(formDataObj, promptContext, dictionaryContextualContent, translationMemoryContent);
 	
 	let openingMarker = '';
 	let closingMarker = '';

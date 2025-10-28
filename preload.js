@@ -4,14 +4,15 @@ contextBridge.exposeInMainWorld('api', {
 	// --- App Level ---
 	openImportWindow: () => ipcRenderer.send('app:open-import-window'),
 	openChatWindow: (novelId) => ipcRenderer.send('app:openChatWindow', novelId),
-	openLearningWindow: (novelId) => ipcRenderer.send('app:openLearningWindow', novelId),
-	startLearning: (data) => ipcRenderer.invoke('learning:start', data),
-	onLearningUpdate: (callback) => ipcRenderer.on('learning:update', (event, ...args) => callback(...args)),
-	// MODIFICATION START: Add new learning instruction handlers
-	saveLearningInstructions: (data) => ipcRenderer.invoke('learning:saveInstructions', data),
-	loadLearningInstructions: (novelId) => ipcRenderer.invoke('learning:loadInstructions', novelId),
-	getLearningInstructionsForAI: (novelId) => ipcRenderer.invoke('learning:getInstructionsForAI', novelId),
-	// MODIFICATION END
+	// MODIFICATION: Renamed API functions for Translation Memory
+	openTranslationMemoryWindow: (novelId) => ipcRenderer.send('app:openTranslationMemoryWindow', novelId),
+	translationMemoryStart: (data) => ipcRenderer.invoke('translation-memory:start', data),
+	onTranslationMemoryUpdate: (callback) => ipcRenderer.on('translation-memory:update', (event, ...args) => callback(...args)),
+	translationMemorySave: (data) => ipcRenderer.invoke('translation-memory:save', data),
+	translationMemoryLoad: (novelId) => ipcRenderer.invoke('translation-memory:load', novelId),
+	translationMemoryGetForAI: (novelId) => ipcRenderer.invoke('translation-memory:getForAI', novelId),
+	translationMemoryGetForNovels: (novelIds) => ipcRenderer.invoke('translation-memory:getForNovels', novelIds),
+	// END MODIFICATION
 	getLangFile: (lang) => ipcRenderer.invoke('i18n:get-lang-file', lang),
 	login: (credentials) => ipcRenderer.invoke('auth:login', credentials),
 	logout: () => ipcRenderer.invoke('auth:logout'),
@@ -26,6 +27,8 @@ contextBridge.exposeInMainWorld('api', {
 	
 	// --- Dashboard/Novel Creation ---
 	getNovelsWithCovers: () => ipcRenderer.invoke('novels:getAllWithCovers'),
+	// NEW API: Get a simple list of novels for UI elements
+	getAllNovelsSimple: () => ipcRenderer.invoke('novels:getAllSimple'),
 	getOneNovel: (novelId) => ipcRenderer.invoke('novels:getOne', novelId),
 	getFullManuscript: (novelId) => ipcRenderer.invoke('novels:getFullManuscript', novelId),
 	getAllNovelContent: (novelId) => ipcRenderer.invoke('novels:getAllNovelContent', novelId),

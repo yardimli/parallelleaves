@@ -7,13 +7,12 @@ let importWindow = null;
 let chapterEditorWindows = new Map();
 let codexViewerWindows = new Map();
 let chatWindow = null;
-let learningWindow = null;
+// MODIFICATION: Renamed variable
+let translationMemoryWindow = null;
 let isMainWindowReady = false;
 
 /**
  * Sets a Content Security Policy for the window's webContents.
- * This was a missing feature from the refactoring of electron-main-old.js.
- * It helps to mitigate cross-site scripting (XSS) and other injection attacks.
  * @param {BrowserWindow} win - The window to apply the CSP to.
  */
 function setContentSecurityPolicy(win) {
@@ -70,7 +69,6 @@ function createContextMenu(win) {
 			menu.append(new MenuItem({ type: 'separator' }));
 			menu.append(new MenuItem({ label: 'Select All', role: 'selectAll' }));
 		} else if (hasSelection) {
-			// If not editable, but text is selected, provide "Copy" and "Select All".
 			if (menu.items.length > 0 && menu.items[menu.items.length - 1].type !== 'separator') {
 				menu.append(new MenuItem({ type: 'separator' }));
 			}
@@ -240,13 +238,11 @@ function createImportWindow() {
 }
 
 function createChatWindow(novelId) {
-	// If chat window already exists, check if novelId is different
 	if (chatWindow && !chatWindow.isDestroyed()) {
 		const currentUrl = new URL(chatWindow.webContents.getURL());
 		const currentNovelId = currentUrl.searchParams.get('novelId');
 		
 		if (currentNovelId !== novelId) {
-			// If novelId is different, reload the chat window with the new context
 			chatWindow.loadFile('public/chat-window.html', { query: { novelId: novelId } });
 		}
 		chatWindow.focus();
@@ -275,17 +271,18 @@ function createChatWindow(novelId) {
 	});
 }
 
-function createLearningWindow(novelId) {
-	if (learningWindow && !learningWindow.isDestroyed()) {
-		learningWindow.focus();
+// MODIFICATION: Renamed function and updated its implementation
+function createTranslationMemoryWindow(novelId) {
+	if (translationMemoryWindow && !translationMemoryWindow.isDestroyed()) {
+		translationMemoryWindow.focus();
 		return;
 	}
 	
-	learningWindow = new BrowserWindow({
+	translationMemoryWindow = new BrowserWindow({
 		width: 900,
 		height: 700,
 		icon: path.join(__dirname, '..', '..', 'public/assets/icon.png'),
-		title: 'Learning Session', // This will be replaced by i18n on the page
+		title: 'Translation Memory', // This will be replaced by i18n on the page
 		autoHideMenuBar: true,
 		webPreferences: {
 			preload: path.join(__dirname, '..', '..', 'preload.js'),
@@ -294,12 +291,12 @@ function createLearningWindow(novelId) {
 		},
 	});
 	
-	setContentSecurityPolicy(learningWindow);
+	setContentSecurityPolicy(translationMemoryWindow);
 	
-	learningWindow.loadFile('public/learning-window.html', { query: { novelId } });
+	translationMemoryWindow.loadFile('public/translation-memory-window.html', { query: { novelId } });
 	
-	learningWindow.on('closed', () => {
-		learningWindow = null;
+	translationMemoryWindow.on('closed', () => {
+		translationMemoryWindow = null;
 	});
 }
 
@@ -329,7 +326,8 @@ module.exports = {
 	createCodexViewerWindow,
 	createImportWindow,
 	createChatWindow,
-	createLearningWindow,
+	// MODIFICATION: Exported renamed function
+	createTranslationMemoryWindow,
 	closeSplashAndShowMain,
 	getMainWindow: () => mainWindow,
 	getImportWindow: () => importWindow,
