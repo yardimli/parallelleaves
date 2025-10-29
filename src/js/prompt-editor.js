@@ -32,7 +32,6 @@ const formDataExtractors = {
 		useCodex: form.elements.use_codex.checked,
 		contextPairs: parseInt(form.elements.context_pairs.value, 10) || 0,
 		useDictionary: form.elements.use_dictionary.checked,
-		// MODIFIED: Read selected options from the new <select> element
 		translationMemoryIds: Array.from(form.querySelector('#js-translation-memory-select').selectedOptions).map(option => option.value)
 	})
 };

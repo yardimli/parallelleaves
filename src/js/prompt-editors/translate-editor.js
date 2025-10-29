@@ -114,7 +114,6 @@ const updatePreview = async (container, context) => {
 		return;
 	}
 	
-	// MODIFIED: Read selected options from the <select> element
 	const selectEl = form.querySelector('#js-translation-memory-select');
 	const selectedMemoryIds = Array.from(selectEl.selectedOptions).map(opt => opt.value);
 	
@@ -229,7 +228,6 @@ const populateForm = (container, state, novelId) => {
 	});
 };
 
-// MODIFIED: This function now populates a <select> and initializes Choices.js
 const populateTranslationMemoriesDropdown = async (container, currentNovelId) => {
 	const select = container.querySelector('#js-translation-memory-select');
 	if (!select) return;

@@ -5,7 +5,6 @@ const HTMLtoDOCX = require('html-to-docx');
 const imageHandler = require('../../utils/image-handler.js');
 const { countWordsInHtml, htmlToPlainText } = require('../utils.js');
 const { mapLanguageToIsoCode } = require('../../js/languages.js');
-// MODIFICATION: Import the helper functions to check for valid translation memories and extract pairs.
 const { hasValidTranslationMemory, extractAllMarkerPairs } = require('./translationMemoryHandlers.js');
 
 function toRoman(num) {
@@ -55,12 +54,18 @@ function registerNovelHandlers(db, sessionManager, windowManager) {
 		return novels;
 	});
 	
-	ipcMain.handle('novels:getAllWithTranslationMemory', (event) => {
+	ipcMain.handle('novels:getAllWithTranslationMemory', async (event) => {
 		try {
 			const allNovels = db.prepare('SELECT id, title FROM novels ORDER BY title ASC').all();
-			// Filter the list by checking each novel's translation memory file.
-			const filteredNovels = allNovels.filter(novel => hasValidTranslationMemory(novel.id));
-			return filteredNovels;
+			const novelsWithTmResult = await hasValidTranslationMemory(sessionManager.getSession()?.token);
+			
+			if (!novelsWithTmResult.success) {
+				console.error('Failed to get novels with TM from server:', novelsWithTmResult.message);
+				return [];
+			}
+			
+			const tmNovelIds = new Set(novelsWithTmResult.novelIds);
+			return allNovels.filter(novel => tmNovelIds.has(novel.id));
 		} catch (error) {
 			console.error('Failed to get novels with translation memory:', error);
 			return [];

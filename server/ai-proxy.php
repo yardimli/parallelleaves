@@ -7,7 +7,7 @@
 	 * It validates a user session token for protected actions, logs all interactions to a MySQL database,
 	 * and provides a verified, grouped list of available models.
 	 *
-	 * @version 1.8.2
+	 * @version 1.9.0
 	 * @author Ekim Emre Yardimli
 	 */
 
@@ -27,6 +27,46 @@
 	 *   PRIMARY KEY (`id`),
 	 *   KEY `user_id` (`user_id`)
 	 * ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+	 */
+
+	/*
+	 * -- MODIFIED: SQL for new server-side translation memory tables
+	 *
+	 * CREATE TABLE `user_books` (
+	 *   `id` int(11) NOT NULL AUTO_INCREMENT,
+	 *   `book_id` int(11) NOT NULL COMMENT 'The novel_id from the Electron app''s local DB',
+	 *   `user_id` int(11) NOT NULL,
+	 *   `source_language` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+	 *   `target_language` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+	 *   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+	 *   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+	 *   PRIMARY KEY (`id`),
+	 *   UNIQUE KEY `book_id_user_id` (`book_id`,`user_id`)
+	 * ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+	 *
+	 * CREATE TABLE `user_book_blocks` (
+	 *   `id` int(11) NOT NULL AUTO_INCREMENT,
+	 *   `user_book_id` int(11) NOT NULL,
+	 *   `marker_id` int(11) NOT NULL,
+	 *   `source_text` text COLLATE utf8mb4_unicode_ci NOT NULL,
+	 *   `target_text` text COLLATE utf8mb4_unicode_ci NOT NULL,
+	 *   `is_analyzed` tinyint(1) NOT NULL DEFAULT 0,
+	 *   PRIMARY KEY (`id`),
+	 *   UNIQUE KEY `user_book_id_marker_id` (`user_book_id`,`marker_id`),
+	 *   KEY `user_book_id` (`user_book_id`)
+	 * ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+	 *
+	 * CREATE TABLE `user_books_translation_memory` (
+	 *   `id` int(11) NOT NULL AUTO_INCREMENT,
+	 *   `user_book_id` int(11) NOT NULL,
+	 *   `block_id` int(11) NOT NULL,
+	 *   `source_sentence` text COLLATE utf8mb4_unicode_ci NOT NULL,
+	 *   `target_sentence` text COLLATE utf8mb4_unicode_ci NOT NULL,
+	 *   PRIMARY KEY (`id`),
+	 *   KEY `user_book_id` (`user_book_id`),
+	 *   KEY `block_id` (`block_id`)
+	 * ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+	 *
 	 */
 
 
@@ -410,5 +450,11 @@
 		}
 		exit;
 	} else {
+		if (str_starts_with($action, 'tm_')) {
+			include 'tm_handler.php';
+			handleTranslationMemoryAction($db, $action, $userId, $payload, $apiKey);
+			exit;
+		}
+		// END MODIFICATION
 		sendJsonError(400, 'Invalid action specified. Supported actions are "chat", "get_models", "generate_cover", "log_translation".');
 	}

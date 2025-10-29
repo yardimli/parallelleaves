@@ -72,7 +72,6 @@ function getNovelBackupData(db, novelId) {
 			translationMemoryTxt = fs.readFileSync(translationMemoryPath, 'utf8');
 		}
 		
-		// MODIFIED: Added translationMemoryTxt to the return object.
 		return { novel, sections, chapters, image, codexHtml, dictionaryJson, translationMemoryTxt };
 	} catch (error) {
 		console.error(`[Backup] Failed to gather backup data for novel ${novelId}:`, error);

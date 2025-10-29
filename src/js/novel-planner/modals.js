@@ -25,12 +25,11 @@ export function showConfirmationModal (title, message, options = {}) {
 		const newDeclineBtn = declineBtn.cloneNode(true);
 		declineBtn.parentNode.replaceChild(newDeclineBtn, declineBtn);
 		
-		titleEl.innerHTML = title; // MODIFIED: Allow HTML in title
-		contentEl.innerHTML = message; // MODIFIED: Allow HTML in message
+		titleEl.innerHTML = title;
+		contentEl.innerHTML = message;
 		
 		if (options.showDecline) {
 			newDeclineBtn.classList.remove('hidden');
-			// NEW: Allow custom text for decline button via i18n key
 			if (options.declineKey) {
 				newDeclineBtn.textContent = t(options.declineKey);
 			}
