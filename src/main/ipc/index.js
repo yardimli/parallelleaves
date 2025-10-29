@@ -31,7 +31,7 @@ function registerIpcHandlers(db, sessionManager, windowManager) {
 	registerSystemHandlers(db, sessionManager, windowManager);
 	registerDictionaryHandlers();
 	registerLoggingHandlers(db, sessionManager);
-	registerTranslationMemoryHandlers(db, sessionManager);
+	registerTranslationMemoryHandlers(db, sessionManager, windowManager); // MODIFICATION: Pass windowManager
 }
 
 module.exports = { registerIpcHandlers };

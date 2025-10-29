@@ -7,7 +7,7 @@ let importWindow = null;
 let chapterEditorWindows = new Map();
 let codexViewerWindows = new Map();
 let chatWindow = null;
-let translationMemoryWindow = null;
+// MODIFICATION: Removed translationMemoryWindow variable
 let isMainWindowReady = false;
 
 /**
@@ -270,33 +270,7 @@ function createChatWindow(novelId) {
 	});
 }
 
-function createTranslationMemoryWindow(novelId) {
-	if (translationMemoryWindow && !translationMemoryWindow.isDestroyed()) {
-		translationMemoryWindow.focus();
-		return;
-	}
-	
-	translationMemoryWindow = new BrowserWindow({
-		width: 900,
-		height: 700,
-		icon: path.join(__dirname, '..', '..', 'public/assets/icon.png'),
-		title: 'Translation Memory', // This will be replaced by i18n on the page
-		autoHideMenuBar: true,
-		webPreferences: {
-			preload: path.join(__dirname, '..', '..', 'preload.js'),
-			contextIsolation: true,
-			nodeIntegration: false,
-		},
-	});
-	
-	setContentSecurityPolicy(translationMemoryWindow);
-	
-	translationMemoryWindow.loadFile('public/translation-memory-window.html', { query: { novelId } });
-	
-	translationMemoryWindow.on('closed', () => {
-		translationMemoryWindow = null;
-	});
-}
+// MODIFICATION: Removed createTranslationMemoryWindow function
 
 function closeSplashAndShowMain() {
 	if (splashWindow && !splashWindow.isDestroyed()) {
@@ -324,7 +298,7 @@ module.exports = {
 	createCodexViewerWindow,
 	createImportWindow,
 	createChatWindow,
-	createTranslationMemoryWindow,
+	// MODIFICATION: Removed createTranslationMemoryWindow from exports
 	closeSplashAndShowMain,
 	getMainWindow: () => mainWindow,
 	getImportWindow: () => importWindow,

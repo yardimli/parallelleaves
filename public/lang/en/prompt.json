@@ -78,8 +78,5 @@
   "errorNoActiveEditor": "No active editor to apply changes to.",
   "errorNoSelection": "Could not get selection from the editor. For rephrasing, please select some text.",
   "errorFetchContext": "Could not fetch previous translation blocks for context. {message}",
-  "errorNoInterface": "Cannot open AI editor: Editor interface is not available.",
-  "translationMemory": {
-    "pairsToGenerate": "Pairs to Generate"
-  }
+  "errorNoInterface": "Cannot open AI editor: Editor interface is not available."
 }

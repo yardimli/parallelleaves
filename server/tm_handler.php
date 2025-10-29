@@ -21,17 +21,20 @@
 	 * @param int $userId The authenticated user's ID.
 	 * @param array $payload The request payload from the client.
 	 * @param string $apiKey The OpenRouter API key.
+	 * @param array $tmConfig Configuration for TM generation (model, pair_count).
 	 * @return void
 	 */
-	function handleTranslationMemoryAction(mysqli $db, string $action, int $userId, array $payload, string $apiKey): void
+	function handleTranslationMemoryAction(mysqli $db, string $action, int $userId, array $payload, string $apiKey, array $tmConfig): void
 	{
 		switch ($action) {
 			case 'tm_sync_blocks':
 				syncBookBlocks($db, $userId, $payload);
 				break;
-			case 'tm_start_generation':
-				startMemoryGeneration($db, $userId, $payload, $apiKey);
+			// MODIFICATION: Renamed to reflect background processing nature
+			case 'tm_run_full_generation':
+				runFullMemoryGeneration($db, $userId, $payload, $apiKey, $tmConfig);
 				break;
+			// END MODIFICATION
 			case 'tm_get_memory':
 				getTranslationMemory($db, $userId, $payload);
 				break;
@@ -173,24 +176,26 @@
 	}
 
 	/**
-	 * Starts the process of generating translation memory for the next un-analyzed block.
+	 * NEW: Runs the memory generation process for all un-analyzed blocks in a novel.
 	 *
 	 * @param mysqli $db The database connection.
 	 * @param int $userId The user's ID.
 	 * @param array $payload The request payload.
 	 * @param string $apiKey The OpenRouter API key.
+	 * @param array $tmConfig Configuration for TM generation (model, pair_count).
 	 * @return void
 	 */
-	function startMemoryGeneration(mysqli $db, int $userId, array $payload, string $apiKey): void
+	function runFullMemoryGeneration(mysqli $db, int $userId, array $payload, string $apiKey, array $tmConfig): void
 	{
 		$novelId = $payload['novel_id'] ?? null;
-		$model = $payload['model'] ?? null;
-		$temperature = $payload['temperature'] ?? 0.7;
-		$pairCount = $payload['pair_count'] ?? 2;
-
-		if (!$novelId || !$model) {
-			sendJsonError(400, 'Missing novel_id or model for generation.');
+		if (!$novelId) {
+			sendJsonError(400, 'Missing novel_id for generation.');
 		}
+
+		// Get model and pair count from server config
+		$model = $tmConfig['model'];
+		$pairCount = $tmConfig['pair_count'];
+		$temperature = 0.7; // Can be made configurable if needed
 
 		// Get user_book_id and languages
 		$stmt = $db->prepare('SELECT id, source_language, target_language FROM user_books WHERE book_id = ? AND user_id = ?');
@@ -207,74 +212,74 @@
 		$sourceLanguage = $userBook['source_language'];
 		$targetLanguage = $userBook['target_language'];
 
-		// Find the next un-analyzed block
-		$stmt = $db->prepare('SELECT id, marker_id, source_text, target_text FROM user_book_blocks WHERE user_book_id = ? AND is_analyzed = 0 ORDER BY marker_id ASC LIMIT 1');
+		// Find all un-analyzed blocks
+		$stmt = $db->prepare('SELECT id, source_text, target_text FROM user_book_blocks WHERE user_book_id = ? AND is_analyzed = 0 ORDER BY marker_id ASC');
 		$stmt->bind_param('i', $userBookId);
 		$stmt->execute();
 		$result = $stmt->get_result();
-		$block = $result->fetch_assoc();
+		$blocks = $result->fetch_all(MYSQLI_ASSOC);
 		$stmt->close();
 
-		if (!$block) {
-			echo json_encode(['status' => 'finished']);
+		if (empty($blocks)) {
+			echo json_encode(['status' => 'finished', 'processed_count' => 0, 'message' => 'No new blocks to analyze.']);
 			return;
 		}
 
-		// Hard-coded prompts with JSON output requirement
-		$systemPrompt = "You are a literary translation analyst. Your task is to analyze a pair of texts—an original and its translation—and generate concise, actionable translation examples for an AI translator to imitate the style of the human translator. The examples should focus on stylistic choices, idioms, or complex phrases. Return your response as a single JSON object with one key: 'pairs'. The value of 'pairs' must be an array of objects, where each object has two keys: 'source' and 'target'.";
-		$userPrompt = "Analyze the following pair and generate exactly {$pairCount} translation pair(s) that best reflect the translator's style.\n\nSource ({$sourceLanguage}):\n{$block['source_text']}\n\nTranslation ({$targetLanguage}):\n{$block['target_text']}";
+		$processedCount = 0;
+		foreach ($blocks as $block) {
+			// Hard-coded prompts with JSON output requirement
+			$systemPrompt = "You are a literary translation analyst. Your task is to analyze a pair of texts—an original and its translation—and generate concise, actionable translation examples for an AI translator to imitate the style of the human translator. The examples should focus on stylistic choices, idioms, or complex phrases. Return your response as a single JSON object with one key: 'pairs'. The value of 'pairs' must be an array of objects, where each object has two keys: 'source' and 'target'.";
+			$userPrompt = "Analyze the following pair and generate exactly {$pairCount} translation pair(s) that best reflect the translator's style.\n\nSource ({$sourceLanguage}):\n{$block['source_text']}\n\nTranslation ({$targetLanguage}):\n{$block['target_text']}";
 
-		$messages = [
-			['role' => 'system', 'content' => $systemPrompt],
-			['role' => 'user', 'content' => $userPrompt]
-		];
+			$messages = [
+				['role' => 'system', 'content' => $systemPrompt],
+				['role' => 'user', 'content' => $userPrompt]
+			];
 
-		$aiResponse = callOpenRouterForTm($model, (float)$temperature, $messages, $apiKey);
+			$aiResponse = callOpenRouterForTm($model, (float)$temperature, $messages, $apiKey);
 
-		if (!$aiResponse || !isset($aiResponse['choices'][0]['message']['content'])) {
-			sendJsonError(502, 'Failed to get a valid response from the AI model.');
-		}
-
-		$contentJson = json_decode($aiResponse['choices'][0]['message']['content'], true);
-
-		if (json_last_error() !== JSON_ERROR_NONE || !isset($contentJson['pairs']) || !is_array($contentJson['pairs'])) {
-			sendJsonError(500, 'AI response was not in the expected JSON format. Response: ' . $aiResponse['choices'][0]['message']['content']);
-		}
-
-		$db->begin_transaction();
-		try {
-			$insertStmt = $db->prepare('INSERT INTO user_books_translation_memory (user_book_id, block_id, source_sentence, target_sentence) VALUES (?, ?, ?, ?)');
-			$formattedBlock = "\n\n#{$novelId}-{$block['marker_id']}";
-
-			foreach ($contentJson['pairs'] as $pair) {
-				if (isset($pair['source']) && isset($pair['target'])) {
-					$sourceSentence = $pair['source'];
-					$targetSentence = $pair['target'];
-					$insertStmt->bind_param('iiss', $userBookId, $block['id'], $sourceSentence, $targetSentence);
-					$insertStmt->execute();
-					$formattedBlock .= "\n<{$sourceLanguage}>{$sourceSentence}</{$sourceLanguage}>";
-					$formattedBlock .= "\n<{$targetLanguage}>{$targetSentence}</{$targetLanguage}>";
-				}
+			if (!$aiResponse || !isset($aiResponse['choices'][0]['message']['content'])) {
+				// Skip this block on AI error and continue with the next
+				error_log("AI Error for block ID {$block['id']}: Invalid response.");
+				continue;
 			}
-			$insertStmt->close();
 
-			$updateStmt = $db->prepare('UPDATE user_book_blocks SET is_analyzed = 1 WHERE id = ?');
-			$updateStmt->bind_param('i', $block['id']);
-			$updateStmt->execute();
-			$updateStmt->close();
+			$contentJson = json_decode($aiResponse['choices'][0]['message']['content'], true);
 
-			$db->commit();
+			if (json_last_error() !== JSON_ERROR_NONE || !isset($contentJson['pairs']) || !is_array($contentJson['pairs'])) {
+				error_log("JSON Error for block ID {$block['id']}: " . $aiResponse['choices'][0]['message']['content']);
+				continue;
+			}
 
-			echo json_encode([
-				'status' => 'new_instructions',
-				'formatted_block' => $formattedBlock
-			]);
-		} catch (Exception $e) {
-			$db->rollback();
-			error_log("Memory Generation DB Error: " . $e->getMessage());
-			sendJsonError(500, 'Failed to save generated translation memory.');
+			$db->begin_transaction();
+			try {
+				$insertStmt = $db->prepare('INSERT INTO user_books_translation_memory (user_book_id, block_id, source_sentence, target_sentence) VALUES (?, ?, ?, ?)');
+				foreach ($contentJson['pairs'] as $pair) {
+					if (isset($pair['source']) && isset($pair['target'])) {
+						$insertStmt->bind_param('iiss', $userBookId, $block['id'], $pair['source'], $pair['target']);
+						$insertStmt->execute();
+					}
+				}
+				$insertStmt->close();
+
+				$updateStmt = $db->prepare('UPDATE user_book_blocks SET is_analyzed = 1 WHERE id = ?');
+				$updateStmt->bind_param('i', $block['id']);
+				$updateStmt->execute();
+				$updateStmt->close();
+
+				$db->commit();
+				$processedCount++;
+			} catch (Exception $e) {
+				$db->rollback();
+				error_log("DB Error for block ID {$block['id']}: " . $e->getMessage());
+				// Stop the entire process on DB error
+				sendJsonError(500, 'Failed to save generated translation memory for block ' . $block['id']);
+			}
 		}
+
+		echo json_encode(['status' => 'finished', 'processed_count' => $processedCount]);
 	}
+
 
 	/**
 	 * Retrieves the formatted translation memory for a single novel.
@@ -394,7 +399,7 @@
 		$content = '';
 		foreach ($memories as $mem) {
 			$content .= "<{$mem['source_language']}>{$mem['source_sentence']}</{$mem['source_language']}>\n";
-			$content .= "<{$mem['target_language']}>{$mem['target_sentence']}</{$target_language}>\n";
+			$content .= "<{$mem['target_language']}>{$mem['target_sentence']}</{$targetLang}>\n";
 		}
 
 		echo json_encode(['content' => trim($content)]);

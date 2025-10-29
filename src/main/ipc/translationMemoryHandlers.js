@@ -120,14 +120,17 @@ async function hasValidTranslationMemory(token) {
  * Registers IPC handlers for the translation memory window functionality.
  * @param {Database.Database} db - The application's database connection.
  * @param {object} sessionManager - The session manager instance.
+ * @param {object} windowManager - The window manager instance.
  */
-function registerTranslationMemoryHandlers(db, sessionManager) {
-	ipcMain.handle('translation-memory:start', async (event, { novelId, model, temperature, pairCount = 2 }) => {
-		const memoryWindow = event.sender.getOwnerBrowserWindow();
+function registerTranslationMemoryHandlers(db, sessionManager, windowManager) {
+	// MODIFICATION: New handler for background generation
+	ipcMain.handle('translation-memory:generate-in-background', async (event, novelId) => {
+		const editorWindow = event.sender.getOwnerBrowserWindow();
 		const token = sessionManager.getSession()?.token || null;
 		
 		try {
 			// Step 1: Sync local novel content with the server.
+			editorWindow.webContents.send('translation-memory:progress-update', { message: 'Syncing novel content...' });
 			const novel = db.prepare('SELECT source_language, target_language FROM novels WHERE id = ?').get(novelId);
 			if (!novel) throw new Error('Novel not found locally.');
 			
@@ -143,44 +146,26 @@ function registerTranslationMemoryHandlers(db, sessionManager) {
 				pairs: allPairs
 			}, token);
 			
-			// Step 2: Request the next analysis from the server.
-			const result = await callTmApi('tm_start_generation', {
-				novel_id: novelId,
-				model: model,
-				temperature: temperature,
-				pair_count: pairCount
-			}, token);
+			// Step 2: Request the full background generation process from the server.
+			editorWindow.webContents.send('translation-memory:progress-update', { message: 'Starting generation process...' });
+			const result = await callTmApi('tm_run_full_generation', { novel_id: novelId }, token);
 			
-			if (result.status === 'finished') {
-				memoryWindow.webContents.send('translation-memory:update', { type: 'finished', message: 'editor.translationMemory.noMorePairs' });
-			} else if (result.status === 'new_instructions') {
-				memoryWindow.webContents.send('translation-memory:update', {
-					type: 'new_instructions',
-					data: {
-						formattedBlock: result.formatted_block
-					}
-				});
-			}
+			// Step 3: Report completion to the renderer.
+			editorWindow.webContents.send('translation-memory:progress-update', {
+				message: 'Generation complete!',
+				finished: true,
+				processedCount: result.processed_count || 0
+			});
 			
-			return { success: true };
+			return { success: true, processedCount: result.processed_count };
 			
 		} catch (error) {
-			console.error('Translation memory generation failed:', error);
-			memoryWindow.webContents.send('translation-memory:update', { type: 'error', message: 'editor.translationMemory.error', params: { message: error.message } });
+			console.error('Background translation memory generation failed:', error);
+			editorWindow.webContents.send('translation-memory:progress-update', {
+				message: error.message,
+				error: true
+			});
 			return { success: false, error: error.message };
-		}
-	});
-	
-	// Saving is now handled entirely on the server after each generation. This handler is removed.
-	ipcMain.handle('translation-memory:save', () => ({ success: true, message: 'Saving is now handled automatically on the server.' }));
-	
-	ipcMain.handle('translation-memory:load', async (event, novelId) => {
-		try {
-			const token = sessionManager.getSession()?.token || null;
-			const result = await callTmApi('tm_get_memory', { novel_id: novelId }, token);
-			return { success: true, content: result.content || '' };
-		} catch (error) {
-			return { success: false, message: error.message };
 		}
 	});
 	

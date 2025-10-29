@@ -94,6 +94,10 @@
 	$dbName = $_ENV['DB_NAME'] ?? '';
 	$dbUser = $_ENV['DB_USER'] ?? '';
 	$dbPass = $_ENV['DB_PASS'] ?? '';
+// MODIFICATION: Add new environment variables for translation memory generation
+	$tmModel = $_ENV['TM_MODEL'] ?? 'openai/gpt-4o-mini';
+	$tmPairCount = (int)($_ENV['TM_PAIR_COUNT'] ?? 2);
+// END MODIFICATION
 
 // Set common headers
 	header('Content-Type: application/json');
@@ -450,9 +454,11 @@
 		}
 		exit;
 	} else {
+		// MODIFICATION: Pass TM config to the handler
 		if (str_starts_with($action, 'tm_')) {
 			include 'tm_handler.php';
-			handleTranslationMemoryAction($db, $action, $userId, $payload, $apiKey);
+			$tmConfig = ['model' => $tmModel, 'pair_count' => $tmPairCount];
+			handleTranslationMemoryAction($db, $action, $userId, $payload, $apiKey, $tmConfig);
 			exit;
 		}
 		// END MODIFICATION

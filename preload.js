@@ -4,14 +4,10 @@ contextBridge.exposeInMainWorld('api', {
 	// --- App Level ---
 	openImportWindow: () => ipcRenderer.send('app:open-import-window'),
 	openChatWindow: (novelId) => ipcRenderer.send('app:openChatWindow', novelId),
-	openTranslationMemoryWindow: (novelId) => ipcRenderer.send('app:openTranslationMemoryWindow', novelId),
-	translationMemoryStart: (data) => ipcRenderer.invoke('translation-memory:start', data),
-	onTranslationMemoryUpdate: (callback) => ipcRenderer.on('translation-memory:update', (event, ...args) => callback(...args)),
-	translationMemorySave: (data) => ipcRenderer.invoke('translation-memory:save', data),
-	translationMemoryLoad: (novelId) => ipcRenderer.invoke('translation-memory:load', novelId),
-	translationMemoryGetForAI: (novelId) => ipcRenderer.invoke('translation-memory:getForAI', novelId),
+	// MODIFICATION: Removed TM window IPC and added background generation handlers
+	translationMemoryGenerateInBackground: (novelId) => ipcRenderer.invoke('translation-memory:generate-in-background', novelId),
+	onTranslationMemoryProgressUpdate: (callback) => ipcRenderer.on('translation-memory:progress-update', (event, ...args) => callback(...args)),
 	translationMemoryGetForNovels: (novelIds) => ipcRenderer.invoke('translation-memory:getForNovels', novelIds),
-	// NEW: Handlers for comparing novel pairs and TM entries.
 	getTranslationMemoryEntryCount: (novelId) => ipcRenderer.invoke('translation-memory:get-entry-count', novelId),
 	getNovelTranslationPairCount: (novelId) => ipcRenderer.invoke('novels:get-translation-pair-count', novelId),
 	// END MODIFICATION

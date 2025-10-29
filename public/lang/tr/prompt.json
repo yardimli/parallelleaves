@@ -78,8 +78,5 @@
   "errorNoActiveEditor": "Değişiklikleri uygulamak için aktif bir metin alanı yok.",
   "errorNoSelection": "Metin alanından seçim alınamadı. Yeniden yazmak için lütfen metin seçin.",
   "errorFetchContext": "Bağlam için önceki çeviri blokları alınamadı. {message}",
-  "errorNoInterface": "Yapay zeka editörü açılamıyor: Editör arayüzü kullanılamıyor.",
-  "translationMemory": {
-    "pairsToGenerate": "Oluşturulacak Çiftler"
-  }
+  "errorNoInterface": "Yapay zeka editörü açılamıyor: Editör arayüzü kullanılamıyor."
 }

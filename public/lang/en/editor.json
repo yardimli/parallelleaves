@@ -60,11 +60,6 @@
   "confirmModalBtn": "Confirm Action",
   "confirmDeleteChapter": "Are you sure you want to delete this chapter? This cannot be undone.",
   "confirmDeleteAct": "Are you sure you want to delete this act and all its chapters? This cannot be undone.",
-  "confirmUpdateTMMemory": {
-    "title": "Update Translation Memory?",
-    "content": "Your novel has {count} more translation pairs than your Translation Memory. For better AI performance, we recommend updating it now. You can start the process from the toolbar using the <i class='bi bi-lightbulb text-lg'></i> icon.",
-    "decline": "Don't ask again this session"
-  },
   "aiToolbar": {
     "apply": "Apply",
     "retry": "Retry",
@@ -121,17 +116,14 @@
     "errorNoActiveChapter": "Cannot add a note without an active chapter."
   },
   "translationMemory": {
-    "title": "Open Translation Memory",
-    "windowTitle": "Parallel Leaves - Translation Memory",
-    "start": "Start Generating",
-    "next": "Generate Next",
-    "stop": "Stop",
-    "loading": "Finding next pair and analyzing...",
-    "noMorePairs": "No more translation pairs found to generate from.",
-    "resultsTitle": "Generated Memory",
-    "error": "Error: {message}",
-    "save": "Save Memory",
-    "saving": "Saving...",
-    "saved": "Memory saved!"
+    "updateTitle": "Update Translation Memory",
+    "status": {
+      "starting": "Starting TM update...",
+      "syncing": "Syncing novel content...",
+      "generating": "Generating memories from {processed}/{total} blocks...",
+      "complete": "Translation Memory is up to date. ({count} blocks processed)",
+      "complete_none": "Translation Memory is up to date. (No new blocks found)",
+      "error": "TM Error: {message}"
+    }
   }
 }

@@ -78,8 +78,5 @@
   "errorNoActiveEditor": "Ingen aktivt redigeringsprogram å bruke endringer på.",
   "errorNoSelection": "Kunne ikke hente utvalg fra redigeringsprogrammet. For omformulering, vennligst velg litt tekst.",
   "errorFetchContext": "Kunne ikke hente forrige oversettelsesblokker for kontekst. {message}",
-  "errorNoInterface": "Kan ikke åpne AI-redigeringsprogram: Redigeringsgrensesnitt er ikke tilgjengelig.",
-  "translationMemory": {
-    "pairsToGenerate": "Antall par som skal genereres"
-  }
+  "errorNoInterface": "Kan ikke åpne AI-redigeringsprogram: Redigeringsgrensesnitt er ikke tilgjengelig."
 }

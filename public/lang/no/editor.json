@@ -60,11 +60,6 @@
   "confirmModalBtn": "Bekreft handling",
   "confirmDeleteChapter": "Er du sikker på at du vil slette dette kapittelet? Dette kan ikke angres.",
   "confirmDeleteAct": "Er du sikker på at du vil slette denne akten og alle dens kapitler? Dette kan ikke angres.",
-  "confirmUpdateTMMemory": {
-    "title": "Oppdatere oversettelsesminnet?",
-    "content": "Romanen din har {count} flere oversettelsespar enn oversettelsesminnet ditt. For bedre AI-ytelse anbefaler vi at du oppdaterer det nå. Du kan starte prosessen fra verktøylinjen ved å bruke <i class='bi bi-lightbulb text-lg'></i>-ikonet.",
-    "decline": "Ikke spør igjen i denne økten"
-  },
   "aiToolbar": {
     "apply": "Godta",
     "retry": "Prøv igjen",
@@ -121,17 +116,14 @@
     "errorNoActiveChapter": "Kan ikke legge til et notat uten et aktivt kapittel."
   },
   "translationMemory": {
-    "title": "Åpne oversettelsesminne",
-    "windowTitle": "Parallel Leaves - Oversettelsesminne",
-    "start": "Start generering",
-    "next": "Generer neste",
-    "stop": "Stopp",
-    "loading": "Finner neste par og analyserer...",
-    "noMorePairs": "Ingen flere oversettelsespar funnet å generere fra.",
-    "resultsTitle": "Generert minne",
-    "error": "Feil: {message}",
-    "save": "Lagre minne",
-    "saving": "Lagrer...",
-    "saved": "Minne lagret!"
+    "updateTitle": "Oppdater oversettelsesminne",
+    "status": {
+      "starting": "Starter TM-oppdatering...",
+      "syncing": "Synkroniserer romaninnhold...",
+      "generating": "Genererer minner fra {processed}/{total} blokker...",
+      "complete": "Oversettelsesminnet er oppdatert. ({count} blokker behandlet)",
+      "complete_none": "Oversettelsesminnet er oppdatert. (Ingen nye blokker funnet)",
+      "error": "TM-feil: {message}"
+    }
   }
 }

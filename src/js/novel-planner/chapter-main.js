@@ -444,9 +444,45 @@ document.addEventListener('DOMContentLoaded', async () => {
 		
 		document.getElementById('js-open-codex-btn')?.addEventListener('click', () => window.api.openCodex(novelId));
 		document.getElementById('js-open-chat-btn')?.addEventListener('click', () => window.api.openChatWindow(novelId));
-		document.getElementById('js-translation-memory-btn')?.addEventListener('click', () => {
-			window.api.openTranslationMemoryWindow(novelId);
-		});
+		
+		// MODIFICATION: Translation memory button now triggers a background process
+		const tmButton = document.getElementById('js-translation-memory-btn');
+		const tmStatusEl = document.getElementById('js-tm-status');
+		
+		if (tmButton && tmStatusEl) {
+			tmButton.addEventListener('click', async () => {
+				tmButton.disabled = true;
+				tmStatusEl.textContent = t('editor.translationMemory.status.starting');
+				try {
+					await window.api.translationMemoryGenerateInBackground(novelId);
+				} catch (error) {
+					tmStatusEl.textContent = t('editor.translationMemory.status.error', { message: error.message });
+					tmButton.disabled = false;
+				}
+			});
+			
+			window.api.onTranslationMemoryProgressUpdate((update) => {
+				if (update.error) {
+					tmStatusEl.textContent = t('editor.translationMemory.status.error', { message: update.message });
+					tmButton.disabled = false;
+				} else if (update.finished) {
+					if (update.processedCount > 0) {
+						tmStatusEl.textContent = t('editor.translationMemory.status.complete', { count: update.processedCount });
+					} else {
+						tmStatusEl.textContent = t('editor.translationMemory.status.complete_none');
+					}
+					tmButton.disabled = false;
+					// Hide the message after a few seconds
+					setTimeout(() => {
+						tmStatusEl.textContent = '';
+					}, 5000);
+				} else {
+					// For intermediate progress messages
+					tmStatusEl.textContent = update.message;
+				}
+			});
+		}
+		// END MODIFICATION
 		
 		sourceContainer.addEventListener('scroll', () => debouncedSaveScroll(novelId, sourceContainer, targetContainer));
 		targetContainer.addEventListener('scroll', () => debouncedSaveScroll(novelId, sourceContainer, targetContainer));
@@ -734,49 +770,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 					break;
 			}
 		});
-		
-		// NEW: Function to check if TM needs updating and prompt user.
-		const checkTranslationMemoryStatus = async (novelId) => {
-			const sessionKey = `dontAskUpdateTM-${novelId}`;
-			if (sessionStorage.getItem(sessionKey)) {
-				return;
-			}
-			
-			try {
-				const [novelPairsResult, tmEntriesResult] = await Promise.all([
-					window.api.getNovelTranslationPairCount(novelId),
-					window.api.getTranslationMemoryEntryCount(novelId)
-				]);
-				
-				if (!novelPairsResult.success || !tmEntriesResult.success) {
-					console.error('Failed to get pair/entry counts:', novelPairsResult.message, tmEntriesResult.message);
-					return;
-				}
-				
-				const novelPairCount = novelPairsResult.count;
-				const tmEntryCount = tmEntriesResult.count;
-				const diff = novelPairCount - tmEntryCount;
-				
-				if (diff > 5) {
-					const title = t('editor.confirmUpdateTMMemory.title');
-					const content = t('editor.confirmUpdateTMMemory.content', { count: diff });
-					
-					const userChoice = await showConfirmationModal(title, content, {
-						showDecline: true,
-						declineKey: 'editor.confirmUpdateTMMemory.decline'
-					});
-					
-					if (userChoice === 'decline') {
-						sessionStorage.setItem(sessionKey, 'true');
-					}
-				}
-			} catch (error) {
-				console.error('Error checking translation memory status:', error);
-			}
-		};
-		
-		// Call the check after a short delay to ensure the UI is fully settled.
-		setTimeout(() => checkTranslationMemoryStatus(novelId), 2000);
 		
 	} catch (error) {
 		console.error('Failed to load manuscript data:', error);
