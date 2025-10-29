@@ -116,6 +116,9 @@ async function hasValidTranslationMemory(token) {
 	}
 }
 
+// NEW: Map to store active job runners to prevent multiple concurrent jobs for the same novel.
+const activeTmJobs = new Map();
+
 /**
  * Registers IPC handlers for the translation memory window functionality.
  * @param {Database.Database} db - The application's database connection.
@@ -123,13 +126,67 @@ async function hasValidTranslationMemory(token) {
  * @param {object} windowManager - The window manager instance.
  */
 function registerTranslationMemoryHandlers(db, sessionManager, windowManager) {
-	// MODIFICATION: New handler for background generation
+	// MODIFICATION: The handler now orchestrates a job-based background process.
 	ipcMain.handle('translation-memory:generate-in-background', async (event, novelId) => {
 		const editorWindow = event.sender.getOwnerBrowserWindow();
 		const token = sessionManager.getSession()?.token || null;
 		
+		if (activeTmJobs.has(novelId)) {
+			console.log(`Job for novel ${novelId} is already running.`);
+			return { success: false, error: 'A generation job for this novel is already in progress.' };
+		}
+		
+		const processNextBatch = async (jobId) => {
+			if (!activeTmJobs.has(novelId)) {
+				console.log(`Job for novel ${novelId} was cancelled or finished.`);
+				return;
+			}
+			
+			try {
+				// Process one block on the server
+				await callTmApi('tm_process_job_batch', { job_id: jobId }, token);
+				
+				// Get the latest status
+				const status = await callTmApi('tm_get_job_status', { job_id: jobId }, token);
+				
+				if (editorWindow && !editorWindow.isDestroyed()) {
+					editorWindow.webContents.send('translation-memory:progress-update', {
+						processed: status.processed_blocks,
+						total: status.total_blocks
+					});
+				}
+				
+				// Check for completion or error
+				if (status.status === 'complete') {
+					if (editorWindow && !editorWindow.isDestroyed()) {
+						editorWindow.webContents.send('translation-memory:progress-update', {
+							finished: true,
+							processedCount: status.processed_blocks
+						});
+					}
+					activeTmJobs.delete(novelId); // Job finished, remove from active list
+				} else if (status.status === 'error') {
+					throw new Error(status.error_message || 'Unknown server error during job processing.');
+				} else {
+					// Schedule the next batch
+					setTimeout(() => processNextBatch(jobId), 100); // Small delay
+				}
+			} catch (error) {
+				console.error(`Error in TM job for novel ${novelId}:`, error);
+				if (editorWindow && !editorWindow.isDestroyed()) {
+					editorWindow.webContents.send('translation-memory:progress-update', {
+						error: true,
+						message: error.message
+					});
+				}
+				activeTmJobs.delete(novelId); // Job failed, remove from active list
+			}
+		};
+		
 		try {
-			// Step 1: Sync local novel content with the server.
+			activeTmJobs.set(novelId, true); // Mark job as active
+			
+			// Step 1: Sync local content
 			editorWindow.webContents.send('translation-memory:progress-update', { message: 'Syncing novel content...' });
 			const novel = db.prepare('SELECT source_language, target_language FROM novels WHERE id = ?').get(novelId);
 			if (!novel) throw new Error('Novel not found locally.');
@@ -146,25 +203,36 @@ function registerTranslationMemoryHandlers(db, sessionManager, windowManager) {
 				pairs: allPairs
 			}, token);
 			
-			// Step 2: Request the full background generation process from the server.
-			editorWindow.webContents.send('translation-memory:progress-update', { message: 'Starting generation process...' });
-			const result = await callTmApi('tm_run_full_generation', { novel_id: novelId }, token);
+			// Step 2: Start the job on the server
+			const jobResult = await callTmApi('tm_start_generation_job', { novel_id: novelId }, token);
 			
-			// Step 3: Report completion to the renderer.
-			editorWindow.webContents.send('translation-memory:progress-update', {
-				message: 'Generation complete!',
-				finished: true,
-				processedCount: result.processed_count || 0
-			});
-			
-			return { success: true, processedCount: result.processed_count };
+			if (jobResult.job_id) {
+				editorWindow.webContents.send('translation-memory:progress-update', {
+					processed: 0,
+					total: jobResult.total_blocks
+				});
+				// Kick off the processing loop
+				processNextBatch(jobResult.job_id);
+				return { success: true };
+			} else {
+				// No new blocks to process
+				editorWindow.webContents.send('translation-memory:progress-update', {
+					finished: true,
+					processedCount: 0
+				});
+				activeTmJobs.delete(novelId);
+				return { success: true, processedCount: 0 };
+			}
 			
 		} catch (error) {
 			console.error('Background translation memory generation failed:', error);
-			editorWindow.webContents.send('translation-memory:progress-update', {
-				message: error.message,
-				error: true
-			});
+			if (editorWindow && !editorWindow.isDestroyed()) {
+				editorWindow.webContents.send('translation-memory:progress-update', {
+					error: true,
+					message: error.message
+				});
+			}
+			activeTmJobs.delete(novelId); // Ensure job is cleared on initial failure
 			return { success: false, error: error.message };
 		}
 	});

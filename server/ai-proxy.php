@@ -67,6 +67,19 @@
 	 *   KEY `block_id` (`block_id`)
 	 * ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 	 *
+	 * -- NEW: SQL for the new TM generation jobs table
+     * CREATE TABLE `tm_generation_jobs` (
+     *  `id` int(11) NOT NULL AUTO_INCREMENT,
+     *  `user_book_id` int(11) NOT NULL,
+     *  `status` enum('pending','running','complete','error') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'pending',
+     *  `total_blocks` int(11) NOT NULL DEFAULT 0,
+     *  `processed_blocks` int(11) NOT NULL DEFAULT 0,
+     *  `error_message` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+     *  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+     *  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+     *  PRIMARY KEY (`id`),
+     *  KEY `user_book_id` (`user_book_id`)
+     * ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 	 */
 
 

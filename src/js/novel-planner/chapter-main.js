@@ -445,7 +445,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 		document.getElementById('js-open-codex-btn')?.addEventListener('click', () => window.api.openCodex(novelId));
 		document.getElementById('js-open-chat-btn')?.addEventListener('click', () => window.api.openChatWindow(novelId));
 		
-		// MODIFICATION: Translation memory button now triggers a background process
+		// MODIFICATION: Translation memory button and status handler updated for detailed progress.
 		const tmButton = document.getElementById('js-translation-memory-btn');
 		const tmStatusEl = document.getElementById('js-tm-status');
 		
@@ -472,12 +472,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 						tmStatusEl.textContent = t('editor.translationMemory.status.complete_none');
 					}
 					tmButton.disabled = false;
-					// Hide the message after a few seconds
 					setTimeout(() => {
 						tmStatusEl.textContent = '';
 					}, 5000);
+				} else if (update.processed !== undefined && update.total !== undefined) {
+					// NEW: Handle granular progress updates
+					tmStatusEl.textContent = t('editor.translationMemory.status.generating', { processed: update.processed, total: update.total });
 				} else {
-					// For intermediate progress messages
+					// Fallback for general status messages
 					tmStatusEl.textContent = update.message;
 				}
 			});
