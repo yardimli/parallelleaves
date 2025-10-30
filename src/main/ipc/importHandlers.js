@@ -79,10 +79,8 @@ function registerImportHandlers(db, sessionManager, windowManager) {
 		}
 	});
 	
-	// MODIFICATION START: The 'acts' parameter is replaced with a flat 'chapters' array.
 	ipcMain.handle('document:import', async (event, { title, source_language, target_language, chapters }) => {
 		if (!title || !source_language || !target_language || !chapters || chapters.length === 0) {
-			// MODIFICATION END
 			throw new Error('Invalid data provided for import.');
 		}
 		

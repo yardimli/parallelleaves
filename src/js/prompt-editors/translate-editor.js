@@ -11,10 +11,8 @@ const debounce = (func, delay) => {
 	};
 };
 
-// NEW: Variable to hold the Choices.js instance
 let translationMemoryChoices = null;
 
-// NEW: Export a getter for the Choices.js instance so other modules can access it.
 export const getTranslationMemoryChoices = () => translationMemoryChoices;
 
 const defaultState = { // Default state for the translate editor form
@@ -75,14 +73,10 @@ export const buildPromptJson = (formData, context, contextualContent = '') => {
 		? t('prompt.translate.system.examplesBlock')
 		: '';
 	
-	let codexBlock = '';
-	if (formData.useCodex && context.codexContent) {
-		const plainCodex = htmlToPlainText(context.codexContent);
-		if (plainCodex) {
-			codexBlock = t('prompt.translate.system.codexBlock', { codexContent: plainCodex });
-		}
-	}
-	
+	const codexBlock = (formData.useCodex)
+			? t('prompt.translate.system.codexBlock')
+			: '';
+
 	const system = t('prompt.translate.system.base', {
 		sourceLanguage: languageForPrompt,
 		targetLanguage: targetLanguage,
@@ -160,10 +154,6 @@ const updatePreview = async (container, context) => {
 		dictionaryContextualContent = await window.api.getDictionaryContentForAI(context.novelId, 'translation');
 	}
 	
-	if (formData.useCodex) {
-		previewContext.codexContent = await window.api.codex.get(context.novelId);
-	}
-	
 	try {
 		const promptJson = buildPromptJson(formData, previewContext, dictionaryContextualContent);
 		systemPreview.textContent = promptJson.system;
@@ -222,7 +212,6 @@ const populateForm = (container, state, novelId) => {
 	});
 };
 
-// NEW: Function to initialize the Choices.js dropdown
 const populateTranslationMemoriesDropdown = async (container, currentNovelId) => {
 	const select = container.querySelector('#js-translation-memory-select');
 	if (!select) return;
@@ -291,7 +280,6 @@ export const init = async (container, context) => {
 		const fullContext = { ...context };
 		
 		populateForm(container, context.initialState || defaultState, context.novelId);
-		// NEW: Call the function to populate the new dropdown
 		await populateTranslationMemoriesDropdown(container, context.novelId);
 		
 		const form = container.querySelector('#translate-editor-form');
@@ -303,7 +291,6 @@ export const init = async (container, context) => {
 		if (form) {
 			form.addEventListener('input', debouncedUpdatePreview);
 			
-			// NEW: Add change listener for the Choices.js select element
 			const selectEl = form.querySelector('#js-translation-memory-select');
 			if (selectEl) {
 				selectEl.addEventListener('change', () => {

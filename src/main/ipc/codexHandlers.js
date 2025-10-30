@@ -2,180 +2,158 @@ const { ipcMain, app } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { htmlToPlainText } = require('../utils.js');
-const aiService = require('../../ai/ai.js');
+const fetch = require('node-fetch');
+const { AI_PROXY_URL } = require('../../../config.js');
 
-const CODEX_DIR = path.join(app.getPath('userData'), 'codex');
-let isCodexGenCancelled = false;
+let activeCodexJobs = new Map();
 
 /**
- * Ensures the codex directory exists.
+ * A generic function to call the server-side codex API.
+ * @param {string} action - The specific API action (e.g., 'codex_get_status').
+ * @param {object} payload - The data to send.
+ * @param {string} token - The user's auth token.
+ * @returns {Promise<any>} The JSON response from the server.
  */
-function ensureCodexDir() {
-	if (!fs.existsSync(CODEX_DIR)) {
-		fs.mkdirSync(CODEX_DIR, { recursive: true });
+async function callCodexApi(action, payload, token) {
+	if (!AI_PROXY_URL) {
+		throw new Error('AI Proxy URL is not configured.');
+	}
+	
+	const fullPayload = { ...payload, auth_token: token };
+	
+	const response = await fetch(`${AI_PROXY_URL}?action=${action}`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify(fullPayload),
+	});
+	
+	const responseText = await response.text();
+	if (!response.ok) {
+		let errorMessage = `Server error: ${response.status}`;
+		try {
+			const errorJson = JSON.parse(responseText);
+			errorMessage = errorJson.error?.message || responseText;
+		} catch (e) {
+			// Ignore if response is not JSON
+		}
+		throw new Error(errorMessage);
+	}
+	
+	try {
+		return JSON.parse(responseText);
+	} catch (e) {
+		throw new Error('Invalid JSON response from server.');
 	}
 }
 
 /**
- * Helper function to escape special characters for use in a RegExp.
- * @param {string} string - The string to escape.
- * @returns {string} The escaped string.
- */
-function escapeRegex(string) {
-	return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-/**
- * Parses an HTML string to extract codex entries.
- * @param {string} html - The HTML containing entries.
- * @returns {Array<{title: string, html: string}>} An array of entry objects.
- */
-function parseEntriesFromHtml(html) {
-	const entries = [];
-	// This regex captures the h3 title and the full entry block (h3 + p).
-	const entryRegex = /(<h3>([\s\S]*?)<\/h3>[\s\S]*?<p>[\s\S]*?<\/p>)/g;
-	let match;
-	while ((match = entryRegex.exec(html)) !== null) {
-		entries.push({
-			title: match[2].trim(), // The title is in the second capture group
-			html: match[1] // The full HTML block is in the first capture group
-		});
-	}
-	return entries;
-}
-
-/**
- * Registers IPC handlers for the simplified file-based Codex functionality.
+ * Registers IPC handlers for the server-side Codex functionality.
  * @param {Database.Database} db - The application's database connection.
  * @param {object} sessionManager - The session manager instance.
+ * @param {object} windowManager - The window manager instance.
  */
-function registerCodexHandlers(db, sessionManager) {
-	ipcMain.handle('codex:get', (event, novelId) => {
-		ensureCodexDir();
-		const filePath = path.join(CODEX_DIR, `codex-${novelId}.html`);
-		try {
-			if (fs.existsSync(filePath)) {
-				return fs.readFileSync(filePath, 'utf8');
-			}
-			return '<p></p>'; // Return empty paragraph for a new codex file
-		} catch (error) {
-			console.error(`Failed to read codex for novel ${novelId}:`, error);
-			throw new Error('Could not load codex file.');
-		}
-	});
-	
-	ipcMain.handle('codex:save', (event, { novelId, htmlContent }) => {
-		ensureCodexDir();
-		const filePath = path.join(CODEX_DIR, `codex-${novelId}.html`);
-		try {
-			fs.writeFileSync(filePath, htmlContent, 'utf8');
-			return { success: true };
-		} catch (error) {
-			console.error(`Failed to save codex for novel ${novelId}:`, error);
-			throw new Error('Could not save codex file.');
-		}
-	});
-	
-	ipcMain.on('autogen:stop-codex-generation', () => {
-		isCodexGenCancelled = true;
-	});
-	
-	ipcMain.on('autogen:start-codex-generation', async (event, { novelId, model, temperature }) => {
-		isCodexGenCancelled = false; // Reset cancellation flag at the start.
+function registerCodexHandlers(db, sessionManager, windowManager) {
+	ipcMain.on('codex:start-generation', async (event, novelId) => {
 		const sender = event.sender;
-		const sendProgress = (progress, status, statusKey = null, statusParams = {}) => {
-			if (!sender.isDestroyed()) {
-				sender.send('autogen:progress-update', { progress, status, statusKey, statusParams });
-			}
-		};
+		const token = sessionManager.getSession()?.token;
+		
+		if (!token) {
+			sender.send('codex:finished', { status: 'error', message: 'User not authenticated.' });
+			return;
+		}
+		
+		if (activeCodexJobs.has(novelId)) {
+			console.log(`Codex generation for novel ${novelId} is already in progress.`);
+			return;
+		}
+		
+		activeCodexJobs.set(novelId, true);
 		
 		try {
-			sendProgress(0, 'Fetching novel content...');
+			// 1. Get novel languages and current status from server
+			sender.send('codex:update', { statusKey: 'editor.codex.status.checking' });
+			const { status } = await callCodexApi('codex_get_status', { novel_id: novelId }, token);
 			
-			const chapters = db.prepare('SELECT source_content FROM chapters WHERE novel_id = ? AND source_content IS NOT NULL').all(novelId);
-			if (chapters.length === 0) {
-				sendProgress(100, 'No source content found to analyze.', 'electron.codexGenNoSource');
-				if (!sender.isDestroyed()) sender.send('autogen:process-finished', { status: 'complete' });
+			if (status === 'complete' || status === 'generating') {
+				sender.send('codex:finished', { status: 'complete' });
+				activeCodexJobs.delete(novelId);
 				return;
 			}
 			
-			const fullText = chapters.map(c => c.source_content).join('\n');
-			const cleanedText = htmlToPlainText(fullText);
+			// MODIFICATION START: Get novel metadata from the local DB.
+			const novel = db.prepare('SELECT title, author, source_language, target_language FROM novels WHERE id = ?').get(novelId);
+			if (!novel) {
+				throw new Error(`Novel with ID ${novelId} not found locally.`);
+			}
+			// MODIFICATION END
 			
-			const words = cleanedText.split(/\s+/);
-			const chunkSize = 10000;
+			// 2. Get content and split into chunks
+			sender.send('codex:update', { statusKey: 'editor.codex.status.preparing' });
+			const chapters = db.prepare('SELECT source_content FROM chapters WHERE novel_id = ? AND source_content IS NOT NULL AND LENGTH(source_content) > 10').all(novelId);
+			if (chapters.length === 0) {
+				sender.send('codex:finished', { status: 'complete' });
+				activeCodexJobs.delete(novelId);
+				return;
+			}
+			
+			const fullText = chapters.map(c => htmlToPlainText(c.source_content)).join('\n');
+			const words = fullText.split(/\s+/);
+			const chunkSize = 8000; // Approx word count for large contexts
 			const chunks = [];
 			for (let i = 0; i < words.length; i += chunkSize) {
 				chunks.push(words.slice(i, i + chunkSize).join(' '));
 			}
 			
 			if (chunks.length === 0) {
-				sendProgress(100, 'No text found after cleaning.', 'electron.codexGenNoText');
-				if (!sender.isDestroyed()) sender.send('autogen:process-finished', { status: 'complete' });
+				sender.send('codex:finished', { status: 'complete' });
+				activeCodexJobs.delete(novelId);
 				return;
 			}
 			
-			sendProgress(5, `Found ${words.length.toLocaleString()} words, split into ${chunks.length} chunks.`);
+			// 3. Start the job on the server, now including novel metadata
+			// MODIFICATION START: Added title, author, and languages to the payload.
+			await callCodexApi('codex_start_job', {
+				novel_id: novelId,
+				total_chunks: chunks.length,
+				title: novel.title, // Add title
+				author: novel.author, // Add author
+				source_language: novel.source_language, // Add source language
+				target_language: novel.target_language, // Add target language
+			}, token);
+			// MODIFICATION END
 			
-			const codexFilePath = path.join(CODEX_DIR, `codex-${novelId}.html`);
-			
-			const novel = db.prepare('SELECT source_language, target_language FROM novels WHERE id = ?').get(novelId);
-			const sourceLanguage = novel ? novel.source_language : 'English';
-			const targetLanguage = novel ? novel.target_language : 'English';
-			
+			// 4. Process chunks sequentially
 			for (let i = 0; i < chunks.length; i++) {
-				if (isCodexGenCancelled) {
-					sendProgress(100, 'Process cancelled by user.');
-					if (!sender.isDestroyed()) sender.send('autogen:process-finished', { status: 'cancelled' });
+				if (!activeCodexJobs.has(novelId)) { // Check if job was cancelled
+					sender.send('codex:finished', { status: 'cancelled' });
 					return;
 				}
 				
-				const chunk = chunks[i];
-				const progress = 5 + Math.round((i / chunks.length) * 90);
-				sendProgress(progress, `Analyzing chunk ${i + 1} of ${chunks.length}...`);
+				sender.send('codex:update', { statusKey: 'editor.codex.status.generating', progress: i + 1, total: chunks.length });
 				
-				let currentCodexContent = '';
-				if (fs.existsSync(codexFilePath)) {
-					currentCodexContent = fs.readFileSync(codexFilePath, 'utf8');
-				}
-				
-				const token = sessionManager.getSession()?.token || null;
-				const resultHtml = await aiService.generateCodexFromTextChunk({
-					textChunk: chunk,
-					existingCodexHtml: currentCodexContent,
-					sourceLanguage: sourceLanguage,
-					targetLanguage: targetLanguage,
-					model,
-					token,
-					temperature,
-				});
-				
-				if (resultHtml && resultHtml.trim() !== '') {
-					const newEntries = parseEntriesFromHtml(resultHtml);
-					
-					for (const entry of newEntries) {
-						const entryRegex = new RegExp(`(<h3>${escapeRegex(entry.title)}</h3>[\\s\\S]*?<p>[\\s\\S]*?</p>)`, 'i');
-						
-						if (entryRegex.test(currentCodexContent)) {
-							// Entry exists, replace it.
-							currentCodexContent = currentCodexContent.replace(entryRegex, entry.html);
-						} else {
-							// Entry is new, append it.
-							currentCodexContent += `\n${entry.html}`;
-						}
-					}
-					// Save the updated content back to the file after processing the chunk's results.
-					fs.writeFileSync(codexFilePath, currentCodexContent, 'utf8');
-				}
+				await callCodexApi('codex_process_chunk', {
+					novel_id: novelId,
+					chunk_text: chunks[i],
+					chunk_index: i,
+				}, token);
 			}
 			
-			sendProgress(100, 'Codex generation complete!', 'electron.codexGenComplete');
-			if (!sender.isDestroyed()) sender.send('autogen:process-finished', { status: 'complete' });
+			// 5. Finalize
+			await callCodexApi('codex_mark_complete', { novel_id: novelId }, token);
+			sender.send('codex:finished', { status: 'complete' });
 			
 		} catch (error) {
-			console.error('Codex auto-generation failed:', error);
-			sendProgress(100, `An error occurred: ${error.message}`, 'electron.codexGenError', { message: error.message });
-			if (!sender.isDestroyed()) sender.send('autogen:process-finished', { status: 'error', message: error.message });
+			console.error(`Codex generation failed for novel ${novelId}:`, error);
+			sender.send('codex:finished', { status: 'error', message: error.message });
+		} finally {
+			activeCodexJobs.delete(novelId);
+		}
+	});
+	
+	ipcMain.on('codex:stop-generation', (event, novelId) => {
+		if (activeCodexJobs.has(novelId)) {
+			activeCodexJobs.delete(novelId);
+			console.log(`Codex generation for novel ${novelId} cancelled by user.`);
 		}
 	});
 }

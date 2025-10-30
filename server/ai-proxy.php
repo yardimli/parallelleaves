@@ -80,6 +80,23 @@
      *  PRIMARY KEY (`id`),
      *  KEY `user_book_id` (`user_book_id`)
      * ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+     *
+     * -- NEW: SQL for server-side codex generation
+     * ALTER TABLE `user_books` ADD `codex_content` MEDIUMTEXT NULL AFTER `target_language`;
+	 * ALTER TABLE `user_books` ADD `codex_status` ENUM('none','pending','generating','complete','error') NOT NULL DEFAULT 'none' AFTER `codex_content`;
+	 * ALTER TABLE `user_books` ADD `codex_chunks_total` INT NOT NULL DEFAULT 0 AFTER `codex_status`;
+	 * ALTER TABLE `user_books` ADD `codex_chunks_processed` INT NOT NULL DEFAULT 0 AFTER `codex_chunks_total`;
+	 *
+	 * CREATE TABLE `user_book_codex_chunks` (
+	 *  `id` int(11) NOT NULL AUTO_INCREMENT,
+	 *  `user_book_id` int(11) NOT NULL,
+	 *  `chunk_index` int(11) NOT NULL,
+	 *  `chunk_text` MEDIUMTEXT COLLATE utf8mb4_unicode_ci NOT NULL,
+	 *  `is_processed` tinyint(1) NOT NULL DEFAULT 0,
+	 *  PRIMARY KEY (`id`),
+	 *  UNIQUE KEY `user_book_id_chunk_index` (`user_book_id`,`chunk_index`),
+	 *  KEY `user_book_id` (`user_book_id`)
+	 * ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 	 */
 
 
@@ -110,6 +127,7 @@
 
 	$tmModel = $_ENV['TM_MODEL'] ?? 'openai/gpt-4o-mini';
 	$tmPairCount = (int)($_ENV['TM_PAIR_COUNT'] ?? 2);
+	$codexModel = $_ENV['CODEX_MODEL'] ?? 'openai/gpt-4o-mini';
 
 // Set common headers
 	header('Content-Type: application/json');
@@ -353,7 +371,6 @@
 		$chat_payload = $payload;
 		unset($chat_payload['messages']);
 
-		// MODIFIED: Intelligent server-side translation memory injection with looped queries
 		$tmContent = '';
 		if (isset($payload['translation_memory_ids']) && is_array($payload['translation_memory_ids']) && !empty($payload['translation_memory_ids'])) {
 			$novelIds = $payload['translation_memory_ids'];
@@ -397,7 +414,6 @@
 					$result = $stmt->get_result();
 					$memoriesForWord = $result->fetch_all(MYSQLI_ASSOC);
 
-					// MODIFICATION: If the word matches more than 3 sentences, skip it to avoid overly common words.
 					if (count($memoriesForWord) > 3) {
 						continue;
 					}
@@ -419,21 +435,50 @@
 			unset($payload['translation_memory_ids']);
 		}
 
+		$codexContent = '';
+		if (!empty($payload['use_codex']) && !empty($payload['novel_id'])) {
+			$novelId = $payload['novel_id'];
+			$stmt = $db->prepare("SELECT codex_content FROM user_books WHERE user_id = ? AND book_id = ?");
+			$stmt->bind_param("ii", $userId, $novelId);
+			$stmt->execute();
+			$result = $stmt->get_result()->fetch_assoc();
+			$stmt->close();
+			if ($result && !empty($result['codex_content'])) {
+				$codexContent = "Use the following glossary for consistent translation:\n<glossary>\n" . $result['codex_content'] . "\n</glossary>";
+			}
+			unset($payload['use_codex'], $payload['novel_id']);
+		}
 
-		// Inject TM content or remove the placeholder
+
+		// Inject TM and Codex content or remove the placeholders
 		if (isset($payload['messages']) && is_array($payload['messages'])) {
 			foreach ($payload['messages'] as &$message) {
-				if ($message['role'] === 'system' && isset($message['content']) && strpos($message['content'], '##TRANSLATION_MEMORY##') !== false) {
-					if (!empty($tmContent)) {
-						$message['content'] = str_replace('##TRANSLATION_MEMORY##', $tmContent, $message['content']);
-					} else {
-						$message['content'] = str_replace("Use the following translation examples to guide the translation:\n##TRANSLATION_MEMORY##", '', $message['content']);
+				if ($message['role'] === 'system' && isset($message['content'])) {
+					// Handle Translation Memory
+					if (strpos($message['content'], '##TRANSLATION_MEMORY##') !== false) {
+						if (!empty($tmContent)) {
+							$message['content'] = str_replace('##TRANSLATION_MEMORY##', $tmContent, $message['content']);
+						} else {
+							// Clean up the entire block if no TM is available
+							$message['content'] = preg_replace("/Use the following translation examples to guide the translation:\n##TRANSLATION_MEMORY##\n*/", '', $message['content']);
+						}
 					}
+					// Handle Codex
+					if (strpos($message['content'], '##CODEX_BLOCK##') !== false) {
+						if (!empty($codexContent)) {
+							$message['content'] = str_replace('##CODEX_BLOCK##', $codexContent, $message['content']);
+						} else {
+							// Just remove the placeholder if no codex is available
+							$message['content'] = str_replace("##CODEX_BLOCK##\n", '', $message['content']);
+						}
+					}
+					// General cleanup of excessive newlines
 					$message['content'] = trim(preg_replace('/\n{3,}/', "\n\n", $message['content']));
 				}
 			}
 			unset($message);
 		}
+
 
 		$promptLength = 0;
 		if (isset($payload['messages']) && is_array($payload['messages'])) {
@@ -552,9 +597,14 @@
 		exit;
 	} else {
 		if (str_starts_with($action, 'tm_')) {
-			include 'tm_handler.php';
+			include_once 'tm_handler.php';
 			$tmConfig = ['model' => $tmModel, 'pair_count' => $tmPairCount];
 			handleTranslationMemoryAction($db, $action, $userId, $payload, $apiKey, $tmConfig);
+			exit;
+		} elseif (str_starts_with($action, 'codex_')) {
+			include_once 'codex_handler.php';
+			$codexConfig = ['model' => $codexModel];
+			handleCodexAction($db, $action, $userId, $payload, $apiKey, $codexConfig);
 			exit;
 		}
 		sendJsonError(400, 'Invalid action specified. Supported actions are "chat", "get_models", "generate_cover", "log_translation".');

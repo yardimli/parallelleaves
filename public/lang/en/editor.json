@@ -119,5 +119,16 @@
       "complete_none": "Translation Memory is up to date. (No new blocks found)",
       "error": "TM Error: {message}"
     }
+  },
+  "codex": {
+    "status": {
+      "checking": "Checking status...",
+      "preparing": "Preparing content...",
+      "generating": "Generating ({progress}/{total})...",
+      "complete": "Generation complete.",
+      "ready": "Ready",
+      "error": "Error: {message}",
+      "cancelled": "Cancelled."
+    }
   }
 }

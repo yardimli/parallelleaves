@@ -88,7 +88,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 	}
 	
 	function updateStatus() {
-		// MODIFICATION START: Status update now only considers chapters.
 		const chapterBreaks = documentContent.querySelectorAll('.chapter-break-marker').length;
 		const hasContent = documentContent.querySelector('p');
 		
@@ -100,7 +99,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			const chapterLabel = t(chapterCount === 1 ? 'import.chapterLabel_one' : 'import.chapterLabel_other');
 			importStatus.textContent = t('import.statusSummary', { chapterCount, chapterLabel });
 		}
-		// MODIFICATION END
 		
 		updateNavButtonState();
 	}
@@ -321,7 +319,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 		const action = actionTarget.dataset.action;
 		const prevSibling = targetedParagraph.previousElementSibling;
 		
-		// MODIFICATION START: Simplified popover logic for chapter breaks only.
 		if (prevSibling && (prevSibling.classList.contains('chapter-break-marker'))) {
 			prevSibling.remove();
 		}
@@ -340,7 +337,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			
 			documentContent.insertBefore(marker, targetedParagraph);
 		}
-		// MODIFICATION END
 		
 		currentMarkIndex = -1;
 		updateStatus();
@@ -375,9 +371,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 			if (!text) return;
 			
 			let isBreak = false;
-			// MODIFICATION START: breakType is always for chapters now.
 			const breakType = 'chapter-break-marker';
-			// MODIFICATION END
 			
 			if (useNumeric) {
 				const isNumeric = /^\d+$/.test(text);
@@ -505,7 +499,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			return;
 		}
 		
-		// MODIFICATION START: Simplified validation to a flat chapter structure.
 		const chaptersForValidation = [];
 		let currentChapter = { title: 'Chapter 1', content: [] };
 		
@@ -548,12 +541,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 				return;
 			}
 		}
-		// MODIFICATION END
 		
 		importOverlayStatus.textContent = t('import.importingContent');
 		importOverlay.classList.remove('hidden');
 		
-		// MODIFICATION START: Final data structure is a flat 'chapters' array.
 		const chapters = [];
 		currentChapter = { title: 'Chapter 1', content: [] };
 		
@@ -588,7 +579,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 				chapters.push(currentChapter);
 			}
 		}
-		// MODIFICATION END
 		
 		if (chapters.length === 0) {
 			window.showAlert(t('import.alertNoContent'));

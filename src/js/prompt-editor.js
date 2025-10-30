@@ -1,5 +1,4 @@
 import { init as initRephraseEditor, buildPromptJson as buildRephraseJson } from './prompt-editors/rephrase-editor.js';
-// MODIFIED: Import the getter for the Choices instance from translate-editor.js
 import { init as initTranslateEditor, buildPromptJson as buildTranslateJson, getTranslationMemoryChoices } from './prompt-editors/translate-editor.js';
 import { updateToolbarState as updateChapterToolbarState } from './novel-planner/toolbar.js';
 import { t, applyTranslationsTo } from './i18n.js';
@@ -28,8 +27,6 @@ const formDataExtractors = {
 		useDictionary: form.elements.use_dictionary.checked
 	}),
 	'translate': (form) => {
-		// MODIFIED: Use the imported getter to get the Choices.js instance.
-		// This resolves the issue where the instance was not accessible.
 		const choicesInstance = getTranslationMemoryChoices();
 		const tmIds = choicesInstance ? choicesInstance.getValue(true) : [];
 		

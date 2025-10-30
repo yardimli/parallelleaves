@@ -28,7 +28,6 @@ export async function exportNovel(novelId) {
 			const cleanedContent = content.replace(/(\[\[#\d+\]\])|(\{\{#\d+\}\})/g, '');
 			htmlContent += cleanedContent;
 		});
-		// MODIFICATION END
 		
 		// 3. Send the constructed HTML, target language, and localized dialog strings to the main process.
 		const exportResult = await window.api.exportNovelToDocx({

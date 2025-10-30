@@ -6,7 +6,7 @@ contextBridge.exposeInMainWorld('api', {
 	openChatWindow: (novelId) => ipcRenderer.send('app:openChatWindow', novelId),
 	translationMemoryGenerateInBackground: (novelId) => ipcRenderer.invoke('translation-memory:generate-in-background', novelId),
 	onTranslationMemoryProgressUpdate: (callback) => ipcRenderer.on('translation-memory:progress-update', (event, ...args) => callback(...args)),
-
+	
 	getLangFile: (lang) => ipcRenderer.invoke('i18n:get-lang-file', lang),
 	login: (credentials) => ipcRenderer.invoke('auth:login', credentials),
 	logout: () => ipcRenderer.invoke('auth:logout'),
@@ -32,14 +32,10 @@ contextBridge.exposeInMainWorld('api', {
 	exportNovelToDocx: (data) => ipcRenderer.invoke('novels:exportToDocx', data),
 	
 	openEditor: (novelId) => ipcRenderer.send('novels:openEditor', novelId),
-	openCodex: (novelId) => ipcRenderer.send('novels:openCodex', novelId),
-	startCodexAutogen: (data) => ipcRenderer.send('autogen:start-codex-generation', data),
-	stopCodexAutogen: () => ipcRenderer.send('autogen:stop-codex-generation'),
-	onCodexAutogenUpdate: (callback) => ipcRenderer.on('autogen:progress-update', callback),
-	onCodexAutogenFinished: (callback) => ipcRenderer.on('autogen:process-finished', callback),
 	codex: {
-		get: (novelId) => ipcRenderer.invoke('codex:get', novelId),
-		save: (data) => ipcRenderer.invoke('codex:save', data),
+		startGeneration: (novelId) => ipcRenderer.send('codex:start-generation', novelId),
+		onUpdate: (callback) => ipcRenderer.on('codex:update', callback),
+		onFinished: (callback) => ipcRenderer.on('codex:finished', callback)
 	},
 	updateProseSettings: (data) => ipcRenderer.invoke('novels:updateProseSettings', data),
 	updatePromptSettings: (data) => ipcRenderer.invoke('novels:updatePromptSettings', data),

@@ -142,9 +142,6 @@
 		<button type="button" id="js-open-dictionary-btn" class="btn btn-ghost btn-sm btn-square" data-i18n-title="prompt.common.dictionary">
 			<i class="bi bi-book text-lg"></i>
 		</button>
-		<button type="button" id="js-open-codex-btn" class="btn btn-ghost btn-sm btn-square" data-i18n-title="editor.openCodex">
-			<i class="bi bi-journal-richtext text-lg"></i>
-		</button>
 		<button type="button" id="js-translation-memory-btn" class="btn btn-ghost btn-sm btn-square" data-i18n-title="editor.translationMemory.updateTitle">
 			<i class="bi bi-lightbulb text-lg"></i>
 		</button>
@@ -281,8 +278,8 @@
 </div>
 
 <div id="bottom-status-bar" class="flex-shrink-0 h-8 bg-base-100 flex items-center px-4 gap-4 z-40 border-t border-base-300 dark:border-base-100/10 text-sm">
-	<!-- MODIFICATION: Added a span for translation memory status updates -->
 	<span id="js-tm-status" class="text-base-content/70"></span>
+	<span id="js-codex-status" class="text-base-content/70 ml-4"></span>
 	<div class="flex-grow"></div>
 	<div class="flex items-center text-base-content/70">
 		<span id="js-total-word-count" class="mr-4"></span>

@@ -274,7 +274,6 @@ async function renderManuscript (novelData) {
 			});
 		}
 	}
-	// MODIFICATION END
 	
 	sourceContainer.innerHTML = '';
 	targetContainer.innerHTML = '';
@@ -289,14 +288,12 @@ function populateNavDropdown (novelData) {
 	const navDropdown = document.getElementById('js-chapter-nav-dropdown');
 	navDropdown.innerHTML = '';
 	
-	// MODIFICATION START: Populate dropdown with a flat list of chapters, no optgroups.
 	if (novelData.chapters?.length > 0) {
 		novelData.chapters.forEach(chapter => {
 			const option = new Option(chapter.title?.trim() ? ` ${chapter.title}` : `${chapter.chapter_order}. ...`, chapter.id);
 			navDropdown.appendChild(option);
 		});
 	}
-	// MODIFICATION END
 	
 	navDropdown.addEventListener('change', () => scrollToChapter(navDropdown.value, setActiveChapterId));
 }
@@ -310,9 +307,7 @@ function initializeView (novelId, novelData, initialChapterId) {
 	
 	setTimeout(() => {
 		if (!restoreScrollPositions(novelId, sourceContainer, targetContainer)) {
-			// MODIFICATION START: Determine first chapter from the flat list.
 			const chapterToLoad = initialChapterId || novelData.chapters[0]?.id;
-			// MODIFICATION END
 			if (chapterToLoad) {
 				document.getElementById('js-chapter-nav-dropdown').value = chapterToLoad;
 				setTimeout(() => scrollToChapter(chapterToLoad, setActiveChapterId), 50);
@@ -361,17 +356,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 		document.title = t('editor.translating', { title: novelData.title });
 		document.getElementById('js-novel-title').textContent = novelData.title;
 		
-		// MODIFICATION START: Word count is calculated from the flat chapter list.
 		const totalTargetWords = novelData.chapters?.reduce((sum, ch) => sum + ch.target_word_count, 0) || 0;
-		// MODIFICATION END
 		document.getElementById('js-total-word-count').textContent = `${totalTargetWords.toLocaleString()} ${t('common.words')}`;
 		
 		const sourceContainer = document.getElementById('js-source-column-container');
 		const targetContainer = document.getElementById('js-target-column-container');
 		
-		// MODIFICATION START: Check the flat chapter list for content.
 		if (!novelData.chapters || novelData.chapters.length === 0) {
-			// MODIFICATION END
 			const noContentHtml = `<div class="p-8 text-center text-base-content/70"><p>${t('editor.noProjectContent')}</p><p class="text-sm mt-2">${t('editor.noProjectContentHelp')}</p></div>`;
 			sourceContainer.innerHTML = noContentHtml;
 			targetContainer.innerHTML = noContentHtml;
@@ -431,11 +422,42 @@ document.addEventListener('DOMContentLoaded', async () => {
 			initializeView(novelId, novelData, initialChapterId);
 		}
 		
-		document.getElementById('js-open-codex-btn')?.addEventListener('click', () => window.api.openCodex(novelId));
 		document.getElementById('js-open-chat-btn')?.addEventListener('click', () => window.api.openChatWindow(novelId));
 		
 		const tmButton = document.getElementById('js-translation-memory-btn');
 		const tmStatusEl = document.getElementById('js-tm-status');
+		const codexStatusEl = document.getElementById('js-codex-status');
+		
+		// Start background codex generation on load
+		window.api.codex.startGeneration(novelId);
+		
+		window.api.codex.onUpdate((event, { statusKey, progress, total }) => {
+			if (codexStatusEl) {
+				const message = t(statusKey, { progress, total });
+				codexStatusEl.textContent = `Codex: ${message}`;
+			}
+		});
+		
+		window.api.codex.onFinished((event, { status, message }) => {
+			if (codexStatusEl) {
+				let statusMessage = '';
+				if (status === 'complete') {
+					statusMessage = t('editor.codex.status.complete');
+				} else if (status === 'error') {
+					statusMessage = t('editor.codex.status.error', { message });
+				} else if (status === 'cancelled') {
+					statusMessage = t('editor.codex.status.cancelled');
+				}
+				codexStatusEl.textContent = `Codex: ${statusMessage}`;
+				
+				setTimeout(() => {
+					if (status === 'complete') {
+						codexStatusEl.textContent = `Codex: ${t('editor.codex.status.ready')}`;
+					}
+				}, 5000);
+			}
+		});
+		
 		
 		if (tmButton && tmStatusEl) {
 			tmButton.addEventListener('click', async () => {

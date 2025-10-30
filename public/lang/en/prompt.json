@@ -22,7 +22,7 @@
     "contextHelp": "Relevant contextual information is automatically sent to the AI for the best results.",
     "loadingCodex": "Loading codex entries...",
     "system": {
-      "base": "You are an expert prose editor.\n\nWhenever you're given text, rephrase it using the following instructions: <instructions>{instructions}</instructions>\n\n{tenseBlock}\nImitiate and keep the current writing style, and leave mannerisms, word choice and sentence structure intact.\nYou are free to remove redundant lines of speech. Use {language} spelling and grammar.\n\nOnly return the rephrased text, nothing else.",
+      "base": "You are an expert prose editor.\n\nWhenever you're given text, rephrase it using the following instructions: <instructions>{instructions}</instructions>\n\n{tenseBlock}\nImitiate and keep the current writing style, and leave mannerisms, word choice and sentence structure intact.\nYou are free to remove redundant lines of speech. Use {language} spelling and grammar.\n\n##CODEX_BLOCK##\n\nOnly return the rephrased text, nothing else.",
       "defaultInstruction": "Rephrase the given text.",
       "tenseInstruction": "Write in the {tense} tense. "
     },
@@ -47,15 +47,15 @@
     "noTranslationMemories" : "No translation memories available.",
     "selectTranslationMemories" : "Select Translation Memories",
     "system": {
-      "base": "You are an expert literary translator. Your task is to translate a text from {sourceLanguage} to {targetLanguage}.\n{tenseBlock}\nPreserve the original tone, style, and literary devices as much as possible. Maintain the original paragraph breaks.\n\n{instructionsBlock}\n{dictionaryBlock}\n{examplesBlock}\n{codexBlock}\n\nOnly return the translated text, nothing else.",
+      "base": "You are an expert literary translator. Your task is to translate a text from {sourceLanguage} to {targetLanguage}.\n{tenseBlock}\nPreserve the original tone, style, and literary devices as much as possible. Maintain the original paragraph breaks.\n\n{instructionsBlock}\n{dictionaryBlock}\n##TRANSLATION_MEMORY##\n##CODEX_BLOCK##\n\nOnly return the translated text, nothing else.",
       "instructionsBlock": "Follow these specific instructions: <instructions>{instructions}</instructions>",
       "tenseInstruction": "Translate in the {tense} tense. ",
       "dictionaryBlock": "Use the following custom dictionary for consistent translation:\n<dictionary>\n{dictionaryContent}\n</dictionary>",
       "examplesBlock": "Use the following translation examples to guide the translation:\n##TRANSLATION_MEMORY##",
-      "codexBlock": "Use the following glossary for consistent translation:\n<glossary>\n{codexContent}\n</glossary>"
+      "codexBlock": "Use the following glossary for consistent translation:\n##CODEX_BLOCK##"
     },
     "user": {
-      "codexBlock": "Use the following glossary for consistent translation.\n<glossary>\n{codexContent}\n</glossary>",
+      "codexBlock": "Use the following glossary for consistent translation.\n##CODEX_BLOCK##",
       "translationExamples": "Use the following translation examples to guid the translation.\n##TRANSLATION_MEMORY##",
       "textToTranslate": "Translate the following text from {sourceLanguage} to {targetLanguage}:\n\n<text>\n{text}\n</text>"
     }

@@ -120,5 +120,16 @@
       "complete_none": "Çeviri Belleği güncel. (Yeni blok bulunamadı)",
       "error": "ÇB Hatası: {message}"
     }
+  },
+  "codex": {
+    "status": {
+      "checking": "Durum kontrol ediliyor...",
+      "preparing": "İçerik hazırlanıyor...",
+      "generating": "Oluşturuluyor ({progress}/{total})...",
+      "complete": "Oluşturma tamamlandı.",
+      "ready": "Hazır",
+      "error": "Hata: {message}",
+      "cancelled": "İptal edildi."
+    }
   }
 }

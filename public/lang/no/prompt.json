@@ -52,10 +52,10 @@
       "tenseInstruction": "Translate in the {tense} tense. ",
       "dictionaryBlock": "Use the following custom dictionary for consistent translation:\n<dictionary>\n{dictionaryContent}\n</dictionary>",
       "examplesBlock": "Use the following translation examples to guide the translation:\n##TRANSLATION_MEMORY##",
-      "codexBlock": "Use the following glossary for consistent translation:\n<glossary>\n{codexContent}\n</glossary>"
+      "codexBlock": "Use the following glossary for consistent translation:\n##CODEX_BLOCK##"
     },
     "user": {
-      "codexBlock": "Use the following glossary for consistent translation.\n<glossary>\n{codexContent}\n</glossary>",
+      "codexBlock": "Use the following glossary for consistent translation.\n##CODEX_BLOCK##",
       "translationExamples": "Use the following translation examples to guid the translation.\n##TRANSLATION_MEMORY##",
       "textToTranslate": "Translate the following text from {sourceLanguage} to {targetLanguage}:\n\n<text>\n{text}\n</text>"
     }

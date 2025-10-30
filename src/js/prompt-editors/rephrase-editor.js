@@ -45,13 +45,9 @@ export const buildPromptJson = (formData, context, contextualContent = '') => {
 		language: languageForPrompt || 'English'
 	});
 	
-	let codexBlock = '';
-	if (formData.useCodex && context.codexContent) {
-		const plainCodex = htmlToPlainText(context.codexContent);
-		if (plainCodex) {
-			codexBlock = t('prompt.rephrase.user.codexBlock', { codexContent: plainCodex });
-		}
-	}
+	const codexBlock = (formData.useCodex)
+		? t('prompt.translate.system.codexBlock')
+		: '';
 	
 	const truncatedText = selectedText.length > 4096 ? selectedText.substring(0, 4096) + '...' : selectedText;
 	

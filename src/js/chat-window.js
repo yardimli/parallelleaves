@@ -187,14 +187,12 @@ async function populateChapterSelect() {
 	
 	try {
 		const novelData = await window.api.getOneNovel(novelId);
-		// MODIFICATION START: Iterate over the flat `chapters` array instead of nested sections.
 		if (novelData && novelData.chapters) {
 			novelData.chapters.forEach(chapter => {
 				const option = new Option(chapter.title, chapter.id);
 				chapterSelect.appendChild(option);
 			});
 		}
-		// MODIFICATION END
 		chapterSelect.value = currentChat?.selectedChapterId || 'none'; // Set the previously selected chapter or 'none'
 	} catch (error) {
 		console.error('Failed to load novel chapters:', error);
@@ -285,9 +283,7 @@ async function handleSendMessage(event) {
 	if (selectedChapterId && selectedChapterId !== 'none') {
 		try {
 			const novelData = await window.api.getOneNovel(novelId);
-			// MODIFICATION START: Find the selected chapter directly from the flat `chapters` array.
 			const selectedChapter = novelData.chapters.find(c => c.id === parseInt(selectedChapterId));
-			// MODIFICATION END
 			
 			if (selectedChapter) {
 				const sourceContent = htmlToPlainText(selectedChapter.source_content || '');

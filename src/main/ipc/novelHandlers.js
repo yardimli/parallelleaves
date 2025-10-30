@@ -86,7 +86,6 @@ function registerNovelHandlers(db, sessionManager, windowManager) {
 			
 			const novelId = novelResult.lastInsertRowid;
 			
-			// MODIFICATION START: Create a flat list of 10 chapters instead of acts.
 			const insertChapter = db.prepare('INSERT INTO chapters (novel_id, title, chapter_order, source_content, target_content) VALUES (?, ?, ?, ?, ?)');
 			
 			db.transaction(() => {
@@ -94,7 +93,6 @@ function registerNovelHandlers(db, sessionManager, windowManager) {
 					insertChapter.run(novelId, `Chapter ${j}`, j, '<p></p>', '<p></p>');
 				}
 			})();
-			// MODIFICATION END
 			
 			return { success: true, novelId };
 		} catch (error) {
@@ -190,11 +188,9 @@ function registerNovelHandlers(db, sessionManager, windowManager) {
 	ipcMain.handle('novels:getFullManuscript', (event, novelId) => {
 		try {
 			const novel = db.prepare('SELECT * FROM novels WHERE id = ?').get(novelId);
-			// MODIFICATION START: Adjusted fallback for consistency.
 			if (!novel) return { id: novelId, title: 'Not Found', chapters: [] };
 			
 			novel.chapters = db.prepare('SELECT id, title, source_content, target_content, chapter_order FROM chapters WHERE novel_id = ? ORDER BY chapter_order').all(novelId);
-			// MODIFICATION END
 			for (const chapter of novel.chapters) {
 				chapter.source_word_count = countWordsInHtml(chapter.source_content);
 				chapter.target_word_count = countWordsInHtml(chapter.target_content);
@@ -202,9 +198,7 @@ function registerNovelHandlers(db, sessionManager, windowManager) {
 			return novel;
 		} catch (error) {
 			console.error(`Error in getFullManuscript for novelId ${novelId}:`, error);
-			// MODIFICATION START: Adjusted fallback for consistency.
 			return { id: novelId, title: 'Error Loading', chapters: [] };
-			// MODIFICATION END
 		}
 	});
 	
@@ -301,9 +295,6 @@ function registerNovelHandlers(db, sessionManager, windowManager) {
 		windowManager.createChapterEditorWindow({ novelId, chapterId: null });
 	});
 	
-	ipcMain.on('novels:openCodex', (event, novelId) => {
-		windowManager.createCodexViewerWindow(novelId);
-	});
 }
 
 module.exports = { registerNovelHandlers };

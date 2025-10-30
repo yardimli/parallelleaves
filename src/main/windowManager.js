@@ -5,7 +5,6 @@ let mainWindow = null;
 let splashWindow = null;
 let importWindow = null;
 let chapterEditorWindows = new Map();
-let codexViewerWindows = new Map();
 let chatWindow = null;
 let isMainWindowReady = false;
 
@@ -175,40 +174,6 @@ function createChapterEditorWindow({ novelId, chapterId }) {
 	createContextMenu(win);
 }
 
-function createCodexViewerWindow(novelId) {
-	if (codexViewerWindows.has(novelId)) {
-		const existingWin = codexViewerWindows.get(novelId);
-		if (existingWin) {
-			existingWin.focus();
-			return;
-		}
-	}
-	
-	const win = new BrowserWindow({
-		width: 1200,
-		height: 900,
-		icon: path.join(__dirname, '..', '..', 'public/assets/icon.png'),
-		title: 'Parallel Leaves - Codex Viewer',
-		autoHideMenuBar: true,
-		webPreferences: {
-			preload: path.join(__dirname, '..', '..', 'preload.js'),
-			contextIsolation: true,
-			nodeIntegration: false,
-		},
-	});
-	
-	setContentSecurityPolicy(win);
-	
-	win.loadFile('public/codex-viewer.html', { query: { novelId: novelId } });
-	codexViewerWindows.set(novelId, win);
-	
-	win.on('closed', () => {
-		codexViewerWindows.delete(novelId);
-	});
-	
-	createContextMenu(win);
-}
-
 function createImportWindow() {
 	if (importWindow) {
 		importWindow.focus();
@@ -292,7 +257,6 @@ module.exports = {
 	createSplashWindow,
 	createMainWindow,
 	createChapterEditorWindow,
-	createCodexViewerWindow,
 	createImportWindow,
 	createChatWindow,
 	closeSplashAndShowMain,

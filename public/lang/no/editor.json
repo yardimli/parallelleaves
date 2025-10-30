@@ -120,5 +120,16 @@
       "complete_none": "Oversettelsesminnet er oppdatert. (Ingen nye blokker funnet)",
       "error": "TM-feil: {message}"
     }
+  },
+  "codex": {
+    "status": {
+      "checking": "Sjekker status...",
+      "preparing": "Forbereder innhold...",
+      "generating": "Genererer ({progress}/{total})...",
+      "complete": "Generering fullført.",
+      "ready": "Klar",
+      "error": "Feil: {message}",
+      "cancelled": "Avbrutt."
+    }
   }
 }

@@ -128,73 +128,19 @@ async function generateCoverImageViaProxy({ prompt, token }) {
 }
 
 /**
- * for codex look at a text chunk to create or update codex entries as an HTML string.
- * @param {object} params - The parameters for generation.
- * @param {string} params.textChunk - A chunk of the novel text.
- * @param {string} params.existingCodexHtml - The HTML content of the existing codex file.
- * @param {string} params.sourceLanguage - The language of the novel text chunk.
- * @param {string} params.targetLanguage - The language for the output codex entries.
- * @param {string} params.model - The LLM model to use.
- * @param {string|null} params.token - The user's session token.
- * @param {number} [params.temperature=0.5] - The temperature for the AI model.
- * @returns {Promise<string>} An HTML string containing new or updated codex entries.
- */
-async function generateCodexFromTextChunk({ textChunk, existingCodexHtml, sourceLanguage, targetLanguage, model, token, temperature = 0.5 }) {
-	const existingCodexText = htmlToPlainText(existingCodexHtml);
-	const prompt = `
-You are a meticulous world-building assistant for a novelist. Your task is to analyze a chunk of text from a novel and update a codex (an encyclopedia of the world).
-
-**Instructions:**
-1.  Read the provided **Text Chunk** (written in ${sourceLanguage}).
-2.  Review the **Existing Codex Content** to understand what is already documented.
-3.  Identify new characters, locations, or significant objects/lore within the text chunk.
-4.  Identify if the text chunk provides new information or details about entities that *already exist* in the codex.
-5.  For each new or updated entity, write a brief, encyclopedia-style entry.
-6.  **IMPORTANT:** All your output must be written in **${targetLanguage}**.
-7.  Format your entire output as a single block of simple HTML. Use \`<h3>\` for each entity's title and \`<p>\` for its description.
-8.  If you are updating an existing entry, your new entry should be a complete replacement, incorporating both old and new information.
-9.  Return **only the HTML for the new or updated entries**. Do not repeat entries from the existing codex that were not changed by the new text chunk.
-10. If you find no new or updated entities worth adding, return an empty string.
-
-**Existing Codex Content (for context):**
-<codex>
-${existingCodexText.substring(0, 8000)}
-</codex>
-
-**Text Chunk to Analyze (in ${sourceLanguage}):**
-<text>
-${textChunk}
-</text>
-
-**Example HTML Output (in ${targetLanguage}):**
-<h3>Elaria</h3>
-<p>A skilled archer from the Whisperwood, known for her silent movements and keen eye. She assisted Lord Kael during the siege.</p>
-<h3>Shadowfang Keep</h3>
-<p>An ancient fortress located in the northern mountains, now serving as Lord Kael's stronghold. It is known for its imposing black stone walls and a newly discovered secret passage in the east wing.</p>
-`;
-	
-	const response = await callOpenRouter({
-		model: model,
-		messages: [{ role: 'user', content: prompt }],
-		temperature: temperature
-	}, token);
-	
-	// The response is not JSON, so we directly access the content.
-	return response.choices?.[0]?.message?.content || '';
-}
-
-/**
- * Processes a text selection using an LLM for actions like rephrasing.
+ * Processes a text selection using an LLM for actions like rephrasing or translating.
  * @param {object} params - The parameters for the text processing.
  * @param {object} params.prompt - An object with 'system', 'user', and 'ai' properties for the prompt.
  * @param {string} params.model - The LLM model to use.
  * @param {string|null} params.token - The user's session token.
  * @param {number} [params.temperature=0.7] - The temperature for the AI model.
  * @param {object|null} [params.response_format=null] - Optional response format object (e.g., { type: 'json_object' }).
- * @param {Array<number>} [params.translation_memory_ids=[]] - NEW: Array of novel IDs for TM.
+ * @param {Array<number>} [params.translation_memory_ids=[]] - Array of novel IDs for TM.
+ * @param {boolean} [params.use_codex=false] - MODIFICATION: Flag to tell the server to inject the codex.
+ * @param {number|null} [params.novelId=null] - MODIFICATION: The novel ID, required if use_codex is true.
  * @returns {Promise<object>} The AI response object.
  */
-async function processLLMText({ prompt, model, token, temperature = 0.7, response_format = null, translation_memory_ids = [] }) {
+async function processLLMText({ prompt, model, token, temperature = 0.7, response_format = null, translation_memory_ids = [], use_codex = false, novelId = null }) {
 	const messages = [];
 	if (prompt.system) {
 		messages.push({ role: 'system', content: prompt.system });
@@ -229,8 +175,14 @@ async function processLLMText({ prompt, model, token, temperature = 0.7, respons
 		payload.translation_memory_ids = translation_memory_ids;
 	}
 	
+	if (use_codex && novelId) {
+		payload.use_codex = true;
+		payload.novel_id = novelId;
+	}
+	
 	return callOpenRouter(payload, token);
 }
+
 
 /**
  * Fetches the list of available models from the AI Proxy.
@@ -297,7 +249,6 @@ async function getOpenRouterModels(forceRefresh = false, token) {
 }
 
 module.exports = {
-	generateCodexFromTextChunk,
 	processLLMText,
 	getOpenRouterModels,
 	generateCoverPrompt,
