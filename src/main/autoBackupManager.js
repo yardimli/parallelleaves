@@ -65,14 +65,7 @@ function getNovelBackupData(db, novelId) {
 			dictionaryJson = fs.readFileSync(dictionaryPath, 'utf8');
 		}
 		
-		// NEW: Add Translation Memory data to the backup.
-		let translationMemoryTxt = null;
-		const translationMemoryPath = path.join(app.getPath('userData'), `translation_memory_${novelId}.txt`);
-		if (fs.existsSync(translationMemoryPath)) {
-			translationMemoryTxt = fs.readFileSync(translationMemoryPath, 'utf8');
-		}
-		
-		return { novel, sections, chapters, image, codexHtml, dictionaryJson, translationMemoryTxt };
+		return { novel, sections, chapters, image, codexHtml, dictionaryJson };
 	} catch (error) {
 		console.error(`[Backup] Failed to gather backup data for novel ${novelId}:`, error);
 		return null;

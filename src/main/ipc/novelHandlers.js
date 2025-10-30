@@ -54,7 +54,6 @@ function registerNovelHandlers(db, sessionManager, windowManager) {
 		return novels;
 	});
 	
-	// NEW: Handler to get all novels that have a translation memory on the server.
 	ipcMain.handle('novels:getAllWithTranslationMemory', async (event) => {
 		try {
 			const allNovels = db.prepare('SELECT id, title FROM novels ORDER BY title ASC').all();
@@ -226,22 +225,6 @@ function registerNovelHandlers(db, sessionManager, windowManager) {
 		} catch (error) {
 			console.error(`Failed to get all content for novel ${novelId}:`, error);
 			return { success: false, message: 'Failed to retrieve novel content.' };
-		}
-	});
-	
-	// NEW: IPC handler to count translation pairs in a novel.
-	ipcMain.handle('novels:get-translation-pair-count', (event, novelId) => {
-		try {
-			const chapters = db.prepare('SELECT source_content, target_content FROM chapters WHERE novel_id = ?').all(novelId);
-			const combinedSource = chapters.map(c => c.source_content || '').join('');
-			const combinedTarget = chapters.map(c => c.target_content || '').join('');
-			
-			const pairs = extractAllMarkerPairs(combinedSource, combinedTarget);
-			
-			return { success: true, count: pairs.length };
-		} catch (error) {
-			console.error(`Failed to count translation pairs for novel ${novelId}:`, error);
-			return { success: false, message: error.message, count: 0 };
 		}
 	});
 	

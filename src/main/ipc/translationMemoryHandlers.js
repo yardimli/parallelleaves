@@ -116,7 +116,7 @@ async function hasValidTranslationMemory(token) {
 	}
 }
 
-// NEW: Map to store active job runners to prevent multiple concurrent jobs for the same novel.
+// Map to store active job runners to prevent multiple concurrent jobs for the same novel.
 const activeTmJobs = new Map();
 
 /**
@@ -126,7 +126,6 @@ const activeTmJobs = new Map();
  * @param {object} windowManager - The window manager instance.
  */
 function registerTranslationMemoryHandlers(db, sessionManager, windowManager) {
-	// MODIFICATION: The handler now orchestrates a job-based background process.
 	ipcMain.handle('translation-memory:generate-in-background', async (event, novelId) => {
 		const editorWindow = event.sender.getOwnerBrowserWindow();
 		const token = sessionManager.getSession()?.token || null;
@@ -234,27 +233,6 @@ function registerTranslationMemoryHandlers(db, sessionManager, windowManager) {
 			}
 			activeTmJobs.delete(novelId); // Ensure job is cleared on initial failure
 			return { success: false, error: error.message };
-		}
-	});
-	
-	ipcMain.handle('translation-memory:get-entry-count', async (event, novelId) => {
-		try {
-			const token = sessionManager.getSession()?.token || null;
-			const result = await callTmApi('tm_get_entry_count', { novel_id: novelId }, token);
-			return { success: true, count: result.count };
-		} catch (error) {
-			return { success: false, message: error.message, count: 0 };
-		}
-	});
-	
-	ipcMain.handle('translation-memory:getForNovels', async (event, novelIds) => {
-		try {
-			const token = sessionManager.getSession()?.token || null;
-			const result = await callTmApi('tm_get_memory_for_novels', { novel_ids: novelIds }, token);
-			return result.content || '';
-		} catch (error) {
-			console.error(`Failed to get translation memory for AI (novels ${novelIds.join(', ')}):`, error);
-			return '';
 		}
 	});
 }

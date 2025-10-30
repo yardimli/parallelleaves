@@ -4,13 +4,9 @@ contextBridge.exposeInMainWorld('api', {
 	// --- App Level ---
 	openImportWindow: () => ipcRenderer.send('app:open-import-window'),
 	openChatWindow: (novelId) => ipcRenderer.send('app:openChatWindow', novelId),
-	// MODIFICATION: Removed TM window IPC and added background generation handlers
 	translationMemoryGenerateInBackground: (novelId) => ipcRenderer.invoke('translation-memory:generate-in-background', novelId),
 	onTranslationMemoryProgressUpdate: (callback) => ipcRenderer.on('translation-memory:progress-update', (event, ...args) => callback(...args)),
-	translationMemoryGetForNovels: (novelIds) => ipcRenderer.invoke('translation-memory:getForNovels', novelIds),
-	getTranslationMemoryEntryCount: (novelId) => ipcRenderer.invoke('translation-memory:get-entry-count', novelId),
-	getNovelTranslationPairCount: (novelId) => ipcRenderer.invoke('novels:get-translation-pair-count', novelId),
-	// END MODIFICATION
+
 	getLangFile: (lang) => ipcRenderer.invoke('i18n:get-lang-file', lang),
 	login: (credentials) => ipcRenderer.invoke('auth:login', credentials),
 	logout: () => ipcRenderer.invoke('auth:logout'),
@@ -25,6 +21,8 @@ contextBridge.exposeInMainWorld('api', {
 	
 	// --- Dashboard/Novel Creation ---
 	getNovelsWithCovers: () => ipcRenderer.invoke('novels:getAllWithCovers'),
+	
+	// Handlers to get novels that have a TM
 	getAllNovelsWithTM: () => ipcRenderer.invoke('novels:getAllWithTranslationMemory'),
 	getOneNovel: (novelId) => ipcRenderer.invoke('novels:getOne', novelId),
 	getFullManuscript: (novelId) => ipcRenderer.invoke('novels:getFullManuscript', novelId),

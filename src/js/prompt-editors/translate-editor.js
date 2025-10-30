@@ -14,6 +14,9 @@ const debounce = (func, delay) => {
 // NEW: Variable to hold the Choices.js instance
 let translationMemoryChoices = null;
 
+// NEW: Export a getter for the Choices.js instance so other modules can access it.
+export const getTranslationMemoryChoices = () => translationMemoryChoices;
+
 const defaultState = { // Default state for the translate editor form
 	instructions: '',
 	tense: 'past',
@@ -53,7 +56,7 @@ const buildTranslationContextBlock = (translationPairs, languageForPrompt, targe
 	return contextMessages;
 };
 
-export const buildPromptJson = (formData, context, contextualContent = '', translationMemoryContent = '') => {
+export const buildPromptJson = (formData, context, contextualContent = '') => {
 	const { selectedText, languageForPrompt, targetLanguage, translationPairs } = context;
 	
 	const plainTextToTranslate = selectedText;
@@ -68,8 +71,8 @@ export const buildPromptJson = (formData, context, contextualContent = '', trans
 		? t('prompt.translate.system.dictionaryBlock', { dictionaryContent: contextualContent })
 		: '';
 	
-	const examplesBlock = translationMemoryContent
-		? t('prompt.translate.system.examplesBlock', { translationExamples: translationMemoryContent })
+	const examplesBlock = (formData.translationMemoryIds && formData.translationMemoryIds.length > 0)
+		? t('prompt.translate.system.examplesBlock')
 		: '';
 	
 	let codexBlock = '';
@@ -161,17 +164,8 @@ const updatePreview = async (container, context) => {
 		previewContext.codexContent = await window.api.codex.get(context.novelId);
 	}
 	
-	let translationMemoryContent = '';
-	if (formData.translationMemoryIds.length > 0) {
-		try {
-			translationMemoryContent = await window.api.translationMemoryGetForNovels(formData.translationMemoryIds);
-		} catch (error) {
-			console.error('Failed to fetch translation memory for preview:', error);
-		}
-	}
-	
 	try {
-		const promptJson = buildPromptJson(formData, previewContext, dictionaryContextualContent, translationMemoryContent);
+		const promptJson = buildPromptJson(formData, previewContext, dictionaryContextualContent);
 		systemPreview.textContent = promptJson.system;
 		userPreview.textContent = promptJson.user;
 		aiPreview.textContent = promptJson.ai || t('prompt.preview.empty');

@@ -11,8 +11,8 @@ function registerAiHandlers(db, sessionManager) {
 	ipcMain.handle('llm:process-text', async (event, data) => {
 		try {
 			const token = sessionManager.getSession()?.token || null;
-			const { prompt, model, temperature, response_format } = data;
-			const result = await aiService.processLLMText({ prompt, model, temperature, response_format, token });
+			const { prompt, model, temperature, response_format, translation_memory_ids } = data;
+			const result = await aiService.processLLMText({ prompt, model, temperature, response_format, token, translation_memory_ids });
 			return { success: true, data: result };
 		} catch (error) {
 			console.error('AI Processing Error in main process:', error);

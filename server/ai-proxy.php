@@ -7,7 +7,7 @@
 	 * It validates a user session token for protected actions, logs all interactions to a MySQL database,
 	 * and provides a verified, grouped list of available models.
 	 *
-	 * @version 1.9.0
+	 * @version 1.9.1
 	 * @author Ekim Emre Yardimli
 	 */
 
@@ -107,10 +107,9 @@
 	$dbName = $_ENV['DB_NAME'] ?? '';
 	$dbUser = $_ENV['DB_USER'] ?? '';
 	$dbPass = $_ENV['DB_PASS'] ?? '';
-// MODIFICATION: Add new environment variables for translation memory generation
+
 	$tmModel = $_ENV['TM_MODEL'] ?? 'openai/gpt-4o-mini';
 	$tmPairCount = (int)($_ENV['TM_PAIR_COUNT'] ?? 2);
-// END MODIFICATION
 
 // Set common headers
 	header('Content-Type: application/json');
@@ -351,6 +350,73 @@
 			sendJsonError(405, 'Method Not Allowed. Please use POST for chat completions.');
 		}
 
+		// MODIFIED: Intelligent server-side translation memory injection
+		$tmContent = '';
+		if (isset($payload['translation_memory_ids']) && is_array($payload['translation_memory_ids']) && !empty($payload['translation_memory_ids'])) {
+			$novelIds = $payload['translation_memory_ids'];
+
+			// Find the last user message to extract keywords for TM search
+			$lastUserMessage = '';
+			if (isset($payload['messages']) && is_array($payload['messages'])) {
+				for ($i = count($payload['messages']) - 1; $i >= 0; $i--) {
+					if ($payload['messages'][$i]['role'] === 'user') {
+						$lastUserMessage = $payload['messages'][$i]['content'] ?? '';
+						break;
+					}
+				}
+			}
+
+			// Extract unique, meaningful words from the user's text
+			$words = preg_split('/[\s,.;:!?()"-]+/', strtolower($lastUserMessage), -1, PREG_SPLIT_NO_EMPTY);
+			$uniqueWords = array_unique($words);
+			$uniqueWords = array_filter($uniqueWords, fn($word) => mb_strlen($word) > 2);
+
+			if (!empty($uniqueWords)) {
+				// Build a REGEXP pattern for whole-word matching
+				$regexpPattern = '[[:<:]](' . implode('|', array_map(fn($word) => $db->real_escape_string($word), $uniqueWords)) . ')[[:>:]]';
+
+				$placeholders = implode(',', array_fill(0, count($novelIds), '?'));
+				$types = str_repeat('i', count($novelIds));
+
+				// NEW: Query finds TM entries where the source sentence matches any of the unique words
+				$stmt = $db->prepare(
+					"SELECT DISTINCT tm.id, tm.source_sentence, tm.target_sentence, b.source_language, b.target_language " .
+					"FROM user_books_translation_memory tm " .
+					"JOIN user_books b ON tm.user_book_id = b.id " .
+					"WHERE b.user_id = ? AND b.book_id IN ($placeholders) AND tm.source_sentence REGEXP ?"
+				);
+				$stmt->bind_param("i" . $types . "s", $userId, ...$novelIds, $regexpPattern);
+				$stmt->execute();
+				$result = $stmt->get_result();
+				$memories = $result->fetch_all(MYSQLI_ASSOC);
+				$stmt->close();
+
+				// Format the found TM pairs for injection
+				foreach ($memories as $mem) {
+					$tmContent .= "<{$mem['source_language']}>{$mem['source_sentence']}</{$mem['source_language']}>\n";
+					$tmContent .= "<{$mem['target_language']}>{$mem['target_sentence']}</{$mem['target_language']}>\n";
+				}
+				$tmContent = trim($tmContent);
+			}
+			unset($payload['translation_memory_ids']);
+		}
+
+
+		// Inject TM content or remove the placeholder
+		if (isset($payload['messages']) && is_array($payload['messages'])) {
+			foreach ($payload['messages'] as &$message) {
+				if ($message['role'] === 'system' && isset($message['content']) && strpos($message['content'], '##TRANSLATION_MEMORY##') !== false) {
+					if (!empty($tmContent)) {
+						$message['content'] = str_replace('##TRANSLATION_MEMORY##', $tmContent, $message['content']);
+					} else {
+						$message['content'] = str_replace("Use the following translation examples to guide the translation:\n##TRANSLATION_MEMORY##", '', $message['content']);
+					}
+					$message['content'] = trim(preg_replace('/\n{3,}/', "\n\n", $message['content']));
+				}
+			}
+			unset($message);
+		}
+
 		$promptLength = 0;
 		if (isset($payload['messages']) && is_array($payload['messages'])) {
 			foreach ($payload['messages'] as $message) {
@@ -467,13 +533,11 @@
 		}
 		exit;
 	} else {
-		// MODIFICATION: Pass TM config to the handler
 		if (str_starts_with($action, 'tm_')) {
 			include 'tm_handler.php';
 			$tmConfig = ['model' => $tmModel, 'pair_count' => $tmPairCount];
 			handleTranslationMemoryAction($db, $action, $userId, $payload, $apiKey, $tmConfig);
 			exit;
 		}
-		// END MODIFICATION
 		sendJsonError(400, 'Invalid action specified. Supported actions are "chat", "get_models", "generate_cover", "log_translation".');
 	}

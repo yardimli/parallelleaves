@@ -19,11 +19,6 @@ async function callOpenRouter(payload, token) {
 		throw new Error('AI Proxy URL is not configured in config.js.');
 	}
 	
-	if (payload.model.endsWith('--thinking')) {
-		payload.model = payload.model.slice(0, -10); // Remove '--thinking' to get the real model ID.
-		payload.reasoning = { 'effort': 'medium' };
-	}
-	
 	const headers = {
 		'Content-Type': 'application/json'
 	};
@@ -196,9 +191,10 @@ ${textChunk}
  * @param {string|null} params.token - The user's session token.
  * @param {number} [params.temperature=0.7] - The temperature for the AI model.
  * @param {object|null} [params.response_format=null] - Optional response format object (e.g., { type: 'json_object' }).
+ * @param {Array<number>} [params.translation_memory_ids=[]] - NEW: Array of novel IDs for TM.
  * @returns {Promise<object>} The AI response object.
  */
-async function processLLMText({ prompt, model, token, temperature = 0.7, response_format = null }) {
+async function processLLMText({ prompt, model, token, temperature = 0.7, response_format = null, translation_memory_ids = [] }) {
 	const messages = [];
 	if (prompt.system) {
 		messages.push({ role: 'system', content: prompt.system });
@@ -227,6 +223,10 @@ async function processLLMText({ prompt, model, token, temperature = 0.7, respons
 	
 	if (response_format) {
 		payload.response_format = response_format;
+	}
+	
+	if (translation_memory_ids && translation_memory_ids.length > 0) {
+		payload.translation_memory_ids = translation_memory_ids;
 	}
 	
 	return callOpenRouter(payload, token);

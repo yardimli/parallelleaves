@@ -1,5 +1,6 @@
 import { init as initRephraseEditor, buildPromptJson as buildRephraseJson } from './prompt-editors/rephrase-editor.js';
-import { init as initTranslateEditor, buildPromptJson as buildTranslateJson } from './prompt-editors/translate-editor.js';
+// MODIFIED: Import the getter for the Choices instance from translate-editor.js
+import { init as initTranslateEditor, buildPromptJson as buildTranslateJson, getTranslationMemoryChoices } from './prompt-editors/translate-editor.js';
 import { updateToolbarState as updateChapterToolbarState } from './novel-planner/toolbar.js';
 import { t, applyTranslationsTo } from './i18n.js';
 import { htmlToPlainText, processSourceContentForMarkers } from '../utils/html-processing.js';
@@ -26,14 +27,21 @@ const formDataExtractors = {
 		useCodex: form.elements.use_codex.checked,
 		useDictionary: form.elements.use_dictionary.checked
 	}),
-	'translate': (form) => ({
-		instructions: form.elements.instructions.value.trim(),
-		tense: form.elements.tense.value,
-		useCodex: form.elements.use_codex.checked,
-		contextPairs: parseInt(form.elements.context_pairs.value, 10) || 0,
-		useDictionary: form.elements.use_dictionary.checked,
-		translationMemoryIds: Array.from(form.querySelector('#js-translation-memory-select').selectedOptions).map(option => option.value)
-	})
+	'translate': (form) => {
+		// MODIFIED: Use the imported getter to get the Choices.js instance.
+		// This resolves the issue where the instance was not accessible.
+		const choicesInstance = getTranslationMemoryChoices();
+		const tmIds = choicesInstance ? choicesInstance.getValue(true) : [];
+		
+		return {
+			instructions: form.elements.instructions.value.trim(),
+			tense: form.elements.tense.value,
+			useCodex: form.elements.use_codex.checked,
+			contextPairs: parseInt(form.elements.context_pairs.value, 10) || 0,
+			useDictionary: form.elements.use_dictionary.checked,
+			translationMemoryIds: tmIds
+		};
+	}
 };
 
 let modalEl;
@@ -253,7 +261,7 @@ function createFloatingToolbar(from, to, model) {
 }
 
 async function startAiAction(params) {
-	const { prompt, model, temperature, openingMarker, closingMarker } = params;
+	const { prompt, model, temperature, openingMarker, closingMarker, translation_memory_ids } = params;
 	
 	isAiActionActive = true;
 	if (currentEditorInterface.type === 'iframe') {
@@ -263,7 +271,7 @@ async function startAiAction(params) {
 	showAiSpinner();
 	
 	try {
-		const result = await window.api.processLLMText({ prompt, model, temperature });
+		const result = await window.api.processLLMText({ prompt, model, temperature, translation_memory_ids });
 		hideAiSpinner();
 		
 		if (result.success && result.data.choices && result.data.choices.length > 0) {
@@ -495,16 +503,7 @@ async function handleModalApply() {
 		dictionaryContextualContent = await window.api.getDictionaryContentForAI(novelId, 'translation');
 	}
 	
-	let translationMemoryContent = '';
-	if (action === 'translate' && formDataObj.translationMemoryIds && formDataObj.translationMemoryIds.length > 0) {
-		try {
-			translationMemoryContent = await window.api.translationMemoryGetForNovels(formDataObj.translationMemoryIds);
-		} catch (error) {
-			console.error('Failed to fetch translation memory for prompt:', error);
-		}
-	}
-	
-	const prompt = builder(formDataObj, promptContext, dictionaryContextualContent, translationMemoryContent);
+	const prompt = builder(formDataObj, promptContext, dictionaryContextualContent);
 	
 	let openingMarker = '';
 	let closingMarker = '';
@@ -571,7 +570,8 @@ async function handleModalApply() {
 		model: currentAiParams.model,
 		temperature: currentAiParams.temperature,
 		openingMarker,
-		closingMarker
+		closingMarker,
+		translation_memory_ids: formDataObj.translationMemoryIds
 	});
 }
 

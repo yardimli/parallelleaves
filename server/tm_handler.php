@@ -141,8 +141,6 @@
 
 			$receivedMarkerIds = [];
 
-			// MODIFICATION: Broke the single ON DUPLICATE KEY UPDATE query into a SELECT, then either INSERT or UPDATE.
-			// This allows for a strict, case-sensitive comparison in PHP to determine if the is_analyzed flag needs to be reset.
 			$selectStmt = $db->prepare('SELECT source_text, target_text FROM user_book_blocks WHERE user_book_id = ? AND marker_id = ?');
 			$insertStmt = $db->prepare('INSERT INTO user_book_blocks (user_book_id, marker_id, source_text, target_text, is_analyzed) VALUES (?, ?, ?, ?, 0)');
 			$updateStmt = $db->prepare('UPDATE user_book_blocks SET source_text = ?, target_text = ?, is_analyzed = 0 WHERE user_book_id = ? AND marker_id = ?');
@@ -178,7 +176,6 @@
 			$selectStmt->close();
 			$insertStmt->close();
 			$updateStmt->close();
-			// END MODIFICATION
 
 			// Delete blocks that are no longer present in the client
 			if (!empty($receivedMarkerIds)) {
