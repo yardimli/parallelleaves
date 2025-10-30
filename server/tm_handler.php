@@ -142,7 +142,8 @@
 			$userBookId = $userBook['id'];
 
 			$receivedMarkerIds = [];
-			$upsertStmt = $db->prepare('INSERT INTO user_book_blocks (user_book_id, marker_id, source_text, target_text) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE source_text = VALUES(source_text), target_text = VALUES(target_text)');
+			// MODIFICATION: Reset is_analyzed to 0 if content changes.
+			$upsertStmt = $db->prepare('INSERT INTO user_book_blocks (user_book_id, marker_id, source_text, target_text) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE is_analyzed = IF(source_text <> VALUES(source_text) OR target_text <> VALUES(target_text), 0, is_analyzed), source_text = VALUES(source_text), target_text = VALUES(target_text)');
 
 			foreach ($pairs as $pair) {
 				$markerId = $pair['marker'];
@@ -270,10 +271,12 @@
 		$stmt->close();
 
 		// Set job to running
-		$stmt = $db->prepare('UPDATE tm_generation_jobs SET status = "running", updated_at = NOW() WHERE id = ?');
-		$stmt->bind_param('i', $jobId);
-		$stmt->execute();
-		$stmt->close();
+		if ($job['status'] === 'pending') {
+			$stmt = $db->prepare('UPDATE tm_generation_jobs SET status = "running", updated_at = NOW() WHERE id = ?');
+			$stmt->bind_param('i', $jobId);
+			$stmt->execute();
+			$stmt->close();
+		}
 		$db->commit();
 
 		// Get languages
@@ -516,7 +519,7 @@
 		$content = '';
 		foreach ($memories as $mem) {
 			$content .= "<{$mem['source_language']}>{$mem['source_sentence']}</{$mem['source_language']}>\n";
-			$content .= "<{$mem['target_language']}>{$mem['target_sentence']}</{$targetLang}>\n";
+			$content .= "<{$mem['target_language']}>{$mem['target_sentence']}</{$mem['target_language']}>\n";
 		}
 
 		echo json_encode(['content' => trim($content)]);

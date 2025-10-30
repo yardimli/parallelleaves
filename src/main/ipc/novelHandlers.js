@@ -54,6 +54,7 @@ function registerNovelHandlers(db, sessionManager, windowManager) {
 		return novels;
 	});
 	
+	// NEW: Handler to get all novels that have a translation memory on the server.
 	ipcMain.handle('novels:getAllWithTranslationMemory', async (event) => {
 		try {
 			const allNovels = db.prepare('SELECT id, title FROM novels ORDER BY title ASC').all();
