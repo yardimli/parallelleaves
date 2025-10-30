@@ -205,38 +205,23 @@ async function renderManuscript (novelData) {
 	totalIframes = 0;
 	
 	const [
-		sectionHeaderTpl,
 		sourceChapterTpl,
 		targetChapterTpl
 	] = await Promise.all([
-		window.api.getTemplate('editor/section-header'),
 		window.api.getTemplate('editor/source-chapter'),
 		window.api.getTemplate('editor/target-chapter')
 	]);
 	
 	const tempDiv = document.createElement('div');
 	
-	for (const section of novelData.sections) {
-		const sectionHtml = sectionHeaderTpl
-			.replace(/{{id}}/g, section.id)
-			.replace(/{{title}}/g, section.title)
-			.replace(/{{section_order}}/g, section.section_order);
-		
-		tempDiv.innerHTML = sectionHtml.trim();
-		const sectionHeaderEl = tempDiv.firstChild;
-		sourceFragment.appendChild(sectionHeaderEl);
-		targetFragment.appendChild(sectionHeaderEl.cloneNode(true));
-		
-		if (!section.chapters || section.chapters.length === 0) {
-			const noChaptersMessage = document.createElement('p');
-			noChaptersMessage.className = 'px-8 py-6 text-base-content/60';
-			noChaptersMessage.textContent = t('editor.noChaptersInSection');
-			sourceFragment.appendChild(noChaptersMessage);
-			targetFragment.appendChild(noChaptersMessage.cloneNode(true));
-			continue;
-		}
-		
-		for (const chapter of section.chapters) {
+	if (!novelData.chapters || novelData.chapters.length === 0) {
+		const noChaptersMessage = document.createElement('p');
+		noChaptersMessage.className = 'px-8 py-6 text-base-content/60';
+		noChaptersMessage.textContent = t('editor.noChaptersInBook'); // This translation key can be kept or updated.
+		sourceFragment.appendChild(noChaptersMessage);
+		targetFragment.appendChild(noChaptersMessage.cloneNode(true));
+	} else {
+		for (const chapter of novelData.chapters) {
 			const rawSourceContent = chapter.source_content || '';
 			const cleanedSourceContent = removeObsoleteCodexLinks(rawSourceContent);
 			const finalSourceContent = processSourceContentForMarkers(cleanedSourceContent);
@@ -245,7 +230,7 @@ async function renderManuscript (novelData) {
 				.replace(/{{id}}/g, chapter.id)
 				.replace(/{{title}}/g, chapter.title)
 				.replace(/{{source_word_count}}/g, chapter.source_word_count.toLocaleString())
-				.replace('{{source_content}}', finalSourceContent); // Use the fully processed content
+				.replace('{{source_content}}', finalSourceContent);
 			
 			tempDiv.innerHTML = sourceHtml.trim();
 			const sourceChapterWrapper = tempDiv.firstChild;
@@ -289,6 +274,7 @@ async function renderManuscript (novelData) {
 			});
 		}
 	}
+	// MODIFICATION END
 	
 	sourceContainer.innerHTML = '';
 	targetContainer.innerHTML = '';
@@ -303,17 +289,14 @@ function populateNavDropdown (novelData) {
 	const navDropdown = document.getElementById('js-chapter-nav-dropdown');
 	navDropdown.innerHTML = '';
 	
-	novelData.sections.forEach(section => {
-		const optgroup = document.createElement('optgroup');
-		optgroup.label = `${section.section_order}. ${section.title}`;
-		if (section.chapters?.length > 0) {
-			section.chapters.forEach(chapter => {
-				const option = new Option(chapter.title?.trim() ? ` ${chapter.title}` : `${chapter.chapter_order}. ...`, chapter.id);
-				optgroup.appendChild(option);
-			});
-		}
-		navDropdown.appendChild(optgroup);
-	});
+	// MODIFICATION START: Populate dropdown with a flat list of chapters, no optgroups.
+	if (novelData.chapters?.length > 0) {
+		novelData.chapters.forEach(chapter => {
+			const option = new Option(chapter.title?.trim() ? ` ${chapter.title}` : `${chapter.chapter_order}. ...`, chapter.id);
+			navDropdown.appendChild(option);
+		});
+	}
+	// MODIFICATION END
 	
 	navDropdown.addEventListener('change', () => scrollToChapter(navDropdown.value, setActiveChapterId));
 }
@@ -327,7 +310,9 @@ function initializeView (novelId, novelData, initialChapterId) {
 	
 	setTimeout(() => {
 		if (!restoreScrollPositions(novelId, sourceContainer, targetContainer)) {
-			const chapterToLoad = initialChapterId || novelData.sections[0]?.chapters[0]?.id;
+			// MODIFICATION START: Determine first chapter from the flat list.
+			const chapterToLoad = initialChapterId || novelData.chapters[0]?.id;
+			// MODIFICATION END
 			if (chapterToLoad) {
 				document.getElementById('js-chapter-nav-dropdown').value = chapterToLoad;
 				setTimeout(() => scrollToChapter(chapterToLoad, setActiveChapterId), 50);
@@ -376,13 +361,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 		document.title = t('editor.translating', { title: novelData.title });
 		document.getElementById('js-novel-title').textContent = novelData.title;
 		
-		const totalTargetWords = novelData.sections?.flatMap(s => s.chapters).reduce((sum, ch) => sum + ch.target_word_count, 0) || 0;
+		// MODIFICATION START: Word count is calculated from the flat chapter list.
+		const totalTargetWords = novelData.chapters?.reduce((sum, ch) => sum + ch.target_word_count, 0) || 0;
+		// MODIFICATION END
 		document.getElementById('js-total-word-count').textContent = `${totalTargetWords.toLocaleString()} ${t('common.words')}`;
 		
 		const sourceContainer = document.getElementById('js-source-column-container');
 		const targetContainer = document.getElementById('js-target-column-container');
 		
-		if (!novelData.sections || novelData.sections.length === 0) {
+		// MODIFICATION START: Check the flat chapter list for content.
+		if (!novelData.chapters || novelData.chapters.length === 0) {
+			// MODIFICATION END
 			const noContentHtml = `<div class="p-8 text-center text-base-content/70"><p>${t('editor.noProjectContent')}</p><p class="text-sm mt-2">${t('editor.noProjectContentHelp')}</p></div>`;
 			sourceContainer.innerHTML = noContentHtml;
 			targetContainer.innerHTML = noContentHtml;
@@ -581,27 +570,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 					}
 				} else if (action === 'insert-above' || action === 'insert-below') {
 					await window.api.insertChapter({ chapterId, direction: action.replace('insert-', '') });
-					window.location.reload();
-				}
-			}
-			
-			const sectionActionBtn = target.closest('.js-section-action');
-			if (sectionActionBtn) {
-				const { action, sectionId } = sectionActionBtn.dataset;
-				if (action === 'rename') {
-					const currentTitle = sectionActionBtn.closest('.flex.justify-between').querySelector('h2').textContent.split('. ')[1];
-					const newTitle = await showInputModal(t('editor.renameAct'), t('editor.promptNewActTitle'), currentTitle);
-					if (newTitle) {
-						await window.api.renameSection({ sectionId, newTitle });
-						window.location.reload();
-					}
-				} else if (action === 'delete') {
-					if (await showConfirmationModal(t('editor.deleteAct'), t('editor.confirmDeleteAct'))) {
-						await window.api.deleteSection({ sectionId });
-						window.location.reload();
-					}
-				} else if (action === 'insert-above' || action === 'insert-below') {
-					await window.api.insertSection({ sectionId, direction: action.replace('insert-', '') });
 					window.location.reload();
 				}
 			}

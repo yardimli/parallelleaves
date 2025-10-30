@@ -118,7 +118,7 @@ i[class^="bi-"], i[class*=" bi-"] {
     @apply bg-base-200;
 }
 
-.chapter-break-marker, .act-break-marker {
+.chapter-break-marker {
     @apply relative py-2 my-4 cursor-pointer;
 }
 
@@ -126,22 +126,13 @@ i[class^="bi-"], i[class*=" bi-"] {
     @apply border-t-2 border-dashed border-accent;
 }
 
-.act-break-marker {
-    @apply border-t-4 border-double border-primary;
-}
-
-.chapter-break-marker::before, .act-break-marker::before {
+.chapter-break-marker::before {
     @apply block font-bold uppercase mb-1;
 }
 
 .chapter-break-marker::before {
     content: 'New Chapter';
     @apply text-xs text-accent;
-}
-
-.act-break-marker::before {
-    content: 'New Act';
-    @apply text-sm text-primary;
 }
 
 .break-title {

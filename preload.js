@@ -70,10 +70,6 @@ contextBridge.exposeInMainWorld('api', {
 	deleteChapter: (data) => ipcRenderer.invoke('chapters:delete', data),
 	insertChapter: (data) => ipcRenderer.invoke('chapters:insert', data),
 	
-	renameSection: (data) => ipcRenderer.invoke('sections:rename', data),
-	deleteSection: (data) => ipcRenderer.invoke('sections:delete', data),
-	insertSection: (data) => ipcRenderer.invoke('sections:insert', data),
-	
 	// LLM
 	processLLMText: (data) => ipcRenderer.invoke('llm:process-text', data),
 	chatSendMessage: (data) => ipcRenderer.invoke('chat:send-message', data),

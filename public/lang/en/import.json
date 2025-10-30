@@ -12,7 +12,6 @@
   "instructions": "Click any paragraph to mark it as the start of a new chapter or act.",
   "status": "No content to import.",
   "startImport": "Start Import",
-  "newAct": "New Act",
   "newChapter": "New Chapter",
   "removeBreak": "Remove Break",
   "readingFile": "Reading file...",
@@ -21,9 +20,7 @@
   "alertNoContent": "No content to import.",
   "errorImport": "Error during import: {message}",
   "errorChapterTooLong": "Import failed: Chapter '{chapterTitle}' is too long ({wordCount} words). Please split chapters to be under 5000 words.",
-  "statusSummary": "{actCount} {actLabel} and {chapterCount} {chapterLabel} will be created.",
-  "actLabel_one": "Act",
-  "actLabel_other": "Acts",
+  "statusSummary": "and {chapterCount} {chapterLabel} will be created.",
   "chapterLabel_one": "Chapter",
   "chapterLabel_other": "Chapters",
   "importingContent": "Importing content...",
@@ -37,6 +34,6 @@
     "allCapsLabel": "All-Caps Lines",
     "allCapsDesc": "Detects short lines (under 50 chars) written entirely in uppercase.",
     "runDetection": "Run Detection",
-    "results": "{count} chapters and acts detected."
+    "results": "{count} chapters detected."
   }
 }

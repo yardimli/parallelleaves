@@ -42,28 +42,7 @@ function registerLoggingHandlers(db, sessionManager) {
 			return { success: false, message: 'Cannot log translation: source or target text is missing.' };
 		}
 		
-		// 1. Log to local SQLite database
-		try {
-			// Use the fully normalized data for the database query.
-			db.prepare(`
-                INSERT INTO translation_logs (user_id, novel_id, chapter_id, source_text, target_text, marker, model, temperature)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            `).run(
-				session.user.id,
-				normalizedLogData.novel_id,
-				normalizedLogData.chapter_id,
-				normalizedLogData.source_text,
-				normalizedLogData.target_text,
-				normalizedLogData.marker,
-				normalizedLogData.model,
-				normalizedLogData.temperature
-			);
-		} catch (error) {
-			console.error('Failed to log translation to local DB:', error);
-			// Continue to attempt remote logging even if local fails.
-		}
-		
-		// 2. Log to remote MySQL database via proxy
+		// 1. Log to remote MySQL database via proxy
 		try {
 			// Use the normalized data for the remote payload to ensure the proxy receives snake_case keys.
 			const payload = { ...normalizedLogData, auth_token: session.token };

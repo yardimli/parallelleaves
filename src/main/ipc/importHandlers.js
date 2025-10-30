@@ -79,8 +79,10 @@ function registerImportHandlers(db, sessionManager, windowManager) {
 		}
 	});
 	
-	ipcMain.handle('document:import', async (event, { title, source_language, target_language, acts }) => {
-		if (!title || !source_language || !target_language || !acts || acts.length === 0) {
+	// MODIFICATION START: The 'acts' parameter is replaced with a flat 'chapters' array.
+	ipcMain.handle('document:import', async (event, { title, source_language, target_language, chapters }) => {
+		if (!title || !source_language || !target_language || !chapters || chapters.length === 0) {
+			// MODIFICATION END
 			throw new Error('Invalid data provided for import.');
 		}
 		
@@ -93,19 +95,11 @@ function registerImportHandlers(db, sessionManager, windowManager) {
 			).run(userId, title, source_language, target_language, 'draft');
 			novelId = novelResult.lastInsertRowid;
 			
-			let sectionOrder = 1;
-			for (const act of acts) {
-				const sectionResult = db.prepare(
-					'INSERT INTO sections (novel_id, title, description, section_order) VALUES (?, ?, ?, ?)'
-				).run(novelId, act.title, `Act ${sectionOrder}`, sectionOrder++);
-				const sectionId = sectionResult.lastInsertRowid;
-				
-				let chapterOrder = 1;
-				for (const chapter of act.chapters) {
-					db.prepare(
-						'INSERT INTO chapters (novel_id, section_id, title, source_content, status, chapter_order) VALUES (?, ?, ?, ?, ?, ?)'
-					).run(novelId, sectionId, chapter.title, chapter.content, 'in_progress', chapterOrder++);
-				}
+			let chapterOrder = 1;
+			for (const chapter of chapters) {
+				db.prepare(
+					'INSERT INTO chapters (novel_id, title, source_content, status, chapter_order) VALUES (?, ?, ?, ?, ?)'
+				).run(novelId, chapter.title, chapter.content, 'in_progress', chapterOrder++);
 			}
 		});
 		

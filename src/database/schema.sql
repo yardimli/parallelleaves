@@ -9,26 +9,15 @@ CREATE TABLE IF NOT EXISTS users (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS series (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    title TEXT NOT NULL,
-    description TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
 CREATE TABLE IF NOT EXISTS novels (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
-    series_id INTEGER,
     title TEXT NOT NULL,
     author TEXT,
     genre TEXT,
     logline TEXT,
     synopsis TEXT,
     status TEXT NOT NULL DEFAULT 'draft',
-    order_in_series INTEGER,
     source_language TEXT DEFAULT 'English',
     target_language TEXT DEFAULT 'English',
     rephrase_settings TEXT,
@@ -37,20 +26,17 @@ CREATE TABLE IF NOT EXISTS novels (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS sections (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    novel_id INTEGER NOT NULL,
-    title TEXT NOT NULL,
-    description TEXT,
-    section_order INTEGER NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
+-- MODIFICATION START: Removed the 'sections' table.
+-- The concept of 'Acts' or 'Sections' has been removed for a flatter chapter structure.
+-- CREATE TABLE IF NOT EXISTS sections ... (Removed)
+-- MODIFICATION END
 
 CREATE TABLE IF NOT EXISTS chapters (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     novel_id INTEGER NOT NULL,
-    section_id INTEGER NOT NULL,
+    -- MODIFICATION START: Removed section_id as sections are no longer used.
+    -- section_id INTEGER NOT NULL,
+    -- MODIFICATION END
     title TEXT NOT NULL,
     source_content TEXT,
     target_content TEXT,
@@ -122,33 +108,11 @@ BEGIN
     WHERE id = OLD.novel_id;
 END;
 
--- When a section is changed
-CREATE TRIGGER IF NOT EXISTS update_novel_on_section_update
-    AFTER UPDATE ON sections
-    FOR EACH ROW
-BEGIN
-    UPDATE novels
-    SET updated_at = CURRENT_TIMESTAMP
-    WHERE id = NEW.novel_id;
-END;
-
-CREATE TRIGGER IF NOT EXISTS update_novel_on_section_insert
-    AFTER INSERT ON sections
-    FOR EACH ROW
-BEGIN
-    UPDATE novels
-    SET updated_at = CURRENT_TIMESTAMP
-    WHERE id = NEW.novel_id;
-END;
-
-CREATE TRIGGER IF NOT EXISTS update_novel_on_section_delete
-    AFTER DELETE ON sections
-    FOR EACH ROW
-BEGIN
-    UPDATE novels
-    SET updated_at = CURRENT_TIMESTAMP
-    WHERE id = OLD.novel_id;
-END;
+-- MODIFICATION START: Removed triggers related to the 'sections' table.
+-- CREATE TRIGGER IF NOT EXISTS update_novel_on_section_update ... (Removed)
+-- CREATE TRIGGER IF NOT EXISTS update_novel_on_section_insert ... (Removed)
+-- CREATE TRIGGER IF NOT EXISTS update_novel_on_section_delete ... (Removed)
+-- MODIFICATION END
 
 CREATE TABLE IF NOT EXISTS translation_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

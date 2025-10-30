@@ -37,7 +37,6 @@ function registerBackupRestoreHandlers(db, sessionManager) {
 		const restoreTransaction = db.transaction(() => {
 			const {
 				novel,
-				sections = [],
 				chapters = [],
 				image,
 				codexHtml,
@@ -46,19 +45,17 @@ function registerBackupRestoreHandlers(db, sessionManager) {
 			
 			// 1. Insert the novel, getting the new ID.
 			const newNovelStmt = db.prepare(`
-                INSERT INTO novels (user_id, series_id, title, author, genre, logline, synopsis, status, order_in_series, source_language, target_language, rephrase_settings, translate_settings)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO novels (user_id, title, author, genre, logline, synopsis, status, source_language, target_language, rephrase_settings, translate_settings)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `);
 			const newNovelResult = newNovelStmt.run(
 				sessionManager.getSession()?.user.id || 1,
-				null, // series_id is not backed up/restored for simplicity
 				`${novel.title} (Restored)`,
 				novel.author,
 				novel.genre,
 				novel.logline,
 				novel.synopsis,
 				novel.status,
-				novel.order_in_series,
 				novel.source_language,
 				novel.target_language,
 				novel.rephrase_settings,
@@ -66,31 +63,14 @@ function registerBackupRestoreHandlers(db, sessionManager) {
 			);
 			const newNovelId = newNovelResult.lastInsertRowid;
 			
-			// ID mapping tables
-			const sectionIdMap = new Map();
-			
-			const newSectionStmt = db.prepare(`
-                INSERT INTO sections (novel_id, title, description, section_order)
-                VALUES (?, ?, ?, ?)
-            `);
 			const newChapterStmt = db.prepare(`
-                INSERT INTO chapters (novel_id, section_id, title, source_content, target_content, status, chapter_order)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO chapters (novel_id, title, source_content, target_content, status, chapter_order)
+                VALUES (?, ?, ?, ?, ?, ?)
             `);
 			
-			// 2. Insert sections
-			for (const section of sections) {
-				const oldSectionId = section.id;
-				const newSectionResult = newSectionStmt.run(newNovelId, section.title, section.description, section.section_order);
-				sectionIdMap.set(oldSectionId, newSectionResult.lastInsertRowid);
-			}
-			
-			// 3. Insert chapters
+			// 3. Insert chapters directly.
 			for (const chapter of chapters) {
-				const newSectionId = sectionIdMap.get(chapter.section_id);
-				if (newSectionId) {
-					newChapterStmt.run(newNovelId, newSectionId, chapter.title, chapter.source_content, chapter.target_content, chapter.status, chapter.chapter_order);
-				}
+				newChapterStmt.run(newNovelId, chapter.title, chapter.source_content, chapter.target_content, chapter.status, chapter.chapter_order);
 			}
 			
 			// 6. Restore cover image if it exists in the backup

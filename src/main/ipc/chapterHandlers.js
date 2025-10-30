@@ -161,14 +161,16 @@ function registerChapterHandlers(db, windowManager) {
 	
 	ipcMain.handle('chapters:delete', (event, { chapterId }) => {
 		try {
-			const chapter = db.prepare('SELECT section_id, chapter_order FROM chapters WHERE id = ?').get(chapterId);
+			// MODIFICATION START: Re-ordering is now based on novel_id.
+			const chapter = db.prepare('SELECT novel_id, chapter_order FROM chapters WHERE id = ?').get(chapterId);
 			if (!chapter) throw new Error('Chapter not found.');
 			
 			db.transaction(() => {
 				db.prepare('DELETE FROM chapters WHERE id = ?').run(chapterId);
-				db.prepare('UPDATE chapters SET chapter_order = chapter_order - 1 WHERE section_id = ? AND chapter_order > ?')
-					.run(chapter.section_id, chapter.chapter_order);
+				db.prepare('UPDATE chapters SET chapter_order = chapter_order - 1 WHERE novel_id = ? AND chapter_order > ?')
+					.run(chapter.novel_id, chapter.chapter_order);
 			})();
+			// MODIFICATION END
 			
 			return { success: true };
 		} catch (error) {
@@ -179,18 +181,20 @@ function registerChapterHandlers(db, windowManager) {
 	
 	ipcMain.handle('chapters:insert', (event, { chapterId, direction }) => {
 		try {
-			const refChapter = db.prepare('SELECT novel_id, section_id, chapter_order FROM chapters WHERE id = ?').get(chapterId);
+			// MODIFICATION START: Re-ordering and insertion is now based on novel_id.
+			const refChapter = db.prepare('SELECT novel_id, chapter_order FROM chapters WHERE id = ?').get(chapterId);
 			if (!refChapter) throw new Error('Reference chapter not found.');
 			
 			const newOrder = direction === 'above' ? refChapter.chapter_order : refChapter.chapter_order + 1;
 			
 			db.transaction(() => {
-				db.prepare('UPDATE chapters SET chapter_order = chapter_order + 1 WHERE section_id = ? AND chapter_order >= ?')
-					.run(refChapter.section_id, newOrder);
+				db.prepare('UPDATE chapters SET chapter_order = chapter_order + 1 WHERE novel_id = ? AND chapter_order >= ?')
+					.run(refChapter.novel_id, newOrder);
 				
-				db.prepare('INSERT INTO chapters (novel_id, section_id, title, chapter_order, source_content, target_content) VALUES (?, ?, ?, ?, ?, ?)')
-					.run(refChapter.novel_id, refChapter.section_id, 'New Chapter', newOrder, '<p></p>', '<p></p>');
+				db.prepare('INSERT INTO chapters (novel_id, title, chapter_order, source_content, target_content) VALUES (?, ?, ?, ?, ?)')
+					.run(refChapter.novel_id, 'New Chapter', newOrder, '<p></p>', '<p></p>');
 			})();
+			// MODIFICATION END
 			
 			return { success: true };
 		} catch (error) {

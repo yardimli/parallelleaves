@@ -19,18 +19,16 @@ export async function exportNovel(novelId) {
 			htmlContent += `<p><em>by ${novel.author}</em></p>`;
 		}
 		
-		novel.sections.forEach(section => {
-			// Add Act/Section breaks. The `pageBreakBefore` attribute is specific to html-to-docx.
-			htmlContent += `<br pageBreakBefore="true" /><h2>${section.title}</h2>`;
-			section.chapters.forEach(chapter => {
-				// Add Chapter breaks
-				htmlContent += `<h3>${chapter.title}</h3>`;
-				
-				const content = chapter.target_content || '<p><em>(No content)</em></p>';
-				const cleanedContent = content.replace(/\[\[#\d+\]\]/g, '');
-				htmlContent += cleanedContent;
-			});
+		novel.chapters.forEach(chapter => {
+			// Add Chapter breaks using a page break and heading.
+			htmlContent += `<br pageBreakBefore="true" /><h3>${chapter.title}</h3>`;
+			
+			const content = chapter.target_content || '<p><em>(No content)</em></p>';
+			// Clean markers from the final output.
+			const cleanedContent = content.replace(/(\[\[#\d+\]\])|(\{\{#\d+\}\})/g, '');
+			htmlContent += cleanedContent;
 		});
+		// MODIFICATION END
 		
 		// 3. Send the constructed HTML, target language, and localized dialog strings to the main process.
 		const exportResult = await window.api.exportNovelToDocx({

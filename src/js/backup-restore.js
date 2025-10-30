@@ -52,8 +52,7 @@ export async function restoreNovel() {
 		// 2. Parse the file content as JSON.
 		const backupData = JSON.parse(fileContent);
 		
-		// The presence of 'novel' and 'sections' is sufficient to identify a valid backup file.
-		if (!backupData.novel || !backupData.sections) {
+		if (!backupData.novel) {
 			throw new Error('Invalid or corrupted backup file format.');
 		}
 		

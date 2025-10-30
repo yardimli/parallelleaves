@@ -81,27 +81,26 @@ document.addEventListener('DOMContentLoaded', async () => {
 	}
 	
 	function updateNavButtonState() {
-		const marks = documentContent.querySelectorAll('.chapter-break-marker, .act-break-marker');
+		const marks = documentContent.querySelectorAll('.chapter-break-marker');
 		const hasMarks = marks.length > 0;
 		prevMarkBtn.disabled = !hasMarks;
 		nextMarkBtn.disabled = !hasMarks;
 	}
 	
 	function updateStatus() {
-		const actBreaks = documentContent.querySelectorAll('.act-break-marker').length;
+		// MODIFICATION START: Status update now only considers chapters.
 		const chapterBreaks = documentContent.querySelectorAll('.chapter-break-marker').length;
 		const hasContent = documentContent.querySelector('p');
 		
-		const actCount = hasContent ? actBreaks + 1 : 0;
-		const chapterCount = hasContent ? actBreaks + chapterBreaks + 1 : 0;
+		const chapterCount = hasContent ? chapterBreaks + 1 : 0;
 		
 		if (chapterCount === 0) {
 			importStatus.textContent = t('import.status');
 		} else {
-			const actLabel = t(actCount === 1 ? 'import.actLabel_one' : 'import.actLabel_other');
 			const chapterLabel = t(chapterCount === 1 ? 'import.chapterLabel_one' : 'import.chapterLabel_other');
-			importStatus.textContent = t('import.statusSummary', { actCount, actLabel, chapterCount, chapterLabel });
+			importStatus.textContent = t('import.statusSummary', { chapterCount, chapterLabel });
 		}
+		// MODIFICATION END
 		
 		updateNavButtonState();
 	}
@@ -198,7 +197,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 			const nodesToProcess = [];
 			let node;
 			while ((node = walker.nextNode())) {
-				if (node.parentElement.closest('script, style, .act-break-marker, .chapter-break-marker')) continue;
+				if (node.parentElement.closest('script, style, .chapter-break-marker')) continue;
 				if (new RegExp(query, 'gi').test(node.textContent)) {
 					nodesToProcess.push(node);
 				}
@@ -322,17 +321,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 		const action = actionTarget.dataset.action;
 		const prevSibling = targetedParagraph.previousElementSibling;
 		
-		if (prevSibling && (prevSibling.classList.contains('act-break-marker') || prevSibling.classList.contains('chapter-break-marker'))) {
+		// MODIFICATION START: Simplified popover logic for chapter breaks only.
+		if (prevSibling && (prevSibling.classList.contains('chapter-break-marker'))) {
 			prevSibling.remove();
 		}
 		
-		if (action === 'set-act' || action === 'set-chapter') {
+		if (action === 'set-chapter') {
 			const marker = document.createElement('div');
 			const title = targetedParagraph.textContent.trim();
 			marker.dataset.title = title;
 			
-			const breakClass = action === 'set-act' ? 'act-break-marker' : 'chapter-break-marker';
-			marker.className = `${breakClass} not-prose`;
+			marker.className = 'chapter-break-marker not-prose';
 			
 			const titleSpan = document.createElement('span');
 			titleSpan.className = 'break-title';
@@ -341,6 +340,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 			
 			documentContent.insertBefore(marker, targetedParagraph);
 		}
+		// MODIFICATION END
 		
 		currentMarkIndex = -1;
 		updateStatus();
@@ -366,7 +366,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 		
 		const paragraphs = Array.from(documentContent.querySelectorAll('p'));
 		
-		documentContent.querySelectorAll('.act-break-marker, .chapter-break-marker').forEach(marker => marker.remove());
+		documentContent.querySelectorAll('.chapter-break-marker').forEach(marker => marker.remove());
 		
 		let lastBreakIndex = -1;
 		
@@ -375,7 +375,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 			if (!text) return;
 			
 			let isBreak = false;
-			let breakType = 'chapter-break-marker';
+			// MODIFICATION START: breakType is always for chapters now.
+			const breakType = 'chapter-break-marker';
+			// MODIFICATION END
 			
 			if (useNumeric) {
 				const isNumeric = /^\d+$/.test(text);
@@ -384,10 +386,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 			}
 			
 			if (!isBreak && useKeyword) {
-				if (/^\b(act|perde)\b/i.test(text)) {
-					isBreak = true;
-					breakType = 'act-break-marker';
-				} else if (/^\b(chapter|bölüm)\b/i.test(text)) {
+				if (/^\b(chapter|bölüm)\b/i.test(text)) {
 					isBreak = true;
 				}
 			}
@@ -444,7 +443,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 			if (node.nodeType !== Node.ELEMENT_NODE) continue;
 			
 			// Reset counter at every existing break marker
-			if (node.classList.contains('act-break-marker') || node.classList.contains('chapter-break-marker')) {
+			if (node.classList.contains('chapter-break-marker')) {
 				currentWordCount = 0;
 				continue;
 			}
@@ -453,25 +452,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 			if (node.tagName === 'P') {
 				const paragraphWordCount = countWords(node.textContent);
 				
-				// If adding this paragraph exceeds the limit, and it's not the very first paragraph of a chapter.
-				// The `currentWordCount > 0` check ensures we don't add a break before the very first paragraph of a section.
 				if (currentWordCount > 0 && currentWordCount + paragraphWordCount > WORD_LIMIT) {
-					// Insert a new chapter break *before* the current paragraph
 					const marker = document.createElement('div');
 					marker.className = 'chapter-break-marker not-prose';
-					marker.dataset.title = ''; // Let importer use default naming
+					marker.dataset.title = '';
 					
 					const titleSpan = document.createElement('span');
 					titleSpan.className = 'break-title';
-					titleSpan.textContent = ''; // No specific title for auto-split
+					titleSpan.textContent = '';
 					marker.appendChild(titleSpan);
 					
 					documentContent.insertBefore(marker, node);
 					
-					// Reset the word count for the new chapter, starting with the current paragraph
 					currentWordCount = paragraphWordCount;
 				} else {
-					// Otherwise, just add to the current chapter's word count
 					currentWordCount += paragraphWordCount;
 				}
 			}
@@ -480,7 +474,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 	});
 	
 	nextMarkBtn.addEventListener('click', () => {
-		const marks = documentContent.querySelectorAll('.chapter-break-marker, .act-break-marker');
+		const marks = documentContent.querySelectorAll('.chapter-break-marker');
 		if (marks.length === 0) return;
 		
 		currentMarkIndex++;
@@ -492,7 +486,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 	});
 	
 	prevMarkBtn.addEventListener('click', () => {
-		const marks = documentContent.querySelectorAll('.chapter-break-marker, .act-break-marker');
+		const marks = documentContent.querySelectorAll('.chapter-break-marker');
 		if (marks.length === 0) return;
 		
 		currentMarkIndex--;
@@ -511,8 +505,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 			return;
 		}
 		
-		const actsForValidation = [];
-		let currentAct = { title: 'Act 1', chapters: [] };
+		// MODIFICATION START: Simplified validation to a flat chapter structure.
+		const chaptersForValidation = [];
 		let currentChapter = { title: 'Chapter 1', content: [] };
 		
 		const allNodes = documentContent.childNodes;
@@ -520,121 +514,83 @@ document.addEventListener('DOMContentLoaded', async () => {
 		for (const node of allNodes) {
 			if (node.nodeType !== Node.ELEMENT_NODE) continue;
 			
-			const isActBreak = node.classList.contains('act-break-marker');
 			const isChapterBreak = node.classList.contains('chapter-break-marker');
 			
-			if (isActBreak || isChapterBreak) {
+			if (isChapterBreak) {
 				if (currentChapter.content.length > 0) {
-					currentAct.chapters.push(currentChapter);
+					chaptersForValidation.push(currentChapter);
 				}
-				
-				if (isActBreak) {
-					if (currentAct.chapters.length > 0) {
-						actsForValidation.push(currentAct);
-					}
-					currentAct = { title: node.dataset.title || `Act ${actsForValidation.length + 2}`, chapters: [] };
-				}
-				
-				currentChapter = { title: node.dataset.title || `Chapter ${currentAct.chapters.length + 1}`, content: [] };
-				
+				currentChapter = { title: node.dataset.title || `Chapter ${chaptersForValidation.length + 1}`, content: [] };
 			} else if (node.tagName === 'P') {
 				currentChapter.content.push(node.textContent.trim());
 			}
 		}
 		
 		if (currentChapter.content.length > 0) {
-			currentAct.chapters.push(currentChapter);
-		}
-		if (currentAct.chapters.length > 0) {
-			actsForValidation.push(currentAct);
+			chaptersForValidation.push(currentChapter);
 		}
 		
-		if (actsForValidation.length === 0 && allNodes.length > 0) {
+		if (chaptersForValidation.length === 0 && allNodes.length > 0) {
 			const allContent = Array.from(allNodes)
 				.filter(node => node.tagName === 'P')
 				.map(p => p.textContent.trim());
 			
 			if (allContent.length > 0) {
 				currentChapter.content = allContent;
-				currentAct.chapters.push(currentChapter);
-				actsForValidation.push(currentAct);
+				chaptersForValidation.push(currentChapter);
 			}
 		}
 		
-		for (const act of actsForValidation) {
-			for (const chapter of act.chapters) {
-				const wordCount = countWords(chapter.content.join(' '));
-				if (wordCount > WORD_LIMIT) {
-					const fullTitle = act.chapters.length > 1 ? `${act.title} - ${chapter.title}` : chapter.title;
-					window.showAlert(t('import.errorChapterTooLong', { chapterTitle: fullTitle, wordCount: wordCount }), t('common.error'));
-					return; // Stop the import
-				}
+		for (const chapter of chaptersForValidation) {
+			const wordCount = countWords(chapter.content.join(' '));
+			if (wordCount > WORD_LIMIT) {
+				window.showAlert(t('import.errorChapterTooLong', { chapterTitle: chapter.title, wordCount: wordCount }), t('common.error'));
+				return;
 			}
 		}
-		// END: Word count validation
+		// MODIFICATION END
 		
 		importOverlayStatus.textContent = t('import.importingContent');
 		importOverlay.classList.remove('hidden');
 		
-		const acts = [];
-		currentAct = { title: 'Act 1', chapters: [] };
-		currentChapter = { title: 'Chapter 1', content: [] }; // Now collects an array of paragraph strings
+		// MODIFICATION START: Final data structure is a flat 'chapters' array.
+		const chapters = [];
+		currentChapter = { title: 'Chapter 1', content: [] };
 		
 		for (const node of allNodes) {
 			if (node.nodeType !== Node.ELEMENT_NODE) continue;
 			
-			const isActBreak = node.classList.contains('act-break-marker');
 			const isChapterBreak = node.classList.contains('chapter-break-marker');
 			
-			if (isActBreak || isChapterBreak) {
-				// If the current chapter has content, finalize it.
+			if (isChapterBreak) {
 				if (currentChapter.content.length > 0) {
-					// Join the collected paragraphs into a single HTML string.
 					currentChapter.content = `<p>${currentChapter.content.join('</p><p>')}</p>`;
-					currentAct.chapters.push(currentChapter);
+					chapters.push(currentChapter);
 				}
-				
-				// If it's an act break, finalize the current act.
-				if (isActBreak) {
-					if (currentAct.chapters.length > 0) {
-						acts.push(currentAct);
-					}
-					// Start a new act.
-					currentAct = { title: node.dataset.title || `Act ${acts.length + 1}`, chapters: [] };
-				}
-				
-				// Start a new chapter.
-				currentChapter = { title: node.dataset.title || `Chapter ${currentAct.chapters.length + 1}`, content: [] };
-				
+				currentChapter = { title: node.dataset.title || `Chapter ${chapters.length + 1}`, content: [] };
 			} else if (node.tagName === 'P') {
-				// Collect the text content of the paragraph.
 				currentChapter.content.push(node.textContent.trim());
 			}
 		}
 		
-		// Finalize the last chapter and act after the loop.
 		if (currentChapter.content.length > 0) {
 			currentChapter.content = `<p>${currentChapter.content.join('</p><p>')}</p>`;
-			currentAct.chapters.push(currentChapter);
-		}
-		if (currentAct.chapters.length > 0) {
-			acts.push(currentAct);
+			chapters.push(currentChapter);
 		}
 		
-		// Handle case where there are no breaks, treating the whole document as one chapter.
-		if (acts.length === 0 && allNodes.length > 0) {
+		if (chapters.length === 0 && allNodes.length > 0) {
 			const allContent = Array.from(allNodes)
 				.filter(node => node.tagName === 'P')
 				.map(p => p.textContent.trim());
 			
 			if (allContent.length > 0) {
 				currentChapter.content = `<p>${allContent.join('</p><p>')}</p>`;
-				currentAct.chapters.push(currentChapter);
-				acts.push(currentAct);
+				chapters.push(currentChapter);
 			}
 		}
+		// MODIFICATION END
 		
-		if (acts.length === 0) {
+		if (chapters.length === 0) {
 			window.showAlert(t('import.alertNoContent'));
 			importOverlay.classList.add('hidden');
 			return;
@@ -645,7 +601,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 				title: titleInput.value.trim(),
 				source_language: sourceLangSelect.value,
 				target_language: targetLangSelect.value,
-				acts: acts
+				chapters: chapters // Pass the flat chapters array
 			});
 		} catch (error) {
 			console.error('Import failed:', error);

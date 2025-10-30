@@ -87,7 +87,9 @@
 <!-- Footer -->
 <div class="flex-shrink-0 p-4 border-t border-base-300 flex justify-between items-center">
 	<div class="text-sm text-base-content/70">
-		<p><i class="bi bi-info-circle-fill"></i> <span data-i18n="import.instructions">Click any paragraph to mark it as the start of a new chapter or act.</span></p>
+		<!-- MODIFICATION START: Updated instructions text. -->
+		<p><i class="bi bi-info-circle-fill"></i> <span data-i18n="import.instructions">Click any paragraph to mark it as the start of a new chapter.</span></p>
+		<!-- MODIFICATION END -->
 		<p id="js-import-status" class="font-bold mt-1" data-i18n="import.status">No content to import.</p>
 	</div>
 	<button id="start-import-btn" class="btn btn-accent w-48" disabled>
@@ -101,7 +103,6 @@
 <!-- Pop-up menu for selecting break type -->
 <div id="break-type-popover" class="hidden absolute z-50">
 	<ul class="menu p-2 shadow-lg bg-base-200 rounded-box w-48">
-		<li><button data-action="set-act"><i class="bi bi-film"></i> <span data-i18n="import.newAct">New Act</span></button></li>
 		<li><button data-action="set-chapter"><i class="bi bi-card-text"></i> <span data-i18n="import.newChapter">New Chapter</span></button></li>
 		<div class="divider my-1"></div>
 		<li data-action="remove-break"><button><i class="bi bi-x-circle"></i> <span data-i18n="import.removeBreak">Remove Break</span></button></li>
@@ -136,8 +137,10 @@
 			<div class="form-control">
 				<label class="label cursor-pointer">
 					<div>
-						<span class="label-text font-semibold" data-i18n="import.autoDetectModal.keywordLabel">Keywords (Chapter, Act)</span>
-						<p class="text-xs text-base-content/60" data-i18n="import.autoDetectModal.keywordDesc">Detects lines starting with "Chapter" or "Act".</p>
+						<!-- MODIFICATION START: Simplified keyword detection description. -->
+						<span class="label-text font-semibold" data-i18n="import.autoDetectModal.keywordLabel">Keywords (Chapter)</span>
+						<p class="text-xs text-base-content/60" data-i18n="import.autoDetectModal.keywordDesc">Detects lines starting with "Chapter".</p>
+						<!-- MODIFICATION END -->
 					</div>
 					<input type="checkbox" id="detect-keyword" class="toggle toggle-primary" checked />
 				</label>

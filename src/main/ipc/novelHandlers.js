@@ -86,19 +86,15 @@ function registerNovelHandlers(db, sessionManager, windowManager) {
 			
 			const novelId = novelResult.lastInsertRowid;
 			
-			const insertSection = db.prepare('INSERT INTO sections (novel_id, title, section_order) VALUES (?, ?, ?)');
-			const insertChapter = db.prepare('INSERT INTO chapters (novel_id, section_id, title, chapter_order, source_content, target_content) VALUES (?, ?, ?, ?, ?, ?)');
+			// MODIFICATION START: Create a flat list of 10 chapters instead of acts.
+			const insertChapter = db.prepare('INSERT INTO chapters (novel_id, title, chapter_order, source_content, target_content) VALUES (?, ?, ?, ?, ?)');
 			
 			db.transaction(() => {
-				for (let i = 1; i <= 3; i++) { // 3 Acts
-					const sectionResult = insertSection.run(novelId, `Act ${toRoman(i)}`, i);
-					const sectionId = sectionResult.lastInsertRowid;
-					
-					for (let j = 1; j <= 10; j++) { // 10 Chapters per Act
-						insertChapter.run(novelId, sectionId, `Chapter ${j}`, j, '<p></p>', '<p></p>');
-					}
+				for (let j = 1; j <= 10; j++) { // 10 Chapters
+					insertChapter.run(novelId, `Chapter ${j}`, j, '<p></p>', '<p></p>');
 				}
 			})();
+			// MODIFICATION END
 			
 			return { success: true, novelId };
 		} catch (error) {
@@ -111,10 +107,7 @@ function registerNovelHandlers(db, sessionManager, windowManager) {
 		const novel = db.prepare('SELECT id, title, source_language, target_language, rephrase_settings, translate_settings FROM novels WHERE id = ?').get(novelId);
 		if (!novel) return null;
 		
-		novel.sections = db.prepare('SELECT * FROM sections WHERE novel_id = ? ORDER BY section_order').all(novelId);
-		novel.sections.forEach(section => {
-			section.chapters = db.prepare('SELECT * FROM chapters WHERE section_id = ? ORDER BY `chapter_order`').all(section.id);
-		});
+		novel.chapters = db.prepare('SELECT * FROM chapters WHERE novel_id = ? ORDER BY chapter_order').all(novelId);
 		
 		return novel;
 	});
@@ -124,10 +117,7 @@ function registerNovelHandlers(db, sessionManager, windowManager) {
 			const novel = db.prepare('SELECT id, title, author, target_language FROM novels WHERE id = ?').get(novelId);
 			if (!novel) throw new Error('Novel not found.');
 			
-			novel.sections = db.prepare('SELECT id, title FROM sections WHERE novel_id = ? ORDER BY section_order').all(novelId);
-			for (const section of novel.sections) {
-				section.chapters = db.prepare('SELECT id, title, target_content FROM chapters WHERE section_id = ? ORDER BY chapter_order').all(section.id);
-			}
+			novel.chapters = db.prepare('SELECT id, title, target_content FROM chapters WHERE novel_id = ? ORDER BY chapter_order').all(novelId);
 			
 			return { success: true, data: novel };
 		} catch (error) {
@@ -200,20 +190,21 @@ function registerNovelHandlers(db, sessionManager, windowManager) {
 	ipcMain.handle('novels:getFullManuscript', (event, novelId) => {
 		try {
 			const novel = db.prepare('SELECT * FROM novels WHERE id = ?').get(novelId);
-			if (!novel) return { id: novelId, title: 'Not Found', sections: [] };
+			// MODIFICATION START: Adjusted fallback for consistency.
+			if (!novel) return { id: novelId, title: 'Not Found', chapters: [] };
 			
-			novel.sections = db.prepare('SELECT * FROM sections WHERE novel_id = ? ORDER BY section_order').all(novelId);
-			for (const section of novel.sections) {
-				section.chapters = db.prepare('SELECT id, title, source_content, target_content, chapter_order FROM chapters WHERE section_id = ? ORDER BY `chapter_order`').all(section.id);
-				for (const chapter of section.chapters) {
-					chapter.source_word_count = countWordsInHtml(chapter.source_content);
-					chapter.target_word_count = countWordsInHtml(chapter.target_content);
-				}
+			novel.chapters = db.prepare('SELECT id, title, source_content, target_content, chapter_order FROM chapters WHERE novel_id = ? ORDER BY chapter_order').all(novelId);
+			// MODIFICATION END
+			for (const chapter of novel.chapters) {
+				chapter.source_word_count = countWordsInHtml(chapter.source_content);
+				chapter.target_word_count = countWordsInHtml(chapter.target_content);
 			}
 			return novel;
 		} catch (error) {
 			console.error(`Error in getFullManuscript for novelId ${novelId}:`, error);
-			return { id: novelId, title: 'Error Loading', sections: [] };
+			// MODIFICATION START: Adjusted fallback for consistency.
+			return { id: novelId, title: 'Error Loading', chapters: [] };
+			// MODIFICATION END
 		}
 	});
 	

@@ -34,8 +34,7 @@ function getNovelBackupData(db, novelId) {
 			return null;
 		}
 		
-		const sections = db.prepare('SELECT * FROM sections WHERE novel_id = ? ORDER BY section_order').all(novelId);
-		const chapters = db.prepare('SELECT * FROM chapters WHERE novel_id = ? ORDER BY section_id, chapter_order').all(novelId);
+		const chapters = db.prepare('SELECT * FROM chapters WHERE novel_id = ? ORDER BY chapter_order').all(novelId);
 		
 		// Image data
 		let image = null;
@@ -65,7 +64,7 @@ function getNovelBackupData(db, novelId) {
 			dictionaryJson = fs.readFileSync(dictionaryPath, 'utf8');
 		}
 		
-		return { novel, sections, chapters, image, codexHtml, dictionaryJson };
+		return { novel, chapters, image, codexHtml, dictionaryJson };
 	} catch (error) {
 		console.error(`[Backup] Failed to gather backup data for novel ${novelId}:`, error);
 		return null;
