@@ -7,7 +7,7 @@
 	 * including syncing book content, generating new memory pairs via an LLM,
 	 * and retrieving stored memories. It is included and called by ai-proxy.php.
 	 *
-	 * @version 1.0.0
+	 * @version 1.1.0
 	 * @author Ekim Emre Yardimli
 	 */
 
@@ -30,7 +30,6 @@
 			case 'tm_sync_blocks':
 				syncBookBlocks($db, $userId, $payload);
 				break;
-			// NEW: Actions for the new job-based generation process
 			case 'tm_start_generation_job':
 				startGenerationJob($db, $userId, $payload);
 				break;
@@ -40,7 +39,6 @@
 			case 'tm_get_job_status':
 				getJobStatus($db, $userId, $payload);
 				break;
-			// END NEW
 			case 'tm_get_memory':
 				getTranslationMemory($db, $userId, $payload);
 				break;
@@ -142,18 +140,45 @@
 			$userBookId = $userBook['id'];
 
 			$receivedMarkerIds = [];
-			// MODIFICATION: Reset is_analyzed to 0 if content changes.
-			$upsertStmt = $db->prepare('INSERT INTO user_book_blocks (user_book_id, marker_id, source_text, target_text) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE is_analyzed = IF(source_text <> VALUES(source_text) OR target_text <> VALUES(target_text), 0, is_analyzed), source_text = VALUES(source_text), target_text = VALUES(target_text)');
+
+			// MODIFICATION: Broke the single ON DUPLICATE KEY UPDATE query into a SELECT, then either INSERT or UPDATE.
+			// This allows for a strict, case-sensitive comparison in PHP to determine if the is_analyzed flag needs to be reset.
+			$selectStmt = $db->prepare('SELECT source_text, target_text FROM user_book_blocks WHERE user_book_id = ? AND marker_id = ?');
+			$insertStmt = $db->prepare('INSERT INTO user_book_blocks (user_book_id, marker_id, source_text, target_text, is_analyzed) VALUES (?, ?, ?, ?, 0)');
+			$updateStmt = $db->prepare('UPDATE user_book_blocks SET source_text = ?, target_text = ?, is_analyzed = 0 WHERE user_book_id = ? AND marker_id = ?');
 
 			foreach ($pairs as $pair) {
 				$markerId = $pair['marker'];
 				$sourceText = $pair['source'];
 				$targetText = $pair['target'];
 				$receivedMarkerIds[] = $markerId;
-				$upsertStmt->bind_param('iiss', $userBookId, $markerId, $sourceText, $targetText);
-				$upsertStmt->execute();
+
+				// 1. Check if the block already exists
+				$selectStmt->bind_param('ii', $userBookId, $markerId);
+				$selectStmt->execute();
+				$result = $selectStmt->get_result();
+				$existingBlock = $result->fetch_assoc();
+
+				if ($existingBlock) {
+					// 2. Row exists, compare content in PHP. This comparison is binary-safe and case-sensitive.
+					if ($existingBlock['source_text'] !== $sourceText || $existingBlock['target_text'] !== $targetText) {
+						// Content has changed, so update it and reset the is_analyzed flag to 0.
+						$updateStmt->bind_param('ssii', $sourceText, $targetText, $userBookId, $markerId);
+						$updateStmt->execute();
+					}
+					// If content is identical, do nothing to preserve the existing is_analyzed state.
+				} else {
+					// 3. Row does not exist, so insert a new one with is_analyzed set to 0.
+					$insertStmt->bind_param('iiss', $userBookId, $markerId, $sourceText, $targetText);
+					$insertStmt->execute();
+				}
 			}
-			$upsertStmt->close();
+
+			// Close the prepared statements
+			$selectStmt->close();
+			$insertStmt->close();
+			$updateStmt->close();
+			// END MODIFICATION
 
 			// Delete blocks that are no longer present in the client
 			if (!empty($receivedMarkerIds)) {
@@ -183,7 +208,7 @@
 	}
 
 	/**
-	 * NEW: Creates a new job to generate translation memories for a novel.
+	 * Creates a new job to generate translation memories for a novel.
 	 *
 	 * @param mysqli $db The database connection.
 	 * @param int $userId The user's ID.
@@ -232,7 +257,7 @@
 	}
 
 	/**
-	 * NEW: Processes a small batch of blocks for a given generation job.
+	 * Processes a small batch of blocks for a given generation job.
 	 *
 	 * @param mysqli $db The database connection.
 	 * @param int $userId The user's ID.
@@ -373,7 +398,7 @@
 	}
 
 	/**
-	 * NEW: Retrieves the current status of a generation job.
+	 * Retrieves the current status of a generation job.
 	 *
 	 * @param mysqli $db The database connection.
 	 * @param int $userId The user's ID.
