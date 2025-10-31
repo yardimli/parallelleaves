@@ -423,7 +423,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 		
 		document.getElementById('js-open-chat-btn')?.addEventListener('click', () => window.api.openChatWindow(novelId));
 		
-		const tmButton = document.getElementById('js-translation-memory-btn');
 		const tmStatusEl = document.getElementById('js-tm-status');
 		const codexStatusEl = document.getElementById('js-codex-status');
 		
@@ -457,41 +456,49 @@ document.addEventListener('DOMContentLoaded', async () => {
 			}
 		});
 		
+		// MODIFICATION: Background Translation Memory Update Logic
+		let isTmUpdateRunning = false;
+		const runTmUpdate = async () => {
+			if (isTmUpdateRunning) {
+				console.log('TM update is already in progress. Skipping.');
+				return;
+			}
+			isTmUpdateRunning = true;
+			try {
+				await window.api.translationMemoryGenerateInBackground(novelId);
+			} catch (error) {
+				tmStatusEl.textContent = t('editor.translationMemory.status.error', { message: error.message });
+				isTmUpdateRunning = false; // Reset on error
+			}
+		};
 		
-		if (tmButton && tmStatusEl) {
-			tmButton.addEventListener('click', async () => {
-				tmButton.disabled = true;
-				tmStatusEl.textContent = t('editor.translationMemory.status.starting');
-				try {
-					await window.api.translationMemoryGenerateInBackground(novelId);
-				} catch (error) {
-					tmStatusEl.textContent = t('editor.translationMemory.status.error', { message: error.message });
-					tmButton.disabled = false;
-				}
-			});
-			
-			window.api.onTranslationMemoryProgressUpdate((update) => {
-				if (update.error) {
-					tmStatusEl.textContent = t('editor.translationMemory.status.error', { message: update.message });
-					tmButton.disabled = false;
-				} else if (update.finished) {
-					if (update.processedCount > 0) {
-						tmStatusEl.textContent = t('editor.translationMemory.status.complete', { count: update.processedCount });
-					} else {
-						tmStatusEl.textContent = t('editor.translationMemory.status.complete_none');
-					}
-					tmButton.disabled = false;
-					setTimeout(() => {
-						tmStatusEl.textContent = '';
-					}, 5000);
-				} else if (update.processed !== undefined && update.total !== undefined) {
-					tmStatusEl.textContent = t('editor.translationMemory.status.generating', { processed: update.processed, total: update.total });
+		window.api.onTranslationMemoryProgressUpdate((update) => {
+			if (update.error) {
+				tmStatusEl.textContent = t('editor.translationMemory.status.error', { message: update.message });
+				isTmUpdateRunning = false; // Reset flag
+			} else if (update.finished) {
+				if (update.processedCount > 0) {
+					tmStatusEl.textContent = t('editor.translationMemory.status.complete', { count: update.processedCount });
 				} else {
-					// Fallback for general status messages
-					tmStatusEl.textContent = update.message;
+					tmStatusEl.textContent = t('editor.translationMemory.status.complete_none');
 				}
-			});
-		}
+				isTmUpdateRunning = false; // Reset flag
+				setTimeout(() => {
+					tmStatusEl.textContent = ''; // Clear status after 5 seconds
+				}, 5000);
+			} else if (update.processed !== undefined && update.total !== undefined) {
+				tmStatusEl.textContent = t('editor.translationMemory.status.generating', { processed: update.processed, total: update.total });
+			} else {
+				// Fallback for general status messages like "Syncing..."
+				tmStatusEl.textContent = update.message;
+			}
+		});
+		
+		// Initial TM update run on load
+		runTmUpdate();
+		
+		// Set interval for subsequent updates every minute
+		setInterval(runTmUpdate, 60000);
 		
 		sourceContainer.addEventListener('scroll', () => debouncedSaveScroll(novelId, sourceContainer, targetContainer));
 		targetContainer.addEventListener('scroll', () => debouncedSaveScroll(novelId, sourceContainer, targetContainer));

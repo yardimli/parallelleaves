@@ -7,7 +7,7 @@
 	 * It validates a user session token for protected actions, logs all interactions to a MySQL database,
 	 * and provides a verified, grouped list of available models.
 	 *
-	 * @version 1.9.3
+	 * @version 1.9.4
 	 * @author Ekim Emre Yardimli
 	 */
 
@@ -370,6 +370,11 @@
 
 		$chat_payload = $payload;
 		unset($chat_payload['messages']);
+
+		// MODIFIED: Add novel_id to the chat_payload for logging purposes if it exists.
+		if (!empty($payload['novel_id'])) {
+			$chat_payload['novel_id'] = $payload['novel_id'];
+		}
 
 		$tmContent = '';
 		if (isset($payload['translation_memory_ids']) && is_array($payload['translation_memory_ids']) && !empty($payload['translation_memory_ids'])) {

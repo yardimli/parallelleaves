@@ -253,8 +253,9 @@ function createFloatingToolbar(from, to, model) {
 	});
 }
 
+// MODIFIED: This function now accepts a single `params` object to simplify passing data.
 async function startAiAction(params) {
-	const { prompt, model, temperature, openingMarker, closingMarker, translation_memory_ids } = params;
+	currentAiParams = params; // Store all parameters for a potential retry.
 	
 	isAiActionActive = true;
 	if (currentEditorInterface.type === 'iframe') {
@@ -264,8 +265,15 @@ async function startAiAction(params) {
 	showAiSpinner();
 	
 	try {
-		console.log('Sending prompt to AI:', prompt);
-		const result = await window.api.processLLMText({ prompt, model, temperature, translation_memory_ids });
+		console.log('Sending prompt to AI:', params.prompt);
+		// MODIFIED: Construct payload for the API call from the params object.
+		const result = await window.api.processLLMText({
+			prompt: params.prompt,
+			model: params.model,
+			temperature: params.temperature,
+			translation_memory_ids: params.translation_memory_ids,
+			novelId: params.novelId
+		});
 		hideAiSpinner();
 		
 		if (result.success && result.data.choices && result.data.choices.length > 0) {
@@ -279,15 +287,16 @@ async function startAiAction(params) {
 					chapterId: context.chapterId,
 					sourceText: context.selectedText,
 					targetText: newContentText,
-					marker: openingMarker,
+					marker: params.openingMarker,
 					model: params.model,
 					temperature: params.temperature
 				};
 			}
 			
 			let newContentHtml;
-			const textWithMarkers = openingMarker && closingMarker
-				? `${openingMarker} ${newContentText} ${closingMarker}`
+			const textWithMarkers = params.openingMarker && params.closingMarker
+				? `${params.openingMarker} ${newContentText} ${params.closingMarker}`
+				// eslint-disable-next-line no-irregular-whitespace
 				: newContentText;
 			
 			const isInlineSelection = originalFragmentJson &&
@@ -308,7 +317,7 @@ async function startAiAction(params) {
 			
 			if (replacementData) {
 				aiActionRange.to = replacementData.finalRange.to;
-				createFloatingToolbar(aiActionRange.from, aiActionRange.to, model);
+				createFloatingToolbar(aiActionRange.from, aiActionRange.to, params.model);
 				
 				if (replacementData.finalRange) {
 					setTimeout(() => {
@@ -542,16 +551,21 @@ async function handleModalApply() {
 		}
 	}
 	
-	currentAiParams = { prompt, model, temperature, action, context: promptContext, formData: formDataObj };
-	
-	startAiAction({
-		prompt: currentAiParams.prompt,
-		model: currentAiParams.model,
-		temperature: currentAiParams.temperature,
+	// MODIFIED: Consolidate all parameters into a single object for startAiAction.
+	const aiParams = {
+		prompt,
+		model,
+		temperature,
+		action,
+		context: promptContext,
+		formData: formDataObj,
 		openingMarker,
 		closingMarker,
-		translation_memory_ids: formDataObj.translationMemoryIds
-	});
+		translation_memory_ids: formDataObj.translationMemoryIds,
+		novelId
+	};
+	
+	startAiAction(aiParams);
 }
 
 export function setupPromptEditor() {
