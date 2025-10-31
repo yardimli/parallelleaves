@@ -6,7 +6,7 @@
 	 * Displays a list of user's books and the detailed translation memory
 	 * pairs for a selected book.
 	 *
-	 * @version 1.1.0
+	 * @version 1.2.0
 	 * @author Ekim Emre Yardimli
 	 */
 
@@ -25,11 +25,10 @@
 	$books = [];
 	$selectedBook = null;
 	$translationMemories = [];
-// NEW: Variables for handling update/delete messages
 	$updateMessage = '';
 	$updateMessageType = ''; // 'success' or 'error'
 
-// NEW: Handle POST request for deleting TM for a book
+// Handle POST request for deleting TM for a book
 	if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['user_book_id'])) {
 		if ($_POST['action'] === 'delete_tm') {
 			$userBookId = (int)$_POST['user_book_id'];
@@ -75,8 +74,8 @@
 		$view = 'details';
 		$userBookId = (int)$_GET['book_id'];
 
-		// Fetch the selected book's details to ensure ownership
-		$stmt = $db->prepare('SELECT id, book_id, source_language, target_language FROM user_books WHERE id = ? AND user_id = ?');
+		// MODIFIED: Fetch the selected book's details including title
+		$stmt = $db->prepare('SELECT id, book_id, title, source_language, target_language FROM user_books WHERE id = ? AND user_id = ?');
 		$stmt->bind_param('ii', $userBookId, $userId);
 		$stmt->execute();
 		$selectedBook = $stmt->get_result()->fetch_assoc();
@@ -97,10 +96,10 @@
 			exit;
 		}
 	} else {
-		// Fetch the list of all books for the user
+		// MODIFIED: Fetch the list of all books for the user, including title and author
 		$view = 'list';
 		$stmt = $db->prepare(
-			'SELECT ub.id, ub.book_id, ub.source_language, ub.target_language, ' .
+			'SELECT ub.id, ub.book_id, ub.title, ub.author, ub.source_language, ub.target_language, ' .
 			'(SELECT COUNT(*) FROM user_books_translation_memory WHERE user_book_id = ub.id) as tm_count ' .
 			'FROM user_books ub WHERE ub.user_id = ? ORDER BY ub.updated_at DESC'
 		);
@@ -117,7 +116,7 @@
 		<h2 class="text-3xl font-semibold mb-4">Translation Memory</h2>
 		<p class="mb-6">Select a novel to view its generated translation memory pairs.</p>
 
-		<?php // NEW: Display success or error messages
+		<?php
 		if ($updateMessage): ?>
 			<div role="alert" class="alert alert-<?php
 				echo $updateMessageType; ?> mb-4">
@@ -136,7 +135,8 @@
 				<table class="table w-full">
 					<thead>
 					<tr>
-						<th>Novel ID</th>
+						<!-- MODIFIED: Changed header from Novel ID to Title -->
+						<th>Title</th>
 						<th>Languages</th>
 						<th>TM Entries</th>
 						<th>Actions</th>
@@ -146,8 +146,13 @@
 					<?php
 						foreach ($books as $book): ?>
 							<tr>
-								<td><?php
-										echo htmlspecialchars((string)$book['book_id']); ?></td>
+								<!-- MODIFIED: Display title and author -->
+								<td>
+									<div class="font-bold"><?php
+											echo htmlspecialchars($book['title']); ?></div>
+									<div class="text-sm opacity-50"><?php
+											echo htmlspecialchars($book['author'] ?? 'Unknown Author'); ?></div>
+								</td>
 								<td>
 							<span class="badge badge-ghost"><?php
 									echo htmlspecialchars($book['source_language']); ?></span>
@@ -158,7 +163,6 @@
 								<td><?php
 										echo htmlspecialchars((string)$book['tm_count']); ?></td>
 								<td>
-									<!-- MODIFIED: Flex container for buttons -->
 									<div class="flex items-center gap-2">
 										<a href="translation_memory.php?book_id=<?php
 											echo $book['id']; ?>"
@@ -167,7 +171,6 @@
 												   echo 'btn-disabled'; ?>">
 											View Details
 										</a>
-										<!-- NEW: Delete TM form and button -->
 										<form action="translation_memory.php" method="POST" class="inline"
 										      onsubmit="return confirm('Are you sure you want to delete all TM entries for this book? This cannot be undone.');">
 											<input type="hidden" name="action" value="delete_tm">
@@ -196,9 +199,10 @@
 		<div class="mb-4">
 			<a href="translation_memory.php" class="btn btn-sm btn-outline">&larr; Back to Book List</a>
 		</div>
+		<!-- MODIFIED: Changed header to show book title -->
 		<h2 class="text-3xl font-semibold mb-4">
-			Translation Memory for Novel ID: <?php
-				echo htmlspecialchars((string)$selectedBook['book_id']); ?>
+			Translation Memory for: <span class="italic"><?php
+					echo htmlspecialchars($selectedBook['title']); ?></span>
 		</h2>
 
 		<?php

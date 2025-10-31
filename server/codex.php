@@ -27,7 +27,7 @@
 	$updateMessage = '';
 	$updateMessageType = ''; // 'success' or 'error'
 
-// MODIFIED: Handle saving codex content OR resetting the codex
+// Handle saving codex content OR resetting the codex
 	if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['user_book_id'])) {
 		$userBookId = (int)$_POST['user_book_id'];
 
@@ -53,7 +53,7 @@
 				}
 				$updateStmt->close();
 			} elseif (isset($_POST['action']) && $_POST['action'] === 'reset_codex') {
-				// NEW: Action: Reset Codex
+				// Action: Reset Codex
 				$updateStmt = $db->prepare('UPDATE user_books SET codex_content = NULL, codex_status = "none", codex_chunks_total = 0, codex_chunks_processed = 0 WHERE id = ?');
 				$updateStmt->bind_param('i', $userBookId);
 				if ($updateStmt->execute()) {
@@ -78,8 +78,8 @@
 		$view = 'edit';
 		$userBookId = (int)$_GET['book_id'];
 
-		// Fetch the selected book's details to ensure ownership
-		$stmt = $db->prepare('SELECT id, book_id, codex_content, codex_status FROM user_books WHERE id = ? AND user_id = ?');
+		// MODIFIED: Fetch the selected book's details including title
+		$stmt = $db->prepare('SELECT id, book_id, title, codex_content, codex_status FROM user_books WHERE id = ? AND user_id = ?');
 		$stmt->bind_param('ii', $userBookId, $userId);
 		$stmt->execute();
 		$selectedBook = $stmt->get_result()->fetch_assoc();
@@ -91,10 +91,10 @@
 			exit;
 		}
 	} else {
-		// Fetch the list of all books for the user
+		// MODIFIED: Fetch the list of all books for the user, including title and author
 		$view = 'list';
 		$stmt = $db->prepare(
-			'SELECT id, book_id, source_language, target_language, codex_status FROM user_books WHERE user_id = ? ORDER BY updated_at DESC'
+			'SELECT id, book_id, title, author, source_language, target_language, codex_status FROM user_books WHERE user_id = ? ORDER BY updated_at DESC'
 		);
 		$stmt->bind_param('i', $userId);
 		$stmt->execute();
@@ -109,7 +109,7 @@
 		<h2 class="text-3xl font-semibold mb-4">Codex Editor</h2>
 		<p class="mb-6">Select a novel to view or edit its codex.</p>
 
-		<?php // NEW: Display success or error messages from reset action
+		<?php
 		if ($updateMessage): ?>
 			<div role="alert" class="alert alert-<?php
 				echo $updateMessageType; ?> mb-4">
@@ -128,7 +128,8 @@
 				<table class="table w-full">
 					<thead>
 					<tr>
-						<th>Novel ID</th>
+						<!-- MODIFIED: Changed header from Novel ID to Title -->
+						<th>Title</th>
 						<th>Languages</th>
 						<th>Codex Status</th>
 						<th>Actions</th>
@@ -138,8 +139,13 @@
 					<?php
 						foreach ($books as $book): ?>
 							<tr>
-								<td><?php
-										echo htmlspecialchars((string)$book['book_id']); ?></td>
+								<!-- MODIFIED: Display title and author -->
+								<td>
+									<div class="font-bold"><?php
+											echo htmlspecialchars($book['title']); ?></div>
+									<div class="text-sm opacity-50"><?php
+											echo htmlspecialchars($book['author'] ?? 'Unknown Author'); ?></div>
+								</td>
 								<td>
 							<span class="badge badge-ghost"><?php
 									echo htmlspecialchars($book['source_language']); ?></span>
@@ -150,13 +156,11 @@
 								<td><span class="badge badge-info"><?php
 											echo htmlspecialchars($book['codex_status']); ?></span></td>
 								<td>
-									<!-- MODIFIED: Flex container for buttons -->
 									<div class="flex items-center gap-2">
 										<a href="codex.php?book_id=<?php
 											echo $book['id']; ?>" class="btn btn-sm btn-primary">
 											Edit Codex
 										</a>
-										<!-- NEW: Reset Codex form and button -->
 										<form action="codex.php" method="POST" class="inline"
 										      onsubmit="return confirm('Are you sure you want to reset the codex for this book? All content will be deleted and regenerated.');">
 											<input type="hidden" name="action" value="reset_codex">
@@ -184,9 +188,10 @@
 		<div class="mb-4">
 			<a href="codex.php" class="btn btn-sm btn-outline">&larr; Back to Book List</a>
 		</div>
+		<!-- MODIFIED: Changed header to show book title -->
 		<h2 class="text-3xl font-semibold mb-4">
-			Editing Codex for Novel ID: <?php
-				echo htmlspecialchars((string)$selectedBook['book_id']); ?>
+			Editing Codex for: <span class="italic"><?php
+					echo htmlspecialchars($selectedBook['title']); ?></span>
 		</h2>
 
 		<?php
