@@ -11,10 +11,6 @@ const debounce = (func, delay) => {
 	};
 };
 
-// MODIFIED: Removed translationMemoryChoices and related get function
-// let translationMemoryChoices = null;
-// export const getTranslationMemoryChoices = () => translationMemoryChoices;
-
 const defaultState = { // Default state for the translate editor form
 	instructions: '',
 	tense: 'past',
