@@ -6,7 +6,7 @@
 	 * Displays a list of user's books and the detailed translation memory
 	 * pairs for a selected book.
 	 *
-	 * @version 1.0.0
+	 * @version 1.1.0
 	 * @author Ekim Emre Yardimli
 	 */
 
@@ -25,6 +25,50 @@
 	$books = [];
 	$selectedBook = null;
 	$translationMemories = [];
+// NEW: Variables for handling update/delete messages
+	$updateMessage = '';
+	$updateMessageType = ''; // 'success' or 'error'
+
+// NEW: Handle POST request for deleting TM for a book
+	if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['user_book_id'])) {
+		if ($_POST['action'] === 'delete_tm') {
+			$userBookId = (int)$_POST['user_book_id'];
+			// Verify the user owns this book before deleting
+			$stmt = $db->prepare('SELECT id FROM user_books WHERE id = ? AND user_id = ?');
+			$stmt->bind_param('ii', $userBookId, $userId);
+			$stmt->execute();
+			$result = $stmt->get_result();
+			if ($result->num_rows > 0) {
+				$db->begin_transaction();
+				try {
+					// 1. Delete all entries from the translation memory table for this book
+					$deleteStmt = $db->prepare('DELETE FROM user_books_translation_memory WHERE user_book_id = ?');
+					$deleteStmt->bind_param('i', $userBookId);
+					$deleteStmt->execute();
+					$deleteStmt->close();
+
+					// 2. Reset the analysis status on all blocks for this book so they can be re-processed
+					$updateStmt = $db->prepare('UPDATE user_book_blocks SET is_analyzed = 0 WHERE user_book_id = ?');
+					$updateStmt->bind_param('i', $userBookId);
+					$updateStmt->execute();
+					$updateStmt->close();
+
+					$db->commit();
+					$updateMessage = 'Translation Memory for this book has been deleted. It will be regenerated the next time the app syncs.';
+					$updateMessageType = 'success';
+				} catch (Exception $e) {
+					$db->rollback();
+					error_log("TM Deletion Error: " . $e->getMessage());
+					$updateMessage = 'An error occurred while deleting the Translation Memory.';
+					$updateMessageType = 'error';
+				}
+			} else {
+				$updateMessage = 'You do not have permission to perform this action.';
+				$updateMessageType = 'error';
+			}
+			$stmt->close();
+		}
+	}
 
 // Determine view based on GET parameter
 	if (isset($_GET['book_id'])) {
@@ -73,6 +117,16 @@
 		<h2 class="text-3xl font-semibold mb-4">Translation Memory</h2>
 		<p class="mb-6">Select a novel to view its generated translation memory pairs.</p>
 
+		<?php // NEW: Display success or error messages
+		if ($updateMessage): ?>
+			<div role="alert" class="alert alert-<?php
+				echo $updateMessageType; ?> mb-4">
+				<span><?php
+						echo htmlspecialchars($updateMessage); ?></span>
+			</div>
+		<?php
+		endif; ?>
+
 		<?php
 		if (empty($books)): ?>
 			<p>You have not synced any books with translation memories yet.</p>
@@ -104,13 +158,28 @@
 								<td><?php
 										echo htmlspecialchars((string)$book['tm_count']); ?></td>
 								<td>
-									<a href="translation_memory.php?book_id=<?php
-										echo $book['id']; ?>"
-									   class="btn btn-sm btn-primary <?php
-										   if ($book['tm_count'] == 0)
-											   echo 'btn-disabled'; ?>">
-										View Details
-									</a>
+									<!-- MODIFIED: Flex container for buttons -->
+									<div class="flex items-center gap-2">
+										<a href="translation_memory.php?book_id=<?php
+											echo $book['id']; ?>"
+										   class="btn btn-sm btn-primary <?php
+											   if ($book['tm_count'] == 0)
+												   echo 'btn-disabled'; ?>">
+											View Details
+										</a>
+										<!-- NEW: Delete TM form and button -->
+										<form action="translation_memory.php" method="POST" class="inline"
+										      onsubmit="return confirm('Are you sure you want to delete all TM entries for this book? This cannot be undone.');">
+											<input type="hidden" name="action" value="delete_tm">
+											<input type="hidden" name="user_book_id" value="<?php
+												echo $book['id']; ?>">
+											<button type="submit" class="btn btn-sm btn-outline btn-error" <?php
+												if ($book['tm_count'] == 0)
+													echo 'disabled'; ?>>
+												Delete
+											</button>
+										</form>
+									</div>
 								</td>
 							</tr>
 						<?php

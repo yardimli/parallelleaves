@@ -6,7 +6,7 @@
 	 * Allows users to view a list of their books and edit the codex content
 	 * for each one.
 	 *
-	 * @version 1.0.0
+	 * @version 1.1.0
 	 * @author Ekim Emre Yardimli
 	 */
 
@@ -27,28 +27,44 @@
 	$updateMessage = '';
 	$updateMessageType = ''; // 'success' or 'error'
 
-// Handle saving codex content
-	if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['user_book_id'], $_POST['codex_content'])) {
+// MODIFIED: Handle saving codex content OR resetting the codex
+	if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['user_book_id'])) {
 		$userBookId = (int)$_POST['user_book_id'];
-		$codexContent = $_POST['codex_content'];
 
 		// Verify the user owns this book before updating
 		$stmt = $db->prepare('SELECT id FROM user_books WHERE id = ? AND user_id = ?');
 		$stmt->bind_param('ii', $userBookId, $userId);
 		$stmt->execute();
 		$result = $stmt->get_result();
+
 		if ($result->num_rows > 0) {
-			// User owns the book, proceed with update
-			$updateStmt = $db->prepare('UPDATE user_books SET codex_content = ? WHERE id = ?');
-			$updateStmt->bind_param('si', $codexContent, $userBookId);
-			if ($updateStmt->execute()) {
-				$updateMessage = 'Codex updated successfully!';
-				$updateMessageType = 'success';
-			} else {
-				$updateMessage = 'Failed to update codex.';
-				$updateMessageType = 'error';
+			// Check which action is being performed (save or reset)
+			if (isset($_POST['codex_content'])) {
+				// Action: Save Codex Content
+				$codexContent = $_POST['codex_content'];
+				$updateStmt = $db->prepare('UPDATE user_books SET codex_content = ? WHERE id = ?');
+				$updateStmt->bind_param('si', $codexContent, $userBookId);
+				if ($updateStmt->execute()) {
+					$updateMessage = 'Codex updated successfully!';
+					$updateMessageType = 'success';
+				} else {
+					$updateMessage = 'Failed to update codex.';
+					$updateMessageType = 'error';
+				}
+				$updateStmt->close();
+			} elseif (isset($_POST['action']) && $_POST['action'] === 'reset_codex') {
+				// NEW: Action: Reset Codex
+				$updateStmt = $db->prepare('UPDATE user_books SET codex_content = NULL, codex_status = "none", codex_chunks_total = 0, codex_chunks_processed = 0 WHERE id = ?');
+				$updateStmt->bind_param('i', $userBookId);
+				if ($updateStmt->execute()) {
+					$updateMessage = 'Codex has been reset. It will be regenerated the next time the app syncs.';
+					$updateMessageType = 'success';
+				} else {
+					$updateMessage = 'Failed to reset codex.';
+					$updateMessageType = 'error';
+				}
+				$updateStmt->close();
 			}
-			$updateStmt->close();
 		} else {
 			$updateMessage = 'Error: You do not have permission to edit this codex.';
 			$updateMessageType = 'error';
@@ -93,6 +109,16 @@
 		<h2 class="text-3xl font-semibold mb-4">Codex Editor</h2>
 		<p class="mb-6">Select a novel to view or edit its codex.</p>
 
+		<?php // NEW: Display success or error messages from reset action
+		if ($updateMessage): ?>
+			<div role="alert" class="alert alert-<?php
+				echo $updateMessageType; ?> mb-4">
+				<span><?php
+						echo htmlspecialchars($updateMessage); ?></span>
+			</div>
+		<?php
+		endif; ?>
+
 		<?php
 		if (empty($books)): ?>
 			<p>You have not synced any books yet.</p>
@@ -124,10 +150,25 @@
 								<td><span class="badge badge-info"><?php
 											echo htmlspecialchars($book['codex_status']); ?></span></td>
 								<td>
-									<a href="codex.php?book_id=<?php
-										echo $book['id']; ?>" class="btn btn-sm btn-primary">
-										Edit Codex
-									</a>
+									<!-- MODIFIED: Flex container for buttons -->
+									<div class="flex items-center gap-2">
+										<a href="codex.php?book_id=<?php
+											echo $book['id']; ?>" class="btn btn-sm btn-primary">
+											Edit Codex
+										</a>
+										<!-- NEW: Reset Codex form and button -->
+										<form action="codex.php" method="POST" class="inline"
+										      onsubmit="return confirm('Are you sure you want to reset the codex for this book? All content will be deleted and regenerated.');">
+											<input type="hidden" name="action" value="reset_codex">
+											<input type="hidden" name="user_book_id" value="<?php
+												echo $book['id']; ?>">
+											<button type="submit" class="btn btn-sm btn-outline btn-warning" <?php
+												if ($book['codex_status'] === 'none')
+													echo 'disabled'; ?>>
+												Reset
+											</button>
+										</form>
+									</div>
 								</td>
 							</tr>
 						<?php
