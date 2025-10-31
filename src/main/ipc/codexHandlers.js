@@ -80,12 +80,10 @@ function registerCodexHandlers(db, sessionManager, windowManager) {
 				return;
 			}
 			
-			// MODIFICATION START: Get novel metadata from the local DB.
 			const novel = db.prepare('SELECT title, author, source_language, target_language FROM novels WHERE id = ?').get(novelId);
 			if (!novel) {
 				throw new Error(`Novel with ID ${novelId} not found locally.`);
 			}
-			// MODIFICATION END
 			
 			// 2. Get content and split into chunks
 			sender.send('codex:update', { statusKey: 'editor.codex.status.preparing' });
@@ -111,7 +109,6 @@ function registerCodexHandlers(db, sessionManager, windowManager) {
 			}
 			
 			// 3. Start the job on the server, now including novel metadata
-			// MODIFICATION START: Added title, author, and languages to the payload.
 			await callCodexApi('codex_start_job', {
 				novel_id: novelId,
 				total_chunks: chunks.length,
@@ -120,7 +117,6 @@ function registerCodexHandlers(db, sessionManager, windowManager) {
 				source_language: novel.source_language, // Add source language
 				target_language: novel.target_language, // Add target language
 			}, token);
-			// MODIFICATION END
 			
 			// 4. Process chunks sequentially
 			for (let i = 0; i < chunks.length; i++) {

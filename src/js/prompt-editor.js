@@ -253,7 +253,6 @@ function createFloatingToolbar(from, to, model) {
 	});
 }
 
-// MODIFIED: This function now accepts a single `params` object to simplify passing data.
 async function startAiAction(params) {
 	currentAiParams = params; // Store all parameters for a potential retry.
 	
@@ -266,7 +265,6 @@ async function startAiAction(params) {
 	
 	try {
 		console.log('Sending prompt to AI:', params.prompt);
-		// MODIFIED: Construct payload for the API call from the params object.
 		const result = await window.api.processLLMText({
 			prompt: params.prompt,
 			model: params.model,
@@ -551,7 +549,6 @@ async function handleModalApply() {
 		}
 	}
 	
-	// MODIFIED: Consolidate all parameters into a single object for startAiAction.
 	const aiParams = {
 		prompt,
 		model,

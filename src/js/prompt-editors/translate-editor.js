@@ -89,7 +89,6 @@ const updatePreview = async (container, context) => {
 		return;
 	}
 	
-	// MODIFICATION: Get selected values from Choices.js instance
 	const selectedMemoryIds = translationMemoryChoices ? translationMemoryChoices.getValue(true) : [];
 	
 	const formData = {

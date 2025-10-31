@@ -362,8 +362,6 @@
 		// Save results and update progress
 		$db->begin_transaction();
 		try {
-			// MODIFICATION: First, delete any existing TM entries for this block.
-			// This is important for blocks that are being re-analyzed after their content was updated.
 			$deleteStmt = $db->prepare('DELETE FROM user_books_translation_memory WHERE block_id = ?');
 			$deleteStmt->bind_param('i', $block['id']);
 			$deleteStmt->execute();

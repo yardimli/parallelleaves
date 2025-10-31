@@ -371,7 +371,6 @@
 		$chat_payload = $payload;
 		unset($chat_payload['messages']);
 
-		// MODIFIED: Add novel_id to the chat_payload for logging purposes if it exists.
 		if (!empty($payload['novel_id'])) {
 			$chat_payload['novel_id'] = $payload['novel_id'];
 		}

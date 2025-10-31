@@ -107,7 +107,6 @@
 	 */
 	function startCodexJob(mysqli $db, int $userId, array $payload): void
 	{
-		// MODIFICATION START: Added language parameters to ensure book can be created.
 		$novelId = $payload['novel_id'] ?? null;
 		$totalChunks = $payload['total_chunks'] ?? 0;
 		$sourceLang = $payload['source_language'] ?? null;
@@ -140,7 +139,6 @@
 		$stmt->bind_param('ii', $totalChunks, $userBookId);
 		$stmt->execute();
 		$stmt->close();
-		// MODIFICATION END
 
 		echo json_encode(['success' => true, 'message' => 'Codex job started.']);
 	}

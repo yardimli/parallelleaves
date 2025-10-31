@@ -231,18 +231,14 @@ async function renderManuscript (novelData) {
 		targetFragment.appendChild(noChaptersMessage.cloneNode(true));
 	} else {
 		for (const chapter of novelData.chapters) {
-			// MODIFICATION START: The logic for cleaning up orphan markers has been moved here.
-			// It now operates on raw HTML strings before any DOM manipulation.
 			const { cleanedSourceContent, wasModified } = synchronizeMarkers(chapter.source_content, chapter.target_content);
 			
 			if (wasModified) {
-				// If markers were removed, update the database in the background.
 				window.api.updateChapterField({ chapterId: chapter.id, field: 'source_content', value: cleanedSourceContent });
 			}
 			
 			// Use the cleaned content for rendering.
 			const rawSourceContent = cleanedSourceContent || '';
-			// MODIFICATION END
 			
 			const finalSourceContent = processSourceContentForMarkers(rawSourceContent);
 			
@@ -297,7 +293,6 @@ async function renderManuscript (novelData) {
 	sourceContainer.appendChild(sourceFragment);
 	targetContainer.appendChild(targetFragment);
 	
-	// NEW: Add a final cleanup step to remove any lingering empty marker links as a failsafe.
 	sourceContainer.querySelectorAll('a.translation-marker-link').forEach(link => {
 		if (link.textContent.trim() === '') {
 			link.remove();
@@ -481,7 +476,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 			}
 		});
 		
-		// MODIFICATION: Background Translation Memory Update Logic
 		let isTmUpdateRunning = false;
 		const runTmUpdate = async () => {
 			if (isTmUpdateRunning) {
