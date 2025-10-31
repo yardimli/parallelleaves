@@ -7,7 +7,7 @@
 	 * It validates a user session token for protected actions, logs all interactions to a MySQL database,
 	 * and provides a verified, grouped list of available models.
 	 *
-	 * @version 1.9.4
+	 * @version 1.9.5
 	 * @author Ekim Emre Yardimli
 	 */
 
@@ -376,9 +376,17 @@
 		}
 
 		$tmContent = '';
-		if (isset($payload['translation_memory_ids']) && is_array($payload['translation_memory_ids']) && !empty($payload['translation_memory_ids'])) {
-			$novelIds = $payload['translation_memory_ids'];
+		$hasTmPlaceholder = false;
+		if (isset($payload['messages']) && is_array($payload['messages'])) {
+			foreach ($payload['messages'] as $message) {
+				if ($message['role'] === 'system' && isset($message['content']) && strpos($message['content'], '##TRANSLATION_MEMORY##') !== false) {
+					$hasTmPlaceholder = true;
+					break;
+				}
+			}
+		}
 
+		if ($hasTmPlaceholder) {
 			$lastUserMessage = '';
 			if (isset($payload['messages']) && is_array($payload['messages'])) {
 				for ($i = count($payload['messages']) - 1; $i >= 0; $i--) {
@@ -394,40 +402,85 @@
 			$uniqueWords = array_filter($uniqueWords, fn($word) => mb_strlen($word) > 2);
 
 			if (!empty($uniqueWords)) {
-				$placeholders = implode(',', array_fill(0, count($novelIds), '?'));
-				$types = str_repeat('i', count($novelIds));
+				$allMemories = [];
+				$maxPairs = 100;
+				$currentNovelId = $payload['novel_id'] ?? null;
 
-				$stmt = $db->prepare(
-					"SELECT tm.id, tm.source_sentence, tm.target_sentence, b.source_language, b.target_language " .
-					"FROM user_books_translation_memory tm " .
-					"JOIN user_books b ON tm.user_book_id = b.id " .
-					"WHERE b.user_id = ? AND b.book_id IN ($placeholders) AND tm.source_sentence REGEXP ?"
-				);
+				// NEW: First pass - get memories from the current novel first.
+				if ($currentNovelId) {
+					$stmt = $db->prepare(
+						"SELECT tm.id, tm.source_sentence, tm.target_sentence, b.source_language, b.target_language " .
+						"FROM user_books_translation_memory tm " .
+						"JOIN user_books b ON tm.user_book_id = b.id " .
+						"WHERE b.user_id = ? AND b.book_id = ? AND tm.source_sentence REGEXP ?"
+					);
 
-				$allMemories = []; // Use an associative array to store unique memories by ID
+					foreach ($uniqueWords as $word) {
+						if (count($allMemories) >= $maxPairs) {
+							break;
+						}
+						$regexpPattern = '[[:<:]]' . $db->real_escape_string($word) . '[[:>:]]';
+						$stmt->bind_param("iis", $userId, $currentNovelId, $regexpPattern);
+						$stmt->execute();
+						$result = $stmt->get_result();
+						$memoriesForWord = $result->fetch_all(MYSQLI_ASSOC);
 
-				// Loop through each unique word and query the database individually
-				foreach ($uniqueWords as $word) {
-					$regexpPattern = '[[:<:]]' . $db->real_escape_string($word) . '[[:>:]]'; // Whole word match
+						if (count($memoriesForWord) > 3) {
+							continue;
+						}
 
-					// CORRECTED: Consolidate all parameters into a single array before unpacking
-					$params = array_merge([$userId], $novelIds, [$regexpPattern]);
-					$stmt->bind_param("i" . $types . "s", ...$params);
-
-					$stmt->execute();
-					$result = $stmt->get_result();
-					$memoriesForWord = $result->fetch_all(MYSQLI_ASSOC);
-
-					if (count($memoriesForWord) > 3) {
-						continue;
+						foreach ($memoriesForWord as $memory) {
+							if (count($allMemories) >= $maxPairs) {
+								break 2;
+							}
+							$allMemories[$memory['id']] = $memory;
+						}
 					}
-
-					// Add results to the collection, using the ID as a key to prevent duplicates
-					foreach ($memoriesForWord as $memory) {
-						$allMemories[$memory['id']] = $memory;
-					}
+					$stmt->close();
 				}
-				$stmt->close();
+
+				// NEW: Second pass - fill remaining slots with memories from other novels.
+				if (count($allMemories) < $maxPairs) {
+					$sql = "SELECT tm.id, tm.source_sentence, tm.target_sentence, b.source_language, b.target_language " .
+						"FROM user_books_translation_memory tm " .
+						"JOIN user_books b ON tm.user_book_id = b.id " .
+						"WHERE b.user_id = ? ";
+					if ($currentNovelId) {
+						$sql .= "AND b.book_id != ? ";
+					}
+					$sql .= "AND tm.source_sentence REGEXP ?";
+					$stmt = $db->prepare($sql);
+
+					foreach ($uniqueWords as $word) {
+						if (count($allMemories) >= $maxPairs) {
+							break;
+						}
+						$regexpPattern = '[[:<:]]' . $db->real_escape_string($word) . '[[:>:]]';
+						if ($currentNovelId) {
+							$stmt->bind_param("iis", $userId, $currentNovelId, $regexpPattern);
+						} else {
+							$stmt->bind_param("is", $userId, $regexpPattern);
+						}
+						$stmt->execute();
+						$result = $stmt->get_result();
+						$memoriesForWord = $result->fetch_all(MYSQLI_ASSOC);
+
+						if (count($memoriesForWord) > 3) {
+							continue;
+						}
+
+						foreach ($memoriesForWord as $memory) {
+							if (count($allMemories) >= $maxPairs) {
+								break 2;
+							}
+							if (!isset($allMemories[$memory['id']])) {
+								$allMemories[$memory['id']] = $memory;
+							}
+						}
+					}
+					$stmt->close();
+				}
+
 
 				// Format the unique TM pairs for injection
 				foreach ($allMemories as $mem) {
@@ -436,8 +489,8 @@
 				}
 				$tmContent = trim($tmContent);
 			}
-			unset($payload['translation_memory_ids']);
 		}
+
 
 		$codexContent = '';
 		if (!empty($payload['novel_id'])) {

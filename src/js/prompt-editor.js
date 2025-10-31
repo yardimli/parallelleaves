@@ -1,5 +1,6 @@
 import { init as initRephraseEditor, buildPromptJson as buildRephraseJson } from './prompt-editors/rephrase-editor.js';
-import { init as initTranslateEditor, buildPromptJson as buildTranslateJson, getTranslationMemoryChoices } from './prompt-editors/translate-editor.js';
+// MODIFIED: Removed getTranslationMemoryChoices import
+import { init as initTranslateEditor, buildPromptJson as buildTranslateJson } from './prompt-editors/translate-editor.js';
 import { updateToolbarState as updateChapterToolbarState } from './novel-planner/toolbar.js';
 import { t, applyTranslationsTo } from './i18n.js';
 import { htmlToPlainText, processSourceContentForMarkers } from '../utils/html-processing.js';
@@ -24,15 +25,12 @@ const formDataExtractors = {
 		instructions: form.elements.instructions.value.trim(),
 		tense: form.elements.tense.value
 	}),
+	// MODIFIED: The extractor for 'translate' no longer needs to get selected TM IDs.
 	'translate': (form) => {
-		const choicesInstance = getTranslationMemoryChoices();
-		const tmIds = choicesInstance ? choicesInstance.getValue(true) : [];
-		
 		return {
 			instructions: form.elements.instructions.value.trim(),
 			tense: form.elements.tense.value,
-			contextPairs: parseInt(form.elements.context_pairs.value, 10) || 0,
-			translationMemoryIds: tmIds
+			contextPairs: parseInt(form.elements.context_pairs.value, 10) || 0
 		};
 	}
 };
@@ -558,7 +556,7 @@ async function handleModalApply() {
 		formData: formDataObj,
 		openingMarker,
 		closingMarker,
-		translation_memory_ids: formDataObj.translationMemoryIds,
+		// MODIFIED: translation_memory_ids is no longer sent. The server handles this automatically.
 		novelId
 	};
 	

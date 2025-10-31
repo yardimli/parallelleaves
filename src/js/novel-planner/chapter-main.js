@@ -516,8 +516,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 		// Initial TM update run on load
 		runTmUpdate();
 		
-		// Set interval for subsequent updates every minute
-		setInterval(runTmUpdate, 60000);
+		// Set interval for subsequent updates every 5 minutes
+		setInterval(runTmUpdate, 60000*5);
 		
 		sourceContainer.addEventListener('scroll', () => debouncedSaveScroll(novelId, sourceContainer, targetContainer));
 		targetContainer.addEventListener('scroll', () => debouncedSaveScroll(novelId, sourceContainer, targetContainer));

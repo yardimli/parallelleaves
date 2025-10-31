@@ -11,9 +11,9 @@ const debounce = (func, delay) => {
 	};
 };
 
-let translationMemoryChoices = null;
-
-export const getTranslationMemoryChoices = () => translationMemoryChoices;
+// MODIFIED: Removed translationMemoryChoices and related get function
+// let translationMemoryChoices = null;
+// export const getTranslationMemoryChoices = () => translationMemoryChoices;
 
 const defaultState = { // Default state for the translate editor form
 	instructions: '',
@@ -89,13 +89,11 @@ const updatePreview = async (container, context) => {
 		return;
 	}
 	
-	const selectedMemoryIds = translationMemoryChoices ? translationMemoryChoices.getValue(true) : [];
-	
+	// MODIFIED: Removed logic for getting selected memory IDs
 	const formData = {
 		instructions: form.elements.instructions.value.trim(),
 		tense: form.elements.tense.value,
-		contextPairs: parseInt(form.elements.context_pairs.value, 10) || 0,
-		translationMemoryIds: selectedMemoryIds
+		contextPairs: parseInt(form.elements.context_pairs.value, 10) || 0
 	};
 	
 	const systemPreview = container.querySelector('.js-preview-system');
@@ -182,64 +180,7 @@ const populateForm = (container, state, novelId) => {
 	});
 };
 
-const populateTranslationMemoriesDropdown = async (container, currentNovelId) => {
-	const select = container.querySelector('#js-translation-memory-select');
-	if (!select) return;
-	
-	if (translationMemoryChoices) {
-		translationMemoryChoices.destroy();
-		translationMemoryChoices = null;
-	}
-	
-	translationMemoryChoices = new Choices(select, {
-		removeItemButton: true,
-		placeholder: true,
-		placeholderValue: t('prompt.translate.selectTranslationMemories'),
-		classNames: {
-			containerOuter: 'choices',
-			containerInner: 'choices__inner',
-		}
-	});
-	
-	try {
-		const novels = await window.api.getAllNovelsWithTM();
-		if (!novels || novels.length === 0) {
-			translationMemoryChoices.disable();
-			return;
-		}
-		
-		const storageKey = `translation-memory-selection-${currentNovelId}`;
-		const savedSelectionJson = localStorage.getItem(storageKey);
-		let idsToSelect = [];
-		
-		if (savedSelectionJson) {
-			try {
-				const savedIds = JSON.parse(savedSelectionJson);
-				if (Array.isArray(savedIds)) {
-					idsToSelect = savedIds;
-				}
-			} catch (e) {
-				console.error('Failed to parse saved translation memory selection:', e);
-				idsToSelect = [currentNovelId.toString()];
-			}
-		} else {
-			idsToSelect = [currentNovelId.toString()];
-		}
-		
-		const choices = novels.map(novel => ({
-			value: novel.id.toString(),
-			label: novel.title,
-			selected: idsToSelect.includes(novel.id.toString())
-		}));
-		
-		translationMemoryChoices.setChoices(choices, 'value', 'label', true);
-		
-	} catch (error) {
-		console.error('Failed to load novels for translation memory selection:', error);
-		translationMemoryChoices.disable();
-	}
-};
-
+// MODIFIED: Removed the populateTranslationMemoriesDropdown function entirely.
 
 export const init = async (container, context) => {
 	try {
@@ -250,7 +191,7 @@ export const init = async (container, context) => {
 		const fullContext = { ...context };
 		
 		populateForm(container, context.initialState || defaultState, context.novelId);
-		await populateTranslationMemoriesDropdown(container, context.novelId);
+		// MODIFIED: Removed call to populateTranslationMemoriesDropdown
 		
 		const form = container.querySelector('#translate-editor-form');
 		
@@ -261,17 +202,7 @@ export const init = async (container, context) => {
 		if (form) {
 			form.addEventListener('input', debouncedUpdatePreview);
 			
-			const selectEl = form.querySelector('#js-translation-memory-select');
-			if (selectEl) {
-				selectEl.addEventListener('change', () => {
-					if (translationMemoryChoices) {
-						const selectedIds = translationMemoryChoices.getValue(true);
-						const storageKey = `translation-memory-selection-${context.novelId}`;
-						localStorage.setItem(storageKey, JSON.stringify(selectedIds));
-					}
-					debouncedUpdatePreview();
-				});
-			}
+			// MODIFIED: Removed event listener for the now-deleted select element
 			
 			form.addEventListener('change', (e) => {
 				if (e.target.type === 'checkbox') {
