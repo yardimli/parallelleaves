@@ -6,7 +6,6 @@ const imageHandler = require('../utils/image-handler.js');
 // Define paths for backup and data directories
 const DOCUMENTS_PATH = app.getPath('documents');
 const BACKUPS_BASE_DIR = path.join(DOCUMENTS_PATH, 'ParallelLeaves', 'Backups');
-const CODEX_DIR = path.join(app.getPath('userData'), 'codex');
 const DICTIONARIES_DIR = path.join(app.getPath('userData'), 'dictionaries');
 
 /**
@@ -50,13 +49,6 @@ function getNovelBackupData(db, novelId) {
 			}
 		}
 		
-		// Codex data
-		let codexHtml = null;
-		const codexPath = path.join(CODEX_DIR, `codex-${novelId}.html`);
-		if (fs.existsSync(codexPath)) {
-			codexHtml = fs.readFileSync(codexPath, 'utf8');
-		}
-		
 		// Dictionary data
 		let dictionaryJson = null;
 		const dictionaryPath = path.join(DICTIONARIES_DIR, `${novelId}.json`);
@@ -64,7 +56,7 @@ function getNovelBackupData(db, novelId) {
 			dictionaryJson = fs.readFileSync(dictionaryPath, 'utf8');
 		}
 		
-		return { novel, chapters, image, codexHtml, dictionaryJson };
+		return { novel, chapters, image, dictionaryJson };
 	} catch (error) {
 		console.error(`[Backup] Failed to gather backup data for novel ${novelId}:`, error);
 		return null;

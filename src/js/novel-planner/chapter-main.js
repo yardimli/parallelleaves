@@ -2,7 +2,7 @@ import { setupTopToolbar, setActiveContentWindow, updateToolbarState } from './t
 import { setupPromptEditor, openPromptEditor } from '../prompt-editor.js';
 import { setupTypographySettings, getTypographySettings, generateTypographyStyleProperties } from './typography-settings.js';
 import { initI18n, t, applyTranslationsTo } from '../i18n.js';
-import { processSourceContentForMarkers, removeObsoleteCodexLinks } from '../../utils/html-processing.js';
+import { processSourceContentForMarkers} from '../../utils/html-processing.js';
 import { initDictionaryModal } from '../dictionary/dictionary-modal.js';
 import { loadModals } from '../../utils/modal-loader.js';
 import { showConfirmationModal, showInputModal } from './modals.js';
@@ -223,8 +223,7 @@ async function renderManuscript (novelData) {
 	} else {
 		for (const chapter of novelData.chapters) {
 			const rawSourceContent = chapter.source_content || '';
-			const cleanedSourceContent = removeObsoleteCodexLinks(rawSourceContent);
-			const finalSourceContent = processSourceContentForMarkers(cleanedSourceContent);
+			const finalSourceContent = processSourceContentForMarkers(rawSourceContent);
 			
 			const sourceHtml = sourceChapterTpl
 				.replace(/{{id}}/g, chapter.id)

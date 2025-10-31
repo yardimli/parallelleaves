@@ -136,11 +136,10 @@ async function generateCoverImageViaProxy({ prompt, token }) {
  * @param {number} [params.temperature=0.7] - The temperature for the AI model.
  * @param {object|null} [params.response_format=null] - Optional response format object (e.g., { type: 'json_object' }).
  * @param {Array<number>} [params.translation_memory_ids=[]] - Array of novel IDs for TM.
- * @param {boolean} [params.use_codex=false] - MODIFICATION: Flag to tell the server to inject the codex.
- * @param {number|null} [params.novelId=null] - MODIFICATION: The novel ID, required if use_codex is true.
+ * @param {number|null} [params.novelId=null] - The novel ID.
  * @returns {Promise<object>} The AI response object.
  */
-async function processLLMText({ prompt, model, token, temperature = 0.7, response_format = null, translation_memory_ids = [], use_codex = false, novelId = null }) {
+async function processLLMText({ prompt, model, token, temperature = 0.7, response_format = null, translation_memory_ids = [], novelId = null }) {
 	const messages = [];
 	if (prompt.system) {
 		messages.push({ role: 'system', content: prompt.system });
@@ -175,10 +174,7 @@ async function processLLMText({ prompt, model, token, temperature = 0.7, respons
 		payload.translation_memory_ids = translation_memory_ids;
 	}
 	
-	if (use_codex && novelId) {
-		payload.use_codex = true;
-		payload.novel_id = novelId;
-	}
+	payload.novel_id = novelId;
 	
 	return callOpenRouter(payload, token);
 }

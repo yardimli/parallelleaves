@@ -1,8 +1,0 @@
-{
-  "addToDictionary": "Sözlüğe Ekle",
-  "noContent": "İçerik yok.",
-  "codexGenNoSource": "Analiz edilecek kaynak metin bulunamadı. İşlem tamamlandı.",
-  "codexGenNoText": "İşlem sonrası metin bulunamadı. İşlem tamamlandı.",
-  "codexGenComplete": "Kodeks oluşturma tamamlandı! Sayfa şimdi yeniden yüklenecek.",
-  "codexGenError": "Bir hata oluştu: {message}"
-}

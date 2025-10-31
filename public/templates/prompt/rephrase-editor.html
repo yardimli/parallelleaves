@@ -4,7 +4,6 @@
 		<div>
 			<label for="rephrase-instructions" class="label"><span class="label-text text-lg font-semibold" data-i18n="prompt.rephrase.instructions">Instructions</span></label>
 			<textarea id="rephrase-instructions" name="instructions" class="textarea textarea-bordered w-full h-24 font-mono text-sm" data-i18n-placeholder="prompt.rephrase.instructionsPlaceholder"></textarea>
-			<p class="text-xs text-base-content/60 mt-1" data-i18n="prompt.rephrase.instructionsHelp">Provide the main instructions for rephrasing the text.</p>
 		</div>
 		
 		<!-- Tense Selection -->
@@ -15,26 +14,6 @@
 				<button type="button" class="js-tense-btn btn flex-1" data-tense="present" data-i18n="prompt.common.present">Present</button>
 			</div>
 			<input type="hidden" name="tense" value="past">
-		</div>
-		
-		<!-- Context Options -->
-		<div class="space-y-2">
-			<h3 class="text-lg font-semibold" data-i18n="prompt.rephrase.contextInfo">Contextual Information</h3>
-			<p class="text-xs text-base-content/60 mb-2" data-i18n="prompt.rephrase.contextHelp">Relevant contextual information is automatically sent to the AI for the best results.</p>
-			
-			<div class="form-control">
-				<label class="label cursor-pointer justify-start gap-2 py-1">
-					<input type="checkbox" name="use_codex" class="js-use-codex-toggle checkbox checkbox-sm" />
-					<span class="label-text font-semibold" data-i18n="prompt.common.useCodex">Use Codex</span>
-				</label>
-			</div>
-			
-			<div class="form-control">
-				<label class="label cursor-pointer justify-start gap-2 py-1">
-					<input type="checkbox" name="use_dictionary" class="js-use-dictionary-toggle checkbox checkbox-sm" checked />
-					<span class="label-text font-semibold" data-i18n="prompt.common.useDictionary">Use Custom Dictionary</span>
-				</label>
-			</div>
 		</div>
 	</form>
 	

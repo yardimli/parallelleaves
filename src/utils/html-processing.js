@@ -53,13 +53,3 @@ export function processSourceContentForMarkers(htmlString) {
 		return `<a href="#" class="translation-marker-link" data-marker-id="${number}" data-marker-type="${type}">${match}</a>`;
 	});
 }
-
-export function removeObsoleteCodexLinks(htmlString) {
-	if (!htmlString) {
-		return htmlString;
-	}
-	// Regex to find the <a> tag with class "codex-link" and capture its content.
-	const codexLinkRegex = /<a[^>]*class="codex-link"[^>]*>(.*?)<\/a>/gi;
-	// Replace the entire tag with only its inner content (captured group $1).
-	return htmlString.replace(codexLinkRegex, '$1');
-}

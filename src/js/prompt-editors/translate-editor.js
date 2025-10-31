@@ -18,9 +18,7 @@ export const getTranslationMemoryChoices = () => translationMemoryChoices;
 const defaultState = { // Default state for the translate editor form
 	instructions: '',
 	tense: 'past',
-	useCodex: true,
 	contextPairs: 4,
-	useDictionary: false,
 	translationMemoryIds: []
 };
 
@@ -54,37 +52,17 @@ const buildTranslationContextBlock = (translationPairs, languageForPrompt, targe
 	return contextMessages;
 };
 
-export const buildPromptJson = (formData, context, contextualContent = '') => {
+export const buildPromptJson = (formData, context, userDictionary = '') => {
 	const { selectedText, languageForPrompt, targetLanguage, translationPairs } = context;
 	
 	const plainTextToTranslate = selectedText;
 	
-	const instructionsBlock = formData.instructions
-		? t('prompt.translate.system.instructionsBlock', { instructions: formData.instructions })
-		: '';
-	
-	const tenseBlock = t('prompt.translate.system.tenseInstruction', { tense: formData.tense });
-	
-	const dictionaryBlock = contextualContent
-		? t('prompt.translate.system.dictionaryBlock', { dictionaryContent: contextualContent })
-		: '';
-	
-	const examplesBlock = (formData.translationMemoryIds && formData.translationMemoryIds.length > 0)
-		? t('prompt.translate.system.examplesBlock')
-		: '';
-	
-	const codexBlock = (formData.useCodex)
-			? t('prompt.translate.system.codexBlock')
-			: '';
-
 	const system = t('prompt.translate.system.base', {
 		sourceLanguage: languageForPrompt,
 		targetLanguage: targetLanguage,
-		tenseBlock: tenseBlock,
-		instructionsBlock: instructionsBlock,
-		dictionaryBlock: dictionaryBlock,
-		examplesBlock: examplesBlock,
-		codexBlock: codexBlock
+		instructions: formData.instructions,
+		tense: formData.tense,
+		dictionary: userDictionary
 	}).trim();
 	
 	const contextMessages = buildTranslationContextBlock(translationPairs, languageForPrompt, targetLanguage);
@@ -117,9 +95,7 @@ const updatePreview = async (container, context) => {
 	const formData = {
 		instructions: form.elements.instructions.value.trim(),
 		tense: form.elements.tense.value,
-		useCodex: form.elements.use_codex.checked,
 		contextPairs: parseInt(form.elements.context_pairs.value, 10) || 0,
-		useDictionary: form.elements.use_dictionary.checked,
 		translationMemoryIds: selectedMemoryIds
 	};
 	
@@ -149,13 +125,10 @@ const updatePreview = async (container, context) => {
 		}
 	}
 	
-	let dictionaryContextualContent = '';
-	if (formData.useDictionary) {
-		dictionaryContextualContent = await window.api.getDictionaryContentForAI(context.novelId, 'translation');
-	}
+	let userDictionaryContent= await window.api.getDictionaryContentForAI(context.novelId, 'translation');
 	
 	try {
-		const promptJson = buildPromptJson(formData, previewContext, dictionaryContextualContent);
+		const promptJson = buildPromptJson(formData, previewContext, userDictionaryContent);
 		systemPreview.textContent = promptJson.system;
 		userPreview.textContent = promptJson.user;
 		aiPreview.textContent = promptJson.ai || t('prompt.preview.empty');
@@ -202,8 +175,6 @@ const populateForm = (container, state, novelId) => {
 	
 	form.elements.instructions.value = state.instructions || '';
 	form.elements.context_pairs.value = state.contextPairs !== undefined ? state.contextPairs : 4;
-	form.elements.use_codex.checked = state.useCodex !== undefined ? state.useCodex : defaultState.useCodex;
-	form.elements.use_dictionary.checked = state.useDictionary !== undefined ? state.useDictionary : defaultState.useDictionary;
 	
 	form.elements.tense.value = tense;
 	const tenseButtons = form.querySelectorAll('.js-tense-btn');

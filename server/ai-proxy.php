@@ -436,7 +436,7 @@
 		}
 
 		$codexContent = '';
-		if (!empty($payload['use_codex']) && !empty($payload['novel_id'])) {
+		if (!empty($payload['novel_id'])) {
 			$novelId = $payload['novel_id'];
 			$stmt = $db->prepare("SELECT codex_content FROM user_books WHERE user_id = ? AND book_id = ?");
 			$stmt->bind_param("ii", $userId, $novelId);
@@ -446,7 +446,6 @@
 			if ($result && !empty($result['codex_content'])) {
 				$codexContent = "Use the following glossary for consistent translation:\n<glossary>\n" . $result['codex_content'] . "\n</glossary>";
 			}
-			unset($payload['use_codex'], $payload['novel_id']);
 		}
 
 

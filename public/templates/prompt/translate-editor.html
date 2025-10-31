@@ -31,35 +31,12 @@
 		<!-- Context Options -->
 		<div class="space-y-2">
 			<h3 class="text-lg font-semibold" data-i18n="prompt.translate.contextInfo">Contextual Information</h3>
-			<!-- Help text moved below -->
-			
-			<div class="form-control">
-				<label class="label cursor-pointer justify-start gap-2 py-1">
-					<input type="checkbox" name="use_codex" class="js-use-codex-toggle checkbox checkbox-sm" />
-					<span class="label-text font-semibold" data-i18n="prompt.common.useCodex">Use Codex</span>
-				</label>
-			</div>
-			
-			<div class="form-control">
-				<label class="label cursor-pointer justify-start gap-2 py-1">
-					<input type="checkbox" name="use_dictionary" class="js-use-dictionary-toggle checkbox checkbox-sm" checked />
-					<span class="label-text font-semibold" data-i18n="prompt.common.useDictionary">Use Custom Dictionary</span>
-				</label>
-			</div>
-			
 			<div>
 				<label for="js-translation-memory-select" class="label">
 					<span class="label-text font-semibold" data-i18n="prompt.common.useTranslationMemory">Use Translation Memory</span>
 				</label>
 				<select multiple id="js-translation-memory-select" class="w-full"></select>
 			</div>
-		</div>
-		
-		<!-- Help Hints -->
-		<div class="text-xs text-base-content/60 pt-2 border-t border-base-300 space-y-1">
-			<p data-i18n="prompt.translate.instructionsHelp">Provide any specific instructions for translating the text.</p>
-			<p data-i18n="prompt.translate.prevPairsHelp">Include N previous translation as context for the AI. (0 to disable)</p>
-			<p data-i18n="prompt.translate.contextHelp">Relevant contextual information (like glossary entries) can be sent to the AI for better translations.</p>
 		</div>
 	</form>
 	

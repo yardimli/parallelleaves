@@ -1,8 +1,0 @@
-{
-  "addToDictionary": "Legg til i ordbok",
-  "noContent": "Ikke noe innhold.",
-  "codexGenNoSource": "Ikke noe kildeinnhold funnet å analysere. Prosessen er ferdig.",
-  "codexGenNoText": "Ingen tekst funnet etter rensing. Prosessen er ferdig.",
-  "codexGenComplete": "Codex-generering fullført! Siden vil nå lastes på nytt.",
-  "codexGenError": "En feil oppstod: {message}"
-}

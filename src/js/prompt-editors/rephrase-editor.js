@@ -13,9 +13,7 @@ const debounce = (func, delay) => {
 
 const defaultState = { // Default state for the rephrase editor form
 	instructions: '',
-	tense: 'past',
-	useCodex: true,
-	useDictionary: false
+	tense: 'past'
 };
 
 const buildSurroundingTextBlock = (wordsBefore, wordsAfter) => {
@@ -32,32 +30,22 @@ const buildSurroundingTextBlock = (wordsBefore, wordsAfter) => {
 	return t('prompt.rephrase.user.surroundingTextBlockAfterOnly', { wordsAfter });
 };
 
-export const buildPromptJson = (formData, context, contextualContent = '') => {
+export const buildPromptJson = (formData, context, userDictionary = '') => {
 	const { selectedText, wordCount, languageForPrompt, wordsBefore, wordsAfter } = context;
 	
-	const instructions = formData.instructions || t('prompt.rephrase.system.defaultInstruction');
-	
-	const tenseBlock = t('prompt.rephrase.system.tenseInstruction', { tense: formData.tense });
-	
 	const system = t('prompt.rephrase.system.base', {
-		instructions: instructions,
-		tenseBlock: tenseBlock,
+		instructions: formData.instructions,
+		tense: formData.tense,
+		dictionary: userDictionary,
 		language: languageForPrompt || 'English'
 	});
-	
-	const codexBlock = (formData.useCodex)
-		? t('prompt.translate.system.codexBlock')
-		: '';
 	
 	const truncatedText = selectedText.length > 4096 ? selectedText.substring(0, 4096) + '...' : selectedText;
 	
 	const surroundingText = buildSurroundingTextBlock(wordsBefore, wordsAfter);
 	
 	const userParts = [];
-	if (contextualContent) {
-		userParts.push(t('prompt.common.user.dictionaryBlock', { dictionaryContent: contextualContent }));
-	}
-	userParts.push(codexBlock);
+
 	if (surroundingText) {
 		userParts.push(surroundingText);
 	}
@@ -81,9 +69,7 @@ const updatePreview = async (container, context) => {
 	
 	const formData = {
 		instructions: form.elements.instructions.value.trim(),
-		tense: form.elements.tense.value,
-		useCodex: form.elements.use_codex.checked,
-		useDictionary: form.elements.use_dictionary.checked
+		tense: form.elements.tense.value
 	};
 	
 	const systemPreview = container.querySelector('.js-preview-system');
@@ -92,16 +78,9 @@ const updatePreview = async (container, context) => {
 	
 	if (!systemPreview || !userPreview || !aiPreview) return;
 	
-	let dictionaryContextualContent = '';
-	if (formData.useDictionary) {
-		// Now only fetches content from the dictionary.
-		dictionaryContextualContent = await window.api.getDictionaryContentForAI(context.novelId, 'translation');
-	}
+	let dictionaryContextualContent = await window.api.getDictionaryContentForAI(context.novelId, 'translation');
 
 	const previewContext = { ...context };
-	if (formData.useCodex) {
-		previewContext.codexContent = await window.api.codex.get(context.novelId);
-	}
 	
 	try {
 		const promptJson = buildPromptJson(formData, previewContext, dictionaryContextualContent);
@@ -125,8 +104,6 @@ const populateForm = (container, state, novelId) => {
 	const tense = state.tense || savedTense || defaultState.tense;
 	
 	form.elements.instructions.value = state.instructions || '';
-	form.elements.use_codex.checked = state.useCodex !== undefined ? state.useCodex : defaultState.useCodex;
-	form.elements.use_dictionary.checked = state.useDictionary !== undefined ? state.useDictionary : defaultState.useDictionary;
 	
 	form.elements.tense.value = tense;
 	const tenseButtons = form.querySelectorAll('.js-tense-btn');

@@ -42,7 +42,7 @@ module.exports = {
 	REGISTER_URL: 'https://playground.computer/parallelleaves/register.php',
 	
 	/**
-	 * The default AI model to use for automated tasks like suggesting codex details.
+	 * The default AI model.
 	 * This can be any model ID supported by your OpenRouter configuration.
 	 * @type {string}
 	 */

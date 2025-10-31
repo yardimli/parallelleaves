@@ -1,5 +1,5 @@
 // This new file contains all the logic for loading, saving, and applying typography settings.
-// It's designed to be reusable between the chapter editor and the codex editor.
+// It's designed to be reusable between the chapter editor.
 
 const DEFAULTS = {
 	font_family: "'Noto Serif', serif",

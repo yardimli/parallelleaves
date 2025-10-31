@@ -241,7 +241,7 @@ function registerNovelHandlers(db, sessionManager, windowManager) {
 			localPath = await imageHandler.storeImageFromUrl(coverInfo.data, novelId, 'cover');
 			imageType = 'generated';
 		} else if (coverInfo.type === 'local') {
-			const paths = await imageHandler.storeImageFromPath(coverInfo.data, novelId, null, 'cover-upload');
+			const paths = await imageHandler.storeImageFromPath(coverInfo.data, novelId, 'cover-upload');
 			localPath = paths.original_path;
 			imageType = 'upload';
 		}

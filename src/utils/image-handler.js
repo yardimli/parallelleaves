@@ -60,14 +60,13 @@ async function storeImageFromUrl(url, novelId, filenameBase) {
 
 /**
  * Copies an image from a local file path to the application's storage.
- * This is used for user uploads. Now handles null codexEntryId for novel covers.
+ * This is used for user uploads.
  * @param {string} sourcePath - The absolute path of the file to copy.
  * @param {string} novelId - The ID of the novel.
- * @param {string|null} codexEntryId - The ID of the codex entry, or null.
  * @param {string} filenameBase - The base name for the new file.
  * @returns {Promise<{original_path: string, thumbnail_path: string|null}>} The relative paths for DB storage.
  */
-async function storeImageFromPath(sourcePath, novelId, codexEntryId, filenameBase) {
+async function storeImageFromPath(sourcePath, novelId, filenameBase) {
 	try {
 		if (!fs.existsSync(sourcePath)) {
 			throw new Error('Source file does not exist.');
@@ -77,9 +76,6 @@ async function storeImageFromPath(sourcePath, novelId, codexEntryId, filenameBas
 		
 		// Build target directory path conditionally.
 		let targetDir = path.join(IMAGES_DIR, 'novels', String(novelId));
-		if (codexEntryId) {
-			targetDir = path.join(targetDir, String(codexEntryId));
-		}
 		
 		// Ensure the directory exists.
 		fs.mkdirSync(targetDir, { recursive: true });
@@ -92,9 +88,6 @@ async function storeImageFromPath(sourcePath, novelId, codexEntryId, filenameBas
 		
 		// Build relative path for DB storage conditionally.
 		let relativePath = path.join('novels', String(novelId));
-		if (codexEntryId) {
-			relativePath = path.join(relativePath, String(codexEntryId));
-		}
 		relativePath = path.join(relativePath, filename);
 		
 		return {

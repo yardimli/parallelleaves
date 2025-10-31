@@ -4,7 +4,6 @@ const fs = require('fs');
 const imageHandler = require('../../utils/image-handler.js');
 const { getNovelBackupData } = require('../autoBackupManager.js');
 
-const CODEX_DIR = path.join(app.getPath('userData'), 'codex');
 const DICTIONARIES_DIR = path.join(app.getPath('userData'), 'dictionaries');
 
 /**
@@ -39,7 +38,6 @@ function registerBackupRestoreHandlers(db, sessionManager) {
 				novel,
 				chapters = [],
 				image,
-				codexHtml,
 				dictionaryJson
 			} = backupData;
 			
@@ -89,17 +87,6 @@ function registerBackupRestoreHandlers(db, sessionManager) {
                     `).run(sessionManager.getSession()?.user.id || 1, newNovelId, uniqueName, uniqueName, 'restored');
 				} catch (e) {
 					console.error('Failed to restore cover image:', e);
-				}
-			}
-			
-			// Restore codex and dictionary files
-			if (codexHtml) {
-				try {
-					ensureDir(CODEX_DIR);
-					const codexPath = path.join(CODEX_DIR, `codex-${newNovelId}.html`);
-					fs.writeFileSync(codexPath, codexHtml, 'utf8');
-				} catch (e) {
-					console.error('Failed to restore codex file:', e);
 				}
 			}
 			

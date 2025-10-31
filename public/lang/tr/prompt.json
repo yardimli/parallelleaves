@@ -1,33 +1,20 @@
 {
   "common": {
     "dictionary": "Sözlük",
-    "dictionaryHelp": "Yapay zeka için özel bir sözlük veya terimler listesi sağlayın. Her satıra bir girdi, örn: 'Karakter Adı = Çevrilmiş Adı'.",
-    "useDictionary": "Özel Sözlük Kullan",
-    "editDictionary": "Sözlüğü Düzenle",
-    "useCodex": "Kodeks Kayıtlarını Kullan",
     "useTranslationMemory" : "Çeviri Belleğini Kullan",
     "tense": "Zaman",
     "past": "Geçmiş",
-    "present": "Şimdiki",
-    "user": {
-      "dictionaryBlock": "Take into account the following custom dictionary:\n<dictionary>\n{dictionaryContent}\n</dictionary>"
-    }
+    "present": "Şimdiki"
   },
   "rephrase": {
     "title": "Yeniden Yaz",
     "instructions": "Talimatlar",
-    "instructionsHelp": "Metni nasıl yeniden yazılacağına dair talimatlarınızı girin.",
     "instructionsPlaceholder": "Örn: Daha resmi bir dille yeniden yaz.",
     "contextInfo": "Bağlam Bilgisi",
-    "contextHelp": "En iyi sonuçlar için ilgili bağlam bilgileri yapay zekaya otomatik olarak gönderilir.",
-    "loadingCodex": "Kodeks kayıtları yükleniyor...",
     "system": {
-      "base": "You are an expert prose editor.\n\nWhenever you're given text, rephrase it using the following instructions: <instructions>{instructions}</instructions>\n\n{tenseBlock}\nImitate and keep the current writing style, and leave mannerisms, word choice and sentence structure intact.\nYou are free to remove redundant lines of speech. Use {language} spelling and grammar.\n\nOnly return the rephrased text, nothing else.",
-      "defaultInstruction": "Rephrase the given text.",
-      "tenseInstruction": "Write in the {tense} tense. "
+      "base": "You are an expert prose editor.\n\nWhenever you're given text, rephrase it using the following instructions: {instructions}\n\nuse the {tense} tense\nImitate and keep the current writing style, and leave mannerisms, word choice and sentence structure intact.\nYou are free to remove redundant lines of speech. Use {language} spelling and grammar.\n\nOnly return the rephrased text, nothing else."
     },
     "user": {
-      "codexBlock": "Take into account the following glossary of characters/locations/items/lore... when writing your response:\n<codex>\n{codexContent}\n</codex>",
       "surroundingTextBlock": "For contextual information, refer to surrounding words in the scene, DO NOT REPEAT THEM:\n<textBefore>\n{wordsBefore}\n</textBefore>\n<textAfter>\n{wordsAfter}\n</textAfter>",
       "surroundingTextBlockBeforeOnly": "For contextual information, refer to surrounding words in the scene, DO NOT REPEAT THEM:\n<textBefore>\n{wordsBefore}\n</textBefore>",
       "surroundingTextBlockAfterOnly": "For contextual information, refer to surrounding words in the scene, DO NOT REPEAT THEM:\n<textAfter>\n{wordsAfter}\n</textAfter>",
@@ -37,27 +24,17 @@
   "translate": {
     "title": "Çevir",
     "instructions": "Talimatlar",
-    "instructionsHelp": "Çeviri için özel talimatlarınızı girin.",
     "instructionsPlaceholder": "Örn: Resmi bir dille çevir. Karakter isimlerini değiştirme.",
     "contextInfo": "Bağlam Bilgisi",
-    "contextHelp": "Daha iyi çeviri için ilgili bağlam bilgileri (kodeks kayıtları gibi) yapay zekaya gönderilebilir.",
-    "loadingCodex": "Kodeks kayıtları yükleniyor...",
     "prevPairs": "Önceki Çeviriler",
     "prevPairsHelp": "Yapay zekaya bağlam sağlamak için önceki N çeviri bloğunu dahil et. (Kapatmak için 0 girin).",
     "noTranslationMemories" : "Kullanılabilir çeviri belleği yok.",
     "selectTranslationMemories" : "Çeviri Belleklerini Seç",
     "system": {
-      "base": "You are an expert literary translator. Your task is to translate a text from {sourceLanguage} to {targetLanguage}.\n{tenseBlock}\nPreserve the original tone, style, and literary devices as much as possible. Maintain the original paragraph breaks.\n\n{instructionsBlock}\n{dictionaryBlock}\n{examplesBlock}\n{codexBlock}\n\nOnly return the translated text, nothing else.",
-      "instructionsBlock": "Follow these specific instructions: <instructions>{instructions}</instructions>",
-      "tenseInstruction": "Translate in the {tense} tense. ",
-      "dictionaryBlock": "Use the following custom dictionary for consistent translation:\n<dictionary>\n{dictionaryContent}\n</dictionary>",
-      "examplesBlock": "Use the following translation examples to guide the translation:\n##TRANSLATION_MEMORY##",
-      "codexBlock": "Use the following glossary for consistent translation:\n##CODEX_BLOCK##"
+      "base": "You are an expert literary translator. Your task is to translate a text from {sourceLanguage} to {targetLanguage}.\nTranslate in the {tense} tense.\nPreserve the original tone, style, and literary devices as much as possible. Maintain the original paragraph breaks.\n\nFollow these specific instructions: {instructions}\nUse the following custom dictionary:\n{dictionary}\n##TRANSLATION_MEMORY##\n##CODEX_BLOCK##\n\nOnly return the translated text, nothing else."
     },
     "user": {
-      "codexBlock": "Use the following glossary for consistent translation.\n##CODEX_BLOCK##",
-      "translationExamples": "Use the following translation examples to guid the translation.\n##TRANSLATION_MEMORY##",
-      "textToTranslate": "Translate the following text from {sourceLanguage} to {targetLanguage}:\n\n<text>\n{text}\n</text>"
+      "textToTranslate": "Translate the following text from {sourceLanguage} to {targetLanguage}:\n\n{text}"
     }
   },
   "preview": {

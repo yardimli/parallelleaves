@@ -22,9 +22,7 @@ const promptBuilders = {
 const formDataExtractors = {
 	'rephrase': (form) => ({
 		instructions: form.elements.instructions.value.trim(),
-		tense: form.elements.tense.value,
-		useCodex: form.elements.use_codex.checked,
-		useDictionary: form.elements.use_dictionary.checked
+		tense: form.elements.tense.value
 	}),
 	'translate': (form) => {
 		const choicesInstance = getTranslationMemoryChoices();
@@ -33,9 +31,7 @@ const formDataExtractors = {
 		return {
 			instructions: form.elements.instructions.value.trim(),
 			tense: form.elements.tense.value,
-			useCodex: form.elements.use_codex.checked,
 			contextPairs: parseInt(form.elements.context_pairs.value, 10) || 0,
-			useDictionary: form.elements.use_dictionary.checked,
 			translationMemoryIds: tmIds
 		};
 	}
@@ -268,6 +264,7 @@ async function startAiAction(params) {
 	showAiSpinner();
 	
 	try {
+		console.log('Sending prompt to AI:', prompt);
 		const result = await window.api.processLLMText({ prompt, model, temperature, translation_memory_ids });
 		hideAiSpinner();
 		
@@ -468,18 +465,6 @@ async function handleModalApply() {
 		wordsAfter: selectionInfo.wordsAfter
 	};
 	
-	if (formDataObj.useCodex) {
-		const novelId = currentContext.novelId;
-		if (novelId) {
-			try {
-				const codexHtml = await window.api.codex.get(novelId);
-				promptContext.codexContent = htmlToPlainText(codexHtml);
-			} catch (error) {
-				console.error('Failed to fetch codex content for prompt:', error);
-			}
-		}
-	}
-	
 	if (action === 'translate' && formDataObj.contextPairs > 0) {
 		try {
 			const chapterId = currentContext.chapterId;
@@ -495,10 +480,7 @@ async function handleModalApply() {
 		}
 	}
 	
-	let dictionaryContextualContent = '';
-	if (formDataObj.useDictionary) {
-		dictionaryContextualContent = await window.api.getDictionaryContentForAI(novelId, 'translation');
-	}
+	let dictionaryContextualContent = await window.api.getDictionaryContentForAI(novelId, 'translation');
 	
 	const prompt = builder(formDataObj, promptContext, dictionaryContextualContent);
 	
