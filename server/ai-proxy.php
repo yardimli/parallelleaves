@@ -12,6 +12,20 @@
 	 */
 
 	/*
+	 *
+	 * CREATE TABLE `api_logs` (
+  `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `user_id` int(10) UNSIGNED NOT NULL,
+  `action` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `request_payload` longtext COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `response_body` longtext COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `response_code` smallint(6) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+	*
+	*
 	 * -- SQL for the new translation_logs table in MySQL
 	 * CREATE TABLE `translation_logs` (
 	 *   `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -158,7 +172,8 @@
 			$stmt = $db->prepare(
 				'INSERT INTO api_logs (user_id, action, request_payload, response_body, response_code) VALUES (?, ?, ?, ?, ?)'
 			);
-			$payloadJson = $requestPayload ? json_encode($requestPayload) : null;
+			// MODIFIED: Added JSON_UNESCAPED_UNICODE flag to prevent escaping of multi-byte characters.
+			$payloadJson = $requestPayload ? json_encode($requestPayload, JSON_UNESCAPED_UNICODE) : null;
 			$stmt->bind_param('isssi', $userId, $action, $payloadJson, $responseBody, $responseCode);
 			$stmt->execute();
 			$stmt->close();
