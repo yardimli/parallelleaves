@@ -7,7 +7,7 @@
 	 * including initializing jobs, processing text chunks to generate entries via an LLM,
 	 * and tracking progress. It is included and called by ai-proxy.php.
 	 *
-	 * @version 1.3.1
+	 * @version 1.3.2
 	 * @author Ekim Emre Yardimli
 	 */
 
@@ -172,24 +172,21 @@
 		$book = $stmt->get_result()->fetch_assoc();
 		$stmt->close();
 
-		// MODIFIED: The system prompt has been updated to instruct the LLM to return the complete, updated codex.
 		$systemPrompt = "You are a meticulous world-building assistant for a novelist. Your task is to maintain a codex (an encyclopedia of the world).\n\n**Instructions:**\n1. You will be given the **Existing Codex Content** and a new **Text Chunk** (written in {$book['source_language']}).\n2. Your job is to integrate new information from the text chunk into the codex.\n3. Identify new characters, locations, or lore. Add them as new entries.\n4. Identify new information about entities that already exist in the codex. Update their entries by incorporating the new details.\n5. **Your output must be the complete, updated codex.** This means you must include all original entries that were not changed, plus any new or updated entries.\n6. If you update an entry, the new version should completely replace the old one.\n7. Gormat for each entry: a title on its own line, followed by the description on the next line, with two blank lines separating entries.\n8. **IMPORTANT:** All your output must be written in **{$book['target_language']}**.\n9. If the text chunk adds no new information worth noting, you must return the **Existing Codex Content** exactly as it was given to you.";
 		$userPrompt = "**Existing Codex Content (for context):**\n<codex>\n" . ($book['codex_content'] ?? 'This is the beginning of the codex.') . "\n</codex>\n\n**Text Chunk to Analyze (in {$book['source_language']}):**\n<text>\n{$chunkText}\n</text>";
 
 		$messages = [['role' => 'system', 'content' => $systemPrompt], ['role' => 'user', 'content' => $userPrompt]];
 
-		// NEW: Add retry logic for the AI call to handle transient errors.
 		$aiResponse = null;
 		$maxRetries = 3;
 		for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
-			$aiResponse = callOpenRouterForCodex($codexConfig['model'], 0.5, $messages, $apiKey);
-			// Check for a valid response structure.
+			// MODIFIED: Pass the database connection and user ID to the API call function for logging.
+			$aiResponse = callOpenRouterForCodex($codexConfig['model'], 0.5, $messages, $apiKey, $db, $userId);
 			if ($aiResponse && isset($aiResponse['choices'][0]['message']['content'])) {
-				break; // Success, exit the loop.
+				break;
 			}
-			// If it's not the last attempt, wait before retrying.
 			if ($attempt < $maxRetries) {
-				sleep(1); // Wait for 1 second.
+				sleep(1);
 			}
 		}
 
@@ -201,12 +198,8 @@
 			sendJsonError(502, 'AI service failed to generate a valid response for the codex chunk after multiple attempts.');
 		}
 
-		// MODIFIED: The entire response from the AI is now treated as the new, complete codex content.
-		// The previous logic for parsing, merging, and rebuilding the codex has been removed.
 		$updatedCodexText = trim($aiResponse['choices'][0]['message']['content']);
 
-		// If the AI returns an empty response (which it shouldn't, based on the new prompt),
-		// we fall back to the existing content to avoid data loss.
 		if (empty($updatedCodexText)) {
 			$updatedCodexText = $book['codex_content'] ?? '';
 		}
@@ -254,9 +247,12 @@
 	 * @param float $temperature
 	 * @param array $messages
 	 * @param string $apiKey
+	 * @param mysqli $db
+	 * @param int $userId
 	 * @return array|null
 	 */
-	function callOpenRouterForCodex(string $model, float $temperature, array $messages, string $apiKey): ?array
+	// MODIFIED: Added $db and $userId parameters to the function signature for logging purposes.
+	function callOpenRouterForCodex(string $model, float $temperature, array $messages, string $apiKey, mysqli $db, int $userId): ?array
 	{
 		$payload = ['model' => $model, 'messages' => $messages, 'temperature' => $temperature];
 
@@ -274,6 +270,9 @@
 		$response = curl_exec($ch);
 		$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 		curl_close($ch);
+
+		// NEW: Log the interaction with the LLM API to the api_logs table.
+		logInteraction($db, $userId, 'codex_llm_call', $payload, (string)$response, $httpCode);
 
 		if ($httpCode !== 200) {
 			error_log("OpenRouter API Error for Codex (HTTP $httpCode): $response");

@@ -7,7 +7,7 @@
 	 * including syncing book content, generating new memory pairs via an LLM,
 	 * and retrieving stored memories. It is included and called by ai-proxy.php.
 	 *
-	 * @version 1.1.2
+	 * @version 1.1.3
 	 * @author Ekim Emre Yardimli
 	 */
 
@@ -63,9 +63,12 @@
 	 * @param float $temperature The temperature for the generation.
 	 * @param array $messages The array of messages for the prompt.
 	 * @param string $apiKey The OpenRouter API key.
+	 * @param mysqli $db The database connection object for logging.
+	 * @param int $userId The user's ID for logging.
 	 * @return array|null The decoded JSON response from the API or null on failure.
 	 */
-	function callOpenRouterForTm(string $model, float $temperature, array $messages, string $apiKey): ?array
+	// MODIFIED: Added $db and $userId parameters to the function signature for logging purposes.
+	function callOpenRouterForTm(string $model, float $temperature, array $messages, string $apiKey, mysqli $db, int $userId): ?array
 	{
 		$payload = [
 			'model' => $model,
@@ -88,6 +91,9 @@
 		$response = curl_exec($ch);
 		$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 		curl_close($ch);
+
+		// NEW: Log the interaction with the LLM API to the api_logs table.
+		logInteraction($db, $userId, 'tm_llm_call', $payload, (string)$response, $httpCode);
 
 		if ($httpCode !== 200) {
 			error_log("OpenRouter API Error (HTTP $httpCode): $response");
@@ -116,7 +122,6 @@
 		$novelId = $payload['novel_id'] ?? null;
 		$sourceLang = $payload['source_language'] ?? null;
 		$targetLang = $payload['target_language'] ?? null;
-		// MODIFIED: Get title and author from payload
 		$title = $payload['title'] ?? 'Untitled';
 		$author = $payload['author'] ?? null;
 		$pairs = $payload['pairs'] ?? [];
@@ -127,7 +132,6 @@
 
 		$db->begin_transaction();
 		try {
-			// MODIFIED: Find or create the user_book entry, now with title and author
 			$stmt = $db->prepare(
 				'INSERT INTO user_books (book_id, user_id, title, author, source_language, target_language) VALUES (?, ?, ?, ?, ?, ?)
                  ON DUPLICATE KEY UPDATE title = VALUES(title), author = VALUES(author), source_language = VALUES(source_language), target_language = VALUES(target_language)'
@@ -136,7 +140,6 @@
 			$stmt->execute();
 			$stmt->close();
 
-			// Get the user_book_id
 			$stmt = $db->prepare('SELECT id FROM user_books WHERE book_id = ? AND user_id = ?');
 			$stmt->bind_param('ii', $novelId, $userId);
 			$stmt->execute();
@@ -157,33 +160,26 @@
 				$targetText = $pair['target'];
 				$receivedMarkerIds[] = $markerId;
 
-				// 1. Check if the block already exists
 				$selectStmt->bind_param('ii', $userBookId, $markerId);
 				$selectStmt->execute();
 				$result = $selectStmt->get_result();
 				$existingBlock = $result->fetch_assoc();
 
 				if ($existingBlock) {
-					// 2. Row exists, compare content in PHP. This comparison is binary-safe and case-sensitive.
 					if ($existingBlock['source_text'] !== $sourceText || $existingBlock['target_text'] !== $targetText) {
-						// Content has changed, so update it and reset the is_analyzed flag to 0.
 						$updateStmt->bind_param('ssii', $sourceText, $targetText, $userBookId, $markerId);
 						$updateStmt->execute();
 					}
-					// If content is identical, do nothing to preserve the existing is_analyzed state.
 				} else {
-					// 3. Row does not exist, so insert a new one with is_analyzed set to 0.
 					$insertStmt->bind_param('iiss', $userBookId, $markerId, $sourceText, $targetText);
 					$insertStmt->execute();
 				}
 			}
 
-			// Close the prepared statements
 			$selectStmt->close();
 			$insertStmt->close();
 			$updateStmt->close();
 
-			// Delete blocks that are no longer present in the client
 			if (!empty($receivedMarkerIds)) {
 				$placeholders = implode(',', array_fill(0, count($receivedMarkerIds), '?'));
 				$types = 'i' . str_repeat('i', count($receivedMarkerIds));
@@ -194,7 +190,6 @@
 				$deleteStmt->execute();
 				$deleteStmt->close();
 			} else {
-				// If no pairs were received, delete all blocks for this book
 				$deleteStmt = $db->prepare("DELETE FROM user_book_blocks WHERE user_book_id = ?");
 				$deleteStmt->bind_param('i', $userBookId);
 				$deleteStmt->execute();
@@ -225,7 +220,6 @@
 			sendJsonError(400, 'Missing novel_id for starting a job.');
 		}
 
-		// Get user_book_id
 		$stmt = $db->prepare('SELECT id FROM user_books WHERE book_id = ? AND user_id = ?');
 		$stmt->bind_param('ii', $novelId, $userId);
 		$stmt->execute();
@@ -237,7 +231,6 @@
 		}
 		$userBookId = $userBook['id'];
 
-		// Count un-analyzed blocks
 		$stmt = $db->prepare('SELECT COUNT(*) as count FROM user_book_blocks WHERE user_book_id = ? AND is_analyzed = 0');
 		$stmt->bind_param('i', $userBookId);
 		$stmt->execute();
@@ -249,7 +242,6 @@
 			return;
 		}
 
-		// Create the job
 		$stmt = $db->prepare('INSERT INTO tm_generation_jobs (user_book_id, total_blocks) VALUES (?, ?)');
 		$stmt->bind_param('ii', $userBookId, $totalBlocks);
 		$stmt->execute();
@@ -276,7 +268,6 @@
 			sendJsonError(400, 'Missing job_id for processing.');
 		}
 
-		// Get job details and lock it
 		$db->begin_transaction();
 		$stmt = $db->prepare('SELECT * FROM tm_generation_jobs WHERE id = ? AND status IN ("pending", "running") FOR UPDATE');
 		$stmt->bind_param('i', $jobId);
@@ -288,7 +279,6 @@
 			sendJsonError(404, 'Job not found, already completed, or locked.');
 		}
 
-		// Verify user ownership
 		$stmt = $db->prepare('SELECT id FROM user_books WHERE id = ? AND user_id = ?');
 		$stmt->bind_param('ii', $job['user_book_id'], $userId);
 		$stmt->execute();
@@ -298,7 +288,6 @@
 		}
 		$stmt->close();
 
-		// Set job to running
 		if ($job['status'] === 'pending') {
 			$stmt = $db->prepare('UPDATE tm_generation_jobs SET status = "running", updated_at = NOW() WHERE id = ?');
 			$stmt->bind_param('i', $jobId);
@@ -307,7 +296,6 @@
 		}
 		$db->commit();
 
-		// Get languages
 		$stmt = $db->prepare('SELECT source_language, target_language FROM user_books WHERE id = ?');
 		$stmt->bind_param('i', $job['user_book_id']);
 		$stmt->execute();
@@ -316,7 +304,6 @@
 		$sourceLanguage = $userBook['source_language'];
 		$targetLanguage = $userBook['target_language'];
 
-		// Get the next block to process
 		$stmt = $db->prepare('SELECT id, source_text, target_text FROM user_book_blocks WHERE user_book_id = ? AND is_analyzed = 0 ORDER BY marker_id ASC LIMIT 1');
 		$stmt->bind_param('i', $job['user_book_id']);
 		$stmt->execute();
@@ -324,7 +311,6 @@
 		$stmt->close();
 
 		if (!$block) {
-			// No more blocks, mark job as complete
 			$stmt = $db->prepare('UPDATE tm_generation_jobs SET status = "complete", updated_at = NOW() WHERE id = ?');
 			$stmt->bind_param('i', $jobId);
 			$stmt->execute();
@@ -333,7 +319,6 @@
 			return;
 		}
 
-		// Process the block
 		$model = $tmConfig['model'];
 		$pairCount = $tmConfig['pair_count'];
 		$temperature = 0.7;
@@ -343,36 +328,31 @@
 
 		$messages = [['role' => 'system', 'content' => $systemPrompt], ['role' => 'user', 'content' => $userPrompt]];
 
-		// NEW: Add retry logic for the AI call and JSON parsing.
 		$aiResponse = null;
 		$contentJson = null;
 		$maxRetries = 3;
 		for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
-			$aiResponse = callOpenRouterForTm($model, (float)$temperature, $messages, $apiKey);
+			// MODIFIED: Pass the database connection and user ID to the API call function for logging.
+			$aiResponse = callOpenRouterForTm($model, (float)$temperature, $messages, $apiKey, $db, $userId);
 			if ($aiResponse && isset($aiResponse['choices'][0]['message']['content'])) {
 				$contentJson = json_decode($aiResponse['choices'][0]['message']['content'], true);
 				if (json_last_error() === JSON_ERROR_NONE && isset($contentJson['pairs']) && is_array($contentJson['pairs'])) {
-					break; // Success, exit the loop.
+					break;
 				}
 			}
-			// If it's not the last attempt, wait before retrying.
 			if ($attempt < $maxRetries) {
-				sleep(1); // Wait for 1 second.
+				sleep(1);
 			}
-			// Reset for the next attempt.
 			$aiResponse = null;
 			$contentJson = null;
 		}
 
-		// MODIFIED: Check if the loop succeeded and handle failure if it didn't.
 		if (!$aiResponse || !$contentJson) {
-			// Determine a more specific error message.
 			$errorMsg = 'AI service failed to generate a valid response after multiple attempts.';
 			if ($aiResponse && !$contentJson) {
 				$errorMsg = 'AI service returned invalid JSON after multiple attempts.';
 			}
 
-			// Mark job as errored and stop.
 			$stmt = $db->prepare('UPDATE tm_generation_jobs SET status = "error", error_message = ? WHERE id = ?');
 			$stmt->bind_param('si', $errorMsg, $jobId);
 			$stmt->execute();
@@ -380,7 +360,6 @@
 			sendJsonError(502, $errorMsg);
 		}
 
-		// Save results and update progress
 		$db->begin_transaction();
 		try {
 			$deleteStmt = $db->prepare('DELETE FROM user_books_translation_memory WHERE block_id = ?');
@@ -388,7 +367,6 @@
 			$deleteStmt->execute();
 			$deleteStmt->close();
 
-			// Now, insert the new TM entries generated by the AI.
 			$insertStmt = $db->prepare('INSERT INTO user_books_translation_memory (user_book_id, block_id, source_sentence, target_sentence) VALUES (?, ?, ?, ?)');
 			foreach ($contentJson['pairs'] as $pair) {
 				if (isset($pair['source']) && isset($pair['target'])) {
@@ -398,13 +376,11 @@
 			}
 			$insertStmt->close();
 
-			// Mark the block as analyzed.
 			$updateStmt = $db->prepare('UPDATE user_book_blocks SET is_analyzed = 1 WHERE id = ?');
 			$updateStmt->bind_param('i', $block['id']);
 			$updateStmt->execute();
 			$updateStmt->close();
 
-			// Update the job progress.
 			$updateJobStmt = $db->prepare('UPDATE tm_generation_jobs SET processed_blocks = processed_blocks + 1, updated_at = NOW() WHERE id = ?');
 			$updateJobStmt->bind_param('i', $jobId);
 			$updateJobStmt->execute();
