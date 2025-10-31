@@ -163,9 +163,17 @@ async function saveSourceChanges (chapterId) {
 	}
 }
 
-async function synchronizeMarkers (chapterId, sourceContainer, targetHtml) {
+/**
+ * MODIFIED: This function now operates on raw HTML strings before rendering
+ * and returns the cleaned content. It no longer interacts with the DOM or API.
+ * @param {string} rawSourceHtml - The raw source HTML content from the database.
+ * @param {string} rawTargetHtml - The raw target HTML content from the database.
+ * @returns {{cleanedSourceContent: string, wasModified: boolean}} - The cleaned source content and a flag indicating if changes were made.
+ */
+function synchronizeMarkers (rawSourceHtml, rawTargetHtml) {
 	const markerRegex = /(\[\[#(\d+)\]\])|(\{\{#(\d+)\}\})/g;
-	let sourceHtml = sourceContainer.innerHTML;
+	let sourceHtml = rawSourceHtml || '';
+	const targetHtml = rawTargetHtml || '';
 	
 	const getMarkerNumbers = (html) => {
 		const numbers = new Set();
@@ -176,25 +184,26 @@ async function synchronizeMarkers (chapterId, sourceContainer, targetHtml) {
 	};
 	
 	const sourceMarkerNumbers = getMarkerNumbers(sourceHtml);
-	if (sourceMarkerNumbers.size === 0) return;
+	if (sourceMarkerNumbers.size === 0) {
+		return { cleanedSourceContent: sourceHtml, wasModified: false };
+	}
 	
 	const targetMarkerNumbers = getMarkerNumbers(targetHtml);
 	let wasModified = false;
 	
 	sourceMarkerNumbers.forEach(number => {
 		if (!targetMarkerNumbers.has(number)) {
-			const openingMarkerRegex = new RegExp(`\\[\\[#${number}\\]\]\\s*`, 'g');
+			const openingMarkerRegex = new RegExp(`\\[\\[#${number}\\]\\]\\s*`, 'g');
 			const closingMarkerRegex = new RegExp(`\\{\\{#${number}\\}\\}\\s*`, 'g');
 			const originalSourceHtml = sourceHtml;
 			sourceHtml = sourceHtml.replace(openingMarkerRegex, '').replace(closingMarkerRegex, '');
-			if (sourceHtml !== originalSourceHtml) wasModified = true;
+			if (sourceHtml !== originalSourceHtml) {
+				wasModified = true;
+			}
 		}
 	});
 	
-	if (wasModified) {
-		sourceContainer.innerHTML = sourceHtml;
-		await window.api.updateChapterField({ chapterId, field: 'source_content', value: sourceHtml });
-	}
+	return { cleanedSourceContent: sourceHtml, wasModified };
 }
 
 async function renderManuscript (novelData) {
@@ -222,7 +231,19 @@ async function renderManuscript (novelData) {
 		targetFragment.appendChild(noChaptersMessage.cloneNode(true));
 	} else {
 		for (const chapter of novelData.chapters) {
-			const rawSourceContent = chapter.source_content || '';
+			// MODIFICATION START: The logic for cleaning up orphan markers has been moved here.
+			// It now operates on raw HTML strings before any DOM manipulation.
+			const { cleanedSourceContent, wasModified } = synchronizeMarkers(chapter.source_content, chapter.target_content);
+			
+			if (wasModified) {
+				// If markers were removed, update the database in the background.
+				window.api.updateChapterField({ chapterId: chapter.id, field: 'source_content', value: cleanedSourceContent });
+			}
+			
+			// Use the cleaned content for rendering.
+			const rawSourceContent = cleanedSourceContent || '';
+			// MODIFICATION END
+			
 			const finalSourceContent = processSourceContentForMarkers(rawSourceContent);
 			
 			const sourceHtml = sourceChapterTpl
@@ -244,10 +265,7 @@ async function renderManuscript (novelData) {
 			const targetChapterWrapper = tempDiv.firstChild;
 			targetFragment.appendChild(targetChapterWrapper);
 			
-			const sourceContentContainer = sourceChapterWrapper.querySelector('.source-content-readonly');
 			const iframe = targetChapterWrapper.querySelector('iframe');
-			
-			await synchronizeMarkers(chapter.id, sourceContentContainer, chapter.target_content || '');
 			
 			totalIframes++;
 			const viewInfo = { iframe, isReady: false, initialContent: chapter.target_content || '', initialResizeComplete: false };
@@ -278,6 +296,13 @@ async function renderManuscript (novelData) {
 	targetContainer.innerHTML = '';
 	sourceContainer.appendChild(sourceFragment);
 	targetContainer.appendChild(targetFragment);
+	
+	// NEW: Add a final cleanup step to remove any lingering empty marker links as a failsafe.
+	sourceContainer.querySelectorAll('a.translation-marker-link').forEach(link => {
+		if (link.textContent.trim() === '') {
+			link.remove();
+		}
+	});
 	
 	applyTranslationsTo(sourceContainer);
 	applyTranslationsTo(targetContainer);
