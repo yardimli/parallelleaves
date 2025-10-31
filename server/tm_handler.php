@@ -7,7 +7,7 @@
 	 * including syncing book content, generating new memory pairs via an LLM,
 	 * and retrieving stored memories. It is included and called by ai-proxy.php.
 	 *
-	 * @version 1.1.1
+	 * @version 1.1.2
 	 * @author Ekim Emre Yardimli
 	 */
 
@@ -342,27 +342,42 @@
 		$userPrompt = "Analyze the following pair and generate exactly {$pairCount} translation pair(s) that best reflect the translator's style.\n\nSource ({$sourceLanguage}):\n{$block['source_text']}\n\nTranslation ({$targetLanguage}):\n{$block['target_text']}";
 
 		$messages = [['role' => 'system', 'content' => $systemPrompt], ['role' => 'user', 'content' => $userPrompt]];
-		$aiResponse = callOpenRouterForTm($model, (float)$temperature, $messages, $apiKey);
 
-		if (!$aiResponse || !isset($aiResponse['choices'][0]['message']['content'])) {
-			// AI Error, mark job as errored and stop
-			$errorMsg = 'AI service failed to generate a valid response.';
-			$stmt = $db->prepare('UPDATE tm_generation_jobs SET status = "error", error_message = ? WHERE id = ?');
-			$stmt->bind_param('si', $errorMsg, $jobId);
-			$stmt->execute();
-			$stmt->close();
-			sendJsonError(500, $errorMsg);
+		// NEW: Add retry logic for the AI call and JSON parsing.
+		$aiResponse = null;
+		$contentJson = null;
+		$maxRetries = 3;
+		for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+			$aiResponse = callOpenRouterForTm($model, (float)$temperature, $messages, $apiKey);
+			if ($aiResponse && isset($aiResponse['choices'][0]['message']['content'])) {
+				$contentJson = json_decode($aiResponse['choices'][0]['message']['content'], true);
+				if (json_last_error() === JSON_ERROR_NONE && isset($contentJson['pairs']) && is_array($contentJson['pairs'])) {
+					break; // Success, exit the loop.
+				}
+			}
+			// If it's not the last attempt, wait before retrying.
+			if ($attempt < $maxRetries) {
+				sleep(1); // Wait for 1 second.
+			}
+			// Reset for the next attempt.
+			$aiResponse = null;
+			$contentJson = null;
 		}
 
-		$contentJson = json_decode($aiResponse['choices'][0]['message']['content'], true);
-		if (json_last_error() !== JSON_ERROR_NONE || !isset($contentJson['pairs']) || !is_array($contentJson['pairs'])) {
-			// JSON Error, mark job as errored and stop
-			$errorMsg = 'AI service returned invalid JSON.';
+		// MODIFIED: Check if the loop succeeded and handle failure if it didn't.
+		if (!$aiResponse || !$contentJson) {
+			// Determine a more specific error message.
+			$errorMsg = 'AI service failed to generate a valid response after multiple attempts.';
+			if ($aiResponse && !$contentJson) {
+				$errorMsg = 'AI service returned invalid JSON after multiple attempts.';
+			}
+
+			// Mark job as errored and stop.
 			$stmt = $db->prepare('UPDATE tm_generation_jobs SET status = "error", error_message = ? WHERE id = ?');
 			$stmt->bind_param('si', $errorMsg, $jobId);
 			$stmt->execute();
 			$stmt->close();
-			sendJsonError(500, $errorMsg);
+			sendJsonError(502, $errorMsg);
 		}
 
 		// Save results and update progress

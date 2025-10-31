@@ -7,7 +7,7 @@
 	 * including initializing jobs, processing text chunks to generate entries via an LLM,
 	 * and tracking progress. It is included and called by ai-proxy.php.
 	 *
-	 * @version 1.3.0
+	 * @version 1.3.1
 	 * @author Ekim Emre Yardimli
 	 */
 
@@ -177,14 +177,28 @@
 		$userPrompt = "**Existing Codex Content (for context):**\n<codex>\n" . ($book['codex_content'] ?? 'This is the beginning of the codex.') . "\n</codex>\n\n**Text Chunk to Analyze (in {$book['source_language']}):**\n<text>\n{$chunkText}\n</text>";
 
 		$messages = [['role' => 'system', 'content' => $systemPrompt], ['role' => 'user', 'content' => $userPrompt]];
-		$aiResponse = callOpenRouterForCodex($codexConfig['model'], 0.5, $messages, $apiKey);
+
+		// NEW: Add retry logic for the AI call to handle transient errors.
+		$aiResponse = null;
+		$maxRetries = 3;
+		for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+			$aiResponse = callOpenRouterForCodex($codexConfig['model'], 0.5, $messages, $apiKey);
+			// Check for a valid response structure.
+			if ($aiResponse && isset($aiResponse['choices'][0]['message']['content'])) {
+				break; // Success, exit the loop.
+			}
+			// If it's not the last attempt, wait before retrying.
+			if ($attempt < $maxRetries) {
+				sleep(1); // Wait for 1 second.
+			}
+		}
 
 		if (!$aiResponse || !isset($aiResponse['choices'][0]['message']['content'])) {
 			$stmt = $db->prepare('UPDATE user_books SET codex_chunks_processed = codex_chunks_processed + 1, codex_status = "error" WHERE id = ?');
 			$stmt->bind_param('i', $userBookId);
 			$stmt->execute();
 			$stmt->close();
-			sendJsonError(502, 'AI service failed to generate a valid response for the codex chunk.');
+			sendJsonError(502, 'AI service failed to generate a valid response for the codex chunk after multiple attempts.');
 		}
 
 		// MODIFIED: The entire response from the AI is now treated as the new, complete codex content.
