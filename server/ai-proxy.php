@@ -50,6 +50,8 @@
 	 *   `id` int(11) NOT NULL AUTO_INCREMENT,
 	 *   `book_id` int(11) NOT NULL COMMENT 'The novel_id from the Electron app''s local DB',
 	 *   `user_id` int(11) NOT NULL,
+	 *   `title` varchar(255) NOT NULL,
+	 *   `author` varchar(255) DEFAULT NULL,
 	 *   `source_language` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
 	 *   `target_language` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
 	 *   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),

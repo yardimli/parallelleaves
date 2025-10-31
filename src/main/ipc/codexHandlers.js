@@ -109,13 +109,14 @@ function registerCodexHandlers(db, sessionManager, windowManager) {
 			}
 			
 			// 3. Start the job on the server, now including novel metadata
+			// MODIFIED: Ensure title and author are sent to the server.
 			await callCodexApi('codex_start_job', {
 				novel_id: novelId,
 				total_chunks: chunks.length,
-				title: novel.title, // Add title
-				author: novel.author, // Add author
-				source_language: novel.source_language, // Add source language
-				target_language: novel.target_language, // Add target language
+				title: novel.title,
+				author: novel.author,
+				source_language: novel.source_language,
+				target_language: novel.target_language,
 			}, token);
 			
 			// 4. Process chunks sequentially

@@ -187,7 +187,8 @@ function registerTranslationMemoryHandlers(db, sessionManager, windowManager) {
 			
 			// Step 1: Sync local content
 			editorWindow.webContents.send('translation-memory:progress-update', { message: 'Syncing novel content...' });
-			const novel = db.prepare('SELECT source_language, target_language FROM novels WHERE id = ?').get(novelId);
+			// MODIFIED: Fetch title and author along with languages
+			const novel = db.prepare('SELECT title, author, source_language, target_language FROM novels WHERE id = ?').get(novelId);
 			if (!novel) throw new Error('Novel not found locally.');
 			
 			const chapters = db.prepare('SELECT source_content, target_content FROM chapters WHERE novel_id = ?').all(novelId);
@@ -195,8 +196,11 @@ function registerTranslationMemoryHandlers(db, sessionManager, windowManager) {
 			const combinedTarget = chapters.map(c => c.target_content || '').join('');
 			const allPairs = extractAllMarkerPairs(combinedSource, combinedTarget);
 			
+			// MODIFIED: Send title and author in the sync payload
 			await callTmApi('tm_sync_blocks', {
 				novel_id: novelId,
+				title: novel.title,
+				author: novel.author,
 				source_language: novel.source_language,
 				target_language: novel.target_language,
 				pairs: allPairs

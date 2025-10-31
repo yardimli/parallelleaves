@@ -7,7 +7,7 @@
 	 * including initializing jobs, processing text chunks to generate entries via an LLM,
 	 * and tracking progress. It is included and called by ai-proxy.php.
 	 *
-	 * @version 1.1.0
+	 * @version 1.2.0
 	 * @author Ekim Emre Yardimli
 	 */
 
@@ -111,28 +111,26 @@
 		$totalChunks = $payload['total_chunks'] ?? 0;
 		$sourceLang = $payload['source_language'] ?? null;
 		$targetLang = $payload['target_language'] ?? null;
+		$title = $payload['title'] ?? 'Untitled';
+		$author = $payload['author'] ?? null;
 
 		if (!$novelId || !$sourceLang || !$targetLang) {
 			sendJsonError(400, 'Missing novel_id, source_language, or target_language to start a job.');
 		}
 
-		// Find or create the user_book entry using INSERT ... ON DUPLICATE KEY UPDATE
 		$stmt = $db->prepare(
-			'INSERT INTO user_books (book_id, user_id, source_language, target_language) VALUES (?, ?, ?, ?)
-			 ON DUPLICATE KEY UPDATE source_language = VALUES(source_language), target_language = VALUES(target_language)'
+			'INSERT INTO user_books (book_id, user_id, title, author, source_language, target_language) VALUES (?, ?, ?, ?, ?, ?)
+			 ON DUPLICATE KEY UPDATE title = VALUES(title), author = VALUES(author), source_language = VALUES(source_language), target_language = VALUES(target_language)'
 		);
-		$stmt->bind_param('iiss', $novelId, $userId, $sourceLang, $targetLang);
+		$stmt->bind_param('iissss', $novelId, $userId, $title, $author, $sourceLang, $targetLang);
 		$stmt->execute();
 		$stmt->close();
 
-		// Get the user_book_id for the now-guaranteed entry
 		$userBookId = getUserBookId($db, $userId, (int)$novelId);
 		if (!$userBookId) {
-			// This should not happen if the above query was successful
 			sendJsonError(500, 'Failed to find or create book entry in the database.');
 		}
 
-		// Proceed with resetting the codex job status for the book
 		$stmt = $db->prepare(
 			'UPDATE user_books SET codex_content = NULL, codex_status = "generating", codex_chunks_total = ?, codex_chunks_processed = 0 WHERE id = ?'
 		);
@@ -174,7 +172,7 @@
 		$book = $stmt->get_result()->fetch_assoc();
 		$stmt->close();
 
-		$systemPrompt = "You are a meticulous world-building assistant for a novelist. Your task is to analyze a chunk of text from a novel and update a codex (an encyclopedia of the world).\n\n**Instructions:**\n1. Read the provided **Text Chunk** (written in {$book['source_language']}).\n2. Review the **Existing Codex Content** to understand what is already documented.\n3. Identify new characters, locations, or significant objects/lore within the text chunk.\n4. Identify if the text chunk provides new information or details about entities that *already exist* in the codex.\n5. For each new or updated entity, write a brief, encyclopedia-style entry.\n6. **IMPORTANT:** All your output must be written in **{$book['target_language']}**.\n7. Format your entire output as a single block of simple HTML. Use `<h3>` for each entity's title and `<p>` for its description.\n8. If you are updating an existing entry, your new entry should be a complete replacement, incorporating both old and new information.\n9. Return **only the HTML for the new or updated entries**. Do not repeat entries from the existing codex that were not changed by the new text chunk.\n10. If you find no new or updated entities worth adding, return an empty string.";
+		$systemPrompt = "You are a meticulous world-building assistant for a novelist. Your task is to analyze a chunk of text from a novel and update a codex (an encyclopedia of the world).\n\n**Instructions:**\n1. Read the provided **Text Chunk** (written in {$book['source_language']}).\n2. Review the **Existing Codex Content** to understand what is already documented.\n3. Identify new characters, locations, or significant objects/lore within the text chunk.\n4. Identify if the text chunk provides new information or details about entities that *already exist* in the codex.\n5. For each new or updated entity, write a brief, encyclopedia-style entry.\n6. **IMPORTANT:** All your output must be written in **{$book['target_language']}**.\n7. Format your entire output as plain text. For each entry, put the title on its own line, followed by the description on the next line. Separate entries with two blank lines. Example:\n\nENTITY TITLE\nA paragraph describing the entity.\n\nANOTHER ENTITY\nAnother paragraph for this other entity.\n8. If you are updating an existing entry, your new entry should be a complete replacement, incorporating both old and new information.\n9. Return **only the text for the new or updated entries**. Do not repeat entries from the existing codex that were not changed by the new text chunk.\n10. If you find no new or updated entities worth adding, return an empty string.";
 		$userPrompt = "**Existing Codex Content (for context):**\n<codex>\n" . mb_substr($book['codex_content'] ?? '', 0, 8000) . "\n</codex>\n\n**Text Chunk to Analyze (in {$book['source_language']}):**\n<text>\n{$chunkText}\n</text>";
 
 		$messages = [['role' => 'system', 'content' => $systemPrompt], ['role' => 'user', 'content' => $userPrompt]];
@@ -188,25 +186,23 @@
 			sendJsonError(502, 'AI service failed to generate a valid response for the codex chunk.');
 		}
 
-		$newHtml = $aiResponse['choices'][0]['message']['content'];
-		$currentCodex = $book['codex_content'] ?? '';
+		$newlyGeneratedText = $aiResponse['choices'][0]['message']['content'];
+		$currentCodexText = $book['codex_content'] ?? '';
 
-		if (!empty(trim($newHtml))) {
-			$newEntries = parseEntriesFromHtml($newHtml);
-			foreach ($newEntries as $entry) {
-				$escapedTitle = preg_quote($entry['title'], '/');
-				$entryRegex = "/(<h3>\s*{$escapedTitle}\s*<\/h3>[\s\S]*?<p>[\s\S]*?<\/p>)/i";
+		if (!empty(trim($newlyGeneratedText))) {
+			// Parse existing and new entries into associative arrays
+			$codexMap = parseEntriesFromText($currentCodexText);
+			$newEntriesMap = parseEntriesFromText($newlyGeneratedText);
 
-				if (preg_match($entryRegex, $currentCodex)) {
-					$currentCodex = preg_replace($entryRegex, $entry['html'], $currentCodex);
-				} else {
-					$currentCodex .= "\n" . $entry['html'];
-				}
-			}
+			// Merge new entries into the existing map. array_merge overwrites existing keys, which is perfect for updates.
+			$mergedMap = array_merge($codexMap, $newEntriesMap);
+
+			// Rebuild the final codex text from the merged map
+			$currentCodexText = buildTextFromEntries($mergedMap);
 		}
 
 		$stmt = $db->prepare('UPDATE user_books SET codex_content = ?, codex_chunks_processed = codex_chunks_processed + 1 WHERE id = ?');
-		$stmt->bind_param('si', $currentCodex, $userBookId);
+		$stmt->bind_param('si', $currentCodexText, $userBookId);
 		$stmt->execute();
 		$stmt->close();
 
@@ -278,26 +274,51 @@
 	}
 
 	/**
-	 * Helper to parse HTML from AI into distinct entries.
+	 * Helper to parse plain text from AI into an associative array of entries.
 	 *
-	 * @param string $html
-	 * @return array
+	 * @param string $text The plain text containing codex entries.
+	 * @return array An associative array with title => description.
 	 */
-	function parseEntriesFromHtml(string $html): array
+	function parseEntriesFromText(string $text): array
 	{
 		$entries = [];
-		$entryRegex = '/(<h3>[\s\S]*?<\/h3>[\s\S]*?<p>[\s\S]*?<\/p>)/i';
-		preg_match_all($entryRegex, $html, $matches);
+		// Normalize line endings and split by two or more newlines
+		$blocks = preg_split('/(\r\n|\n|\r){2,}/', trim($text));
 
-		foreach ($matches[0] as $matchHtml) {
-			$titleRegex = '/<h3>([\s\S]*?)<\/h3>/i';
-			preg_match($titleRegex, $matchHtml, $titleMatches);
-			$title = $titleMatches[1] ?? 'Untitled';
+		foreach ($blocks as $block) {
+			if (empty(trim($block))) {
+				continue;
+			}
+			// Find the position of the first newline
+			$firstNewlinePos = strpos($block, "\n");
+			if ($firstNewlinePos === false) {
+				// If no newline, the whole block is the title
+				$title = trim($block);
+				$description = '';
+			} else {
+				// Title is the first line, description is the rest
+				$title = trim(substr($block, 0, $firstNewlinePos));
+				$description = trim(substr($block, $firstNewlinePos + 1));
+			}
 
-			$entries[] = [
-				'title' => trim($title),
-				'html' => trim($matchHtml),
-			];
+			if (!empty($title)) {
+				$entries[$title] = $description;
+			}
 		}
 		return $entries;
+	}
+
+	/**
+	 * Helper to build a plain text string from an associative array of entries.
+	 *
+	 * @param array $entries An associative array with title => description.
+	 * @return string The formatted plain text string.
+	 */
+	function buildTextFromEntries(array $entries): string
+	{
+		$text = '';
+		foreach ($entries as $title => $description) {
+			$text .= $title . "\n" . $description . "\n\n";
+		}
+		return trim($text);
 	}

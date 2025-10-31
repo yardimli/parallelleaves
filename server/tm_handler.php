@@ -116,6 +116,9 @@
 		$novelId = $payload['novel_id'] ?? null;
 		$sourceLang = $payload['source_language'] ?? null;
 		$targetLang = $payload['target_language'] ?? null;
+		// MODIFIED: Get title and author from payload
+		$title = $payload['title'] ?? 'Untitled';
+		$author = $payload['author'] ?? null;
 		$pairs = $payload['pairs'] ?? [];
 
 		if (!$novelId || !$sourceLang || !$targetLang || !is_array($pairs)) {
@@ -124,9 +127,12 @@
 
 		$db->begin_transaction();
 		try {
-			// Find or create the user_book entry
-			$stmt = $db->prepare('INSERT INTO user_books (book_id, user_id, source_language, target_language) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE source_language = VALUES(source_language), target_language = VALUES(target_language)');
-			$stmt->bind_param('iiss', $novelId, $userId, $sourceLang, $targetLang);
+			// MODIFIED: Find or create the user_book entry, now with title and author
+			$stmt = $db->prepare(
+				'INSERT INTO user_books (book_id, user_id, title, author, source_language, target_language) VALUES (?, ?, ?, ?, ?, ?)
+                 ON DUPLICATE KEY UPDATE title = VALUES(title), author = VALUES(author), source_language = VALUES(source_language), target_language = VALUES(target_language)'
+			);
+			$stmt->bind_param('iissss', $novelId, $userId, $title, $author, $sourceLang, $targetLang);
 			$stmt->execute();
 			$stmt->close();
 
