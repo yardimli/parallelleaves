@@ -7,7 +7,7 @@
 	 * including initializing jobs, processing text chunks to generate entries via an LLM,
 	 * and tracking progress. It is included and called by ai-proxy.php.
 	 *
-	 * @version 1.2.0
+	 * @version 1.3.0
 	 * @author Ekim Emre Yardimli
 	 */
 
@@ -172,8 +172,9 @@
 		$book = $stmt->get_result()->fetch_assoc();
 		$stmt->close();
 
-		$systemPrompt = "You are a meticulous world-building assistant for a novelist. Your task is to analyze a chunk of text from a novel and update a codex (an encyclopedia of the world).\n\n**Instructions:**\n1. Read the provided **Text Chunk** (written in {$book['source_language']}).\n2. Review the **Existing Codex Content** to understand what is already documented.\n3. Identify new characters, locations, or significant objects/lore within the text chunk.\n4. Identify if the text chunk provides new information or details about entities that *already exist* in the codex.\n5. For each new or updated entity, write a brief, encyclopedia-style entry.\n6. **IMPORTANT:** All your output must be written in **{$book['target_language']}**.\n7. Format your entire output as plain text. For each entry, put the title on its own line, followed by the description on the next line. Separate entries with two blank lines. Example:\n\nENTITY TITLE\nA paragraph describing the entity.\n\nANOTHER ENTITY\nAnother paragraph for this other entity.\n8. If you are updating an existing entry, your new entry should be a complete replacement, incorporating both old and new information.\n9. Return **only the text for the new or updated entries**. Do not repeat entries from the existing codex that were not changed by the new text chunk.\n10. If you find no new or updated entities worth adding, return an empty string.";
-		$userPrompt = "**Existing Codex Content (for context):**\n<codex>\n" . mb_substr($book['codex_content'] ?? '', 0, 8000) . "\n</codex>\n\n**Text Chunk to Analyze (in {$book['source_language']}):**\n<text>\n{$chunkText}\n</text>";
+		// MODIFIED: The system prompt has been updated to instruct the LLM to return the complete, updated codex.
+		$systemPrompt = "You are a meticulous world-building assistant for a novelist. Your task is to maintain a codex (an encyclopedia of the world).\n\n**Instructions:**\n1. You will be given the **Existing Codex Content** and a new **Text Chunk** (written in {$book['source_language']}).\n2. Your job is to integrate new information from the text chunk into the codex.\n3. Identify new characters, locations, or lore. Add them as new entries.\n4. Identify new information about entities that already exist in the codex. Update their entries by incorporating the new details.\n5. **Your output must be the complete, updated codex.** This means you must include all original entries that were not changed, plus any new or updated entries.\n6. If you update an entry, the new version should completely replace the old one.\n7. Gormat for each entry: a title on its own line, followed by the description on the next line, with two blank lines separating entries.\n8. **IMPORTANT:** All your output must be written in **{$book['target_language']}**.\n9. If the text chunk adds no new information worth noting, you must return the **Existing Codex Content** exactly as it was given to you.";
+		$userPrompt = "**Existing Codex Content (for context):**\n<codex>\n" . ($book['codex_content'] ?? 'This is the beginning of the codex.') . "\n</codex>\n\n**Text Chunk to Analyze (in {$book['source_language']}):**\n<text>\n{$chunkText}\n</text>";
 
 		$messages = [['role' => 'system', 'content' => $systemPrompt], ['role' => 'user', 'content' => $userPrompt]];
 		$aiResponse = callOpenRouterForCodex($codexConfig['model'], 0.5, $messages, $apiKey);
@@ -186,23 +187,18 @@
 			sendJsonError(502, 'AI service failed to generate a valid response for the codex chunk.');
 		}
 
-		$newlyGeneratedText = $aiResponse['choices'][0]['message']['content'];
-		$currentCodexText = $book['codex_content'] ?? '';
+		// MODIFIED: The entire response from the AI is now treated as the new, complete codex content.
+		// The previous logic for parsing, merging, and rebuilding the codex has been removed.
+		$updatedCodexText = trim($aiResponse['choices'][0]['message']['content']);
 
-		if (!empty(trim($newlyGeneratedText))) {
-			// Parse existing and new entries into associative arrays
-			$codexMap = parseEntriesFromText($currentCodexText);
-			$newEntriesMap = parseEntriesFromText($newlyGeneratedText);
-
-			// Merge new entries into the existing map. array_merge overwrites existing keys, which is perfect for updates.
-			$mergedMap = array_merge($codexMap, $newEntriesMap);
-
-			// Rebuild the final codex text from the merged map
-			$currentCodexText = buildTextFromEntries($mergedMap);
+		// If the AI returns an empty response (which it shouldn't, based on the new prompt),
+		// we fall back to the existing content to avoid data loss.
+		if (empty($updatedCodexText)) {
+			$updatedCodexText = $book['codex_content'] ?? '';
 		}
 
 		$stmt = $db->prepare('UPDATE user_books SET codex_content = ?, codex_chunks_processed = codex_chunks_processed + 1 WHERE id = ?');
-		$stmt->bind_param('si', $currentCodexText, $userBookId);
+		$stmt->bind_param('si', $updatedCodexText, $userBookId);
 		$stmt->execute();
 		$stmt->close();
 
@@ -271,54 +267,4 @@
 		}
 
 		return json_decode($response, true);
-	}
-
-	/**
-	 * Helper to parse plain text from AI into an associative array of entries.
-	 *
-	 * @param string $text The plain text containing codex entries.
-	 * @return array An associative array with title => description.
-	 */
-	function parseEntriesFromText(string $text): array
-	{
-		$entries = [];
-		// Normalize line endings and split by two or more newlines
-		$blocks = preg_split('/(\r\n|\n|\r){2,}/', trim($text));
-
-		foreach ($blocks as $block) {
-			if (empty(trim($block))) {
-				continue;
-			}
-			// Find the position of the first newline
-			$firstNewlinePos = strpos($block, "\n");
-			if ($firstNewlinePos === false) {
-				// If no newline, the whole block is the title
-				$title = trim($block);
-				$description = '';
-			} else {
-				// Title is the first line, description is the rest
-				$title = trim(substr($block, 0, $firstNewlinePos));
-				$description = trim(substr($block, $firstNewlinePos + 1));
-			}
-
-			if (!empty($title)) {
-				$entries[$title] = $description;
-			}
-		}
-		return $entries;
-	}
-
-	/**
-	 * Helper to build a plain text string from an associative array of entries.
-	 *
-	 * @param array $entries An associative array with title => description.
-	 * @return string The formatted plain text string.
-	 */
-	function buildTextFromEntries(array $entries): string
-	{
-		$text = '';
-		foreach ($entries as $title => $description) {
-			$text .= $title . "\n" . $description . "\n\n";
-		}
-		return trim($text);
 	}

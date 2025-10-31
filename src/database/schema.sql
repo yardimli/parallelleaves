@@ -1,7 +1,3 @@
--- This schema is a simplified version based on the Laravel models provided.
--- It uses INTEGER for foreign keys and TEXT for JSON data.
-
-
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -14,9 +10,6 @@ CREATE TABLE IF NOT EXISTS novels (
     user_id INTEGER NOT NULL,
     title TEXT NOT NULL,
     author TEXT,
-    genre TEXT,
-    logline TEXT,
-    synopsis TEXT,
     status TEXT NOT NULL DEFAULT 'draft',
     source_language TEXT DEFAULT 'English',
     target_language TEXT DEFAULT 'English',
@@ -26,17 +19,9 @@ CREATE TABLE IF NOT EXISTS novels (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- MODIFICATION START: Removed the 'sections' table.
--- The concept of 'Acts' or 'Sections' has been removed for a flatter chapter structure.
--- CREATE TABLE IF NOT EXISTS sections ... (Removed)
--- MODIFICATION END
-
 CREATE TABLE IF NOT EXISTS chapters (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     novel_id INTEGER NOT NULL,
-    -- MODIFICATION START: Removed section_id as sections are no longer used.
-    -- section_id INTEGER NOT NULL,
-    -- MODIFICATION END
     title TEXT NOT NULL,
     source_content TEXT,
     target_content TEXT,
@@ -45,9 +30,6 @@ CREATE TABLE IF NOT EXISTS chapters (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
-
--- MODIFICATION START: Removed codex_categories and codex_entries tables.
--- MODIFICATION END
 
 CREATE TABLE IF NOT EXISTS images (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -66,9 +48,6 @@ CREATE TABLE IF NOT EXISTS images (
 INSERT INTO users (id, name, email)
 SELECT 1, 'Default User', 'user@example.com'
 WHERE NOT EXISTS (SELECT 1 FROM users WHERE id = 1);
-
--- MODIFICATION START: Added triggers to automatically update the 'updated_at' timestamp on the 'novels' table.
--- This ensures the "Last Edit" date on the dashboard is always accurate when related content changes.
 
 -- When a novel's own details are updated
 CREATE TRIGGER IF NOT EXISTS update_novel_timestamp_on_update
@@ -107,35 +86,3 @@ BEGIN
     SET updated_at = CURRENT_TIMESTAMP
     WHERE id = OLD.novel_id;
 END;
-
--- MODIFICATION START: Removed triggers related to the 'sections' table.
--- CREATE TRIGGER IF NOT EXISTS update_novel_on_section_update ... (Removed)
--- CREATE TRIGGER IF NOT EXISTS update_novel_on_section_insert ... (Removed)
--- CREATE TRIGGER IF NOT EXISTS update_novel_on_section_delete ... (Removed)
--- MODIFICATION END
-
-CREATE TABLE IF NOT EXISTS translation_logs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    novel_id INTEGER NOT NULL,
-    chapter_id INTEGER NOT NULL,
-    source_text TEXT NOT NULL,
-    target_text TEXT NOT NULL,
-    marker TEXT,
-    model TEXT NOT NULL,
-    temperature REAL NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
--- MODIFICATION START: New table for logging target editor changes
-CREATE TABLE IF NOT EXISTS target_editor_logs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    novel_id INTEGER NOT NULL,
-    chapter_id INTEGER NOT NULL,
-    marker TEXT,
-    content TEXT NOT NULL,
-    is_analyzed INTEGER NOT NULL DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
--- MODIFICATION END

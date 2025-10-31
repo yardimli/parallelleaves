@@ -84,5 +84,7 @@
     "title": "Oppdatering tilgjengelig",
     "description": "En ny versjon ({latestVersion}) er tilgjengelig! Du bruker for øyeblikket versjon {currentVersion}.",
     "updateNow": "Oppdater nå"
-  }
+  },
+  "resetWarningTitle": "Tilbakestill og avslutt?",
+  "resetWarningMessage": "Er du sikker på at du vil logge ut og tilbakestille applikasjonen? Alle dine prosjekter, innstillinger og data vil bli slettet permanent. Denne handlingen kan ikke angres."
 }

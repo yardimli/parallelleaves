@@ -43,16 +43,13 @@ function registerBackupRestoreHandlers(db, sessionManager) {
 			
 			// 1. Insert the novel, getting the new ID.
 			const newNovelStmt = db.prepare(`
-                INSERT INTO novels (user_id, title, author, genre, logline, synopsis, status, source_language, target_language, rephrase_settings, translate_settings)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO novels (user_id, title, author,  status, source_language, target_language, rephrase_settings, translate_settings)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             `);
 			const newNovelResult = newNovelStmt.run(
 				sessionManager.getSession()?.user.id || 1,
 				`${novel.title} (Restored)`,
 				novel.author,
-				novel.genre,
-				novel.logline,
-				novel.synopsis,
 				novel.status,
 				novel.source_language,
 				novel.target_language,

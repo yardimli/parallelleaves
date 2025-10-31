@@ -19,6 +19,9 @@ contextBridge.exposeInMainWorld('api', {
 	splashFinished: () => ipcRenderer.send('splash:finished'),
 	openExternalUrl: (url) => ipcRenderer.send('app:open-external-url', url),
 	
+	// ADDED: Expose the application reset function to the renderer process.
+	appReset: () => ipcRenderer.send('app:reset'),
+	
 	// --- Dashboard/Novel Creation ---
 	getNovelsWithCovers: () => ipcRenderer.invoke('novels:getAllWithCovers'),
 	

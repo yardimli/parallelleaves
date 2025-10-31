@@ -84,5 +84,7 @@
     "title": "Güncelleme Mevcut",
     "description": "Yeni bir sürüm ({latestVersion}) mevcut! Şu anki sürümünüz {currentVersion}.",
     "updateNow": "Şimdi Güncelle"
-  }
+  },
+  "resetWarningTitle": "Sıfırla ve Çık?",
+  "resetWarningMessage": "Uygulamadan çıkış yapıp tüm verileri sıfırlamak istediğinizden emin misiniz? Tüm projeleriniz, ayarlarınız ve verileriniz kalıcı olarak silinecektir. Bu işlem geri alınamaz."
 }

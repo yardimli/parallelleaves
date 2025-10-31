@@ -1,6 +1,32 @@
-const { app } = require('electron');
+const { app, session } = require('electron');
 const path = require('path');
-const fs = require('fs'); // Import the 'fs' module
+const fs = require('fs');
+
+// --- Reset Logic on Startup ---
+// This block must run before any other app logic that might access the userData path.
+// It checks for a 'reset.flag' file located one level above the userData directory.
+// If the flag is found, it deletes the entire userData directory and then removes the flag.
+try {
+	const userDataPath = app.getPath('userData');
+	const resetFlagPath = path.join(userDataPath, '..', 'reset.flag');
+	
+	if (fs.existsSync(resetFlagPath)) {
+		console.log('Reset flag found. Deleting user data directory...');
+		// Ensure the path exists before trying to delete it.
+		if (fs.existsSync(userDataPath)) {
+			fs.rmSync(userDataPath, { recursive: true, force: true });
+		}
+		// Remove the flag file to prevent reset on subsequent launches.
+		fs.unlinkSync(resetFlagPath);
+		console.log('User data deleted and reset flag removed.');
+	}
+} catch (error) {
+	// If this fails, the app might be in an inconsistent state.
+	// We log the error and continue, but a production app might show an error dialog and quit.
+	console.error('FATAL: Failed to process application reset:', error);
+}
+
+
 const { initializeDatabase } = require('./src/database/database.js');
 const sessionManager = require('./src/main/sessionManager.js');
 const windowManager = require('./src/main/windowManager.js');
@@ -54,6 +80,14 @@ app.on('ready', () => {
 	windowManager.createSplashWindow();
 	windowManager.createMainWindow();
 });
+
+// MODIFIED: The 'will-quit' handler no longer contains the reset logic.
+// The reset is now handled at application startup to avoid file lock issues.
+app.on('will-quit', async (event) => {
+	// The application can perform any other necessary cleanup here.
+	// The reset logic has been moved to the startup sequence.
+});
+
 
 app.on('window-all-closed', () => {
 	if (process.platform !== 'darwin') {

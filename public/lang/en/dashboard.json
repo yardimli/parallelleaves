@@ -84,5 +84,7 @@
     "title": "Update Available",
     "description": "A new version ({latestVersion}) is available! You are currently on version {currentVersion}.",
     "updateNow": "Update Now"
-  }
+  },
+  "resetWarningTitle": "Reset and Quit?",
+  "resetWarningMessage": "Are you sure you want to sign out and reset the application? All your projects, settings, and data will be permanently deleted. This action cannot be undone."
 }

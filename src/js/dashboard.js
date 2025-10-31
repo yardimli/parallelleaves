@@ -184,9 +184,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 		}
 	}
 	
+	// MODIFIED: This function now triggers a full application reset.
 	async function handleLogout() {
-		await window.api.logout();
-		updateAuthUI(null);
+		// Use a native confirm dialog to warn the user about data deletion.
+		// The title of the confirm box is not customizable, so we include it in the message.
+		const confirmationMessage = `${t('dashboard.resetWarningTitle')}\n\n${t('dashboard.resetWarningMessage')}`;
+		const confirmed = window.confirm(confirmationMessage);
+		
+		if (confirmed) {
+			// Call the new IPC handler to clear all data and quit the app.
+			await window.api.appReset();
+		}
 	}
 	
 	async function initAuth() {

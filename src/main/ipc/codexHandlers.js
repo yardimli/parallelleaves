@@ -72,9 +72,12 @@ function registerCodexHandlers(db, sessionManager, windowManager) {
 		try {
 			// 1. Get novel languages and current status from server
 			sender.send('codex:update', { statusKey: 'editor.codex.status.checking' });
-			const { status } = await callCodexApi('codex_get_status', { novel_id: novelId }, token);
+			// MODIFIED: Fetch full status object from the server.
+			const serverStatus = await callCodexApi('codex_get_status', { novel_id: novelId }, token);
+			const { status, processed, total } = serverStatus;
 			
-			if (status === 'complete' || status === 'generating') {
+			// If the codex is already complete, no need to do anything else.
+			if (status === 'complete') {
 				sender.send('codex:finished', { status: 'complete' });
 				activeCodexJobs.delete(novelId);
 				return;
@@ -108,19 +111,29 @@ function registerCodexHandlers(db, sessionManager, windowManager) {
 				return;
 			}
 			
-			// 3. Start the job on the server, now including novel metadata
-			// MODIFIED: Ensure title and author are sent to the server.
-			await callCodexApi('codex_start_job', {
-				novel_id: novelId,
-				total_chunks: chunks.length,
-				title: novel.title,
-				author: novel.author,
-				source_language: novel.source_language,
-				target_language: novel.target_language,
-			}, token);
+			// MODIFIED: Logic to determine whether to resume or start a new job.
+			let startChunkIndex = 0;
 			
-			// 4. Process chunks sequentially
-			for (let i = 0; i < chunks.length; i++) {
+			// If status is 'generating' or 'error', we attempt to resume.
+			// If the number of local chunks has changed, we restart the job from scratch.
+			if ((status === 'generating' || status === 'error') && total === chunks.length) {
+				startChunkIndex = processed; // Start from the next unprocessed chunk.
+				console.log(`Resuming codex generation for novel ${novelId} from chunk ${startChunkIndex}.`);
+			} else {
+				// Start a fresh job if status is 'none' or if chunk counts mismatch.
+				await callCodexApi('codex_start_job', {
+					novel_id: novelId,
+					total_chunks: chunks.length,
+					title: novel.title,
+					author: novel.author,
+					source_language: novel.source_language,
+					target_language: novel.target_language,
+				}, token);
+			}
+			
+			// 4. Process chunks sequentially, starting from the correct index
+			// MODIFIED: The loop now starts from `startChunkIndex` to allow resuming.
+			for (let i = startChunkIndex; i < chunks.length; i++) {
 				if (!activeCodexJobs.has(novelId)) { // Check if job was cancelled
 					sender.send('codex:finished', { status: 'cancelled' });
 					return;

@@ -1,4 +1,4 @@
-const { ipcMain, shell } = require('electron');
+const { ipcMain, shell, app, BrowserWindow } = require('electron');
 const fetch = require('node-fetch');
 const path = require('path');
 const fs = require('fs');
@@ -56,6 +56,26 @@ function registerSystemHandlers(db, sessionManager, windowManager) {
 	ipcMain.on('app:open-external-url', (event, url) => {
 		if (url) {
 			shell.openExternal(url);
+		}
+	});
+	
+	// MODIFIED: This handler now creates a flag file and quits the application.
+	// The actual data deletion is handled on the next startup to avoid file lock issues.
+	ipcMain.on('app:reset', () => {
+		const userDataPath = app.getPath('userData');
+		// Place the flag file one level above userData to prevent it from being deleted during the reset.
+		const resetFlagPath = path.join(userDataPath, '..', 'reset.flag');
+		
+		try {
+			// Create the flag file to signal a reset on the next launch.
+			fs.writeFileSync(resetFlagPath, 'reset');
+			console.log(`Reset flag created at: ${resetFlagPath}`);
+			
+			// Quit the application. The startup process will handle the deletion.
+			app.quit();
+		} catch (error) {
+			console.error('Failed to create reset flag:', error);
+			// If we can't create the flag, we shouldn't quit, as the reset won't happen.
 		}
 	});
 	
