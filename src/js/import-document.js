@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 	const autoDetectModal = document.getElementById('auto-detect-modal');
 	const runDetectionBtn = document.getElementById('run-detection-btn');
 	
-	const WORD_LIMIT = 5000; // Word count limit per chapter
+	const WORD_LIMIT = 12000; // Word count limit per chapter
 	
 	let currentFilePath = null;
 	let currentMarkIndex = -1;

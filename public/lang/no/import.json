@@ -19,7 +19,7 @@
   "alertNoTitle": "Vennligst oppgi en prosjekttittel.",
   "alertNoContent": "Ikke noe innhold å importere.",
   "errorImport": "Feil under import: {message}",
-  "errorChapterTooLong": "Import mislyktes: Kapittel '{chapterTitle}' er for langt ({wordCount} ord). Vennligst del opp kapitler til å være under 5000 ord.",
+  "errorChapterTooLong": "Import mislyktes: Kapittel '{chapterTitle}' er for langt ({wordCount} ord). Vennligst del opp kapitler til å være under 12000 ord.",
   "statusSummary": "{chapterCount} {chapterLabel} vil bli opprettet.",
   "chapterLabel_one": "Kapittel",
   "chapterLabel_other": "Kapitler",

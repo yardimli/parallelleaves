@@ -211,8 +211,8 @@
 			[
 				'group' => 'Popular',
 				'models' => [
-					['id' => 'openrouter/sonoma-dusk-alpha', 'name' => 'Sonoma Dusk Alpha'],
-					['id' => 'openrouter/sonoma-sky-alpha', 'name' => 'Sonoma Sky Alpha'],
+					['id' => 'openai/gpt-5.1', 'name' => 'OpenAI GPT-5.1'],
+					['id' => 'google/gemini-3-pro-preview', 'name' => 'Google: Gemini 3 Pro'],
 					['id' => 'openai/gpt-4o', 'name' => 'OpenAI GPT-4o'],
 					['id' => 'anthropic/claude-3.7-sonnet', 'name' => 'Claude 3.7 Sonnet'],
 					['id' => 'anthropic/claude-3.7-sonnet:thinking', 'name' => 'Claude 3.7 Sonnet (Thinking)'],

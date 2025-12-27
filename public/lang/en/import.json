@@ -19,7 +19,7 @@
   "alertNoTitle": "Please provide a project title.",
   "alertNoContent": "No content to import.",
   "errorImport": "Error during import: {message}",
-  "errorChapterTooLong": "Import failed: Chapter '{chapterTitle}' is too long ({wordCount} words). Please split chapters to be under 5000 words.",
+  "errorChapterTooLong": "Import failed: Chapter '{chapterTitle}' is too long ({wordCount} words). Please split chapters to be under 12000 words.",
   "statusSummary": "and {chapterCount} {chapterLabel} will be created.",
   "chapterLabel_one": "Chapter",
   "chapterLabel_other": "Chapters",

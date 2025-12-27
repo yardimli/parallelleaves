@@ -19,7 +19,7 @@
   "alertNoTitle": "Lütfen bir proje adı girin.",
   "alertNoContent": "Yüklenecek içerik yok.",
   "errorImport": "Yükleme sırasında hata: {message}",
-  "errorChapterTooLong": "İçeri aktarma başarısız: '{chapterTitle}' bölümü çok uzun ({wordCount} kelime). Lütfen bölümleri 5000 kelimenin altında olacak şekilde bölün.",
+  "errorChapterTooLong": "İçeri aktarma başarısız: '{chapterTitle}' bölümü çok uzun ({wordCount} kelime). Lütfen bölümleri 12000 kelimenin altında olacak şekilde bölün.",
   "statusSummary": "{chapterCount} {chapterLabel} oluşturulacak.",
   "chapterLabel_one": "Bölüm",
   "chapterLabel_other": "Bölüm",
