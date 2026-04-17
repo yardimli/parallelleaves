@@ -292,6 +292,7 @@
 		}
 
 		$ch = curl_init('https://openrouter.ai/api/v1/models');
+		$ch = curl_init('https://openrouter.ai/api/v1/models');
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($ch, CURLOPT_HTTPHEADER, [
 			'Accept: application/json',
@@ -429,7 +430,7 @@
 						"SELECT tm.id, tm.source_sentence, tm.target_sentence, b.source_language, b.target_language " .
 						"FROM user_books_translation_memory tm " .
 						"JOIN user_books b ON tm.user_book_id = b.id " .
-						"WHERE b.user_id = ? AND b.book_id = ? AND tm.source_sentence REGEXP ?"
+						"WHERE (b.user_id = ? OR ? = 1) AND b.book_id = ? AND tm.source_sentence REGEXP ?"
 					);
 
 					foreach ($uniqueWords as $word) {
@@ -437,7 +438,8 @@
 							break;
 						}
 						$regexpPattern = '[[:<:]]' . $db->real_escape_string($word) . '[[:>:]]';
-						$stmt->bind_param("iis", $userId, $currentNovelId, $regexpPattern);
+						// Bind userId twice to handle the OR condition
+						$stmt->bind_param("iiis", $userId, $userId, $currentNovelId, $regexpPattern);
 						$stmt->execute();
 						$result = $stmt->get_result();
 						$memoriesForWord = $result->fetch_all(MYSQLI_ASSOC);
@@ -461,7 +463,7 @@
 					$sql = "SELECT tm.id, tm.source_sentence, tm.target_sentence, b.source_language, b.target_language " .
 						"FROM user_books_translation_memory tm " .
 						"JOIN user_books b ON tm.user_book_id = b.id " .
-						"WHERE b.user_id = ? ";
+						"WHERE (b.user_id = ? OR ? = 1) ";
 					if ($currentNovelId) {
 						$sql .= "AND b.book_id != ? ";
 					}
@@ -474,9 +476,10 @@
 						}
 						$regexpPattern = '[[:<:]]' . $db->real_escape_string($word) . '[[:>:]]';
 						if ($currentNovelId) {
-							$stmt->bind_param("iis", $userId, $currentNovelId, $regexpPattern);
+							// Bind userId twice to handle the OR condition
+							$stmt->bind_param("iiis", $userId, $userId, $currentNovelId, $regexpPattern);
 						} else {
-							$stmt->bind_param("is", $userId, $regexpPattern);
+							$stmt->bind_param("iis", $userId, $userId, $regexpPattern);
 						}
 						$stmt->execute();
 						$result = $stmt->get_result();

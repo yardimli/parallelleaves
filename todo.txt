@@ -1,0 +1,232 @@
+
+
+on the server api_log codex and translation memory usage per user per book per chapter with date time model tokens used cost
+
+create vector database on server for translation memory
+
+use vector database to find best matching translations for current translation request and add them to the llm prompt on the server side.
+
+move the llm prompt templates to a setting file for the whole app so i can edit them easily
+
+codex doesnt work with chinese characters
+
+make the chapter splitter use chapter texts like "Chapter 1", "Act 1" in multiple languages
+
+add token usage report including model, tokens used, cost, date, time, also for image generation for each book
+
+add book editorial feature that will use source and target chapters to create a book report about accuracy of the translation, grammar issues, spelling issues, etc
+
+
+
+add help icon to toolbar on chapter-editor with all the keyboard shortcuts
+
+bug: ctrl-1 looses position after translation.
+
+bug: on mac restoring a book doesnt restore its picture.
+
+bug: when showing the missing codex dialog clicking on generate opens the outline window but the dialog to generate is not opened automatically.
+
+make dialogs in dark mode brighter and easier to read
+
+import bug in console: Uncaught Error: Cannot destructure property 'statusKey' of 'undefined' as it is undefined.
+
+
+
+on website add detailed pages.
+
+on website add a page for pricing and plans and purchase with paypal.
+
+distribute on windows app store
+
+distribute on mac app store
+
+-----------------------------------------------------------------------
+add text to speech feature to read aloud the target text in chapter-editor and highlight the words as they are read and allow user to stop and resume the playback with keyboard shortcuts. when reading move the cursor to the current word being read.
+
+
+
+-----------------------------------------------------------------------
+
+# Changelog
+## v0.17 - 2025-10-31
+
+remove old target comparison feature to learn using dictionary, add server sided translation memory instead.
+
+when initiating translation memory from app send all blocks every time on the server check if a block has changed if so run translation memory on that block again.
+
+don't download translation memory to the app instead send the book id's to the server and have the server insert the translation memory into the llm prompt replacing the placehoder ##TRANSLATION_MEMORY##
+
+make codex creation online remove from app
+
+on the server scan the translation memory and only add the entries that matches any of the words in the source that will be translated.
+
+upload translation memory to server
+
+
+
+## v0.14 - 2025-09-24
+
+### 🐛 Bug Fixes
+- Fixed scroll bug when loading last position or navigating chapters
+
+### ✨ New Features
+
+#### Translation AI
+- Add translation logging to local and remote databases
+- Add logging on user edits to target text to local and remote databases
+- When running translation and rephrase after the dictionary in the prompt include analysis that is not transferred to the dictionary
+- Do auto analysis in the background when chapter-editor is open and save it to localstorage
+
+#### Codex Improvements
+- Simplify Codex to a single editor for the whole book
+- Add temperature setting to AutoGen
+
+#### Translation and Rephrase Enhancements
+- Add tense selection to rephrase and translate editors
+- Use simplified codex entries in prompts for better context
+- Translate ai floating toolbar
+- Add keyboard shortcuts for apply retry and cancel in floating ai results. (Esc to discard, ctrl+enter to apply, ctrl-r to retry)
+- Add temperature setting
+
+#### Editor Improvements
+- Added sync scroll from target to source on markers
+- Made source readonly with cursor
+- Added word count display for selection in both source and target
+- Added right-click context menu to add selected text to dictionary
+- Add search and replace feature in chapter editor with next/previous buttons, case sensitivity, replace, replace all, and highlighting
+- Add shortcut so ctrl-1 sets focus on the source, ctrl-2 sets focus on the target.
+- Pressing ctrl-t brings up the translate dialog when cursor is on the target and source has selected text.
+- Make ctrl-f and ctrl-h work to open search and replace bars.
+- In target editor tab will go to next chapter and shift-tab will go to previous chapter
+
+#### Chat System Enhancements
+- Implemented chat history saving to localStorage
+- Added ability to create new chat sessions or continue existing ones
+- Added option to delete chat history from localStorage
+- Added dropdown in chat history to include chapter context for chapter-specific questions
+- Add temperature setting
+
+#### Dictionary Overhaul
+- Redesigned dictionary in source and target to work as classical dictionary with dedicated dialog
+- Replaced textarea with row-based system allowing users to add and delete individual entries
+- Add button on dictionary entries to open search replace in chapter-editor with the texts from the dictionary entry
+- Add a new field for type (translation or rephrasing) if it is not set default to translation when saving the dictionary
+- Increase the width of the dictionary dialog
+
+#### Project Management
+- Added "Start Blank Project" option to index.html dropdown menu alongside existing import document option
+- Blank project creation requires only project name and source/target language selection
+- New blank projects automatically generate structure with 3 acts and 10 empty chapters per act
+- Acts use Roman numerals, chapters use regular numbers for naming
+
+#### Chapter Editor Enhancements
+- Added "Insert Chapter" function next to existing edit button for each chapter
+- Added "Insert Act" and "Delete Act" functionality
+- Added "Delete Chapter" functionality
+- Added buttons to rename both chapters and acts for both source and target languages
+
+#### Backup and Restore
+- when exporting a book for backup also save the dictionary and new codex and restore it.
+- auto backup all books every hour to a backups folder in user documents/parallelleaves/backups, keep last months backups, delete older ones.
+
+
+
+rm -rf node_modules package-lock.json; # Removes node_modules and package-lock.json
+npm install;                          # Reinstalls all dependencies from scratch
+npm rebuild;                          # Rebuilds native modules for Electron
+
+
+DONE:
+
+when user makes a translation to the server log user_id, book_id, chapter_id, source_text, target_text translation block marker, model, temperature, date time in a new table. write the sql statement for the table. log both locally and on the server. on local check if table exists if not create it.
+
+when user edits the target track the changes the user makes and post them to the server. use the begin and end markers on target to post changes to the server.
+
+scroll bug on similar chapter names,
+
+auto scroll to last position needs delay wait for iframes to load and update the heights
+
+on mac i want the app name to show in the menubar
+
+on the translation and rephrase dialog add a dictionary button. it should open a textarea in the dialog where user can a dictionary in free form that will be sent to the llm as part of the prompt. also add a checkbox to let user decide to include the dictionary or not in the llm promt. the dictionary will be shared between rephrase and translation dialog the dictionary should be saved into the app localstorage per book.
+
+in import-document when user clicks on start import verify that no chapter will be longer than 5000 words, show error and dont import if this happens. on top after auto detect chapters add a button for auto split that will split the document so no chapter is longer than 5000 words. split after the last full paragrah when its more than 5000 words. if no paragraph found my 5500 words split at 5000 words.
+
+bug: on blank install start with the login screen dont show the language select welcome box.
+
+on the index move the add book button outside of the menu.
+
+on import document in split chapters add search like in chapter-editor with searchbar on top and next previous buttons and highlighting the found results open with button and ctrl-f when pressing enter inside the search input find the next result. show number of results and text showing 4 / 55
+
+on chapter-editor make right click to select and copy work on the source side
+
+on the chapter-editor move the word count and selection count to the bottom bar, create the bottom bar
+
+compile on mac and try running the compiled version
+
+if a project doesnt have any codex entries when chapter-editor opens show a dialog that will tell why codex is need for good translation. add button create codex which will open the outline window and open the codex wizard dialog.
+
+add a chat with llm window that can be opened from the chapter-editor toolbar it should have its own window and dropdown to select model and a text input area and a send button. the response should be shown in the window with a copy button for each response. when sending chat send the past 4 user and llm responses.
+
+in chapter-editor add find in source and find in target search box
+
+remove ai from codex editor
+
+on the index.html on the top add button for restoring a backup. and in the book card add a button to backup the whole book with its codex and chapters with source and target as a JSON file. The restore function should be able to take the JSON and recreate the book inserting it into the database as a new book. The backup and restore functions should take into account that the id relationship existing in the database will need to be recreated with new id's. Add the restore and backup code as new javascript file.
+
+
+add export of translation to docx, show the default os save dialog with filename set to book title and date. add chapter and act breaks to the docx. export the html formatting in target to the docx file.
+
+add a startup splash screen with logged in user (if user has logged in), and version number and link to website and message to tell if the version is up to date or not (add php script on server to check latest version) use the image in public/assets/splash-v1.png the ratio of the image is 3:4 the texts should be 1:4 height at the bottom of the splash screen. if a new version is preset dont auto hide the splash screen until user clicks the update link or clicks anywhere to continue.
+
+on chapter-editor on the source at the top of every chapter add a button that says edit it should switch the source chapter to contenteditable (plain not using prose-mirror) and hide the edit button and make two new buttons save and cancel visible. when switching to edit the content should load from the database table so its plain text and when saved after save or cancel reload the chapter with the codex entries and markers clickable.
+
+on the novel editor save cursor position for both source and target and restore it when the editor is opened again save per book in local storage using novelId
+
+make the llm model dropdown look like novelcrafter
+
+in the chapter-editor make the markers [[#number]] on the source clickable and scroll the target to the same marker in the chapter if found
+
+on the novel editor remove the chapter sections instead split the view into two columns, make the left column source and right column target iframes. each column should scroll independently. the document should not have a scroll bar.
+
+when running translation for blocks above the selection instead of using paragraphs use the markers [#<number>] on both target and source to create matching pairs. if there are no markers then dont use previous blocks.
+
+i also want to add a pure text [#<number>] at the begining of the source, and also insert it at the begining of the translation. the number inside should be a counter that is one greater than all counters in both documents so it is always unique and also works as a helper mark to match translations. user should not be prevented from deleting it on the source. when the chapter-editor first loads verify that all marks in the source exists in the target if one doesnt exist remove it from the source.
+
+in chapter-editor on the source highlight selections that have been translated. update the database with the highlights so it will be persistent.
+
+remove the translate button from the toolbar, instead when user has selected a text on the source and click in an empty paragraph on the iframe show a floating button on the left side when user clicks on it open the translate dialog.
+
+in import add different options to detect chapters and acts (like a single line all capital letters with empty lines before and after, or a line starting with chapter/act and a number, etc)
+
+in my novels page show word count and chapter count for each book for both source and target language. along with an estimated progress of the translation based on chapter, translation blocks and word count. add create date and last edit date (update database schema)
+
+when adding a new book create cover with ai write prompt with llm and use server to generate the image and add it to the book
+
+update server to allow calling fal.ai to generate images and allow user to create book cover from it
+
+add user login to electron, add php page for registration and login api, store user data in mysql database on server, electron should remember logged in user with a token and send their token with each request to the ai php on the server the server should validate the token and only respond and also log to a mysql table.
+
+add translation (english/turkish/norwegian) to the UI
+
+in the chapter editor add a dialog to set writing font style, size, width, etc
+
+in the editor make codex entries dotted underline and hover to show codex hint and click to open codex entry
+
+create a php script that will run on a server that will call openrouter on behalf of electron. the electron should get all results from the php script. because of added delay remove streaming and just show a loading indicator until the full response is received for all ai calls.
+
+in chapter-editor underline codex entries in the chapter text and show a tooltip with the codex entry summary on hover, clicking on it should open the codex entry window
+
+in novel outline add a button to auto generate codex entries for each chapter, it should update exisiting entries and create new ones as needed
+
+in chapter editor make it easy to navigate between chapters
+
+---------
+in chapter-editor use target language for browsers spelling and grammar check
+
+in translation add setting for how many block pairs to include from previous translation to give context
+
+in ai windows remember last instructions and save it the database
+in the ai windows remember the last ai selected and auto select it
+
+
